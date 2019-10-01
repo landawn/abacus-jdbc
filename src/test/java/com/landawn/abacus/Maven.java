@@ -1,6 +1,5 @@
 package com.landawn.abacus;
 
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,11 +34,11 @@ public class Maven {
         IOUtil.copy(sourceDir, targetDir);
 
         StreamEx.listFiles(new File("./target/"))
-                .filter(f -> f.getName().startsWith("abacus-entity-manager") && f.getName().endsWith(".jar"))
+                .filter(f -> f.getName().startsWith("abacus-jdbc") && f.getName().endsWith(".jar"))
                 .peek(f -> N.println(f.getName()))
                 .forEach(f -> IOUtil.copy(f, targetDir));
 
-        StreamEx.listFiles(targetDir) // 
+        StreamEx.listFiles(targetDir) //
                 .forEach(file -> IOUtil.renameTo(file, file.getName().replace(sourceVersion, targetVersion)));
 
         StreamEx.listFiles(targetDir)

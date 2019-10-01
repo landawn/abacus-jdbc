@@ -8,15 +8,15 @@ A general persistent library built on JDBC Java. It's easy to learn and simple t
 
 ## Features:
 
-[DataSet](https://cdn.staticaly.com/gh/landawn/abacus-util/master/docs/DataSet_view.html), 
-[JdbcUtil](https://cdn.staticaly.com/gh/landawn/abacus-util/master/docs/JdbcUtil_view.html)
-[SQLExecutor](https://cdn.staticaly.com/gh/landawn/abacus-util/master/docs/SQLExecutor_view.html), 
-[Mapper](https://cdn.staticaly.com/gh/landawn/abacus-util/master/docs/Mapper_view.html), 
-[PreparedQuery](https://cdn.staticaly.com/gh/landawn/abacus-util/master/docs/PreparedQuery_view.html), 
-[SQLBuilder](https://cdn.staticaly.com/gh/landawn/abacus-util/master/docs/SQLBuilder_view.html), 
-[DynamicSQLBuilder](https://cdn.staticaly.com/gh/landawn/abacus-util/master/docs/DynamicSQLBuilder_view.html),
-[JdbcUtil.Dao/CrudDao](https://static.javadoc.io/com.landawn/abacus-util/1.8.22/com/landawn/abacus/util/JdbcUtil.Dao.html), 
-[ConditionFactory(CF)](https://cdn.staticaly.com/gh/landawn/abacus-util/master/docs/ConditionFactory_view.html)...
+[DataSet](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/DataSet_view.html), 
+[JdbcUtil](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/JdbcUtil_view.html)
+[SQLExecutor](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/SQLExecutor_view.html), 
+[Mapper](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/Mapper_view.html), 
+[PreparedQuery](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/PreparedQuery_view.html), 
+[SQLBuilder](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/SQLBuilder_view.html), 
+[DynamicSQLBuilder](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/DynamicSQLBuilder_view.html),
+[JdbcUtil.Dao/CrudDao](https://static.javadoc.io/com.landawn/abacus-jdbc/1.8.22/com/landawn/abacus/util/JdbcUtil.Dao.html), 
+[ConditionFactory(CF)](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/ConditionFactory_view.html)...
 
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
