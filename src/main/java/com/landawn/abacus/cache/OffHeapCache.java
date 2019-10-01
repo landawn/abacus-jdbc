@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2015, Haiyang Li.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -65,6 +65,7 @@ import sun.misc.Unsafe;
  * @param <V> the value type
  * @since 0.8
  */
+@SuppressWarnings("restriction")
 public class OffHeapCache<K, V> extends AbstractCache<K, V> {
 
     /** The Constant logger. */
@@ -690,7 +691,7 @@ public class OffHeapCache<K, V> extends AbstractCache<K, V> {
 
     /**
      * recycle the empty Segment.
-     * 
+     *
      */
     protected void evict() {
         for (int i = 0, len = _segments.length; i < len; i++) {
