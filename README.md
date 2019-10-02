@@ -11,7 +11,7 @@ A general persistent library built on JDBC Java. It's easy to learn and simple t
 [DataSet](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/DataSet_view.html), 
 [PreparedQuery](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/PreparedQuery_view.html), 
 [JdbcUtil](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/JdbcUtil_view.html), 
-[JdbcUtil.Dao/CrudDao](https://static.javadoc.io/com.landawn/abacus-jdbc/1.9.0/com/landawn/abacus/util/JdbcUtil.Dao.html), 
+[JdbcUtil.Dao/CrudDao](https://static.javadoc.io/com.landawn/abacus-jdbc/1.9.1/com/landawn/abacus/util/JdbcUtil.Dao.html), 
 [SQLExecutor](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/SQLExecutor_view.html), 
 [Mapper](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/Mapper_view.html), 
 [SQLBuilder](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/SQLBuilder_view.html), 
@@ -26,12 +26,11 @@ A general persistent library built on JDBC Java. It's easy to learn and simple t
 * Gradle:
 ```gradle
 // JDK 1.8 or above:
-compile 'com.landawn:abacus-jdbc:1.9.0'
+compile 'com.landawn:abacus-jdbc:1.9.1'
 ```
 
 ## User Guide:
-[Introduction to JDBC](https://www.javacodegeeks.com/2015/02/jdbc-tutorial.html)
-
+ [Introduction to JDBC](https://www.javacodegeeks.com/2015/02/jdbc-tutorial.html), [Programming in JDBC/DB with JdbcUtil/PreparedQuery/SQLExecutor/Dao/Mapper](https://github.com/landawn/abacus-util/wiki/Programming-in-RDBMS-with-Jdbc,-Dao,-PreparedQuery-and-SQLExecutor-Mapper).
 
 ## Also See: [abacus-util](https://github.com/landawn/abacus-util), [abacus-entity-manager](https://github.com/landawn/abacus-entity-manager), [abacus-da](https://github.com/landawn/abacus-da).
 
