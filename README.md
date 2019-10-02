@@ -3,7 +3,7 @@
 [![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc.svg)](https://maven-badges.herokuapp.com/maven-central/com.landawn/abacus-jdbc/)
 [![Javadocs](https://www.javadoc.io/badge/com.landawn/abacus-jdbc.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc)
 
-A general persistent library built on JDBC Java. It's easy to learn and simple to use with concise and powerful APIs.
+A general persistent library built on JDBC. It's easy to learn and simple to use with concise and powerful APIs.
 
 
 ## Features:
