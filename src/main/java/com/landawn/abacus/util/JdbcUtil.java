@@ -39,7 +39,6 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -95,7 +94,6 @@ import com.landawn.abacus.SliceSelector;
 import com.landawn.abacus.Transaction;
 import com.landawn.abacus.Transaction.Status;
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
@@ -1096,32 +1094,7 @@ public final class JdbcUtil {
      * @see {@link ResultSet#absolute(int)}
      */
     public static int skip(final ResultSet rs, long n) throws SQLException {
-        if (n <= 0) {
-            return 0;
-        } else if (n == 1) {
-            return rs.next() == true ? 1 : 0;
-        } else {
-            final int currentRow = rs.getRow();
-
-            if (n <= Integer.MAX_VALUE) {
-                try {
-                    if (n > Integer.MAX_VALUE - rs.getRow()) {
-                        while (n-- > 0L && rs.next()) {
-                        }
-                    } else {
-                        rs.absolute((int) n + rs.getRow());
-                    }
-                } catch (SQLException e) {
-                    while (n-- > 0L && rs.next()) {
-                    }
-                }
-            } else {
-                while (n-- > 0L && rs.next()) {
-                }
-            }
-
-            return rs.getRow() - currentRow;
-        }
+        return JDBCUtil.skip(rs, n);
     }
 
     /**
@@ -1174,15 +1147,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static List<String> getColumnLabelList(ResultSet rs) throws SQLException {
-        final ResultSetMetaData metaData = rs.getMetaData();
-        final int columnCount = metaData.getColumnCount();
-        final List<String> labelList = new ArrayList<>(columnCount);
-
-        for (int i = 1, n = columnCount + 1; i < n; i++) {
-            labelList.add(getColumnLabel(metaData, i));
-        }
-
-        return labelList;
+        return JDBCUtil.getColumnLabelList(rs);
     }
 
     /**
@@ -1194,9 +1159,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static String getColumnLabel(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
-        final String result = rsmd.getColumnLabel(columnIndex);
-
-        return N.isNullOrEmpty(result) ? rsmd.getColumnName(columnIndex) : result;
+        return JDBCUtil.getColumnLabel(rsmd, columnIndex);
     }
 
     /**
@@ -1208,40 +1171,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static Object getColumnValue(final ResultSet rs, final int columnIndex) throws SQLException {
-        // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
-        //    final Object obj = rs.getObject(columnIndex);
-        //
-        //    if (obj == null) {
-        //        return obj;
-        //    }
-        //
-        //    final String className = obj.getClass().getName();
-        //
-        //    if (obj instanceof Blob) {
-        //        final Blob blob = (Blob) obj;
-        //        return blob.getBytes(1, (int) blob.length());
-        //    } else if (obj instanceof Clob) {
-        //        final Clob clob = (Clob) obj;
-        //        return clob.getSubString(1, (int) clob.length());
-        //    } else if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
-        //        return rs.getTimestamp(columnIndex);
-        //    } else if (className.startsWith("oracle.sql.DATE")) {
-        //        final String columnClassName = rs.getMetaData().getColumnClassName(columnIndex);
-        //
-        //        if ("java.sql.Timestamp".equals(columnClassName) || "oracle.sql.TIMESTAMP".equals(columnClassName)) {
-        //            return rs.getTimestamp(columnIndex);
-        //        } else {
-        //            return rs.getDate(columnIndex);
-        //        }
-        //    } else if (obj instanceof java.sql.Date) {
-        //        if ("java.sql.Timestamp".equals(rs.getMetaData().getColumnClassName(columnIndex))) {
-        //            return rs.getTimestamp(columnIndex);
-        //        }
-        //    }
-        //
-        //    return obj;
-
-        return rs.getObject(columnIndex);
+        return JDBCUtil.getColumnValue(rs, columnIndex);
     }
 
     /**
@@ -1253,48 +1183,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static Object getColumnValue(final ResultSet rs, final String columnLabel) throws SQLException {
-        // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
-        //    final Object obj = rs.getObject(columnLabel);
-        //
-        //    if (obj == null) {
-        //        return obj;
-        //    }
-        //
-        //    final String className = obj.getClass().getName();
-        //
-        //    if (obj instanceof Blob) {
-        //        final Blob blob = (Blob) obj;
-        //        return blob.getBytes(1, (int) blob.length());
-        //    } else if (obj instanceof Clob) {
-        //        final Clob clob = (Clob) obj;
-        //        return clob.getSubString(1, (int) clob.length());
-        //    } else if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
-        //        return rs.getTimestamp(columnLabel);
-        //    } else if (className.startsWith("oracle.sql.DATE")) {
-        //        final int columnIndex = JdbcUtil.getColumnLabelList(rs).indexOf(columnLabel);
-        //
-        //        if (columnIndex >= 0) {
-        //            final String columnClassName = rs.getMetaData().getColumnClassName(columnIndex + 1);
-        //
-        //            if ("java.sql.Timestamp".equals(columnClassName) || "oracle.sql.TIMESTAMP".equals(columnClassName)) {
-        //                return rs.getTimestamp(columnLabel);
-        //            } else {
-        //                return rs.getDate(columnLabel);
-        //            }
-        //        }
-        //    } else if (obj instanceof java.sql.Date) {
-        //        final int columnIndex = JdbcUtil.getColumnLabelList(rs).indexOf(columnLabel);
-        //
-        //        if (columnIndex >= 0) {
-        //            if ("java.sql.Timestamp".equals(rs.getMetaData().getColumnClassName(columnIndex + 1))) {
-        //                return rs.getTimestamp(columnLabel);
-        //            }
-        //        }
-        //    }
-        //
-        //    return obj;
-
-        return rs.getObject(columnLabel);
+        return JDBCUtil.getColumnValue(rs, columnLabel);
     }
 
     /**
@@ -4860,61 +4749,6 @@ public final class JdbcUtil {
         }
 
         return false;
-    }
-
-    /** The Constant column2FieldNameMapPool. */
-    private static final Map<Class<?>, Map<String, String>> column2FieldNameMapPool = new ConcurrentHashMap<>();
-
-    /**
-     * Gets the column 2 field name map.
-     *
-     * @param entityClass
-     * @return
-     */
-    static Map<String, String> getColumn2FieldNameMap(Class<?> entityClass) {
-        Map<String, String> result = column2FieldNameMapPool.get(entityClass);
-
-        if (result == null) {
-            result = N.newBiMap(LinkedHashMap.class, LinkedHashMap.class);
-
-            final Set<Field> allFields = N.newHashSet();
-
-            for (Class<?> superClass : ClassUtil.getAllSuperclasses(entityClass)) {
-                allFields.addAll(Array.asList(superClass.getDeclaredFields()));
-            }
-
-            allFields.addAll(Array.asList(entityClass.getDeclaredFields()));
-
-            for (Field field : allFields) {
-                if (ClassUtil.getPropGetMethod(entityClass, field.getName()) != null) {
-                    String columnName = null;
-
-                    if (field.isAnnotationPresent(Column.class)) {
-                        columnName = field.getAnnotation(Column.class).value();
-                    } else {
-                        try {
-                            if (field.isAnnotationPresent(javax.persistence.Column.class)) {
-                                columnName = field.getAnnotation(javax.persistence.Column.class).name();
-                            }
-                        } catch (Throwable e) {
-                            logger.warn("To support javax.persistence.Table/Column, please add dependence javax.persistence:persistence-api");
-                        }
-                    }
-
-                    if (N.notNullOrEmpty(columnName)) {
-                        result.put(columnName, field.getName());
-                        result.put(columnName.toLowerCase(), field.getName());
-                        result.put(columnName.toUpperCase(), field.getName());
-                    }
-                }
-            }
-
-            result = ImmutableMap.of(result);
-
-            column2FieldNameMapPool.put(entityClass, result);
-        }
-
-        return result;
     }
 
     /**
@@ -13734,145 +13568,14 @@ public final class JdbcUtil {
          * @return
          */
         static <T> BiRowMapper<T> to(Class<? extends T> targetClass, final boolean ignoreNonMatchedColumns) {
-            if (Object[].class.isAssignableFrom(targetClass)) {
-                return new BiRowMapper<T>() {
-                    @Override
-                    public T apply(ResultSet rs, List<String> columnLabelList) throws SQLException {
-                        final int columnCount = columnLabelList.size();
-                        final Object[] a = Array.newInstance(targetClass.getComponentType(), columnCount);
+            return new BiRowMapper<T>() {
+                private Try.BiFunction<ResultSet, List<String>, T, SQLException> mapper = JDBCUtil.to(targetClass, ignoreNonMatchedColumns);
 
-                        for (int i = 0; i < columnCount; i++) {
-                            a[i] = JdbcUtil.getColumnValue(rs, i + 1);
-                        }
-
-                        return (T) a;
-                    }
-                };
-            } else if (List.class.isAssignableFrom(targetClass)) {
-                return new BiRowMapper<T>() {
-                    private boolean isListOrArrayList = targetClass.equals(List.class) || targetClass.equals(ArrayList.class);
-
-                    @Override
-                    public T apply(ResultSet rs, List<String> columnLabelList) throws SQLException {
-                        final int columnCount = columnLabelList.size();
-                        final List<Object> c = isListOrArrayList ? new ArrayList<>(columnCount) : (List<Object>) N.newInstance(targetClass);
-
-                        for (int i = 0; i < columnCount; i++) {
-                            c.add(JdbcUtil.getColumnValue(rs, i + 1));
-                        }
-
-                        return (T) c;
-                    }
-                };
-            } else if (Map.class.isAssignableFrom(targetClass)) {
-                return new BiRowMapper<T>() {
-                    private boolean isMapOrHashMap = targetClass.equals(Map.class) || targetClass.equals(HashMap.class);
-                    private boolean isLinkedHashMap = targetClass.equals(LinkedHashMap.class);
-
-                    @Override
-                    public T apply(ResultSet rs, List<String> columnLabelList) throws SQLException {
-                        final int columnCount = columnLabelList.size();
-                        final Map<String, Object> m = isMapOrHashMap ? new HashMap<>(columnCount)
-                                : (isLinkedHashMap ? new LinkedHashMap<>(columnCount) : (Map<String, Object>) N.newInstance(targetClass));
-
-                        for (int i = 0; i < columnCount; i++) {
-                            m.put(columnLabelList.get(i), JdbcUtil.getColumnValue(rs, i + 1));
-                        }
-
-                        return (T) m;
-                    }
-                };
-            } else if (ClassUtil.isEntity(targetClass)) {
-                return new BiRowMapper<T>() {
-                    private boolean isDirtyMarker = DirtyMarkerUtil.isDirtyMarker(targetClass);
-                    private EntityInfo entityInfo = ParserUtil.getEntityInfo(targetClass);
-                    private volatile String[] columnLabels = null;
-                    private volatile PropInfo[] propInfos;
-                    private volatile Type<?>[] columnTypes = null;
-
-                    @Override
-                    public T apply(ResultSet rs, List<String> columnLabelList) throws SQLException {
-                        final int columnCount = columnLabelList.size();
-
-                        String[] columnLabels = this.columnLabels;
-                        PropInfo[] propInfos = this.propInfos;
-                        Type<?>[] columnTypes = this.columnTypes;
-
-                        if (columnLabels == null) {
-                            columnLabels = columnLabelList.toArray(new String[columnLabelList.size()]);
-                            this.columnLabels = columnLabels;
-                        }
-
-                        if (columnTypes == null || propInfos == null) {
-                            final Map<String, String> column2FieldNameMap = getColumn2FieldNameMap(targetClass);
-
-                            propInfos = new PropInfo[columnCount];
-                            columnTypes = new Type[columnCount];
-
-                            for (int i = 0; i < columnCount; i++) {
-                                propInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
-
-                                if (propInfos[i] == null) {
-                                    String fieldName = column2FieldNameMap.get(columnLabels[i]);
-
-                                    if (N.isNullOrEmpty(fieldName)) {
-                                        fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
-                                    }
-
-                                    if (N.notNullOrEmpty(fieldName)) {
-                                        propInfos[i] = entityInfo.getPropInfo(fieldName);
-                                    }
-                                }
-
-                                if (propInfos[i] == null) {
-                                    if (ignoreNonMatchedColumns) {
-                                        columnLabels[i] = null;
-                                    } else {
-                                        throw new IllegalArgumentException("No property in class: " + ClassUtil.getCanonicalClassName(targetClass)
-                                                + " mapping to column: " + columnLabels[i]);
-                                    }
-                                } else {
-                                    columnTypes[i] = entityInfo.getPropInfo(columnLabels[i]).dbType;
-                                }
-                            }
-
-                            this.propInfos = propInfos;
-                            this.columnTypes = columnTypes;
-                        }
-
-                        final Object entity = N.newInstance(targetClass);
-
-                        for (int i = 0; i < columnCount; i++) {
-                            if (columnLabels[i] == null) {
-                                continue;
-                            }
-
-                            propInfos[i].setPropValue(entity, columnTypes[i].get(rs, i + 1));
-                        }
-
-                        if (isDirtyMarker) {
-                            DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
-                        }
-
-                        return (T) entity;
-                    }
-                };
-            } else {
-                return new BiRowMapper<T>() {
-                    private Type<? extends T> targetType = N.typeOf(targetClass);
-                    private int columnCount = 0;
-
-                    @Override
-                    public T apply(ResultSet rs, List<String> columnLabelList) throws SQLException {
-                        if (columnCount != 1 && (columnCount = columnLabelList.size()) != 1) {
-                            throw new IllegalArgumentException(
-                                    "It's not supported to retrieve value from multiple columns: " + columnLabelList + " for type: " + targetClass);
-                        }
-
-                        return targetType.get(rs, 1);
-                    }
-                };
-            }
+                @Override
+                public T apply(ResultSet rs, List<String> columnLabelList) throws SQLException {
+                    return mapper.apply(rs, columnLabelList);
+                }
+            };
         }
     }
 
