@@ -1094,7 +1094,7 @@ public final class JdbcUtil {
      * @see {@link ResultSet#absolute(int)}
      */
     public static int skip(final ResultSet rs, long n) throws SQLException {
-        return JDBCUtil.skip(rs, n);
+        return InternalJdbcUtil.skip(rs, n);
     }
 
     /**
@@ -1147,7 +1147,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static List<String> getColumnLabelList(ResultSet rs) throws SQLException {
-        return JDBCUtil.getColumnLabelList(rs);
+        return InternalJdbcUtil.getColumnLabelList(rs);
     }
 
     /**
@@ -1159,7 +1159,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static String getColumnLabel(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
-        return JDBCUtil.getColumnLabel(rsmd, columnIndex);
+        return InternalJdbcUtil.getColumnLabel(rsmd, columnIndex);
     }
 
     /**
@@ -1171,7 +1171,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static Object getColumnValue(final ResultSet rs, final int columnIndex) throws SQLException {
-        return JDBCUtil.getColumnValue(rs, columnIndex);
+        return InternalJdbcUtil.getColumnValue(rs, columnIndex);
     }
 
     /**
@@ -1183,7 +1183,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static Object getColumnValue(final ResultSet rs, final String columnLabel) throws SQLException {
-        return JDBCUtil.getColumnValue(rs, columnLabel);
+        return InternalJdbcUtil.getColumnValue(rs, columnLabel);
     }
 
     /**
@@ -13569,7 +13569,7 @@ public final class JdbcUtil {
          */
         static <T> BiRowMapper<T> to(Class<? extends T> targetClass, final boolean ignoreNonMatchedColumns) {
             return new BiRowMapper<T>() {
-                private Try.BiFunction<ResultSet, List<String>, T, SQLException> mapper = JDBCUtil.to(targetClass, ignoreNonMatchedColumns);
+                private Try.BiFunction<ResultSet, List<String>, T, SQLException> mapper = InternalJdbcUtil.to(targetClass, ignoreNonMatchedColumns);
 
                 @Override
                 public T apply(ResultSet rs, List<String> columnLabelList) throws SQLException {
