@@ -14628,7 +14628,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <U> ExceptionalStream<U, SQLException> stream(Condition cond, JdbcUtil.BiRowMapper<U> rowMapper) throws SQLException;
+        <U> ExceptionalStream<U, SQLException> stream(Condition cond, JdbcUtil.RowMapper<U> rowMapper) throws SQLException;
 
         /**
          *
@@ -14637,7 +14637,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <U> ExceptionalStream<U, SQLException> stream(Condition cond, JdbcUtil.RowMapper<U> rowMapper) throws SQLException;
+        <U> ExceptionalStream<U, SQLException> stream(Condition cond, JdbcUtil.BiRowMapper<U> rowMapper) throws SQLException;
 
         /**
          *
@@ -14656,8 +14656,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <U> ExceptionalStream<U, SQLException> stream(Collection<String> selectPropNames, Condition cond, JdbcUtil.BiRowMapper<U> rowMapper)
-                throws SQLException;
+        <U> ExceptionalStream<U, SQLException> stream(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowMapper<U> rowMapper) throws SQLException;
 
         /**
          *
@@ -14667,7 +14666,8 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <U> ExceptionalStream<U, SQLException> stream(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowMapper<U> rowMapper) throws SQLException;
+        <U> ExceptionalStream<U, SQLException> stream(Collection<String> selectPropNames, Condition cond, JdbcUtil.BiRowMapper<U> rowMapper)
+                throws SQLException;
 
         /**
          *
