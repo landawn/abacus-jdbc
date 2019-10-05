@@ -177,7 +177,7 @@ public final class JdbcUtil {
     private static final Logger logger = LoggerFactory.getLogger(JdbcUtil.class);
 
     /** The async executor. */
-    private static final AsyncExecutor asyncExecutor = new AsyncExecutor(Math.min(8, IOUtil.CPU_CORES), 64, 180L, TimeUnit.SECONDS);
+    private static final AsyncExecutor asyncExecutor = new AsyncExecutor(Math.max(8, IOUtil.CPU_CORES), Math.max(64, IOUtil.CPU_CORES), 180L, TimeUnit.SECONDS);
 
     /** The Constant CURRENT_DIR_PATH. */
     // ...
@@ -14101,6 +14101,28 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param <T>
+         * @param daoInterface
+         * @param ds
+         * @return
+         * @see SQLExecutor#createDao(Class)
+         */
+        static <T extends Dao> T newInstance(final Class<T> daoInterface, final javax.sql.DataSource ds) {
+            N.checkArgNotNull(daoInterface, "daoInterface");
+            N.checkArgNotNull(ds, "dataSource");
+
+            T dao = (T) daoPool.get(daoInterface);
+
+            if (dao == null) {
+                dao = JdbcUtil.newInstance(daoInterface, ds);
+                daoPool.put(daoInterface, dao);
+            }
+
+            return dao;
+        }
+
+        /**
+         *
          * @return
          */
         javax.sql.DataSource dataSource();
@@ -14281,28 +14303,6 @@ public final class JdbcUtil {
         default NamedQuery prepareNamedQuery(final NamedSQL namedSQL, final Try.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
                 throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedSQL, stmtCreator);
-        }
-
-        /**
-         *
-         * @param <T>
-         * @param daoInterface
-         * @param ds
-         * @return
-         * @see SQLExecutor#createDao(Class)
-         */
-        static <T extends Dao> T newInstance(final Class<T> daoInterface, final javax.sql.DataSource ds) {
-            N.checkArgNotNull(daoInterface, "daoInterface");
-            N.checkArgNotNull(ds, "dataSource");
-
-            T dao = (T) daoPool.get(daoInterface);
-
-            if (dao == null) {
-                dao = JdbcUtil.newInstance(daoInterface, ds);
-                daoPool.put(daoInterface, dao);
-            }
-
-            return dao;
         }
     }
 
@@ -14623,12 +14623,51 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <U> ExceptionalStream<U, SQLException> stream(Condition cond, JdbcUtil.BiRowMapper<U> rowMapper) throws SQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <U> ExceptionalStream<U, SQLException> stream(Condition cond, JdbcUtil.RowMapper<U> rowMapper) throws SQLException;
+
+        /**
+         *
          * @param selectPropNames
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
         ExceptionalStream<T, SQLException> stream(Collection<String> selectPropNames, Condition cond) throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <U> ExceptionalStream<U, SQLException> stream(Collection<String> selectPropNames, Condition cond, JdbcUtil.BiRowMapper<U> rowMapper)
+                throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <U> ExceptionalStream<U, SQLException> stream(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowMapper<U> rowMapper) throws SQLException;
 
         /**
          *
@@ -15290,11 +15329,35 @@ public final class JdbcUtil {
                             final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).stream(entityClass);
                         };
+                    } else if (m.getName().equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                            && paramTypes[1].equals(JdbcUtil.RowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).stream((JdbcUtil.RowMapper) args[1]);
+                        };
+                    } else if (m.getName().equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                            && paramTypes[1].equals(JdbcUtil.BiRowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).stream((JdbcUtil.BiRowMapper) args[1]);
+                        };
                     } else if (m.getName().equals("stream") && paramLen == 2 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).stream(entityClass);
+                        };
+                    } else if (m.getName().equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                            && paramTypes[2].equals(JdbcUtil.RowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).stream((JdbcUtil.RowMapper) args[2]);
+                        };
+                    } else if (m.getName().equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                            && paramTypes[2].equals(JdbcUtil.BiRowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).stream((JdbcUtil.BiRowMapper) args[2]);
                         };
                     } else if (m.getName().equals("update") && paramLen == 2 && Map.class.equals(paramTypes[0])
                             && Condition.class.isAssignableFrom(m.getParameterTypes()[1])) {
