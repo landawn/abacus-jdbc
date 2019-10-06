@@ -9208,7 +9208,6 @@ public final class JdbcUtil {
                         try (ResultSet rs = stmt.getResultSet()) {
                             result2 = Optional.of(resultExtrator2.apply(rs));
                         }
-
                     }
                 }
             } finally {
@@ -9252,14 +9251,12 @@ public final class JdbcUtil {
                         try (ResultSet rs = stmt.getResultSet()) {
                             result2 = Optional.of(resultExtrator2.apply(rs));
                         }
-
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
                             result3 = Optional.of(resultExtrator3.apply(rs));
                         }
-
                     }
                 }
             } finally {
@@ -9308,21 +9305,18 @@ public final class JdbcUtil {
                         try (ResultSet rs = stmt.getResultSet()) {
                             result2 = Optional.of(resultExtrator2.apply(rs));
                         }
-
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
                             result3 = Optional.of(resultExtrator3.apply(rs));
                         }
-
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
                             result4 = Optional.of(resultExtrator4.apply(rs));
                         }
-
                     }
                 }
             } finally {
@@ -9375,28 +9369,24 @@ public final class JdbcUtil {
                         try (ResultSet rs = stmt.getResultSet()) {
                             result2 = Optional.of(resultExtrator2.apply(rs));
                         }
-
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
                             result3 = Optional.of(resultExtrator3.apply(rs));
                         }
-
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
                             result4 = Optional.of(resultExtrator4.apply(rs));
                         }
-
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
                             result5 = Optional.of(resultExtrator5.apply(rs));
                         }
-
                     }
                 }
             } finally {
@@ -13123,7 +13113,7 @@ public final class JdbcUtil {
         /**
          *
          * @param rs
-         * @return
+         * @return generally should not return {@code null}.
          * @throws SQLException the SQL exception
          */
         @Override
@@ -13543,7 +13533,7 @@ public final class JdbcUtil {
          *
          * @param rs
          * @param columnLabels
-         * @return
+         * @return generally should not return {@code null}.
          * @throws SQLException the SQL exception
          */
         @Override
@@ -14403,6 +14393,22 @@ public final class JdbcUtil {
         Optional<T> findFirst(Condition cond) throws SQLException;
 
         /**
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> Optional<R> findFirst(Condition cond, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+
+        /**
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> Optional<R> findFirst(Condition cond, JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+
+        /**
          *
          * @param selectPropNames
          * @param cond
@@ -14410,6 +14416,26 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         Optional<T> findFirst(Collection<String> selectPropNames, Condition cond) throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> Optional<R> findFirst(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> Optional<R> findFirst(Collection<String> selectPropNames, Condition cond, JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -14426,7 +14452,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <U> List<U> list(Condition cond, JdbcUtil.RowMapper<U> rowMapper) throws SQLException;
+        <R> List<R> list(Condition cond, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -14435,7 +14461,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <U> List<U> list(Condition cond, JdbcUtil.BiRowMapper<U> rowMapper) throws SQLException;
+        <R> List<R> list(Condition cond, JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -14454,7 +14480,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <U> List<U> list(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowMapper<U> rowMapper) throws SQLException;
+        <R> List<R> list(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -14464,7 +14490,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <U> List<U> list(Collection<String> selectPropNames, Condition cond, JdbcUtil.BiRowMapper<U> rowMapper) throws SQLException;
+        <R> List<R> list(Collection<String> selectPropNames, Condition cond, JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -14666,7 +14692,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <U> ExceptionalStream<U, SQLException> stream(Condition cond, JdbcUtil.RowMapper<U> rowMapper) throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(Condition cond, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -14675,7 +14701,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <U> ExceptionalStream<U, SQLException> stream(Condition cond, JdbcUtil.BiRowMapper<U> rowMapper) throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(Condition cond, JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -14694,7 +14720,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <U> ExceptionalStream<U, SQLException> stream(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowMapper<U> rowMapper) throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -14704,7 +14730,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <U> ExceptionalStream<U, SQLException> stream(Collection<String> selectPropNames, Condition cond, JdbcUtil.BiRowMapper<U> rowMapper)
+        <R> ExceptionalStream<R, SQLException> stream(Collection<String> selectPropNames, Condition cond, JdbcUtil.BiRowMapper<R> rowMapper)
                 throws SQLException;
 
         /**
@@ -15239,11 +15265,35 @@ public final class JdbcUtil {
                             final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).findFirst(entityClass);
                         };
+                    } else if (m.getName().equals("findFirst") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                            && paramTypes[1].equals(JdbcUtil.RowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).findFirst((JdbcUtil.RowMapper) args[1]);
+                        };
+                    } else if (m.getName().equals("findFirst") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                            && paramTypes[1].equals(JdbcUtil.BiRowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).findFirst((JdbcUtil.BiRowMapper) args[1]);
+                        };
                     } else if (m.getName().equals("findFirst") && paramLen == 2 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).findFirst(entityClass);
+                        };
+                    } else if (m.getName().equals("findFirst") && paramLen == 3 && paramTypes[0].equals(Collection.class)
+                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(JdbcUtil.RowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).findFirst((JdbcUtil.RowMapper) args[2]);
+                        };
+                    } else if (m.getName().equals("findFirst") && paramLen == 3 && paramTypes[0].equals(Collection.class)
+                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(JdbcUtil.BiRowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).findFirst((JdbcUtil.BiRowMapper) args[2]);
                         };
                     } else if (m.getName().equals("list") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
