@@ -14421,12 +14421,50 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <U> List<U> list(Condition cond, JdbcUtil.RowMapper<U> rowMapper) throws SQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <U> List<U> list(Condition cond, JdbcUtil.BiRowMapper<U> rowMapper) throws SQLException;
+
+        /**
+         *
          * @param selectPropNames
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
         List<T> list(Collection<String> selectPropNames, Condition cond) throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <U> List<U> list(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowMapper<U> rowMapper) throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <U> List<U> list(Collection<String> selectPropNames, Condition cond, JdbcUtil.BiRowMapper<U> rowMapper) throws SQLException;
 
         /**
          *
@@ -15212,10 +15250,34 @@ public final class JdbcUtil {
                             final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).list(entityClass);
                         };
+                    } else if (m.getName().equals("list") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                            && paramTypes[1].equals(JdbcUtil.RowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).list((JdbcUtil.RowMapper) args[1]);
+                        };
+                    } else if (m.getName().equals("list") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                            && paramTypes[1].equals(JdbcUtil.BiRowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).list((JdbcUtil.BiRowMapper) args[1]);
+                        };
                     } else if (m.getName().equals("list") && paramLen == 2 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).list(entityClass);
+                        };
+                    } else if (m.getName().equals("list") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                            && paramTypes[2].equals(JdbcUtil.RowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).list((JdbcUtil.RowMapper) args[2]);
+                        };
+                    } else if (m.getName().equals("list") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                            && paramTypes[2].equals(JdbcUtil.BiRowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).list((JdbcUtil.BiRowMapper) args[2]);
                         };
                     } else if (m.getName().equals("query") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
@@ -15642,7 +15704,7 @@ public final class JdbcUtil {
                             final Object entity = N.firstNonNull(entities).get();
                             final String sql = namedUpdateFunc.apply(entityClass).set(entity, idPropNameSet).where(CF.eq(idPropName)).sql();
                             final NamedSQL namedSQL = NamedSQL.parse(sql);
-                            int result = 0;
+                            long result = 0;
 
                             if (entities.size() <= batchSize) {
                                 result = N.sum(proxy.prepareNamedQuery(namedSQL).addBatchParameters(entities).batchUpdate());
@@ -15651,7 +15713,7 @@ public final class JdbcUtil {
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedSQL).closeAfterExecution(false)) {
-                                        result = (int) ExceptionalStream.of(entities)
+                                        result = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize) //
                                                 .sumInt(bp -> N.sum(proxy.prepareNamedQuery(namedSQL).addBatchParameters(bp).batchUpdate()))
                                                 .orZero();
@@ -15671,7 +15733,7 @@ public final class JdbcUtil {
                                 }
                             }
 
-                            return result;
+                            return N.toIntExact(result);
                         };
                     } else if (m.getName().equals("batchUpdate") && paramLen == 3 && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
@@ -15688,7 +15750,7 @@ public final class JdbcUtil {
 
                             final String sql = namedUpdateFunc.apply(entityClass).set(propNamesToUpdate).where(CF.eq(idPropName)).sql();
                             final NamedSQL namedSQL = NamedSQL.parse(sql);
-                            int result = 0;
+                            long result = 0;
 
                             if (entities.size() <= batchSize) {
                                 result = N.sum(proxy.prepareNamedQuery(namedSQL).addBatchParameters(entities).batchUpdate());
@@ -15697,7 +15759,7 @@ public final class JdbcUtil {
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedSQL).closeAfterExecution(false)) {
-                                        result = (int) ExceptionalStream.of(entities)
+                                        result = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize) //
                                                 .sumInt(bp -> N.sum(proxy.prepareNamedQuery(namedSQL).addBatchParameters(bp).batchUpdate()))
                                                 .orZero();
@@ -15715,7 +15777,7 @@ public final class JdbcUtil {
                                 }
                             }
 
-                            return result;
+                            return N.toIntExact(result);
                         };
                     } else if (m.getName().equals("deleteById")) {
                         final String query = sql_deleteById;
@@ -15741,11 +15803,11 @@ public final class JdbcUtil {
                                         .batchUpdate());
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
-                                int result = 0;
+                                long result = 0;
 
                                 try {
                                     try (PreparedQuery preparedQuery = proxy.prepareQuery(query).closeAfterExecution(false)) {
-                                        result = (int) ExceptionalStream.of(entities)
+                                        result = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize)
                                                 .sumInt(bp -> N.sum(
                                                         preparedQuery.addBatchParameters(bp, (q, e) -> q.setObject(1, ClassUtil.getPropValue(e, idPropName)))
@@ -15758,7 +15820,7 @@ public final class JdbcUtil {
                                     tran.rollbackIfNotCommitted();
                                 }
 
-                                return (int) result;
+                                return N.toIntExact(result);
                             }
                         };
                     } else {
