@@ -1,5 +1,6 @@
 ### 1.9.4
 
+* Add `Dao.findFirst/list/stream(..., rowMapper)`.
 * Improvements and bug fix.
 
 

@@ -15028,7 +15028,7 @@ public final class JdbcUtil {
                 .filter(m -> !Modifier.isStatic(m.getModifiers()))
                 .toList();
 
-        final Class<?> entityClass = N.isNullOrEmpty(typeArguments) ? null : (Class) typeArguments[0];
+        final Class<T> entityClass = N.isNullOrEmpty(typeArguments) ? null : (Class) typeArguments[0];
 
         final Class<?> sbc = N.isNullOrEmpty(typeArguments) ? null
                 : (typeArguments.length >= 2 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[1]) ? (Class) typeArguments[1]
@@ -15439,37 +15439,169 @@ public final class JdbcUtil {
                     } else if (m.getName().equals("stream") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).stream(entityClass);
+
+                            final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
+                                    .of(new Try.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
+                                        private ExceptionalIterator<T, SQLException> internalIter;
+
+                                        @Override
+                                        public ExceptionalIterator<T, SQLException> get() throws SQLException {
+                                            if (internalIter == null) {
+                                                internalIter = proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).stream(entityClass).iterator();
+                                            }
+
+                                            return internalIter;
+                                        }
+                                    });
+
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                                @Override
+                                public void run() throws SQLException {
+                                    lazyIter.close();
+                                }
+                            });
                         };
                     } else if (m.getName().equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).stream((JdbcUtil.RowMapper) args[1]);
+
+                            final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
+                                    .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
+                                        private ExceptionalIterator<Object, SQLException> internalIter;
+
+                                        @Override
+                                        public ExceptionalIterator<Object, SQLException> get() throws SQLException {
+                                            if (internalIter == null) {
+                                                internalIter = proxy.prepareQuery(sp.sql)
+                                                        .setParameters(1, sp.parameters)
+                                                        .stream((JdbcUtil.RowMapper) args[1])
+                                                        .iterator();
+                                            }
+
+                                            return internalIter;
+                                        }
+                                    });
+
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                                @Override
+                                public void run() throws SQLException {
+                                    lazyIter.close();
+                                }
+                            });
                         };
                     } else if (m.getName().equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).stream((JdbcUtil.BiRowMapper) args[1]);
+
+                            final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
+                                    .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
+                                        private ExceptionalIterator<Object, SQLException> internalIter;
+
+                                        @Override
+                                        public ExceptionalIterator<Object, SQLException> get() throws SQLException {
+                                            if (internalIter == null) {
+                                                internalIter = proxy.prepareQuery(sp.sql)
+                                                        .setParameters(1, sp.parameters)
+                                                        .stream((JdbcUtil.BiRowMapper) args[1])
+                                                        .iterator();
+                                            }
+
+                                            return internalIter;
+                                        }
+                                    });
+
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                                @Override
+                                public void run() throws SQLException {
+                                    lazyIter.close();
+                                }
+                            });
                         };
                     } else if (m.getName().equals("stream") && paramLen == 2 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).stream(entityClass);
+
+                            final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
+                                    .of(new Try.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
+                                        private ExceptionalIterator<T, SQLException> internalIter;
+
+                                        @Override
+                                        public ExceptionalIterator<T, SQLException> get() throws SQLException {
+                                            if (internalIter == null) {
+                                                internalIter = proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).stream(entityClass).iterator();
+                                            }
+
+                                            return internalIter;
+                                        }
+                                    });
+
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                                @Override
+                                public void run() throws SQLException {
+                                    lazyIter.close();
+                                }
+                            });
                         };
                     } else if (m.getName().equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).stream((JdbcUtil.RowMapper) args[2]);
+
+                            final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
+                                    .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
+                                        private ExceptionalIterator<Object, SQLException> internalIter;
+
+                                        @Override
+                                        public ExceptionalIterator<Object, SQLException> get() throws SQLException {
+                                            if (internalIter == null) {
+                                                internalIter = proxy.prepareQuery(sp.sql)
+                                                        .setParameters(1, sp.parameters)
+                                                        .stream((JdbcUtil.RowMapper) args[2])
+                                                        .iterator();
+                                            }
+
+                                            return internalIter;
+                                        }
+                                    });
+
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                                @Override
+                                public void run() throws SQLException {
+                                    lazyIter.close();
+                                }
+                            });
                         };
                     } else if (m.getName().equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(1, sp.parameters).stream((JdbcUtil.BiRowMapper) args[2]);
+
+                            final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
+                                    .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
+                                        private ExceptionalIterator<Object, SQLException> internalIter;
+
+                                        @Override
+                                        public ExceptionalIterator<Object, SQLException> get() throws SQLException {
+                                            if (internalIter == null) {
+                                                internalIter = proxy.prepareQuery(sp.sql)
+                                                        .setParameters(1, sp.parameters)
+                                                        .stream((JdbcUtil.BiRowMapper) args[2])
+                                                        .iterator();
+                                            }
+
+                                            return internalIter;
+                                        }
+                                    });
+
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                                @Override
+                                public void run() throws SQLException {
+                                    lazyIter.close();
+                                }
+                            });
                         };
                     } else if (m.getName().equals("update") && paramLen == 2 && Map.class.equals(paramTypes[0])
                             && Condition.class.isAssignableFrom(m.getParameterTypes()[1])) {
