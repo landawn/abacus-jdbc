@@ -14822,7 +14822,9 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        Optional<T> get(ID id) throws SQLException;
+        default Optional<T> get(ID id) throws SQLException {
+            return get(null, id);
+        }
 
         /**
          *
@@ -14840,7 +14842,9 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        T gett(ID id) throws SQLException;
+        default T gett(ID id) throws SQLException {
+            return get(id).orNull();
+        }
 
         /**
          * Gets the t.
@@ -14850,7 +14854,42 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        T gett(Collection<String> selectPropNames, ID id) throws SQLException;
+        default T gett(Collection<String> selectPropNames, ID id) throws SQLException {
+            return get(selectPropNames, id).orNull();
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default List<T> batchGet(final Collection<ID> ids) throws SQLException {
+            return batchGet(ids, (Collection<String>) null);
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @param selectPropNames
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default List<T> batchGet(final Collection<ID> ids, final Collection<String> selectPropNames) throws SQLException {
+            return batchGet(ids, selectPropNames, JdbcSettings.DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         *
+         * @param ids
+         * @param selectPropNames
+         * @param batchSize
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        List<T> batchGet(final Collection<ID> ids, final Collection<String> selectPropNames, final int batchSize) throws SQLException;
 
         /**
          *
@@ -15034,17 +15073,18 @@ public final class JdbcUtil {
                 : (typeArguments.length >= 2 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[1]) ? (Class) typeArguments[1]
                         : (typeArguments.length >= 3 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[2]) ? (Class) typeArguments[2] : null));
 
+        final Function<Class<?>, SQLBuilder> parameterizedSelectFromFunc = sbc == null ? null
+                : (sbc.equals(PSC.class) ? clazz -> PSC.selectFrom(clazz)
+                        : (sbc.equals(PAC.class) ? clazz -> PAC.selectFrom(clazz) : clazz -> PLC.selectFrom(clazz)));
+
         final Function<String, SQLBuilder> parameterizedSelectFunc = sbc == null ? null
                 : (sbc.equals(PSC.class) ? selectPropName -> PSC.select(selectPropName)
                         : (sbc.equals(PAC.class) ? selectPropName -> PAC.select(selectPropName) : selectPropName -> PLC.select(selectPropName)));
 
         final Function<Collection<String>, SQLBuilder> parameterizedSelectFunc2 = sbc == null ? null
-                : (sbc.equals(PSC.class) ? selectPropNames -> PSC.select(selectPropNames)
-                        : (sbc.equals(PAC.class) ? selectPropNames -> PAC.select(selectPropNames) : selectPropNames -> PLC.select(selectPropNames)));
-
-        final Function<Class<?>, SQLBuilder> parameterizedSelectFromFunc = sbc == null ? null
-                : (sbc.equals(PSC.class) ? clazz -> PSC.selectFrom(clazz)
-                        : (sbc.equals(PAC.class) ? clazz -> PAC.selectFrom(clazz) : clazz -> PLC.selectFrom(clazz)));
+                : (sbc.equals(PSC.class) ? (selectPropNames -> N.isNullOrEmpty(selectPropNames) ? PSC.select(entityClass) : PSC.select(selectPropNames))
+                        : (sbc.equals(PAC.class) ? (selectPropNames -> N.isNullOrEmpty(selectPropNames) ? PAC.select(entityClass) : PAC.select(selectPropNames))
+                                : selectPropNames -> (N.isNullOrEmpty(selectPropNames) ? PLC.select(entityClass) : PLC.select(selectPropNames))));
 
         final Function<Class<?>, SQLBuilder> parameterizedUpdateFunc = sbc == null ? null
                 : (sbc.equals(PSC.class) ? clazz -> PSC.update(clazz) : (sbc.equals(PAC.class) ? clazz -> PAC.update(clazz) : clazz -> PLC.update(clazz)));
@@ -15813,16 +15853,88 @@ public final class JdbcUtil {
                                     .setObject(1, args[1])
                                     .get(entityClass);
                         }
-                    } else if (m.getName().equals("gett")) {
-                        if (paramLen == 1) {
-                            final String query = sql_getById;
-                            call = (proxy, args) -> proxy.prepareQuery(query).setObject(1, args[0]).gett(entityClass);
-                        } else {
-                            call = (proxy, args) -> proxy
-                                    .prepareQuery(parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where(CF.eq(idPropName)).sql())
-                                    .setObject(1, args[1])
-                                    .gett(entityClass);
-                        }
+                    } else if (m.getName().equals("batchGet") && paramLen == 3 && Collection.class.equals(paramTypes[0])
+                            && Collection.class.equals(paramTypes[1]) && int.class.equals(paramTypes[2])) {
+                        call = (proxy, args) -> {
+                            final Collection<Object> ids = (Collection<Object>) args[0];
+                            final Collection<String> selectPropNames = (Collection<String>) args[1];
+                            final int batchSize = (Integer) args[2];
+
+                            N.checkArgPositive(batchSize, "batchSize");
+
+                            if (N.isNullOrEmpty(ids)) {
+                                return new ArrayList<>();
+                            }
+
+                            final Object firstId = N.first(ids).get();
+                            final boolean isMap = firstId instanceof Map;
+                            final boolean isEntity = firstId != null && ClassUtil.isEntity(firstId.getClass());
+                            final boolean isEntityId = firstId instanceof EntityId;
+
+                            N.checkArgument(idPropNames.size() > 1 || !(isEntity || isMap || isEntityId),
+                                    "Input 'ids' can not be EntityIds/Maps or entities for single id ");
+
+                            final List idList = ids instanceof List ? (List) ids : new ArrayList(ids);
+                            final List<T> entities = new ArrayList<>(idList.size());
+
+                            if (idPropNames.size() == 1) {
+                                String sql = parameterizedSelectFunc2.apply(selectPropNames).from(entityClass).where(CF.eq(idPropName)).sql();
+                                sql = sql.substring(0, sql.lastIndexOf('=')) + "IN ";
+
+                                if (ids.size() >= batchSize) {
+                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer(true);
+
+                                    for (int i = 0; i < batchSize; i++) {
+                                        joiner.append('?');
+                                    }
+
+                                    String inSQL = sql + joiner.toString();
+
+                                    for (int i = 0, to = ids.size() - batchSize; i <= to; i += batchSize) {
+                                        entities.addAll(proxy.prepareQuery(inSQL).setParameters(1, idList.subList(i, i + batchSize)).list(entityClass));
+                                    }
+                                }
+
+                                if (ids.size() % batchSize != 0) {
+                                    final int remaining = ids.size() % batchSize;
+                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer(true);
+
+                                    for (int i = 0; i < remaining; i++) {
+                                        joiner.append('?');
+                                    }
+
+                                    String inSQL = sql + joiner.toString();
+                                    entities.addAll(
+                                            proxy.prepareQuery(inSQL).setParameters(1, idList.subList(ids.size() - remaining, ids.size())).list(entityClass));
+                                }
+                            } else {
+                                if (ids.size() >= batchSize) {
+                                    for (int i = 0, to = ids.size() - batchSize; i <= to; i += batchSize) {
+                                        if (isMap) {
+                                            entities.addAll(((BasicDao) proxy).list(CF.eqAndOr(idList.subList(i, i + batchSize))));
+                                        } else if (isEntityId) {
+                                            entities.addAll(((BasicDao) proxy).list(CF.id2Cond(idList.subList(i, i + batchSize))));
+                                        } else {
+                                            entities.addAll(((BasicDao) proxy).list(CF.eqAndOr(idList.subList(i, i + batchSize), idPropNames)));
+                                        }
+                                    }
+                                }
+
+                                if (ids.size() % batchSize != 0) {
+                                    final int remaining = ids.size() % batchSize;
+
+                                    if (isMap) {
+                                        entities.addAll(((BasicDao) proxy).list(CF.eqAndOr(idList.subList(ids.size() - remaining, ids.size()))));
+                                    } else if (isEntityId) {
+                                        entities.addAll(((BasicDao) proxy).list(CF.id2Cond(idList.subList(idList.size() - remaining, ids.size()))));
+                                    } else {
+                                        entities.addAll(((BasicDao) proxy).list(CF.eqAndOr(idList.subList(ids.size() - remaining, ids.size()), idPropNames)));
+                                    }
+                                }
+                            }
+
+                            return entities;
+                        };
                     } else if (m.getName().equals("exists") && paramLen == 1 && !Condition.class.isAssignableFrom(paramTypes[0])) {
                         final String query = sql_existsById;
                         call = (proxy, args) -> proxy.prepareQuery(query).setObject(1, args[0]).exists();

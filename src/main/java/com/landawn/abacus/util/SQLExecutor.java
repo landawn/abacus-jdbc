@@ -6281,8 +6281,11 @@ public class SQLExecutor {
             }
 
             final ID firstId = N.first(ids).get();
+            final boolean isMap = firstId instanceof Map;
+            final boolean isEntity = firstId != null && ClassUtil.isEntity(firstId.getClass());
+            final boolean isEntityId = firstId instanceof EntityId;
 
-            N.checkArgument(idPropNameList.size() > 1 || !(isEntity(firstId) || firstId instanceof Map || firstId instanceof EntityId),
+            N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId),
                     "Input 'ids' can not be EntityIds/Maps or entities for single id ");
 
             final List<ID> idList = ids instanceof List ? (List<ID>) ids : new ArrayList<>(ids);
@@ -6317,11 +6320,7 @@ public class SQLExecutor {
                     String inSQL = sql + joiner.toString();
                     entities.addAll(sqlExecutor.list(targetClass, conn, inSQL, null, null, idList.subList(ids.size() - remaining, ids.size()).toArray()));
                 }
-
             } else {
-                final boolean isMap = firstId instanceof Map;
-                final boolean isEntityId = firstId instanceof EntityId;
-
                 if (ids.size() >= batchSize) {
                     for (int i = 0, to = ids.size() - batchSize; i <= to; i += batchSize) {
                         if (isMap) {
@@ -8870,16 +8869,6 @@ public class SQLExecutor {
             final JdbcSettings jdbcSettings = JdbcSettings.create().setBatchSize(batchSize).setIsolationLevel(isolationLevel);
 
             return sqlExecutor.batchUpdate(conn, sql_delete_by_id, jdbcSettings, listOfIds);
-        }
-
-        /**
-         * Checks if is entity.
-         *
-         * @param obj
-         * @return true, if is entity
-         */
-        private boolean isEntity(Object obj) {
-            return obj != null && ClassUtil.isEntity(obj.getClass());
         }
 
         /**
