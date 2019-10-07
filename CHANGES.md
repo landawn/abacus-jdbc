@@ -1,3 +1,9 @@
+### 1.9.5
+
+* Add `Dao.batchGet`.
+* Improvements and bug fix.
+
+
 ### 1.9.4
 
 * Add `Dao.findFirst/list/stream(..., rowMapper)`.
