@@ -6238,7 +6238,7 @@ public class SQLExecutor {
          * @param ids
          * @return
          */
-        public List<T> batchGet(final List<ID> ids) {
+        public List<T> batchGet(final Collection<ID> ids) {
             return batchGet(ids, (Collection<String>) null);
         }
 
@@ -6249,7 +6249,7 @@ public class SQLExecutor {
          * @param selectPropNames
          * @return
          */
-        public List<T> batchGet(final List<ID> ids, final Collection<String> selectPropNames) {
+        public List<T> batchGet(final Collection<ID> ids, final Collection<String> selectPropNames) {
             return batchGet(ids, selectPropNames, JdbcSettings.DEFAULT_BATCH_SIZE);
         }
 
@@ -6260,7 +6260,7 @@ public class SQLExecutor {
          * @param batchSize
          * @return
          */
-        public List<T> batchGet(final List<ID> ids, final Collection<String> selectPropNames, final int batchSize) {
+        public List<T> batchGet(final Collection<ID> ids, final Collection<String> selectPropNames, final int batchSize) {
             return batchGet(null, ids, selectPropNames, batchSize);
         }
 
@@ -6273,17 +6273,20 @@ public class SQLExecutor {
          * @param batchSize
          * @return
          */
-        public List<T> batchGet(final Connection conn, final List<ID> ids, final Collection<String> selectPropNames, final int batchSize) {
+        public List<T> batchGet(final Connection conn, final Collection<ID> ids, final Collection<String> selectPropNames, final int batchSize) {
             N.checkArgPositive(batchSize, "batchSize");
 
             if (N.isNullOrEmpty(ids)) {
                 return new ArrayList<>();
             }
 
-            N.checkArgument(idPropNameList.size() > 1 || !(isEntity(ids.get(0)) || ids.get(0) instanceof Map || ids.get(0) instanceof EntityId),
+            final ID firstId = N.first(ids).get();
+
+            N.checkArgument(idPropNameList.size() > 1 || !(isEntity(firstId) || firstId instanceof Map || firstId instanceof EntityId),
                     "Input 'ids' can not be EntityIds/Maps or entities for single id ");
 
-            final List<T> entities = new ArrayList<>(ids.size());
+            final List<ID> idList = ids instanceof List ? (List<ID>) ids : new ArrayList<>(ids);
+            final List<T> entities = new ArrayList<>(idList.size());
 
             if (idPropNameList.size() == 1) {
                 String sql = prepareQuery(selectPropNames, idCond).sql;
@@ -6299,7 +6302,7 @@ public class SQLExecutor {
                     String inSQL = sql + joiner.toString();
 
                     for (int i = 0, to = ids.size() - batchSize; i <= to; i += batchSize) {
-                        entities.addAll(sqlExecutor.list(targetClass, conn, inSQL, null, null, ids.subList(i, i + batchSize).toArray()));
+                        entities.addAll(sqlExecutor.list(targetClass, conn, inSQL, null, null, idList.subList(i, i + batchSize).toArray()));
                     }
                 }
 
@@ -6312,21 +6315,21 @@ public class SQLExecutor {
                     }
 
                     String inSQL = sql + joiner.toString();
-                    entities.addAll(sqlExecutor.list(targetClass, conn, inSQL, null, null, ids.subList(ids.size() - remaining, ids.size()).toArray()));
+                    entities.addAll(sqlExecutor.list(targetClass, conn, inSQL, null, null, idList.subList(ids.size() - remaining, ids.size()).toArray()));
                 }
 
             } else {
-                final boolean isMap = ids.get(0) instanceof Map;
-                final boolean isEntityId = ids.get(0) instanceof EntityId;
+                final boolean isMap = firstId instanceof Map;
+                final boolean isEntityId = firstId instanceof EntityId;
 
                 if (ids.size() >= batchSize) {
                     for (int i = 0, to = ids.size() - batchSize; i <= to; i += batchSize) {
                         if (isMap) {
-                            entities.addAll(list(CF.eqAndOr((List<Map<String, ?>>) ids.subList(i, i + batchSize))));
+                            entities.addAll(list(CF.eqAndOr((List<Map<String, ?>>) idList.subList(i, i + batchSize))));
                         } else if (isEntityId) {
-                            entities.addAll(list(CF.id2Cond((List<EntityId>) ids.subList(i, i + batchSize))));
+                            entities.addAll(list(CF.id2Cond((List<EntityId>) idList.subList(i, i + batchSize))));
                         } else {
-                            entities.addAll(list(CF.eqAndOr(ids.subList(i, i + batchSize), idPropNameList)));
+                            entities.addAll(list(CF.eqAndOr(idList.subList(i, i + batchSize), idPropNameList)));
                         }
                     }
                 }
@@ -6335,11 +6338,11 @@ public class SQLExecutor {
                     final int remaining = ids.size() % batchSize;
 
                     if (isMap) {
-                        entities.addAll(list(CF.eqAndOr((List<Map<String, ?>>) ids.subList(ids.size() - remaining, ids.size()))));
+                        entities.addAll(list(CF.eqAndOr((List<Map<String, ?>>) idList.subList(ids.size() - remaining, ids.size()))));
                     } else if (isEntityId) {
-                        entities.addAll(list(CF.id2Cond((List<EntityId>) ids.subList(ids.size() - remaining, ids.size()))));
+                        entities.addAll(list(CF.id2Cond((List<EntityId>) idList.subList(idList.size() - remaining, ids.size()))));
                     } else {
-                        entities.addAll(list(CF.eqAndOr(ids.subList(ids.size() - remaining, ids.size()), idPropNameList)));
+                        entities.addAll(list(CF.eqAndOr(idList.subList(ids.size() - remaining, ids.size()), idPropNameList)));
                     }
                 }
             }
@@ -9165,7 +9168,7 @@ public class SQLExecutor {
          * @param ids
          * @return
          */
-        public ContinuableFuture<List<T>> batchGet(final List<ID> ids) {
+        public ContinuableFuture<List<T>> batchGet(final Collection<ID> ids) {
             return asyncExecutor.execute(new Callable<List<T>>() {
                 @Override
                 public List<T> call() throws Exception {
@@ -9197,7 +9200,7 @@ public class SQLExecutor {
          * @param selectPropNames
          * @return
          */
-        public ContinuableFuture<List<T>> batchGet(final List<ID> ids, final Collection<String> selectPropNames) {
+        public ContinuableFuture<List<T>> batchGet(final Collection<ID> ids, final Collection<String> selectPropNames) {
             return asyncExecutor.execute(new Callable<List<T>>() {
                 @Override
                 public List<T> call() throws Exception {
@@ -9213,7 +9216,7 @@ public class SQLExecutor {
          * @param batchSize
          * @return
          */
-        public ContinuableFuture<List<T>> batchGet(final List<ID> ids, final Collection<String> selectPropNames, final int batchSize) {
+        public ContinuableFuture<List<T>> batchGet(final Collection<ID> ids, final Collection<String> selectPropNames, final int batchSize) {
             return asyncExecutor.execute(new Callable<List<T>>() {
                 @Override
                 public List<T> call() throws Exception {
@@ -9230,7 +9233,8 @@ public class SQLExecutor {
          * @param batchSize
          * @return
          */
-        public ContinuableFuture<List<T>> batchGet(final Connection conn, final List<ID> ids, final Collection<String> selectPropNames, final int batchSize) {
+        public ContinuableFuture<List<T>> batchGet(final Connection conn, final Collection<ID> ids, final Collection<String> selectPropNames,
+                final int batchSize) {
             return asyncExecutor.execute(new Callable<List<T>>() {
                 @Override
                 public List<T> call() throws Exception {
