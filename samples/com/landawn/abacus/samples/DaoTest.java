@@ -1,6 +1,7 @@
 package com.landawn.abacus.samples;
 
 import static com.landawn.abacus.samples.Jdbc.userDao;
+import static org.junit.Assert.assertEquals;
 
 import java.sql.SQLException;
 
@@ -39,6 +40,39 @@ public class DaoTest {
         }
 
         userDao.updateFirstAndLastName("Tom", "Hanks", 100);
+
+        userDao.allUsers().map(e -> e.getFirstName() + " " + e.getLastName()).forEach(Fn.println());
+
+        userDao.deleteById(100L);
+    }
+
+    @Test
+    public void test_batchDelete() throws SQLException {
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.insertWithId(user);
+
+        User userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+
+        assertEquals(1, userDao.batchDeleteByIds(N.repeat(100L, 1)));
+        assertEquals(0, userDao.batchDeleteByIds(N.repeat(100L, 99)));
+        assertEquals(0, userDao.batchDeleteByIds(N.repeat(100L, 199)));
+        assertEquals(0, userDao.batchDeleteByIds(N.repeat(100L, 299)));
+        assertEquals(0, userDao.batchDeleteByIds(N.repeat(100L, 399)));
+        assertEquals(0, userDao.batchDeleteByIds(N.repeat(100L, 999)));
+
+        user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.insertWithId(user);
+
+        userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+
+        assertEquals(1, userDao.batchDelete(N.repeat(userFromDB, 1)));
+        assertEquals(0, userDao.batchDelete(N.repeat(userFromDB, 99)));
+        assertEquals(0, userDao.batchDelete(N.repeat(userFromDB, 199)));
+        assertEquals(0, userDao.batchDelete(N.repeat(userFromDB, 299)));
+        assertEquals(0, userDao.batchDelete(N.repeat(userFromDB, 399)));
+        assertEquals(0, userDao.batchDelete(N.repeat(userFromDB, 999)));
 
         userDao.allUsers().map(e -> e.getFirstName() + " " + e.getLastName()).forEach(Fn.println());
 

@@ -16,6 +16,7 @@ A general persistent library built on JDBC. It's easy to learn and simple to use
 [Mapper](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/Mapper_view.html), 
 [SQLBuilder](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/SQLBuilder_view.html), 
 [DynamicSQLBuilder](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/DynamicSQLBuilder_view.html),
+[SQLMapper](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/SQLMapper_view.html),
 [ConditionFactory(CF)](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/ConditionFactory_view.html)...
 
 

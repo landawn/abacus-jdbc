@@ -6238,7 +6238,7 @@ public class SQLExecutor {
          * @param ids
          * @return
          */
-        public List<T> batchGet(final Collection<ID> ids) {
+        public List<T> batchGet(final Collection<? extends ID> ids) {
             return batchGet(ids, (Collection<String>) null);
         }
 
@@ -6249,7 +6249,7 @@ public class SQLExecutor {
          * @param selectPropNames
          * @return
          */
-        public List<T> batchGet(final Collection<ID> ids, final Collection<String> selectPropNames) {
+        public List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) {
             return batchGet(ids, selectPropNames, JdbcSettings.DEFAULT_BATCH_SIZE);
         }
 
@@ -6260,7 +6260,7 @@ public class SQLExecutor {
          * @param batchSize
          * @return
          */
-        public List<T> batchGet(final Collection<ID> ids, final Collection<String> selectPropNames, final int batchSize) {
+        public List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) {
             return batchGet(null, ids, selectPropNames, batchSize);
         }
 
@@ -6273,7 +6273,7 @@ public class SQLExecutor {
          * @param batchSize
          * @return
          */
-        public List<T> batchGet(final Connection conn, final Collection<ID> ids, final Collection<String> selectPropNames, final int batchSize) {
+        public List<T> batchGet(final Connection conn, final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) {
             N.checkArgPositive(batchSize, "batchSize");
 
             if (N.isNullOrEmpty(ids)) {
@@ -8798,7 +8798,7 @@ public class SQLExecutor {
          * @param ids
          * @return
          */
-        public int batchDeleteByIds(final Collection<ID> ids) {
+        public int batchDeleteByIds(final Collection<? extends ID> ids) {
             return batchDeleteByIds(ids, JdbcSettings.DEFAULT_BATCH_SIZE);
         }
 
@@ -8809,7 +8809,7 @@ public class SQLExecutor {
          * @param batchSize Default value is 200.
          * @return
          */
-        public int batchDeleteByIds(final Collection<ID> ids, final int batchSize) {
+        public int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) {
             return batchDeleteByIds(ids, batchSize, IsolationLevel.DEFAULT);
         }
 
@@ -8821,7 +8821,7 @@ public class SQLExecutor {
          * @param isolationLevel
          * @return
          */
-        public int batchDeleteByIds(final Collection<ID> ids, final int batchSize, final IsolationLevel isolationLevel) {
+        public int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize, final IsolationLevel isolationLevel) {
             return batchDeleteByIds(null, ids, batchSize, isolationLevel);
         }
 
@@ -8832,7 +8832,7 @@ public class SQLExecutor {
          * @param ids
          * @return
          */
-        public int batchDeleteByIds(final Connection conn, final Collection<ID> ids) {
+        public int batchDeleteByIds(final Connection conn, final Collection<? extends ID> ids) {
             return batchDeleteByIds(conn, ids, JdbcSettings.DEFAULT_BATCH_SIZE);
         }
 
@@ -8844,7 +8844,7 @@ public class SQLExecutor {
          * @param batchSize
          * @return
          */
-        public int batchDeleteByIds(final Connection conn, final Collection<ID> ids, final int batchSize) {
+        public int batchDeleteByIds(final Connection conn, final Collection<? extends ID> ids, final int batchSize) {
             return batchDeleteByIds(conn, ids, batchSize, IsolationLevel.DEFAULT);
         }
 
@@ -8857,7 +8857,7 @@ public class SQLExecutor {
          * @param isolationLevel
          * @return
          */
-        private int batchDeleteByIds(final Connection conn, final Collection<ID> ids, final int batchSize, final IsolationLevel isolationLevel) {
+        private int batchDeleteByIds(final Connection conn, final Collection<? extends ID> ids, final int batchSize, final IsolationLevel isolationLevel) {
             N.checkArgPositive(batchSize, "batchSize");
 
             if (N.isNullOrEmpty(ids)) {
@@ -9157,7 +9157,7 @@ public class SQLExecutor {
          * @param ids
          * @return
          */
-        public ContinuableFuture<List<T>> batchGet(final Collection<ID> ids) {
+        public ContinuableFuture<List<T>> batchGet(final Collection<? extends ID> ids) {
             return asyncExecutor.execute(new Callable<List<T>>() {
                 @Override
                 public List<T> call() throws Exception {
@@ -9189,7 +9189,7 @@ public class SQLExecutor {
          * @param selectPropNames
          * @return
          */
-        public ContinuableFuture<List<T>> batchGet(final Collection<ID> ids, final Collection<String> selectPropNames) {
+        public ContinuableFuture<List<T>> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) {
             return asyncExecutor.execute(new Callable<List<T>>() {
                 @Override
                 public List<T> call() throws Exception {
@@ -9205,7 +9205,7 @@ public class SQLExecutor {
          * @param batchSize
          * @return
          */
-        public ContinuableFuture<List<T>> batchGet(final Collection<ID> ids, final Collection<String> selectPropNames, final int batchSize) {
+        public ContinuableFuture<List<T>> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) {
             return asyncExecutor.execute(new Callable<List<T>>() {
                 @Override
                 public List<T> call() throws Exception {
@@ -9222,7 +9222,7 @@ public class SQLExecutor {
          * @param batchSize
          * @return
          */
-        public ContinuableFuture<List<T>> batchGet(final Connection conn, final Collection<ID> ids, final Collection<String> selectPropNames,
+        public ContinuableFuture<List<T>> batchGet(final Connection conn, final Collection<? extends ID> ids, final Collection<String> selectPropNames,
                 final int batchSize) {
             return asyncExecutor.execute(new Callable<List<T>>() {
                 @Override
@@ -11785,7 +11785,7 @@ public class SQLExecutor {
          * @param ids
          * @return
          */
-        public ContinuableFuture<Integer> batchDeleteByIds(final Collection<ID> ids) {
+        public ContinuableFuture<Integer> batchDeleteByIds(final Collection<? extends ID> ids) {
             return asyncExecutor.execute(new Callable<Integer>() {
                 @Override
                 public Integer call() throws Exception {
@@ -11801,7 +11801,7 @@ public class SQLExecutor {
          * @param batchSize
          * @return
          */
-        public ContinuableFuture<Integer> batchDeleteByIds(final Collection<ID> ids, final int batchSize) {
+        public ContinuableFuture<Integer> batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) {
             return asyncExecutor.execute(new Callable<Integer>() {
                 @Override
                 public Integer call() throws Exception {
@@ -11818,7 +11818,7 @@ public class SQLExecutor {
          * @param isolationLevel
          * @return
          */
-        public ContinuableFuture<Integer> batchDeleteByIds(final Collection<ID> ids, final int batchSize, final IsolationLevel isolationLevel) {
+        public ContinuableFuture<Integer> batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize, final IsolationLevel isolationLevel) {
             return asyncExecutor.execute(new Callable<Integer>() {
                 @Override
                 public Integer call() throws Exception {
@@ -11834,7 +11834,7 @@ public class SQLExecutor {
          * @param ids
          * @return
          */
-        public ContinuableFuture<Integer> batchDeleteByIds(final Connection conn, final Collection<ID> ids) {
+        public ContinuableFuture<Integer> batchDeleteByIds(final Connection conn, final Collection<? extends ID> ids) {
             return asyncExecutor.execute(new Callable<Integer>() {
                 @Override
                 public Integer call() throws Exception {
@@ -11851,7 +11851,7 @@ public class SQLExecutor {
          * @param batchSize
          * @return
          */
-        public ContinuableFuture<Integer> batchDeleteByIds(final Connection conn, final Collection<ID> ids, final int batchSize) {
+        public ContinuableFuture<Integer> batchDeleteByIds(final Connection conn, final Collection<? extends ID> ids, final int batchSize) {
             return asyncExecutor.execute(new Callable<Integer>() {
                 @Override
                 public Integer call() throws Exception {

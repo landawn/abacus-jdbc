@@ -7789,7 +7789,9 @@ public final class JdbcUtil {
 
             try {
                 try {
-                    return stmt.executeBatch();
+                    int[] result = stmt.executeBatch();
+
+                    return result;
                 } finally {
                     stmt.clearBatch();
                 }
@@ -14865,7 +14867,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        default List<T> batchGet(final Collection<ID> ids) throws SQLException {
+        default List<T> batchGet(final Collection<? extends ID> ids) throws SQLException {
             return batchGet(ids, (Collection<String>) null);
         }
 
@@ -14877,7 +14879,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        default List<T> batchGet(final Collection<ID> ids, final Collection<String> selectPropNames) throws SQLException {
+        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws SQLException {
             return batchGet(ids, selectPropNames, JdbcSettings.DEFAULT_BATCH_SIZE);
         }
 
@@ -14889,7 +14891,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        List<T> batchGet(final Collection<ID> ids, final Collection<String> selectPropNames, final int batchSize) throws SQLException;
+        List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) throws SQLException;
 
         /**
          *
@@ -15000,6 +15002,25 @@ public final class JdbcUtil {
         * @throws SQLException the SQL exception
         */
         int batchDelete(Collection<? extends T> entities, int batchSize) throws SQLException;
+
+        /**
+        *
+        * @param ids
+        * @return
+        * @throws SQLException the SQL exception
+        */
+        default int batchDeleteByIds(Collection<? extends ID> ids) throws SQLException {
+            return batchDeleteByIds(ids, JdbcSettings.DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+        *
+        * @param ids
+        * @param batchSize
+        * @return
+        * @throws SQLException the SQL exception
+        */
+        int batchDeleteByIds(Collection<? extends ID> ids, int batchSize) throws SQLException;
     }
 
     /**
@@ -16106,6 +16127,40 @@ public final class JdbcUtil {
                                                 .sumInt(bp -> N.sum(
                                                         preparedQuery.addBatchParameters(bp, (q, e) -> q.setObject(1, ClassUtil.getPropValue(e, idPropName)))
                                                                 .batchUpdate()))
+                                                .orZero();
+                                    }
+
+                                    tran.commit();
+                                } finally {
+                                    tran.rollbackIfNotCommitted();
+                                }
+
+                                return N.toIntExact(result);
+                            }
+                        };
+                    } else if (m.getName().equals("batchDeleteByIds") && paramLen == 2 && int.class.equals(paramTypes[1])) {
+                        final String query = sql_deleteById;
+
+                        call = (proxy, args) -> {
+                            final Collection<?> ids = (Collection<?>) args[0];
+                            final int batchSize = (Integer) args[1];
+                            N.checkArgPositive(batchSize, "batchSize");
+
+                            if (N.isNullOrEmpty(ids)) {
+                                return 0;
+                            }
+
+                            if (ids.size() <= batchSize) {
+                                return N.sum(proxy.prepareQuery(query).addBatchParameters(ids, (q, id) -> q.setObject(1, id)).batchUpdate());
+                            } else {
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                long result = 0;
+
+                                try {
+                                    try (PreparedQuery preparedQuery = proxy.prepareQuery(query).closeAfterExecution(false)) {
+                                        result = ExceptionalStream.of(ids)
+                                                .splitToList(batchSize)
+                                                .sumInt(bp -> N.sum(preparedQuery.addBatchParameters(bp, (q, id) -> q.setObject(1, id)).batchUpdate()))
                                                 .orZero();
                                     }
 

@@ -1,3 +1,9 @@
+### 1.9.6
+
+* Add `Dao.batchDeleteByIds`.
+* Improvements and bug fix.
+
+
 ### 1.9.5
 
 * Add `Dao.batchGet`.
