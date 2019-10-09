@@ -6998,6 +6998,7 @@ public final class JdbcUtil {
         }
 
         /**
+         * lazy-execution, lazy-fetch.
          *
          * @param <T>
          * @param targetClass
@@ -7009,6 +7010,7 @@ public final class JdbcUtil {
         }
 
         /**
+         * lazy-execution, lazy-fetch.
          *
          * @param <T>
          * @param rowMapper
@@ -7110,6 +7112,7 @@ public final class JdbcUtil {
         }
 
         /**
+         * lazy-execution, lazy-fetch.
          *
          * @param <T>
          * @param rowMapper
@@ -14679,7 +14682,9 @@ public final class JdbcUtil {
          */
         <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String selectPropName, final Condition cond) throws SQLException;
 
+        // Will it cause confusion if it's called in transaction?
         /**
+         * lazy-execution, lazy-fetch.
          *
          * @param cond
          * @return
@@ -14687,7 +14692,9 @@ public final class JdbcUtil {
          */
         ExceptionalStream<T, SQLException> stream(Condition cond) throws SQLException;
 
+        // Will it cause confusion if it's called in transaction?
         /**
+         * lazy-execution, lazy-fetch.
          *
          * @param cond
          * @param rowMapper
@@ -14696,7 +14703,9 @@ public final class JdbcUtil {
          */
         <R> ExceptionalStream<R, SQLException> stream(Condition cond, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
 
+        // Will it cause confusion if it's called in transaction?
         /**
+         * lazy-execution, lazy-fetch.
          *
          * @param cond
          * @param rowMapper
@@ -14705,7 +14714,9 @@ public final class JdbcUtil {
          */
         <R> ExceptionalStream<R, SQLException> stream(Condition cond, JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
 
+        // Will it cause confusion if it's called in transaction?
         /**
+         * lazy-execution, lazy-fetch.
          *
          * @param selectPropNames
          * @param cond
@@ -14714,7 +14725,9 @@ public final class JdbcUtil {
          */
         ExceptionalStream<T, SQLException> stream(Collection<String> selectPropNames, Condition cond) throws SQLException;
 
+        // Will it cause confusion if it's called in transaction?
         /**
+         * lazy-execution, lazy-fetch.
          *
          * @param selectPropNames
          * @param cond
@@ -14724,7 +14737,9 @@ public final class JdbcUtil {
          */
         <R> ExceptionalStream<R, SQLException> stream(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
 
+        // Will it cause confusion if it's called in transaction?
         /**
+         * lazy-execution, lazy-fetch.
          *
          * @param selectPropNames
          * @param cond
