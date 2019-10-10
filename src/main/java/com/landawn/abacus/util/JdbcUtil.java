@@ -5941,6 +5941,32 @@ public final class JdbcUtil {
         /**
          * Sets the parameters.
          *
+         * @param parameters
+         * @return
+         * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+         * @throws SQLException the SQL exception
+         */
+        public Q setParameters(Collection<?> parameters) throws IllegalArgumentException, SQLException {
+            return setParameters(1, parameters);
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param <T>
+         * @param parameters
+         * @param type
+         * @return
+         * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+         * @throws SQLException the SQL exception
+         */
+        public <T> Q setParameters(Collection<? extends T> parameters, Class<T> type) throws IllegalArgumentException, SQLException {
+            return setParameters(1, parameters, type);
+        }
+
+        /**
+         * Sets the parameters.
+         *
          * @param paramSetter
          * @return
          * @throws SQLException the SQL exception
@@ -6097,6 +6123,9 @@ public final class JdbcUtil {
          */
         @Beta
         public <T> Q addBatchParameters(final Collection<T> batchParameters, BiParametersSetter<? super Q, ? super T> parametersSetter) throws SQLException {
+            checkArgNotNull(batchParameters, "batchParameters");
+            checkArgNotNull(parametersSetter, "parametersSetter");
+
             return addBatchParameters(batchParameters.iterator(), parametersSetter);
         }
 
@@ -11978,6 +12007,8 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         public <T> NamedQuery addBatchParameters(final Collection<T> batchParameters) throws SQLException {
+            checkArgNotNull(batchParameters, "batchParameters");
+
             return addBatchParameters(batchParameters.iterator());
         }
 
