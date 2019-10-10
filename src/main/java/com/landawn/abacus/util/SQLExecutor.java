@@ -786,7 +786,7 @@ public class SQLExecutor {
      * @return
      */
     @Beta
-    public static SQLExecutor w(final String url, final String user, final String password) {
+    public static SQLExecutor create(final String url, final String user, final String password) {
         return new SQLExecutor(JdbcUtil.createDataSource(url, user, password));
     }
 
@@ -799,7 +799,7 @@ public class SQLExecutor {
      * @return
      */
     @Beta
-    public static SQLExecutor w(final String driver, final String url, final String user, final String password) {
+    public static SQLExecutor create(final String driver, final String url, final String user, final String password) {
         return new SQLExecutor(JdbcUtil.createDataSource(driver, url, user, password));
     }
 
@@ -812,8 +812,21 @@ public class SQLExecutor {
      * @return
      */
     @Beta
-    public static SQLExecutor w(final Class<? extends Driver> driverClass, final String url, final String user, final String password) {
+    public static SQLExecutor create(final Class<? extends Driver> driverClass, final String url, final String user, final String password) {
         return new SQLExecutor(JdbcUtil.createDataSource(driverClass, url, user, password));
+    }
+
+    /**
+     *
+     * @param driverClass
+     * @param url
+     * @param user
+     * @param password
+     * @return
+     */
+    @Beta
+    public static SQLExecutor create(final DataSource dataSource) {
+        return new SQLExecutor(dataSource);
     }
 
     /**
@@ -12530,7 +12543,7 @@ public class SQLExecutor {
         public static final String DEFAULT_GENERATED_ID_PROP_NAME = "id";
 
         /** The Constant DEFAULT_BATCH_SIZE. */
-        public static final int DEFAULT_BATCH_SIZE = 200;
+        public static final int DEFAULT_BATCH_SIZE = JdbcUtil.DEFAULT_BATCH_SIZE;
 
         /** The Constant DEFAULT_NO_GENERATED_KEYS. */
         public static final int DEFAULT_NO_GENERATED_KEYS = Statement.NO_GENERATED_KEYS;

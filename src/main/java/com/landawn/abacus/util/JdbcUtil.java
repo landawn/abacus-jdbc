@@ -172,6 +172,9 @@ public final class JdbcUtil {
     /** The Constant logger. */
     private static final Logger logger = LoggerFactory.getLogger(JdbcUtil.class);
 
+    /** The Constant DEFAULT_BATCH_SIZE. */
+    public static final int DEFAULT_BATCH_SIZE = 200;
+
     /** The async executor. */
     private static final AsyncExecutor asyncExecutor = new AsyncExecutor(Math.max(8, IOUtil.CPU_CORES), Math.max(64, IOUtil.CPU_CORES), 180L, TimeUnit.SECONDS);
 
@@ -2678,7 +2681,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotNull(sql, "sql");
 
-        return executeBatchUpdate(conn, sql, listOfParameters, JdbcSettings.DEFAULT_BATCH_SIZE);
+        return executeBatchUpdate(conn, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -13921,7 +13924,7 @@ public final class JdbcUtil {
          * @see CrudDao#batchInsert(Collection)
          */
         default void saveAll(final Collection<? extends T> entitiesToSave) throws SQLException {
-            saveAll(entitiesToSave, JdbcSettings.DEFAULT_BATCH_SIZE);
+            saveAll(entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -13946,7 +13949,7 @@ public final class JdbcUtil {
          */
         @Beta
         default void saveAll(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws SQLException {
-            saveAll(namedInsertSQL, entitiesToSave, JdbcSettings.DEFAULT_BATCH_SIZE);
+            saveAll(namedInsertSQL, entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -14387,7 +14390,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default List<ID> batchInsert(final Collection<? extends T> entities) throws SQLException {
-            return batchInsert(entities, JdbcSettings.DEFAULT_BATCH_SIZE);
+            return batchInsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -14408,7 +14411,7 @@ public final class JdbcUtil {
          */
         @Beta
         default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities) throws SQLException {
-            return batchInsert(namedInsertSQL, entities, JdbcSettings.DEFAULT_BATCH_SIZE);
+            return batchInsert(namedInsertSQL, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -14484,7 +14487,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws SQLException {
-            return batchGet(ids, selectPropNames, JdbcSettings.DEFAULT_BATCH_SIZE);
+            return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -14538,7 +14541,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default int batchUpdate(Collection<? extends T> entities) throws SQLException {
-            return batchUpdate(entities, JdbcSettings.DEFAULT_BATCH_SIZE);
+            return batchUpdate(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -14558,7 +14561,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default int batchUpdate(Collection<? extends T> entities, Collection<String> propNamesToUpdate) throws SQLException {
-            return batchUpdate(entities, JdbcSettings.DEFAULT_BATCH_SIZE);
+            return batchUpdate(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -14595,7 +14598,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default int batchDelete(Collection<? extends T> entities) throws SQLException {
-            return batchDelete(entities, JdbcSettings.DEFAULT_BATCH_SIZE);
+            return batchDelete(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -14614,7 +14617,7 @@ public final class JdbcUtil {
         * @throws SQLException the SQL exception
         */
         default int batchDeleteByIds(Collection<? extends ID> ids) throws SQLException {
-            return batchDeleteByIds(ids, JdbcSettings.DEFAULT_BATCH_SIZE);
+            return batchDeleteByIds(ids, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
         /**
