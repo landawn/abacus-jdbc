@@ -7966,9 +7966,8 @@ public final class JdbcUtil {
          * @param <R>
          * @param func
          * @return
-         * @deprecated {@code asyncExecutor.call(() -> JdbcUtil.prepareQuery(query)...query/update/execute(...)} is recommended.
          */
-        @Deprecated
+        @Beta
         public <R> ContinuableFuture<R> asyncApply(final Try.Function<Q, R, SQLException> func) {
             checkArgNotNull(func, "func");
             assertNotClosed();
@@ -7989,9 +7988,8 @@ public final class JdbcUtil {
          * @param func
          * @param executor
          * @return
-         * @deprecated {@code asyncExecutor.call(() -> JdbcUtil.prepareQuery(query)...query/update/execute(...)} is recommended.
          */
-        @Deprecated
+        @Beta
         public <R> ContinuableFuture<R> asyncApply(final Try.Function<Q, R, SQLException> func, final Executor executor) {
             checkArgNotNull(func, "func");
             checkArgNotNull(executor, "executor");
@@ -8011,9 +8009,8 @@ public final class JdbcUtil {
          *
          * @param action
          * @return
-         * @deprecated {@code asyncExecutor.call(() -> JdbcUtil.prepareQuery(query)...query/update/execute(...)} is recommended.
          */
-        @Deprecated
+        @Beta
         public ContinuableFuture<Void> asyncAccept(final Try.Consumer<Q, SQLException> action) {
             checkArgNotNull(action, "action");
             assertNotClosed();
@@ -8033,9 +8030,8 @@ public final class JdbcUtil {
          * @param action
          * @param executor
          * @return
-         * @deprecated {@code asyncExecutor.call(() -> JdbcUtil.prepareQuery(query)...query/update/execute(...)} is recommended.
          */
-        @Deprecated
+        @Beta
         public ContinuableFuture<Void> asyncAccept(final Try.Consumer<Q, SQLException> action, final Executor executor) {
             checkArgNotNull(action, "action");
             checkArgNotNull(executor, "executor");

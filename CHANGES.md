@@ -1,6 +1,7 @@
 ### 1.9.6
 
 * Add `Dao.batchDeleteByIds`.
+* Rename `SQLExecutor.w` to `SQLExecutor.create`.
 * Improvements and bug fix.
 
 
