@@ -44,7 +44,7 @@ public class Maven {
         StreamEx.listFiles(targetDir)
                 .filter(file -> file.getName().endsWith(".pom") || file.getName().endsWith(".xml") || file.getName().endsWith(".txt"))
                 .forEach(file -> {
-                    final List<String> lines = IOUtil.readLines(file);
+                    final List<String> lines = IOUtil.readAllLines(file);
                     final List<String> newLines = new ArrayList<>(lines.size());
                     for (String line : lines) {
                         newLines.add(line.replaceAll(sourceVersion, targetVersion));
