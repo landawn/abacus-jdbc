@@ -1,3 +1,9 @@
+### 1.9.9
+
+* Remove parameter `startParameterIndex` from `JdbcUtil.PreparedQuery.setParameters(..., parameters...)`.
+* Improvements and bug fix.
+
+
 ### 1.9.8
 
 * Improvements and bug fix.

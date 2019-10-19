@@ -5653,15 +5653,14 @@ public final class JdbcUtil {
         /**
          * Sets the parameters.
          *
-         * @param startParameterIndex
          * @param param1
          * @param param2
          * @return
          * @throws SQLException the SQL exception
          */
-        public Q setParameters(int startParameterIndex, String param1, String param2) throws SQLException {
-            stmt.setString(startParameterIndex++, param1);
-            stmt.setString(startParameterIndex++, param2);
+        public Q setParameters(final String param1, final String param2) throws SQLException {
+            stmt.setString(1, param1);
+            stmt.setString(2, param2);
 
             return (Q) this;
         }
@@ -5669,17 +5668,16 @@ public final class JdbcUtil {
         /**
          * Sets the parameters.
          *
-         * @param startParameterIndex
          * @param param1
          * @param param2
          * @param param3
          * @return
          * @throws SQLException the SQL exception
          */
-        public Q setParameters(int startParameterIndex, String param1, String param2, String param3) throws SQLException {
-            stmt.setString(startParameterIndex++, param1);
-            stmt.setString(startParameterIndex++, param2);
-            stmt.setString(startParameterIndex++, param3);
+        public Q setParameters(final String param1, final String param2, final String param3) throws SQLException {
+            stmt.setString(1, param1);
+            stmt.setString(2, param2);
+            stmt.setString(3, param3);
 
             return (Q) this;
         }
@@ -5687,7 +5685,6 @@ public final class JdbcUtil {
         /**
          * Sets the parameters.
          *
-         * @param startParameterIndex
          * @param param1
          * @param param2
          * @param param3
@@ -5695,11 +5692,11 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        public Q setParameters(int startParameterIndex, String param1, String param2, String param3, String param4) throws SQLException {
-            stmt.setString(startParameterIndex++, param1);
-            stmt.setString(startParameterIndex++, param2);
-            stmt.setString(startParameterIndex++, param3);
-            stmt.setString(startParameterIndex++, param4);
+        public Q setParameters(final String param1, final String param2, final String param3, final String param4) throws SQLException {
+            stmt.setString(1, param1);
+            stmt.setString(2, param2);
+            stmt.setString(3, param3);
+            stmt.setString(4, param4);
 
             return (Q) this;
         }
@@ -5707,7 +5704,6 @@ public final class JdbcUtil {
         /**
          * Sets the parameters.
          *
-         * @param startParameterIndex
          * @param param1
          * @param param2
          * @param param3
@@ -5716,12 +5712,12 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        public Q setParameters(int startParameterIndex, String param1, String param2, String param3, String param4, String param5) throws SQLException {
-            stmt.setString(startParameterIndex++, param1);
-            stmt.setString(startParameterIndex++, param2);
-            stmt.setString(startParameterIndex++, param3);
-            stmt.setString(startParameterIndex++, param4);
-            stmt.setString(startParameterIndex++, param5);
+        public Q setParameters(final String param1, final String param2, final String param3, final String param4, final String param5) throws SQLException {
+            stmt.setString(1, param1);
+            stmt.setString(2, param2);
+            stmt.setString(3, param3);
+            stmt.setString(4, param4);
+            stmt.setString(5, param5);
 
             return (Q) this;
         }
@@ -5729,67 +5725,6 @@ public final class JdbcUtil {
         /**
          * Sets the parameters.
          *
-         * @param startParameterIndex
-         * @param param1
-         * @param param2
-         * @param param3
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        public Q setParameters(int startParameterIndex, Object param1, Object param2, Object param3) throws SQLException {
-            setObject(startParameterIndex++, param1);
-            setObject(startParameterIndex++, param2);
-            setObject(startParameterIndex++, param3);
-
-            return (Q) this;
-        }
-
-        /**
-         * Sets the parameters.
-         *
-         * @param startParameterIndex
-         * @param param1
-         * @param param2
-         * @param param3
-         * @param param4
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        public Q setParameters(int startParameterIndex, Object param1, Object param2, Object param3, Object param4) throws SQLException {
-            setObject(startParameterIndex++, param1);
-            setObject(startParameterIndex++, param2);
-            setObject(startParameterIndex++, param3);
-            setObject(startParameterIndex++, param4);
-
-            return (Q) this;
-        }
-
-        /**
-         * Sets the parameters.
-         *
-         * @param startParameterIndex
-         * @param param1
-         * @param param2
-         * @param param3
-         * @param param4
-         * @param param5
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        public Q setParameters(int startParameterIndex, Object param1, Object param2, Object param3, Object param4, Object param5) throws SQLException {
-            setObject(startParameterIndex++, param1);
-            setObject(startParameterIndex++, param2);
-            setObject(startParameterIndex++, param3);
-            setObject(startParameterIndex++, param4);
-            setObject(startParameterIndex++, param5);
-
-            return (Q) this;
-        }
-
-        /**
-         * Sets the parameters.
-         *
-         * @param startParameterIndex
          * @param param1
          * @param param2
          * @param param3
@@ -5799,14 +5734,14 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        public Q setParameters(int startParameterIndex, Object param1, Object param2, Object param3, Object param4, Object param5, Object param6)
+        public Q setParameters(final String param1, final String param2, final String param3, final String param4, final String param5, final String param6)
                 throws SQLException {
-            setObject(startParameterIndex++, param1);
-            setObject(startParameterIndex++, param2);
-            setObject(startParameterIndex++, param3);
-            setObject(startParameterIndex++, param4);
-            setObject(startParameterIndex++, param5);
-            setObject(startParameterIndex++, param6);
+            stmt.setString(1, param1);
+            stmt.setString(2, param2);
+            stmt.setString(3, param3);
+            stmt.setString(4, param4);
+            stmt.setString(5, param5);
+            stmt.setString(6, param6);
 
             return (Q) this;
         }
@@ -5814,7 +5749,6 @@ public final class JdbcUtil {
         /**
          * Sets the parameters.
          *
-         * @param startParameterIndex
          * @param param1
          * @param param2
          * @param param3
@@ -5825,15 +5759,15 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        public Q setParameters(int startParameterIndex, Object param1, Object param2, Object param3, Object param4, Object param5, Object param6, Object param7)
-                throws SQLException {
-            setObject(startParameterIndex++, param1);
-            setObject(startParameterIndex++, param2);
-            setObject(startParameterIndex++, param3);
-            setObject(startParameterIndex++, param4);
-            setObject(startParameterIndex++, param5);
-            setObject(startParameterIndex++, param6);
-            setObject(startParameterIndex++, param7);
+        public Q setParameters(final String param1, final String param2, final String param3, final String param4, final String param5, final String param6,
+                final String param7) throws SQLException {
+            stmt.setString(1, param1);
+            stmt.setString(2, param2);
+            stmt.setString(3, param3);
+            stmt.setString(4, param4);
+            stmt.setString(5, param5);
+            stmt.setString(6, param6);
+            stmt.setString(7, param7);
 
             return (Q) this;
         }
@@ -5841,7 +5775,128 @@ public final class JdbcUtil {
         /**
          * Sets the parameters.
          *
-         * @param startParameterIndex
+         * @param param1
+         * @param param2
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        public Q setParameters(final Object param1, final Object param2) throws SQLException {
+            setObject(1, param1);
+            setObject(2, param2);
+
+            return (Q) this;
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param param1
+         * @param param2
+         * @param param3
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        public Q setParameters(final Object param1, final Object param2, final Object param3) throws SQLException {
+            setObject(1, param1);
+            setObject(2, param2);
+            setObject(3, param3);
+
+            return (Q) this;
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param param1
+         * @param param2
+         * @param param3
+         * @param param4
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        public Q setParameters(final Object param1, final Object param2, final Object param3, final Object param4) throws SQLException {
+            setObject(1, param1);
+            setObject(2, param2);
+            setObject(3, param3);
+            setObject(4, param4);
+
+            return (Q) this;
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param param1
+         * @param param2
+         * @param param3
+         * @param param4
+         * @param param5
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        public Q setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5) throws SQLException {
+            setObject(1, param1);
+            setObject(2, param2);
+            setObject(3, param3);
+            setObject(4, param4);
+            setObject(5, param5);
+
+            return (Q) this;
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param param1
+         * @param param2
+         * @param param3
+         * @param param4
+         * @param param5
+         * @param param6
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        public Q setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6)
+                throws SQLException {
+            setObject(1, param1);
+            setObject(2, param2);
+            setObject(3, param3);
+            setObject(4, param4);
+            setObject(5, param5);
+            setObject(6, param6);
+
+            return (Q) this;
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param param1
+         * @param param2
+         * @param param3
+         * @param param4
+         * @param param5
+         * @param param6
+         * @param param7
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        public Q setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6,
+                final Object param7) throws SQLException {
+            setObject(1, param1);
+            setObject(2, param2);
+            setObject(3, param3);
+            setObject(4, param4);
+            setObject(5, param5);
+            setObject(6, param6);
+            setObject(7, param7);
+
+            return (Q) this;
+        }
+
+        /**
+         * Sets the parameters.
+         *
          * @param param1
          * @param param2
          * @param param3
@@ -5853,16 +5908,16 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        public Q setParameters(int startParameterIndex, Object param1, Object param2, Object param3, Object param4, Object param5, Object param6, Object param7,
-                Object param8) throws SQLException {
-            setObject(startParameterIndex++, param1);
-            setObject(startParameterIndex++, param2);
-            setObject(startParameterIndex++, param3);
-            setObject(startParameterIndex++, param4);
-            setObject(startParameterIndex++, param5);
-            setObject(startParameterIndex++, param6);
-            setObject(startParameterIndex++, param7);
-            setObject(startParameterIndex++, param8);
+        public Q setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6,
+                final Object param7, final Object param8) throws SQLException {
+            setObject(1, param1);
+            setObject(2, param2);
+            setObject(3, param3);
+            setObject(4, param4);
+            setObject(5, param5);
+            setObject(6, param6);
+            setObject(7, param7);
+            setObject(8, param8);
 
             return (Q) this;
         }
@@ -5870,7 +5925,6 @@ public final class JdbcUtil {
         /**
          * Sets the parameters.
          *
-         * @param startParameterIndex
          * @param param1
          * @param param2
          * @param param3
@@ -5883,17 +5937,37 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        public Q setParameters(int startParameterIndex, Object param1, Object param2, Object param3, Object param4, Object param5, Object param6, Object param7,
-                Object param8, Object param9) throws SQLException {
-            setObject(startParameterIndex++, param1);
-            setObject(startParameterIndex++, param2);
-            setObject(startParameterIndex++, param3);
-            setObject(startParameterIndex++, param4);
-            setObject(startParameterIndex++, param5);
-            setObject(startParameterIndex++, param6);
-            setObject(startParameterIndex++, param7);
-            setObject(startParameterIndex++, param8);
-            setObject(startParameterIndex++, param9);
+        public Q setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6,
+                final Object param7, final Object param8, final Object param9) throws SQLException {
+            setObject(1, param1);
+            setObject(2, param2);
+            setObject(3, param3);
+            setObject(4, param4);
+            setObject(5, param5);
+            setObject(6, param6);
+            setObject(7, param7);
+            setObject(8, param8);
+            setObject(9, param9);
+
+            return (Q) this;
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param parameters
+         * @return
+         * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+         * @throws SQLException the SQL exception
+         */
+        public Q setParameters(final Object[] parameters) throws IllegalArgumentException, SQLException {
+            checkArgNotNull(parameters, "parameters");
+
+            int idx = 1;
+
+            for (Object param : parameters) {
+                setObject(idx++, param);
+            }
 
             return (Q) this;
         }
@@ -5907,14 +5981,82 @@ public final class JdbcUtil {
          * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
          * @throws SQLException the SQL exception
          */
-        public Q setParameters(int startParameterIndex, Collection<?> parameters) throws IllegalArgumentException, SQLException {
+        public Q setParameters(final Collection<?> parameters) throws IllegalArgumentException, SQLException {
             checkArgNotNull(parameters, "parameters");
 
+            int idx = 1;
+
             for (Object param : parameters) {
-                setObject(startParameterIndex++, param);
+                setObject(idx++, param);
             }
 
             return (Q) this;
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param paramSetter
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        public Q setParameters(final ParametersSetter<? super S> paramSetter) throws SQLException {
+            checkArgNotNull(paramSetter, "paramSetter");
+        
+            boolean noException = false;
+        
+            try {
+                paramSetter.accept(stmt);
+        
+                noException = true;
+            } finally {
+                if (noException == false) {
+                    close();
+                }
+            }
+        
+            return (Q) this;
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param <T>
+         * @param parameter
+         * @param paramSetter
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        public <T> Q setParameters(final T parameter, final BiParametersSetter<? super S, ? super T> paramSetter) throws SQLException {
+            checkArgNotNull(paramSetter, "paramSetter");
+        
+            boolean noException = false;
+        
+            try {
+                paramSetter.accept(stmt, parameter);
+        
+                noException = true;
+            } finally {
+                if (noException == false) {
+                    close();
+                }
+            }
+        
+            return (Q) this;
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param <T>
+         * @param parameters
+         * @param type
+         * @return
+         * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+         * @throws SQLException the SQL exception
+         */
+        public <T> Q settParameters(final T[] parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
+            return settParameters(1, parameters, type);
         }
 
         /**
@@ -5928,7 +6070,7 @@ public final class JdbcUtil {
          * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
          * @throws SQLException the SQL exception
          */
-        public <T> Q setParameters(int startParameterIndex, Collection<? extends T> parameters, Class<T> type) throws IllegalArgumentException, SQLException {
+        public <T> Q settParameters(int startParameterIndex, final T[] parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
             checkArgNotNull(parameters, "parameters");
             checkArgNotNull(type, "type");
 
@@ -5944,76 +6086,38 @@ public final class JdbcUtil {
         /**
          * Sets the parameters.
          *
-         * @param parameters
-         * @return
-         * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
-         * @throws SQLException the SQL exception
-         */
-        public Q setParameters(Collection<?> parameters) throws IllegalArgumentException, SQLException {
-            return setParameters(1, parameters);
-        }
-
-        /**
-         * Sets the parameters.
-         *
          * @param <T>
+         * @param startParameterIndex
          * @param parameters
          * @param type
          * @return
          * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
          * @throws SQLException the SQL exception
          */
-        public <T> Q setParameters(Collection<? extends T> parameters, Class<T> type) throws IllegalArgumentException, SQLException {
-            return setParameters(1, parameters, type);
-        }
-
-        /**
-         * Sets the parameters.
-         *
-         * @param paramSetter
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        public Q setParameters(ParametersSetter<? super S> paramSetter) throws SQLException {
-            checkArgNotNull(paramSetter, "paramSetter");
-
-            boolean noException = false;
-
-            try {
-                paramSetter.accept(stmt);
-
-                noException = true;
-            } finally {
-                if (noException == false) {
-                    close();
-                }
-            }
-
-            return (Q) this;
+        public <T> Q settParameters(final Collection<? extends T> parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
+            return settParameters(1, parameters, type);
         }
 
         /**
          * Sets the parameters.
          *
          * @param <T>
-         * @param parameter
-         * @param paramSetter
+         * @param startParameterIndex
+         * @param parameters
+         * @param type
          * @return
+         * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
          * @throws SQLException the SQL exception
          */
-        public <T> Q setParameters(final T parameter, final BiParametersSetter<? super S, ? super T> paramSetter) throws SQLException {
-            checkArgNotNull(paramSetter, "paramSetter");
+        public <T> Q settParameters(int startParameterIndex, final Collection<? extends T> parameters, final Class<T> type)
+                throws IllegalArgumentException, SQLException {
+            checkArgNotNull(parameters, "parameters");
+            checkArgNotNull(type, "type");
 
-            boolean noException = false;
+            final Type<T> setter = N.typeOf(type);
 
-            try {
-                paramSetter.accept(stmt, parameter);
-
-                noException = true;
-            } finally {
-                if (noException == false) {
-                    close();
-                }
+            for (T param : parameters) {
+                setter.set(stmt, startParameterIndex++, param);
             }
 
             return (Q) this;
@@ -15866,7 +15970,7 @@ public final class JdbcUtil {
                         parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
                             @Override
                             public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                preparedQuery.setParameters(1, (Collection) args[0]);
+                                preparedQuery.setParameters(1, args[0]);
                             }
                         };
                     } else {
