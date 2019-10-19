@@ -6002,19 +6002,19 @@ public final class JdbcUtil {
          */
         public Q setParameters(final ParametersSetter<? super S> paramSetter) throws SQLException {
             checkArgNotNull(paramSetter, "paramSetter");
-        
+
             boolean noException = false;
-        
+
             try {
                 paramSetter.accept(stmt);
-        
+
                 noException = true;
             } finally {
                 if (noException == false) {
                     close();
                 }
             }
-        
+
             return (Q) this;
         }
 
@@ -6029,19 +6029,112 @@ public final class JdbcUtil {
          */
         public <T> Q setParameters(final T parameter, final BiParametersSetter<? super S, ? super T> paramSetter) throws SQLException {
             checkArgNotNull(paramSetter, "paramSetter");
-        
+
             boolean noException = false;
-        
+
             try {
                 paramSetter.accept(stmt, parameter);
-        
+
                 noException = true;
             } finally {
                 if (noException == false) {
                     close();
                 }
             }
-        
+
+            return (Q) this;
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param parameters
+         * @return
+         * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+         * @throws SQLException the SQL exception
+         */
+        public Q settParameters(final int[] parameters) throws IllegalArgumentException, SQLException {
+            return settParameters(1, parameters);
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param startParameterIndex
+         * @param parameters
+         * @return
+         * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+         * @throws SQLException the SQL exception
+         */
+        public Q settParameters(int startParameterIndex, final int[] parameters) throws IllegalArgumentException, SQLException {
+            checkArgNotNull(parameters, "parameters");
+
+            for (int param : parameters) {
+                stmt.setInt(startParameterIndex++, param);
+            }
+
+            return (Q) this;
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param parameters
+         * @return
+         * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+         * @throws SQLException the SQL exception
+         */
+        public Q settParameters(final long[] parameters) throws IllegalArgumentException, SQLException {
+            return settParameters(1, parameters);
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param startParameterIndex
+         * @param parameters
+         * @return
+         * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+         * @throws SQLException the SQL exception
+         */
+        public Q settParameters(int startParameterIndex, final long[] parameters) throws IllegalArgumentException, SQLException {
+            checkArgNotNull(parameters, "parameters");
+
+            for (long param : parameters) {
+                stmt.setLong(startParameterIndex++, param);
+            }
+
+            return (Q) this;
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param parameters
+         * @return
+         * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+         * @throws SQLException the SQL exception
+         */
+        public Q settParameters(final String[] parameters) throws IllegalArgumentException, SQLException {
+            return settParameters(1, parameters);
+        }
+
+        /**
+         * Sets the parameters.
+         *
+         * @param startParameterIndex
+         * @param parameters
+         * @return
+         * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+         * @throws SQLException the SQL exception
+         */
+        public Q settParameters(int startParameterIndex, final String[] parameters) throws IllegalArgumentException, SQLException {
+            checkArgNotNull(parameters, "parameters");
+
+            for (String param : parameters) {
+                stmt.setString(startParameterIndex++, param);
+            }
+
             return (Q) this;
         }
 
