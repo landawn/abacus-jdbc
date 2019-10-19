@@ -7083,7 +7083,9 @@ public final class JdbcUtil {
          * @param maxResult
          * @return
          * @throws SQLException the SQL exception
+         * @deprecated the result size should be limited in database server side by sql scripts.
          */
+        @Deprecated
         public <T> List<T> list(final Class<T> targetClass, int maxResult) throws SQLException {
             return list(BiRowMapper.to(targetClass), maxResult);
         }
@@ -7106,7 +7108,9 @@ public final class JdbcUtil {
          * @param maxResult
          * @return
          * @throws SQLException the SQL exception
+         * @deprecated the result size should be limited in database server side by sql scripts.
          */
+        @Deprecated
         public <T> List<T> list(RowMapper<T> rowMapper, int maxResult) throws SQLException {
             return list(RowFilter.ALWAYS_TRUE, rowMapper, maxResult);
         }
@@ -7172,7 +7176,9 @@ public final class JdbcUtil {
          * @param maxResult
          * @return
          * @throws SQLException the SQL exception
+         * @deprecated the result size should be limited in database server side by sql scripts.
          */
+        @Deprecated
         public <T> List<T> list(BiRowMapper<T> rowMapper, int maxResult) throws SQLException {
             return list(BiRowFilter.ALWAYS_TRUE, rowMapper, maxResult);
         }
@@ -14679,8 +14685,7 @@ public final class JdbcUtil {
         * @return
         * @throws SQLException the SQL exception
         */
-        <R> List<R> list(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowFilter rowFilter, JdbcUtil.RowMapper<R> rowMapper)
-                throws SQLException;
+        <R> List<R> list(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowFilter rowFilter, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
 
         /**
         *
