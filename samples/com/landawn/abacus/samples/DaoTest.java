@@ -4,6 +4,8 @@ import static com.landawn.abacus.samples.Jdbc.userDao;
 import static org.junit.Assert.assertEquals;
 
 import java.sql.SQLException;
+import java.util.LinkedHashMap;
+import java.util.List;
 
 import org.junit.Test;
 
@@ -11,6 +13,8 @@ import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.samples.Jdbc.User;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
+import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
+import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.N;
 
 public class DaoTest {
@@ -142,6 +146,9 @@ public class DaoTest {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
+        user.setId(101);
+        userDao.insertWithId(user);
+
         User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
 
@@ -158,6 +165,23 @@ public class DaoTest {
 
             userDao.stream(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fnn.println());
         }
+
+        userDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null,
+                RowMapper.builder().defauLt((i, rs) -> rs.getObject(i)).column(1, (i, rs) -> rs.getString(i)).toList()).forEach(Fn.println());
+
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
+                BiRowMapper.builder().defauLt((i, rs) -> rs.getObject(i)).column("firstName", (i, rs) -> rs.getString(i)).to(List.class)).forEach(Fn.println());
+
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
+                BiRowMapper.builder().defauLt((i, rs) -> rs.getObject(i)).column("firstName", (i, rs) -> rs.getString(i)).to(LinkedHashMap.class))
+                .forEach(Fn.println());
+
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.builder().defauLt((i, rs) -> {
+            N.println(rs.getMetaData().getColumnLabel(i) + ": " + rs.getObject(i));
+            return rs.getObject(i);
+        }).column("firstName", (i, rs) -> rs.getString(i)).to(User.class)).forEach(Fn.println());
+
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.to(User.class)).forEach(Fn.println());
 
         userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 

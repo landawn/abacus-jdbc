@@ -12985,44 +12985,6 @@ public final class JdbcUtil {
         }
     }
 
-    private static final ObjectPool<Type<?>, ColumnGetter<?>> COLUMN_GETTER_POOL = new ObjectPool<>(1024);
-
-    public interface ColumnGetter<V> {
-
-        ColumnGetter<Object> DEFAULT = new ColumnGetter<Object>() {
-            @Override
-            public Object apply(final int columnIndex, final ResultSet rs) throws SQLException {
-                return InternalJdbcUtil.getColumnValue(rs, columnIndex);
-            }
-        };
-
-        /**
-         *
-         * @param columnIndex start from 1
-         * @param rs
-         * @return
-         * @throws SQLException
-         */
-        V apply(int columnIndex, ResultSet rs) throws SQLException;
-
-        static <T> ColumnGetter<T> get(final Type<? extends T> type) {
-            ColumnGetter<?> columnGetter = COLUMN_GETTER_POOL.get(type);
-
-            if (columnGetter == null) {
-                columnGetter = new ColumnGetter<T>() {
-                    @Override
-                    public T apply(int columnIndex, ResultSet rs) throws SQLException {
-                        return type.get(rs, columnIndex);
-                    }
-                };
-
-                COLUMN_GETTER_POOL.put(type, columnGetter);
-            }
-
-            return (ColumnGetter<T>) columnGetter;
-        }
-    }
-
     /**
      * Don't use {@code RowMapper} in {@link PreparedQuery#list(RowMapper)} or any place where multiple records will be retrieved by it, if column labels/count are used in {@link RowMapper#apply(ResultSet)}.
      * Consider using {@code BiRowMapper} instead because it's more efficient to retrieve multiple records when column labels/count are used.
@@ -13140,13 +13102,13 @@ public final class JdbcUtil {
             return new RowMapperBuilder();
         }
 
-        static RowMapperBuilder builder(final int columnCount) {
-            return new RowMapperBuilder(columnCount);
-        }
+        //    static RowMapperBuilder builder(final int columnCount) {
+        //        return new RowMapperBuilder(columnCount);
+        //    }
 
         public static class RowMapperBuilder {
-            private int columnCount = -1;
-            private ColumnGetter<?>[] columnGetters;
+            //    private int columnCount = -1;
+            //    private ColumnGetter<?>[] columnGetters;
             private Map<Integer, ColumnGetter<?>> columnGetterMap;
 
             RowMapperBuilder() {
@@ -13154,11 +13116,11 @@ public final class JdbcUtil {
                 columnGetterMap.put(0, ColumnGetter.DEFAULT);
             }
 
-            RowMapperBuilder(final int columnCount) {
-                this.columnCount = columnCount;
-                columnGetters = new ColumnGetter[columnCount + 1];
-                columnGetters[0] = ColumnGetter.DEFAULT;
-            }
+            //        RowMapperBuilder(final int columnCount) {
+            //            this.columnCount = columnCount;
+            //            columnGetters = new ColumnGetter[columnCount + 1];
+            //            columnGetters[0] = ColumnGetter.DEFAULT;
+            //        }
 
             /**
              * Set default column getter function.
@@ -13167,12 +13129,13 @@ public final class JdbcUtil {
              * @return
              */
             public RowMapperBuilder defauLt(final ColumnGetter<?> columnGetter) {
-                if (columnGetters == null) {
-                    columnGetterMap.put(0, columnGetter);
-                } else {
-                    columnGetters[0] = columnGetter;
-                }
+                //        if (columnGetters == null) {
+                //            columnGetterMap.put(0, columnGetter);
+                //        } else {
+                //            columnGetters[0] = columnGetter;
+                //        }
 
+                columnGetterMap.put(0, columnGetter);
                 return this;
             }
 
@@ -13185,12 +13148,13 @@ public final class JdbcUtil {
              * @return
              */
             public RowMapperBuilder column(final int columnIndex, final ColumnGetter<?> columnGetter) {
-                if (columnGetters == null) {
-                    columnGetterMap.put(columnIndex, columnGetter);
-                } else {
-                    columnGetters[columnIndex] = columnGetter;
-                }
+                //        if (columnGetters == null) {
+                //            columnGetterMap.put(columnIndex, columnGetter);
+                //        } else {
+                //            columnGetters[columnIndex] = columnGetter;
+                //        }
 
+                columnGetterMap.put(columnIndex, columnGetter);
                 return this;
             }
 
@@ -13380,16 +13344,18 @@ public final class JdbcUtil {
             //        return this;
             //    }
 
-            void setDefaultColumnGetter() {
-                for (int i = 1, len = columnGetters.length; i < len; i++) {
-                    if (columnGetters[i] == null) {
-                        columnGetters[i] = columnGetters[0];
-                    }
-                }
-            }
+            //    void setDefaultColumnGetter() {
+            //        if (columnGetters != null) {
+            //            for (int i = 1, len = columnGetters.length; i < len; i++) {
+            //                if (columnGetters[i] == null) {
+            //                    columnGetters[i] = columnGetters[0];
+            //                }
+            //            }
+            //        }
+            //    }
 
             ColumnGetter<?>[] initColumnGetter(ResultSet rs) throws SQLException {
-                final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[rs.getMetaData().getColumnCount()];
+                final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[rs.getMetaData().getColumnCount() + 1];
                 rsColumnGetters[0] = columnGetterMap.get(0);
 
                 for (int i = 1, len = rsColumnGetters.length; i < len; i++) {
@@ -13405,11 +13371,11 @@ public final class JdbcUtil {
              * @return
              */
             public RowMapper<Object[]> toArray() {
-                setDefaultColumnGetter();
+                // setDefaultColumnGetter();
 
                 return new RowMapper<Object[]>() {
-                    private volatile int rsColumnCount = columnCount;
-                    private volatile ColumnGetter<?>[] rsColumnGetters = columnGetters;
+                    private volatile int rsColumnCount = -1;
+                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
 
                     @Override
                     public Object[] apply(ResultSet rs) throws SQLException {
@@ -13423,8 +13389,8 @@ public final class JdbcUtil {
 
                         final Object[] row = new Object[rsColumnCount];
 
-                        for (int i = 0; i < columnCount;) {
-                            row[i] = columnGetters[++i];
+                        for (int i = 0; i < rsColumnCount;) {
+                            row[i] = rsColumnGetters[++i].apply(i, rs);
                         }
 
                         return row;
@@ -13438,11 +13404,11 @@ public final class JdbcUtil {
              * @return
              */
             public RowMapper<List<Object>> toList() {
-                setDefaultColumnGetter();
+                // setDefaultColumnGetter();
 
                 return new RowMapper<List<Object>>() {
-                    private volatile int rsColumnCount = columnCount;
-                    private volatile ColumnGetter<?>[] rsColumnGetters = columnGetters;
+                    private volatile int rsColumnCount = -1;
+                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
 
                     @Override
                     public List<Object> apply(ResultSet rs) throws SQLException {
@@ -13456,8 +13422,8 @@ public final class JdbcUtil {
 
                         final List<Object> row = new ArrayList<>(rsColumnCount);
 
-                        for (int i = 0; i < columnCount;) {
-                            row.add(columnGetters[++i]);
+                        for (int i = 0; i < rsColumnCount;) {
+                            row.add(rsColumnGetters[++i].apply(i, rs));
                         }
 
                         return row;
@@ -13674,21 +13640,21 @@ public final class JdbcUtil {
             return new BiRowMapperBuilder();
         }
 
-        static BiRowMapperBuilder builder(final int columnCount) {
-            return new BiRowMapperBuilder(columnCount);
-        }
+        //    static BiRowMapperBuilder builder(final int columnCount) {
+        //        return new BiRowMapperBuilder(columnCount);
+        //    }
 
         public static class BiRowMapperBuilder {
             private ColumnGetter<?> defaultColumnGetter = ColumnGetter.DEFAULT;
             private final Map<String, ColumnGetter<?>> columnGetterMap;
 
             BiRowMapperBuilder() {
-                this(9);
+                columnGetterMap = new HashMap<>(9);
             }
 
-            BiRowMapperBuilder(final int columnCount) {
-                columnGetterMap = new HashMap<>(Math.min(9, columnCount));
-            }
+            //    BiRowMapperBuilder(final int columnCount) {
+            //        columnGetterMap = new HashMap<>(Math.min(9, columnCount));
+            //    }
 
             /**
              * Set default column getter function.
@@ -13909,7 +13875,7 @@ public final class JdbcUtil {
 
                             final Object entity = N.newInstance(targetClass);
 
-                            for (int i = 0; i < rsColumnCount; i++) {
+                            for (int i = 0; i < rsColumnCount;) {
                                 if (columnLabels[i] == null) {
                                     continue;
                                 }
@@ -14054,6 +14020,44 @@ public final class JdbcUtil {
          */
         @Override
         boolean test(ResultSet rs, List<String> columnLabels) throws SQLException;
+    }
+
+    private static final ObjectPool<Type<?>, ColumnGetter<?>> COLUMN_GETTER_POOL = new ObjectPool<>(1024);
+
+    public interface ColumnGetter<V> {
+
+        ColumnGetter<Object> DEFAULT = new ColumnGetter<Object>() {
+            @Override
+            public Object apply(final int columnIndex, final ResultSet rs) throws SQLException {
+                return InternalJdbcUtil.getColumnValue(rs, columnIndex);
+            }
+        };
+
+        /**
+         *
+         * @param columnIndex start from 1
+         * @param rs
+         * @return
+         * @throws SQLException
+         */
+        V apply(int columnIndex, ResultSet rs) throws SQLException;
+
+        static <T> ColumnGetter<T> get(final Type<? extends T> type) {
+            ColumnGetter<?> columnGetter = COLUMN_GETTER_POOL.get(type);
+
+            if (columnGetter == null) {
+                columnGetter = new ColumnGetter<T>() {
+                    @Override
+                    public T apply(int columnIndex, ResultSet rs) throws SQLException {
+                        return type.get(rs, columnIndex);
+                    }
+                };
+
+                COLUMN_GETTER_POOL.put(type, columnGetter);
+            }
+
+            return (ColumnGetter<T>) columnGetter;
+        }
     }
 
     /** The Constant daoPool. */
