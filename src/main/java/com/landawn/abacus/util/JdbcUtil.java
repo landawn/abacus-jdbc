@@ -541,16 +541,16 @@ public final class JdbcUtil {
         }
     }
 
-    /**
-     *
-     * @param sqlDataSource
-     * @return
-     * @deprecated
-     */
-    @Deprecated
-    public static DataSource wrap(final javax.sql.DataSource sqlDataSource) {
-        return sqlDataSource instanceof DataSource ? ((DataSource) sqlDataSource) : new SimpleDataSource(sqlDataSource);
-    }
+    //    /**
+    //     *
+    //     * @param sqlDataSource
+    //     * @return
+    //     * @deprecated
+    //     */
+    //    @Deprecated
+    //    public static DataSource wrap(final javax.sql.DataSource sqlDataSource) {
+    //        return sqlDataSource instanceof DataSource ? ((DataSource) sqlDataSource) : new SimpleDataSource(sqlDataSource);
+    //    }
 
     /**
      * Creates the connection.
@@ -12985,6 +12985,44 @@ public final class JdbcUtil {
         }
     }
 
+    private static final ObjectPool<Type<?>, ColumnGetter<?>> COLUMN_GETTER_POOL = new ObjectPool<>(1024);
+
+    public interface ColumnGetter<V> {
+
+        ColumnGetter<Object> DEFAULT = new ColumnGetter<Object>() {
+            @Override
+            public Object apply(final int columnIndex, final ResultSet rs) throws SQLException {
+                return InternalJdbcUtil.getColumnValue(rs, columnIndex);
+            }
+        };
+
+        /**
+         *
+         * @param columnIndex start from 1
+         * @param rs
+         * @return
+         * @throws SQLException
+         */
+        V apply(int columnIndex, ResultSet rs) throws SQLException;
+
+        static <T> ColumnGetter<T> get(final Type<? extends T> type) {
+            ColumnGetter<?> columnGetter = COLUMN_GETTER_POOL.get(type);
+
+            if (columnGetter == null) {
+                columnGetter = new ColumnGetter<T>() {
+                    @Override
+                    public T apply(int columnIndex, ResultSet rs) throws SQLException {
+                        return type.get(rs, columnIndex);
+                    }
+                };
+
+                COLUMN_GETTER_POOL.put(type, columnGetter);
+            }
+
+            return (ColumnGetter<T>) columnGetter;
+        }
+    }
+
     /**
      * Don't use {@code RowMapper} in {@link PreparedQuery#list(RowMapper)} or any place where multiple records will be retrieved by it, if column labels/count are used in {@link RowMapper#apply(ResultSet)}.
      * Consider using {@code BiRowMapper} instead because it's more efficient to retrieve multiple records when column labels/count are used.
@@ -13098,251 +13136,335 @@ public final class JdbcUtil {
         @Override
         T apply(ResultSet rs) throws SQLException;
 
-        ///**
-        // * Totally unnecessary. It's more efficient by direct call.
-        // *
-        // * @param leftType
-        // * @param rightType
-        // * @return
-        // * @deprecated
-        // */
-        //@Deprecated
-        //public static <L, R> RowMapper<Pair<L, R>, RuntimeException> toPair(final Class<L> leftType, final Class<R> rightType) {
-        //    N.checkArgNotNull(leftType, "leftType");
-        //    N.checkArgNotNull(rightType, "rightType");
-        //
-        //    return new RowMapper<Pair<L, R>, RuntimeException>() {
-        //        private final Type<L> leftT = N.typeOf(leftType);
-        //        private final Type<R> rightT = N.typeOf(rightType);
-        //
-        //        @Override
-        //        public Pair<L, R> apply(ResultSet rs) throws SQLException, RuntimeException {
-        //            return Pair.of(leftT.get(rs, 1), rightT.get(rs, 2));
-        //        }
-        //    };
-        //}
-        //
-        ///**
-        // * Totally unnecessary. It's more efficient by direct call.
-        // *
-        // * @param leftType
-        // * @param middleType
-        // * @param rightType
-        // * @return
-        // * @deprecated
-        // */
-        //@Deprecated
-        //public static <L, M, R> RowMapper<Triple<L, M, R>, RuntimeException> toTriple(final Class<L> leftType, final Class<M> middleType,
-        //        final Class<R> rightType) {
-        //    N.checkArgNotNull(leftType, "leftType");
-        //    N.checkArgNotNull(middleType, "middleType");
-        //    N.checkArgNotNull(rightType, "rightType");
-        //
-        //    return new RowMapper<Triple<L, M, R>, RuntimeException>() {
-        //        private final Type<L> leftT = N.typeOf(leftType);
-        //        private final Type<M> middleT = N.typeOf(middleType);
-        //        private final Type<R> rightT = N.typeOf(rightType);
-        //
-        //        @Override
-        //        public Triple<L, M, R> apply(ResultSet rs) throws SQLException, RuntimeException {
-        //            return Triple.of(leftT.get(rs, 1), middleT.get(rs, 2), rightT.get(rs, 3));
-        //        }
-        //    };
-        //}
-        //
-        ///**
-        // * Totally unnecessary. It's more efficient by direct call.
-        // *
-        // * @param type1
-        // * @param type2
-        // * @return
-        // * @deprecated
-        // */
-        //@Deprecated
-        //public static <T1, T2> RowMapper<Tuple2<T1, T2>, RuntimeException> toTuple(final Class<T1> type1, final Class<T2> type2) {
-        //    N.checkArgNotNull(type1, "type1");
-        //    N.checkArgNotNull(type2, "type2");
-        //
-        //    return new RowMapper<Tuple2<T1, T2>, RuntimeException>() {
-        //        private final Type<T1> t1 = N.typeOf(type1);
-        //        private final Type<T2> t2 = N.typeOf(type2);
-        //
-        //        @Override
-        //        public Tuple2<T1, T2> apply(ResultSet rs) throws SQLException, RuntimeException {
-        //            return Tuple.of(t1.get(rs, 1), t2.get(rs, 2));
-        //        }
-        //    };
-        //}
-        //
-        ///**
-        // * Totally unnecessary. It's more efficient by direct call.
-        // *
-        // * @param type1
-        // * @param type2
-        // * @param type3
-        // * @return
-        // * @deprecated
-        // */
-        //@Deprecated
-        //public static <T1, T2, T3> RowMapper<Tuple3<T1, T2, T3>, RuntimeException> toTuple(final Class<T1> type1, final Class<T2> type2,
-        //        final Class<T3> type3) {
-        //    N.checkArgNotNull(type1, "type1");
-        //    N.checkArgNotNull(type2, "type2");
-        //    N.checkArgNotNull(type3, "type3");
-        //
-        //    return new RowMapper<Tuple3<T1, T2, T3>, RuntimeException>() {
-        //        private final Type<T1> t1 = N.typeOf(type1);
-        //        private final Type<T2> t2 = N.typeOf(type2);
-        //        private final Type<T3> t3 = N.typeOf(type3);
-        //
-        //        @Override
-        //        public Tuple3<T1, T2, T3> apply(ResultSet rs) throws SQLException, RuntimeException {
-        //            return Tuple.of(t1.get(rs, 1), t2.get(rs, 2), t3.get(rs, 3));
-        //        }
-        //    };
-        //}
-        //
-        ///**
-        // * Totally unnecessary. It's more efficient by direct call.
-        // *
-        // * @param type1
-        // * @param type2
-        // * @param type3
-        // * @param type4
-        // * @return
-        // * @deprecated
-        // */
-        //@Deprecated
-        //public static <T1, T2, T3, T4> RowMapper<Tuple4<T1, T2, T3, T4>, RuntimeException> toTuple(final Class<T1> type1, final Class<T2> type2,
-        //        final Class<T3> type3, final Class<T4> type4) {
-        //    N.checkArgNotNull(type1, "type1");
-        //    N.checkArgNotNull(type2, "type2");
-        //    N.checkArgNotNull(type3, "type3");
-        //    N.checkArgNotNull(type4, "type4");
-        //
-        //    return new RowMapper<Tuple4<T1, T2, T3, T4>, RuntimeException>() {
-        //        private final Type<T1> t1 = N.typeOf(type1);
-        //        private final Type<T2> t2 = N.typeOf(type2);
-        //        private final Type<T3> t3 = N.typeOf(type3);
-        //        private final Type<T4> t4 = N.typeOf(type4);
-        //
-        //        @Override
-        //        public Tuple4<T1, T2, T3, T4> apply(ResultSet rs) throws SQLException, RuntimeException {
-        //            return Tuple.of(t1.get(rs, 1), t2.get(rs, 2), t3.get(rs, 3), t4.get(rs, 4));
-        //        }
-        //    };
-        //}
-        //
-        ///**
-        // * Totally unnecessary. It's more efficient by direct call.
-        // *
-        // * @param type1
-        // * @param type2
-        // * @param type3
-        // * @param type4
-        // * @param type5
-        // * @return
-        // * @deprecated
-        // */
-        //@Deprecated
-        //public static <T1, T2, T3, T4, T5> RowMapper<Tuple5<T1, T2, T3, T4, T5>, RuntimeException> toTuple(final Class<T1> type1, final Class<T2> type2,
-        //        final Class<T3> type3, final Class<T4> type4, final Class<T5> type5) {
-        //    N.checkArgNotNull(type1, "type1");
-        //    N.checkArgNotNull(type2, "type2");
-        //    N.checkArgNotNull(type3, "type3");
-        //    N.checkArgNotNull(type4, "type4");
-        //    N.checkArgNotNull(type5, "type5");
-        //
-        //    return new RowMapper<Tuple5<T1, T2, T3, T4, T5>, RuntimeException>() {
-        //        private final Type<T1> t1 = N.typeOf(type1);
-        //        private final Type<T2> t2 = N.typeOf(type2);
-        //        private final Type<T3> t3 = N.typeOf(type3);
-        //        private final Type<T4> t4 = N.typeOf(type4);
-        //        private final Type<T5> t5 = N.typeOf(type5);
-        //
-        //        @Override
-        //        public Tuple5<T1, T2, T3, T4, T5> apply(ResultSet rs) throws SQLException, RuntimeException {
-        //            return Tuple.of(t1.get(rs, 1), t2.get(rs, 2), t3.get(rs, 3), t4.get(rs, 4), t5.get(rs, 5));
-        //        }
-        //    };
-        //}
-        //
-        ///**
-        // * Totally unnecessary. It's more efficient by direct call.
-        // *
-        // * @param type1
-        // * @param type2
-        // * @param type3
-        // * @param type4
-        // * @param type5
-        // * @param type6
-        // * @return
-        // * @deprecated
-        // */
-        //@Deprecated
-        //public static <T1, T2, T3, T4, T5, T6> RowMapper<Tuple6<T1, T2, T3, T4, T5, T6>, RuntimeException> toTuple(final Class<T1> type1,
-        //        final Class<T2> type2, final Class<T3> type3, final Class<T4> type4, final Class<T5> type5, final Class<T6> type6) {
-        //    N.checkArgNotNull(type1, "type1");
-        //    N.checkArgNotNull(type2, "type2");
-        //    N.checkArgNotNull(type3, "type3");
-        //    N.checkArgNotNull(type4, "type4");
-        //    N.checkArgNotNull(type5, "type5");
-        //    N.checkArgNotNull(type6, "type6");
-        //
-        //    return new RowMapper<Tuple6<T1, T2, T3, T4, T5, T6>, RuntimeException>() {
-        //        private final Type<T1> t1 = N.typeOf(type1);
-        //        private final Type<T2> t2 = N.typeOf(type2);
-        //        private final Type<T3> t3 = N.typeOf(type3);
-        //        private final Type<T4> t4 = N.typeOf(type4);
-        //        private final Type<T5> t5 = N.typeOf(type5);
-        //        private final Type<T6> t6 = N.typeOf(type6);
-        //
-        //        @Override
-        //        public Tuple6<T1, T2, T3, T4, T5, T6> apply(ResultSet rs) throws SQLException, RuntimeException {
-        //            return Tuple.of(t1.get(rs, 1), t2.get(rs, 2), t3.get(rs, 3), t4.get(rs, 4), t5.get(rs, 5), t6.get(rs, 6));
-        //        }
-        //    };
-        //}
-        //
-        ///**
-        // * Totally unnecessary. It's more efficient by direct call.
-        // *
-        // * @param type1
-        // * @param type2
-        // * @param type3
-        // * @param type4
-        // * @param type5
-        // * @param type6
-        // * @param type7
-        // * @return
-        // * @deprecated
-        // */
-        //@Deprecated
-        //public static <T1, T2, T3, T4, T5, T6, T7> RowMapper<Tuple7<T1, T2, T3, T4, T5, T6, T7>, RuntimeException> toTuple(final Class<T1> type1,
-        //        final Class<T2> type2, final Class<T3> type3, final Class<T4> type4, final Class<T5> type5, final Class<T6> type6, final Class<T7> type7) {
-        //    N.checkArgNotNull(type1, "type1");
-        //    N.checkArgNotNull(type2, "type2");
-        //    N.checkArgNotNull(type3, "type3");
-        //    N.checkArgNotNull(type4, "type4");
-        //    N.checkArgNotNull(type5, "type5");
-        //    N.checkArgNotNull(type6, "type6");
-        //    N.checkArgNotNull(type7, "type7");
-        //
-        //    return new RowMapper<Tuple7<T1, T2, T3, T4, T5, T6, T7>, RuntimeException>() {
-        //        private final Type<T1> t1 = N.typeOf(type1);
-        //        private final Type<T2> t2 = N.typeOf(type2);
-        //        private final Type<T3> t3 = N.typeOf(type3);
-        //        private final Type<T4> t4 = N.typeOf(type4);
-        //        private final Type<T5> t5 = N.typeOf(type5);
-        //        private final Type<T6> t6 = N.typeOf(type6);
-        //        private final Type<T7> t7 = N.typeOf(type7);
-        //
-        //        @Override
-        //        public Tuple7<T1, T2, T3, T4, T5, T6, T7> apply(ResultSet rs) throws SQLException, RuntimeException {
-        //            return Tuple.of(t1.get(rs, 1), t2.get(rs, 2), t3.get(rs, 3), t4.get(rs, 4), t5.get(rs, 5), t6.get(rs, 6), t7.get(rs, 7));
-        //        }
-        //    };
-        //}
+        static RowMapperBuilder builder() {
+            return new RowMapperBuilder();
+        }
+
+        static RowMapperBuilder builder(final int columnCount) {
+            return new RowMapperBuilder(columnCount);
+        }
+
+        public static class RowMapperBuilder {
+            private int columnCount = -1;
+            private ColumnGetter<?>[] columnGetters;
+            private Map<Integer, ColumnGetter<?>> columnGetterMap;
+
+            RowMapperBuilder() {
+                columnGetterMap = new HashMap<>(9);
+                columnGetterMap.put(0, ColumnGetter.DEFAULT);
+            }
+
+            RowMapperBuilder(final int columnCount) {
+                this.columnCount = columnCount;
+                columnGetters = new ColumnGetter[columnCount + 1];
+                columnGetters[0] = ColumnGetter.DEFAULT;
+            }
+
+            /**
+             * Set default column getter function.
+             *
+             * @param columnGetter
+             * @return
+             */
+            public RowMapperBuilder defauLt(final ColumnGetter<?> columnGetter) {
+                if (columnGetters == null) {
+                    columnGetterMap.put(0, columnGetter);
+                } else {
+                    columnGetters[0] = columnGetter;
+                }
+
+                return this;
+            }
+
+            /**
+             *
+             * Set column getter function for column[columnIndex].
+             *
+             * @param columnIndex start from 1.
+             * @param columnGetter
+             * @return
+             */
+            public RowMapperBuilder column(final int columnIndex, final ColumnGetter<?> columnGetter) {
+                if (columnGetters == null) {
+                    columnGetterMap.put(columnIndex, columnGetter);
+                } else {
+                    columnGetters[columnIndex] = columnGetter;
+                }
+
+                return this;
+            }
+
+            //    /**
+            //     * Set default column getter function.
+            //     *
+            //     * @param columnGetter
+            //     * @return
+            //     */
+            //    public RowMapperBuilder __(final ColumnGetter<?> columnGetter) {
+            //        if (columnGetters == null) {
+            //            columnGetterMap.put(0, columnGetter);
+            //        } else {
+            //            columnGetters[0] = columnGetter;
+            //        }
+            //
+            //        return this;
+            //    }
+            //
+            //    /**
+            //     *
+            //     * Set column getter function for column[columnIndex].
+            //     *
+            //     * @param columnIndex start from 1.
+            //     * @param columnGetter
+            //     * @return
+            //     */
+            //    public RowMapperBuilder __(final int columnIndex, final ColumnGetter<?> columnGetter) {
+            //        if (columnGetters == null) {
+            //            columnGetterMap.put(columnIndex, columnGetter);
+            //        } else {
+            //            columnGetters[columnIndex] = columnGetter;
+            //        }
+            //
+            //        return this;
+            //    }
+            //
+            //    /**
+            //     * Set column getter function for column[1].
+            //     *
+            //     * @param columnGetter
+            //     * @return
+            //     */
+            //    public RowMapperBuilder _1(final ColumnGetter<?> columnGetter) {
+            //        if (columnGetters == null) {
+            //            columnGetterMap.put(1, columnGetter);
+            //        } else {
+            //            columnGetters[1] = columnGetter;
+            //        }
+            //
+            //        return this;
+            //    }
+            //
+            //    /**
+            //     *
+            //     * Set column getter function for column[1].
+            //     *
+            //     * @param columnGetter
+            //     * @return
+            //     */
+            //    public RowMapperBuilder _2(final ColumnGetter<?> columnGetter) {
+            //        if (columnGetters == null) {
+            //            columnGetterMap.put(2, columnGetter);
+            //        } else {
+            //            columnGetters[2] = columnGetter;
+            //        }
+            //
+            //        return this;
+            //    }
+            //
+            //    /**
+            //     *
+            //     * Set column getter function for column[3].
+            //     *
+            //     * @param columnGetter
+            //     * @return
+            //     */
+            //    public RowMapperBuilder _3(final ColumnGetter<?> columnGetter) {
+            //        if (columnGetters == null) {
+            //            columnGetterMap.put(3, columnGetter);
+            //        } else {
+            //            columnGetters[3] = columnGetter;
+            //        }
+            //
+            //        return this;
+            //    }
+            //
+            //    /**
+            //     *
+            //     * Set column getter function for column[4].
+            //     *
+            //     * @param columnGetter
+            //     * @return
+            //     */
+            //    public RowMapperBuilder _4(final ColumnGetter<?> columnGetter) {
+            //        if (columnGetters == null) {
+            //            columnGetterMap.put(4, columnGetter);
+            //        } else {
+            //            columnGetters[4] = columnGetter;
+            //        }
+            //
+            //        return this;
+            //    }
+            //
+            //    /**
+            //     *
+            //     * Set column getter function for column[5].
+            //     *
+            //     * @param columnGetter
+            //     * @return
+            //     */
+            //    public RowMapperBuilder _5(final ColumnGetter<?> columnGetter) {
+            //        if (columnGetters == null) {
+            //            columnGetterMap.put(5, columnGetter);
+            //        } else {
+            //            columnGetters[5] = columnGetter;
+            //        }
+            //
+            //        return this;
+            //    }
+            //
+            //    /**
+            //     *
+            //     * Set column getter function for column[6].
+            //     *
+            //     * @param columnGetter
+            //     * @return
+            //     */
+            //    public RowMapperBuilder _6(final ColumnGetter<?> columnGetter) {
+            //        if (columnGetters == null) {
+            //            columnGetterMap.put(6, columnGetter);
+            //        } else {
+            //            columnGetters[6] = columnGetter;
+            //        }
+            //
+            //        return this;
+            //    }
+            //
+            //    /**
+            //     *
+            //     * Set column getter function for column[7].
+            //     *
+            //     * @param columnGetter
+            //     * @return
+            //     */
+            //    public RowMapperBuilder _7(final ColumnGetter<?> columnGetter) {
+            //        if (columnGetters == null) {
+            //            columnGetterMap.put(7, columnGetter);
+            //        } else {
+            //            columnGetters[7] = columnGetter;
+            //        }
+            //
+            //        return this;
+            //    }
+            //
+            //    /**
+            //     *
+            //     * Set column getter function for column[8].
+            //     *
+            //     * @param columnGetter
+            //     * @return
+            //     */
+            //    public RowMapperBuilder _8(final ColumnGetter<?> columnGetter) {
+            //        if (columnGetters == null) {
+            //            columnGetterMap.put(8, columnGetter);
+            //        } else {
+            //            columnGetters[8] = columnGetter;
+            //        }
+            //
+            //        return this;
+            //    }
+            //
+            //    /**
+            //     *
+            //     * Set column getter function for column[9].
+            //     *
+            //     * @param columnGetter
+            //     * @return
+            //     */
+            //    public RowMapperBuilder _9(final ColumnGetter<?> columnGetter) {
+            //        if (columnGetters == null) {
+            //            columnGetterMap.put(9, columnGetter);
+            //        } else {
+            //            columnGetters[9] = columnGetter;
+            //        }
+            //
+            //        return this;
+            //    }
+
+            void setDefaultColumnGetter() {
+                for (int i = 1, len = columnGetters.length; i < len; i++) {
+                    if (columnGetters[i] == null) {
+                        columnGetters[i] = columnGetters[0];
+                    }
+                }
+            }
+
+            ColumnGetter<?>[] initColumnGetter(ResultSet rs) throws SQLException {
+                final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[rs.getMetaData().getColumnCount()];
+                rsColumnGetters[0] = columnGetterMap.get(0);
+
+                for (int i = 1, len = rsColumnGetters.length; i < len; i++) {
+                    rsColumnGetters[i] = columnGetterMap.getOrDefault(i, rsColumnGetters[0]);
+                }
+
+                return rsColumnGetters;
+            }
+
+            /**
+             * Don't cache or reuse the returned {@code RowMapper} instance.
+             *
+             * @return
+             */
+            public RowMapper<Object[]> toArray() {
+                setDefaultColumnGetter();
+
+                return new RowMapper<Object[]>() {
+                    private volatile int rsColumnCount = columnCount;
+                    private volatile ColumnGetter<?>[] rsColumnGetters = columnGetters;
+
+                    @Override
+                    public Object[] apply(ResultSet rs) throws SQLException {
+                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+
+                        if (rsColumnGetters == null) {
+                            rsColumnGetters = initColumnGetter(rs);
+                            rsColumnCount = rsColumnGetters.length - 1;
+                            this.rsColumnGetters = rsColumnGetters;
+                        }
+
+                        final Object[] row = new Object[rsColumnCount];
+
+                        for (int i = 0; i < columnCount;) {
+                            row[i] = columnGetters[++i];
+                        }
+
+                        return row;
+                    }
+                };
+            }
+
+            /**
+             * Don't cache or reuse the returned {@code RowMapper} instance.
+             *
+             * @return
+             */
+            public RowMapper<List<Object>> toList() {
+                setDefaultColumnGetter();
+
+                return new RowMapper<List<Object>>() {
+                    private volatile int rsColumnCount = columnCount;
+                    private volatile ColumnGetter<?>[] rsColumnGetters = columnGetters;
+
+                    @Override
+                    public List<Object> apply(ResultSet rs) throws SQLException {
+                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+
+                        if (rsColumnGetters == null) {
+                            rsColumnGetters = initColumnGetter(rs);
+                            rsColumnCount = rsColumnGetters.length - 1;
+                            this.rsColumnGetters = rsColumnGetters;
+                        }
+
+                        final List<Object> row = new ArrayList<>(rsColumnCount);
+
+                        for (int i = 0; i < columnCount;) {
+                            row.add(columnGetters[++i]);
+                        }
+
+                        return row;
+                    }
+                };
+            }
+        }
     }
 
     /**
@@ -13519,6 +13641,7 @@ public final class JdbcUtil {
         T apply(ResultSet rs, List<String> columnLabels) throws SQLException;
 
         /**
+         * Don't cache or reuse the returned {@code BiRowMapper} instance.
          *
          * @param <T>
          * @param targetClass
@@ -13545,6 +13668,292 @@ public final class JdbcUtil {
                     return mapper.apply(rs, columnLabelList);
                 }
             };
+        }
+
+        static BiRowMapperBuilder builder() {
+            return new BiRowMapperBuilder();
+        }
+
+        static BiRowMapperBuilder builder(final int columnCount) {
+            return new BiRowMapperBuilder(columnCount);
+        }
+
+        public static class BiRowMapperBuilder {
+            private ColumnGetter<?> defaultColumnGetter = ColumnGetter.DEFAULT;
+            private final Map<String, ColumnGetter<?>> columnGetterMap;
+
+            BiRowMapperBuilder() {
+                this(9);
+            }
+
+            BiRowMapperBuilder(final int columnCount) {
+                columnGetterMap = new HashMap<>(Math.min(9, columnCount));
+            }
+
+            /**
+             * Set default column getter function.
+             *
+             * @param columnGetter
+             * @return
+             */
+            public BiRowMapperBuilder defauLt(final ColumnGetter<?> columnGetter) {
+                defaultColumnGetter = columnGetter;
+
+                return this;
+            }
+
+            /**
+             * Set column getter function for column[columnName].
+             *
+             * @param columnGetter
+             * @return
+             */
+            public BiRowMapperBuilder column(final String columnName, final ColumnGetter<?> columnGetter) {
+                columnGetterMap.put(columnName, columnGetter);
+
+                return this;
+            }
+
+            //    /**
+            //     * Set default column getter function.
+            //     *
+            //     * @param columnGetter
+            //     * @return
+            //     */
+            //    public BiRowMapperBuilder __(final ColumnGetter<?> columnGetter) {
+            //        defaultColumnGetter = columnGetter;
+            //
+            //        return this;
+            //    }
+            //
+            //    /**
+            //     * Set column getter function for column[columnName].
+            //     *
+            //     * @param columnGetter
+            //     * @return
+            //     */
+            //    public BiRowMapperBuilder __(final String columnName, final ColumnGetter<?> columnGetter) {
+            //        columnGetterMap.put(columnName, columnGetter);
+            //
+            //        return this;
+            //    }
+
+            ColumnGetter<?>[] initColumnGetter(final List<String> columnLabelList) {
+                final int rsColumnCount = columnLabelList.size();
+                final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[rsColumnCount + 1];
+                rsColumnGetters[0] = defaultColumnGetter;
+
+                int cnt = 0;
+                ColumnGetter<?> columnGetter = null;
+
+                for (int i = 0; i < rsColumnCount; i++) {
+                    columnGetter = columnGetterMap.get(columnLabelList.get(i));
+
+                    if (columnGetter != null) {
+                        cnt++;
+                    }
+
+                    rsColumnGetters[i + 1] = columnGetter == null ? defaultColumnGetter : columnGetter;
+                }
+
+                if (cnt < columnGetterMap.size()) {
+                    final List<String> tmp = new ArrayList<>(columnGetterMap.keySet());
+                    tmp.removeAll(columnLabelList);
+                    throw new IllegalArgumentException("ColumnGetters for " + tmp + " are not found in ResultSet columns: " + columnLabelList);
+                }
+
+                return rsColumnGetters;
+            }
+
+            public <T> BiRowMapper<T> to(final Class<? extends T> targetClass) {
+                return to(targetClass, false);
+            }
+
+            public <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final boolean ignoreNonMatchedColumns) {
+                if (Object[].class.isAssignableFrom(targetClass)) {
+                    return new BiRowMapper<T>() {
+                        private volatile int rsColumnCount = -1;
+                        private volatile ColumnGetter<?>[] rsColumnGetters = null;
+
+                        @Override
+                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                            ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+
+                            if (rsColumnGetters == null) {
+                                rsColumnCount = columnLabelList.size();
+                                rsColumnGetters = initColumnGetter(columnLabelList);
+                                this.rsColumnGetters = rsColumnGetters;
+                            }
+
+                            final Object[] a = Array.newInstance(targetClass.getComponentType(), rsColumnCount);
+
+                            for (int i = 0; i < rsColumnCount;) {
+                                a[i] = rsColumnGetters[++i].apply(i, rs);
+                            }
+
+                            return (T) a;
+                        }
+                    };
+                } else if (List.class.isAssignableFrom(targetClass)) {
+                    return new BiRowMapper<T>() {
+                        private final boolean isListOrArrayList = targetClass.equals(List.class) || targetClass.equals(ArrayList.class);
+
+                        private volatile int rsColumnCount = -1;
+                        private volatile ColumnGetter<?>[] rsColumnGetters = null;
+
+                        @Override
+                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                            ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+
+                            if (rsColumnGetters == null) {
+                                rsColumnCount = columnLabelList.size();
+                                rsColumnGetters = initColumnGetter(columnLabelList);
+                                this.rsColumnGetters = rsColumnGetters;
+                            }
+
+                            final List<Object> c = isListOrArrayList ? new ArrayList<>(rsColumnCount) : (List<Object>) N.newInstance(targetClass);
+
+                            for (int i = 0; i < rsColumnCount;) {
+                                c.add(rsColumnGetters[++i].apply(i, rs));
+                            }
+
+                            return (T) c;
+                        }
+                    };
+                } else if (Map.class.isAssignableFrom(targetClass)) {
+                    return new BiRowMapper<T>() {
+                        private final boolean isMapOrHashMap = targetClass.equals(Map.class) || targetClass.equals(HashMap.class);
+                        private final boolean isLinkedHashMap = targetClass.equals(LinkedHashMap.class);
+
+                        private volatile int rsColumnCount = -1;
+                        private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                        private String[] columnLabels = null;
+
+                        @Override
+                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                            ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+
+                            if (rsColumnGetters == null) {
+                                rsColumnCount = columnLabelList.size();
+                                rsColumnGetters = initColumnGetter(columnLabelList);
+                                this.rsColumnGetters = rsColumnGetters;
+
+                                columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
+                            }
+
+                            final Map<String, Object> m = isMapOrHashMap ? new HashMap<>(rsColumnCount)
+                                    : (isLinkedHashMap ? new LinkedHashMap<>(rsColumnCount) : (Map<String, Object>) N.newInstance(targetClass));
+
+                            for (int i = 0; i < rsColumnCount;) {
+                                m.put(columnLabels[i], rsColumnGetters[++i].apply(i, rs));
+                            }
+
+                            return (T) m;
+                        }
+                    };
+                } else if (ClassUtil.isEntity(targetClass)) {
+                    return new BiRowMapper<T>() {
+                        private final boolean isDirtyMarker = DirtyMarkerUtil.isDirtyMarker(targetClass);
+                        private final EntityInfo entityInfo = ParserUtil.getEntityInfo(targetClass);
+
+                        private volatile int rsColumnCount = -1;
+                        private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                        private volatile String[] columnLabels = null;
+                        private volatile PropInfo[] propInfos;
+
+                        @Override
+                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                            ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+
+                            if (rsColumnGetters == null) {
+                                rsColumnCount = columnLabelList.size();
+                                rsColumnGetters = initColumnGetter(columnLabelList);
+                                this.rsColumnGetters = rsColumnGetters;
+
+                                columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
+                                propInfos = new PropInfo[rsColumnCount];
+
+                                final Map<String, String> column2FieldNameMap = InternalJdbcUtil.getColumn2FieldNameMap(targetClass);
+
+                                for (int i = 0; i < rsColumnCount; i++) {
+                                    propInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
+
+                                    if (propInfos[i] == null) {
+                                        String fieldName = column2FieldNameMap.get(columnLabels[i]);
+
+                                        if (N.isNullOrEmpty(fieldName)) {
+                                            fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
+                                        }
+
+                                        if (N.notNullOrEmpty(fieldName)) {
+                                            propInfos[i] = entityInfo.getPropInfo(fieldName);
+                                        }
+                                    }
+
+                                    if (propInfos[i] == null) {
+                                        if (ignoreNonMatchedColumns) {
+                                            columnLabels[i] = null;
+                                        } else {
+                                            throw new IllegalArgumentException("No property in class: " + ClassUtil.getCanonicalClassName(targetClass)
+                                                    + " mapping to column: " + columnLabels[i]);
+                                        }
+                                    } else {
+                                        if (rsColumnGetters[i + 1] == ColumnGetter.DEFAULT) {
+                                            rsColumnGetters[i + 1] = ColumnGetter.get(entityInfo.getPropInfo(columnLabels[i]).dbType);
+                                        }
+                                    }
+                                }
+
+                                this.propInfos = propInfos;
+                            }
+
+                            final Object entity = N.newInstance(targetClass);
+
+                            for (int i = 0; i < rsColumnCount; i++) {
+                                if (columnLabels[i] == null) {
+                                    continue;
+                                }
+
+                                propInfos[i].setPropValue(entity, rsColumnGetters[++i].apply(i, rs));
+                            }
+
+                            if (isDirtyMarker) {
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
+                            }
+
+                            return (T) entity;
+                        }
+                    };
+                } else {
+                    return new BiRowMapper<T>() {
+                        private volatile int rsColumnCount = -1;
+                        private volatile ColumnGetter<?>[] rsColumnGetters = null;
+
+                        @Override
+                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                            ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+
+                            if (rsColumnGetters == null) {
+                                rsColumnCount = columnLabelList.size();
+                                rsColumnGetters = initColumnGetter(columnLabelList);
+
+                                if (rsColumnGetters[1] == ColumnGetter.DEFAULT) {
+                                    rsColumnGetters[1] = ColumnGetter.get(N.typeOf(targetClass));
+                                }
+
+                                this.rsColumnGetters = rsColumnGetters;
+                            }
+
+                            if (rsColumnCount != 1 && (rsColumnCount = columnLabelList.size()) != 1) {
+                                throw new IllegalArgumentException(
+                                        "It's not supported to retrieve value from multiple columns: " + columnLabelList + " for type: " + targetClass);
+                            }
+
+                            return (T) rsColumnGetters[1].apply(1, rs);
+                        }
+                    };
+                }
+            }
         }
     }
 
@@ -13580,7 +13989,8 @@ public final class JdbcUtil {
     }
 
     /**
-     * Don't use {@code RowFilter} in {@link PreparedQuery#list(RowFilter, RowMapper)}, {@link PreparedQuery#forEach(RowFilter, RowConsumer)}  or any place where multiple records will be tested by it, if column labels/count are used in {@link RowFilter#test(ResultSet)}.
+     * Generally, the result should be filtered in database side by SQL scripts.
+     * Only user {@code RowFilter/BiRowFilter} if there is a specific reason or the filter can't be done by SQL scripts in database server side.
      * Consider using {@code BiRowConsumer} instead because it's more efficient to test multiple records when column labels/count are used.
      *
      */
@@ -13613,7 +14023,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * The Interface BiRowFilter.
+     * Generally, the result should be filtered in database side by SQL scripts.
+     * Only user {@code RowFilter/BiRowFilter} if there is a specific reason or the filter can't be done by SQL scripts in database server side.
+     *
      */
     public interface BiRowFilter extends Try.BiPredicate<ResultSet, List<String>, SQLException> {
 
@@ -13645,7 +14057,7 @@ public final class JdbcUtil {
     }
 
     /** The Constant daoPool. */
-    private static final Map<Class<?>, JdbcUtil.Dao> daoPool = new ConcurrentHashMap<>();
+    private static final Map<String, JdbcUtil.Dao> daoPool = new ConcurrentHashMap<>();
 
     /**
      * This interface is designed to share/manager SQL queries by Java APIs/methods with static parameter types and return type, while hiding the SQL scripts.
@@ -14080,11 +14492,27 @@ public final class JdbcUtil {
             N.checkArgNotNull(daoInterface, "daoInterface");
             N.checkArgNotNull(ds, "dataSource");
 
-            T dao = (T) daoPool.get(daoInterface);
+            final String key = ClassUtil.getCanonicalClassName(daoInterface) + "_" + System.identityHashCode(ds);
+            T dao = (T) daoPool.get(key);
 
             if (dao == null) {
-                dao = JdbcUtil.newInstance(daoInterface, ds);
-                daoPool.put(daoInterface, dao);
+                dao = JdbcUtil.newInstance(daoInterface, ds, null);
+                daoPool.put(key, dao);
+            }
+
+            return dao;
+        }
+
+        static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm) {
+            N.checkArgNotNull(daoInterface, "daoInterface");
+            N.checkArgNotNull(dsm, "dataSourceManager");
+
+            final String key = ClassUtil.getCanonicalClassName(daoInterface) + "_" + System.identityHashCode(dsm);
+            T dao = (T) daoPool.get(key);
+
+            if (dao == null) {
+                dao = JdbcUtil.newInstance(daoInterface, null, dsm);
+                daoPool.put(key, dao);
             }
 
             return dao;
@@ -14095,6 +14523,8 @@ public final class JdbcUtil {
          * @return
          */
         javax.sql.DataSource dataSource();
+
+        SQLExecutor sqlExecutor();
 
         //    /**
         //     *
@@ -15109,13 +15539,13 @@ public final class JdbcUtil {
      *
      * @param <T>
      * @param daoInterface
-     * @param ds
+     * @param dsm
      * @return
      */
     @SuppressWarnings({ "rawtypes", "deprecation" })
-    static <T extends Dao> T newInstance(final Class<T> daoInterface, final javax.sql.DataSource ds) {
-        N.checkArgNotNull(daoInterface, "daoInterface");
-        N.checkArgNotNull(ds, "dataSource");
+    static <T extends Dao> T newInstance(final Class<T> daoInterface, final javax.sql.DataSource ds, final DataSourceManager dsm) {
+        final SQLExecutor sqlExecutor = ds != null ? new SQLExecutor(ds) : new SQLExecutor(dsm);
+        final javax.sql.DataSource primaryDataSource = ds != null ? ds : dsm.getPrimaryDataSource();
 
         java.lang.reflect.Type[] typeArguments = null;
 
@@ -16402,7 +16832,9 @@ public final class JdbcUtil {
                 } else if (sqlAnno == null) {
                     if (Modifier.isAbstract(m.getModifiers())) {
                         if (m.getName().equals("dataSource") && javax.sql.DataSource.class.isAssignableFrom(returnType) && paramLen == 0) {
-                            call = (proxy, args) -> ds;
+                            call = (proxy, args) -> primaryDataSource;
+                        } else if (m.getName().equals("sqlExecutor") && SQLExecutor.class.isAssignableFrom(returnType) && paramLen == 0) {
+                            call = (proxy, args) -> sqlExecutor;
                         } else {
                             call = (proxy, args) -> {
                                 throw new UnsupportedOperationException("Unsupported operation: " + m);
@@ -16427,16 +16859,30 @@ public final class JdbcUtil {
                     final boolean isNamedQuery = sqlAnno.annotationType().getSimpleName().startsWith("Named");
                     final NamedSQL namedSQL = isNamedQuery ? NamedSQL.parse(query) : null;
 
-                    if ((paramLen > 0 && JdbcUtil.ParametersSetter.class.isAssignableFrom(paramTypes[0]))
+                    final boolean hasParameterSetter = (paramLen > 0 && JdbcUtil.ParametersSetter.class.isAssignableFrom(paramTypes[0]))
                             || (paramLen > 1 && JdbcUtil.BiParametersSetter.class.isAssignableFrom(paramTypes[1]))
-                            || (paramLen > 1 && JdbcUtil.TriParametersSetter.class.isAssignableFrom(paramTypes[1]))) {
+                            || (paramLen > 1 && JdbcUtil.TriParametersSetter.class.isAssignableFrom(paramTypes[1]));
+
+                    final boolean hasRowMapperOrExtractor = paramLen > 0
+                            && (ResultExtractor.class.isAssignableFrom(lastParamType) || BiResultExtractor.class.isAssignableFrom(lastParamType)
+                                    || RowMapper.class.isAssignableFrom(lastParamType) || BiRowMapper.class.isAssignableFrom(lastParamType));
+
+                    final boolean hasRowFilter = paramLen >= 2
+                            && (RowFilter.class.isAssignableFrom(paramTypes[paramLen - 2]) || BiRowFilter.class.isAssignableFrom(paramTypes[paramLen - 2]));
+
+                    if (hasRowFilter && !hasRowMapperOrExtractor) {
+                        throw new UnsupportedOperationException(
+                                "Parameter 'RowFilter/BiRowFilter' is not supported without last paramere to be 'RowMapper/BiRowMapper' in method: "
+                                        + m.getName());
+                    }
+
+                    if (hasParameterSetter) {
                         throw new UnsupportedOperationException(
                                 "Setting parameters by 'ParametersSetter/BiParametersSetter/TriParametersSetter' is disabled. Can't use it in method: "
                                         + m.getName());
                     }
 
-                    if (paramLen > 0 && (ResultExtractor.class.isAssignableFrom(lastParamType) || BiResultExtractor.class.isAssignableFrom(lastParamType)
-                            || RowMapper.class.isAssignableFrom(lastParamType) || BiRowMapper.class.isAssignableFrom(lastParamType))) {
+                    if (hasRowMapperOrExtractor) {
                         throw new UnsupportedOperationException(
                                 "Retrieving result/record by 'ResultExtractor/BiResultExtractor/RowMapper/BiRowMapper' is disabled. Can't use it in method: "
                                         + m.getName());
@@ -16496,20 +16942,7 @@ public final class JdbcUtil {
                             }
                         };
                     } else {
-                        final boolean isLastParameterMapperOrExtractor = ResultExtractor.class.isAssignableFrom(lastParamType)
-                                || BiResultExtractor.class.isAssignableFrom(lastParamType) || RowMapper.class.isAssignableFrom(lastParamType)
-                                || BiRowMapper.class.isAssignableFrom(lastParamType);
-
-                        final boolean hasRowFilter = paramLen >= 2
-                                && (RowFilter.class.isAssignableFrom(paramTypes[paramLen - 2]) || BiRowFilter.class.isAssignableFrom(paramTypes[paramLen - 2]));
-
-                        if (hasRowFilter && !isLastParameterMapperOrExtractor) {
-                            throw new UnsupportedOperationException(
-                                    "Parameter 'RowFilter/BiRowFilter' is not supported without last paramere to be 'RowMapper/BiRowMapper' in method: "
-                                            + m.getName());
-                        }
-
-                        final int stmtParamLen = hasRowFilter ? (paramLen - 2) : (isLastParameterMapperOrExtractor ? paramLen - 1 : paramLen);
+                        final int stmtParamLen = hasRowFilter ? (paramLen - 2) : (hasRowMapperOrExtractor ? paramLen - 1 : paramLen);
 
                         if (stmtParamLen == 0) {
                             // ignore
@@ -16648,7 +17081,8 @@ public final class JdbcUtil {
                     if (sqlAnno.annotationType().equals(Dao.Select.class) || sqlAnno.annotationType().equals(Dao.NamedSelect.class)) {
                         final boolean idDirtyMarker = ClassUtil.isEntity(returnType) && DirtyMarker.class.isAssignableFrom(returnType);
 
-                        final Try.BiFunction<AbstractPreparedQuery, Object[], T, Exception> queryFunc = createQueryFunctionByMethod(m);
+                        final Try.BiFunction<AbstractPreparedQuery, Object[], T, Exception> queryFunc = createQueryFunctionByMethod(m, hasRowMapperOrExtractor,
+                                hasRowFilter);
 
                         // Getting ClassCastException. Not sure why query result is being casted Dao. It seems there is a bug in JDk compiler.
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
@@ -16926,26 +17360,16 @@ public final class JdbcUtil {
         }
     }
 
-    /**
-     * Creates the query function by method.
-     *
-     * @param <R>
-     * @param method
-     * @return
-     */
     @SuppressWarnings("rawtypes")
-    static <R> BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Method method) {
+    static <R> BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Method method, final boolean hasRowMapperOrExtractor,
+            final boolean hasRowFilter) {
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
         final int paramLen = paramTypes.length;
         final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
         final boolean isListQuery = isListQuery(method);
-        final boolean isLastParameterMapperOrExtractor = paramLen > 0
-                && (ResultExtractor.class.isAssignableFrom(lastParamType) || BiResultExtractor.class.isAssignableFrom(lastParamType)
-                        || RowMapper.class.isAssignableFrom(lastParamType) || BiRowMapper.class.isAssignableFrom(lastParamType));
-        final boolean hasRowFilter = paramLen >= 2 && RowFilter.class.isAssignableFrom(paramTypes[paramLen - 2]);
 
-        if (isLastParameterMapperOrExtractor) {
+        if (hasRowMapperOrExtractor) {
             if (RowMapper.class.isAssignableFrom(lastParamType)) {
                 if (isListQuery) {
                     if (hasRowFilter) {
