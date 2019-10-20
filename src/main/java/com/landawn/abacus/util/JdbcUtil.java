@@ -94,6 +94,7 @@ import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.core.DirtyMarkerUtil;
 import com.landawn.abacus.core.RowDataSet;
+import com.landawn.abacus.core.Seid;
 import com.landawn.abacus.dataSource.DataSourceConfiguration;
 import com.landawn.abacus.dataSource.DataSourceManagerConfiguration;
 import com.landawn.abacus.dataSource.NonSliceSelector;
@@ -8032,7 +8033,7 @@ public final class JdbcUtil {
                 stmt.executeUpdate();
 
                 try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    return rs.next() ? Optional.of((ID) JdbcUtil.getColumnValue(rs, 1)) : Optional.<ID> empty();
+                    return rs.next() ? Optional.of((ID) SINGLE_GENERATED_KEY_EXTRACTOR.apply(rs)) : Optional.<ID> empty();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -8104,7 +8105,7 @@ public final class JdbcUtil {
 
                 try (ResultSet rs = stmt.getGeneratedKeys()) {
                     while (rs.next()) {
-                        result.add((ID) JdbcUtil.getColumnValue(rs, 1));
+                        result.add((ID) SINGLE_GENERATED_KEY_EXTRACTOR.apply(rs));
                     }
 
                     return result;
@@ -12985,6 +12986,82 @@ public final class JdbcUtil {
         }
     }
 
+    /** The Constant NO_GENERATED_KEY_EXTRACTOR. */
+    static final RowMapper<Object> NO_GENERATED_KEY_EXTRACTOR = new RowMapper<Object>() {
+        @Override
+        public Object apply(final ResultSet rs) throws SQLException {
+            return null;
+        }
+    };
+
+    /** The Constant SINGLE_GENERATED_KEY_EXTRACTOR. */
+    static final RowMapper<Object> SINGLE_GENERATED_KEY_EXTRACTOR = new RowMapper<Object>() {
+        @Override
+        public Object apply(final ResultSet rs) throws SQLException {
+            return getColumnValue(rs, 1);
+        }
+    };
+
+    /** The Constant MULTI_GENERATED_KEY_EXTRACTOR. */
+    static final RowMapper<Object> MULTI_GENERATED_KEY_EXTRACTOR = new RowMapper<Object>() {
+        @SuppressWarnings("deprecation")
+        @Override
+        public Object apply(final ResultSet rs) throws SQLException {
+            final List<String> columnLabelList = getColumnLabelList(rs);
+
+            if (columnLabelList.size() == 1) {
+                return getColumnValue(rs, 1);
+            } else {
+                final int columnCount = columnLabelList.size();
+                final Seid id = Seid.of(N.EMPTY_STRING);
+
+                for (int i = 1; i <= columnCount; i++) {
+                    id.set(columnLabelList.get(i - 1), getColumnValue(rs, i));
+                }
+
+                return id;
+            }
+        }
+    };
+
+    /** The Constant NO_BI_GENERATED_KEY_EXTRACTOR. */
+    static final BiRowMapper<Object> NO_BI_GENERATED_KEY_EXTRACTOR = new BiRowMapper<Object>() {
+        @Override
+        public Object apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+            return null;
+        }
+    };
+
+    /** The Constant SINGLE_BI_GENERATED_KEY_EXTRACTOR. */
+    static final BiRowMapper<Object> SINGLE_BI_GENERATED_KEY_EXTRACTOR = new BiRowMapper<Object>() {
+        @Override
+        public Object apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+            return getColumnValue(rs, 1);
+        }
+    };
+
+    /** The Constant MULTI_BI_GENERATED_KEY_EXTRACTOR. */
+    static final BiRowMapper<Object> MULTI_BI_GENERATED_KEY_EXTRACTOR = new BiRowMapper<Object>() {
+        @SuppressWarnings("deprecation")
+        @Override
+        public Object apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+            final List<String> columnLabelList = getColumnLabelList(rs);
+
+            if (columnLabelList.size() == 1) {
+                return getColumnValue(rs, 1);
+            } else {
+                final int columnCount = columnLabelList.size();
+                final Seid id = Seid.of(N.EMPTY_STRING);
+
+                for (int i = 1; i <= columnCount; i++) {
+                    id.set(columnLabelList.get(i - 1), getColumnValue(rs, i));
+                }
+
+                return id;
+            }
+        }
+    };
+
     /**
      * Don't use {@code RowMapper} in {@link PreparedQuery#list(RowMapper)} or any place where multiple records will be retrieved by it, if column labels/count are used in {@link RowMapper#apply(ResultSet)}.
      * Consider using {@code BiRowMapper} instead because it's more efficient to retrieve multiple records when column labels/count are used.
@@ -14632,6 +14709,28 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param query
+         * @param returnColumnIndexes
+         * @return
+         * @throws SQLException
+         */
+        default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws SQLException {
+            return JdbcUtil.prepareQuery(dataSource(), query, returnColumnIndexes);
+        }
+
+        /**
+         *
+         * @param query
+         * @param returnColumnIndexes
+         * @return
+         * @throws SQLException
+         */
+        default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws SQLException {
+            return JdbcUtil.prepareQuery(dataSource(), query, returnColumnNames);
+        }
+
+        /**
+         *
          * @param sql
          * @param stmtCreator
          * @return
@@ -14666,6 +14765,28 @@ public final class JdbcUtil {
         /**
          *
          * @param namedQuery
+         * @param returnColumnIndexes
+         * @return
+         * @throws SQLException
+         */
+        default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws SQLException {
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
+        }
+
+        /**
+         *
+         * @param namedQuery
+         * @param returnColumnNames
+         * @return
+         * @throws SQLException
+         */
+        default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws SQLException {
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
+        }
+
+        /**
+         *
+         * @param namedQuery
          * @param stmtCreator
          * @return
          * @throws SQLException
@@ -14694,6 +14815,28 @@ public final class JdbcUtil {
          */
         default NamedQuery prepareNamedQuery(final NamedSQL namedSQL, final boolean generateKeys) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedSQL, generateKeys);
+        }
+
+        /**
+         *
+         * @param namedQuery
+         * @param returnColumnIndexes
+         * @return
+         * @throws SQLException
+         */
+        default NamedQuery prepareNamedQuery(final NamedSQL namedQuery, final int[] returnColumnIndexes) throws SQLException {
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
+        }
+
+        /**
+         *
+         * @param namedQuery
+         * @param returnColumnNames
+         * @return
+         * @throws SQLException
+         */
+        default NamedQuery prepareNamedQuery(final NamedSQL namedQuery, final String[] returnColumnNames) throws SQLException {
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
         }
 
         /**

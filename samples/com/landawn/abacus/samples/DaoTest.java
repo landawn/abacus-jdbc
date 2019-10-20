@@ -176,10 +176,10 @@ public class DaoTest {
                 BiRowMapper.builder().defauLt((i, rs) -> rs.getObject(i)).column("firstName", (i, rs) -> rs.getString(i)).to(LinkedHashMap.class))
                 .forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.builder().defauLt((i, rs) -> {
-            N.println(rs.getMetaData().getColumnLabel(i) + ": " + rs.getObject(i));
-            return rs.getObject(i);
-        }).column("firstName", (i, rs) -> rs.getString(i)).to(User.class)).forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
+                BiRowMapper.builder().defauLt((i, rs) -> rs.getObject(i)).column("firstName", (i, rs) -> rs.getString(i)).to(User.class)).forEach(Fn.println());
+
+        userDao.sqlExecutor().mapper(User.class, int.class).get(100).ifPresent(Fn.println());
 
         userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.to(User.class)).forEach(Fn.println());
 
@@ -188,5 +188,7 @@ public class DaoTest {
         userDao.allUsers().map(e -> e.getFirstName() + " " + e.getLastName()).forEach(Fn.println());
 
         userDao.deleteById(100L);
+
+        assertEquals(1, userDao.sqlExecutor().update("delete from user where id = ? ", 101));
     }
 }

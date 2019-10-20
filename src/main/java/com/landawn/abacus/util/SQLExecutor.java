@@ -409,82 +409,6 @@ public class SQLExecutor {
         }
     };
 
-    /** The Constant NO_GENERATED_KEY_EXTRACTOR. */
-    private static final JdbcUtil.RowMapper<Object> NO_GENERATED_KEY_EXTRACTOR = new JdbcUtil.RowMapper<Object>() {
-        @Override
-        public Object apply(final ResultSet rs) throws SQLException {
-            return null;
-        }
-    };
-
-    /** The Constant SINGLE_GENERATED_KEY_EXTRACTOR. */
-    private static final JdbcUtil.RowMapper<Object> SINGLE_GENERATED_KEY_EXTRACTOR = new JdbcUtil.RowMapper<Object>() {
-        @Override
-        public Object apply(final ResultSet rs) throws SQLException {
-            return JdbcUtil.getColumnValue(rs, 1);
-        }
-    };
-
-    /** The Constant MULTI_GENERATED_KEY_EXTRACTOR. */
-    private static final JdbcUtil.RowMapper<Object> MULTI_GENERATED_KEY_EXTRACTOR = new JdbcUtil.RowMapper<Object>() {
-        @SuppressWarnings("deprecation")
-        @Override
-        public Object apply(final ResultSet rs) throws SQLException {
-            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
-
-            if (columnLabelList.size() == 1) {
-                return JdbcUtil.getColumnValue(rs, 1);
-            } else {
-                final int columnCount = columnLabelList.size();
-                final Seid id = Seid.of(N.EMPTY_STRING);
-
-                for (int i = 1; i <= columnCount; i++) {
-                    id.set(columnLabelList.get(i - 1), JdbcUtil.getColumnValue(rs, i));
-                }
-
-                return id;
-            }
-        }
-    };
-
-    /** The Constant NO_BI_GENERATED_KEY_EXTRACTOR. */
-    private static final JdbcUtil.BiRowMapper<Object> NO_BI_GENERATED_KEY_EXTRACTOR = new JdbcUtil.BiRowMapper<Object>() {
-        @Override
-        public Object apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-            return null;
-        }
-    };
-
-    /** The Constant SINGLE_BI_GENERATED_KEY_EXTRACTOR. */
-    private static final JdbcUtil.BiRowMapper<Object> SINGLE_BI_GENERATED_KEY_EXTRACTOR = new JdbcUtil.BiRowMapper<Object>() {
-        @Override
-        public Object apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-            return JdbcUtil.getColumnValue(rs, 1);
-        }
-    };
-
-    /** The Constant MULTI_BI_GENERATED_KEY_EXTRACTOR. */
-    private static final JdbcUtil.BiRowMapper<Object> MULTI_BI_GENERATED_KEY_EXTRACTOR = new JdbcUtil.BiRowMapper<Object>() {
-        @SuppressWarnings("deprecation")
-        @Override
-        public Object apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
-
-            if (columnLabelList.size() == 1) {
-                return JdbcUtil.getColumnValue(rs, 1);
-            } else {
-                final int columnCount = columnLabelList.size();
-                final Seid id = Seid.of(N.EMPTY_STRING);
-
-                for (int i = 1; i <= columnCount; i++) {
-                    id.set(columnLabelList.get(i - 1), JdbcUtil.getColumnValue(rs, i));
-                }
-
-                return id;
-            }
-        }
-    };
-
     /** The Constant RESULT_SET_EXTRACTOR. */
     private static final ResultExtractor<ResultSet> RESULT_SET_EXTRACTOR = new ResultExtractor<ResultSet>() {
         @Override
@@ -1119,9 +1043,9 @@ public class SQLExecutor {
     private <ID> JdbcUtil.RowMapper<ID> getGeneratedKeyExtractor(JdbcSettings jdbcSettings) {
         if (jdbcSettings != null && ((N.notNullOrEmpty(jdbcSettings.getReturnedColumnIndexes()) && jdbcSettings.getReturnedColumnIndexes().length > 1)
                 || (N.notNullOrEmpty(jdbcSettings.getReturnedColumnNames()) && jdbcSettings.getReturnedColumnNames().length > 1))) {
-            return (JdbcUtil.RowMapper<ID>) MULTI_GENERATED_KEY_EXTRACTOR;
+            return (JdbcUtil.RowMapper<ID>) JdbcUtil.MULTI_GENERATED_KEY_EXTRACTOR;
         } else {
-            return (JdbcUtil.RowMapper<ID>) SINGLE_GENERATED_KEY_EXTRACTOR;
+            return (JdbcUtil.RowMapper<ID>) JdbcUtil.SINGLE_GENERATED_KEY_EXTRACTOR;
         }
     }
 
@@ -1135,9 +1059,9 @@ public class SQLExecutor {
     private <ID> JdbcUtil.BiRowMapper<ID> getBiGeneratedKeyExtractor(JdbcSettings jdbcSettings) {
         if (jdbcSettings != null && ((N.notNullOrEmpty(jdbcSettings.getReturnedColumnIndexes()) && jdbcSettings.getReturnedColumnIndexes().length > 1)
                 || (N.notNullOrEmpty(jdbcSettings.getReturnedColumnNames()) && jdbcSettings.getReturnedColumnNames().length > 1))) {
-            return (JdbcUtil.BiRowMapper<ID>) MULTI_BI_GENERATED_KEY_EXTRACTOR;
+            return (JdbcUtil.BiRowMapper<ID>) JdbcUtil.MULTI_BI_GENERATED_KEY_EXTRACTOR;
         } else {
-            return (JdbcUtil.BiRowMapper<ID>) SINGLE_BI_GENERATED_KEY_EXTRACTOR;
+            return (JdbcUtil.BiRowMapper<ID>) JdbcUtil.SINGLE_BI_GENERATED_KEY_EXTRACTOR;
         }
     }
 
@@ -1153,20 +1077,20 @@ public class SQLExecutor {
     @SuppressWarnings("rawtypes")
     static <ID> JdbcUtil.RowMapper<ID> checkGeneratedKeysExtractor(JdbcUtil.RowMapper<ID> autoGeneratedKeyExtractor, final NamedSQL namedSQL,
             final Object[] parameters) {
-        if ((autoGeneratedKeyExtractor == null || autoGeneratedKeyExtractor == SINGLE_GENERATED_KEY_EXTRACTOR
-                || autoGeneratedKeyExtractor == MULTI_GENERATED_KEY_EXTRACTOR) //
+        if ((autoGeneratedKeyExtractor == null || autoGeneratedKeyExtractor == JdbcUtil.SINGLE_GENERATED_KEY_EXTRACTOR
+                || autoGeneratedKeyExtractor == JdbcUtil.MULTI_GENERATED_KEY_EXTRACTOR) //
                 && isEntityOrMapParameter(namedSQL, parameters) && ClassUtil.isEntity(parameters[0].getClass())) {
             final Class<?> cls = parameters[0].getClass();
             @SuppressWarnings("deprecation")
             final List<String> idPropNames = ClassUtil.getIdFieldNames(cls);
 
             if (idPropNames.size() == 0) {
-                return (JdbcUtil.RowMapper) NO_GENERATED_KEY_EXTRACTOR;
+                return (JdbcUtil.RowMapper) JdbcUtil.NO_GENERATED_KEY_EXTRACTOR;
             } else if (idPropNames.size() == 1) {
                 if (namedSQL.getNamedParameters().contains(idPropNames.get(0))) {
-                    return (JdbcUtil.RowMapper) NO_GENERATED_KEY_EXTRACTOR;
+                    return (JdbcUtil.RowMapper) JdbcUtil.NO_GENERATED_KEY_EXTRACTOR;
                 } else {
-                    return (JdbcUtil.RowMapper) SINGLE_GENERATED_KEY_EXTRACTOR;
+                    return (JdbcUtil.RowMapper) JdbcUtil.SINGLE_GENERATED_KEY_EXTRACTOR;
                 }
             } else {
                 List<String> generatedIdPropNames = null;
@@ -1182,11 +1106,11 @@ public class SQLExecutor {
                 }
 
                 if (N.isNullOrEmpty(generatedIdPropNames)) {
-                    return (JdbcUtil.RowMapper) NO_GENERATED_KEY_EXTRACTOR;
+                    return (JdbcUtil.RowMapper) JdbcUtil.NO_GENERATED_KEY_EXTRACTOR;
                 } else if (generatedIdPropNames.size() == 1) {
-                    return (JdbcUtil.RowMapper) SINGLE_GENERATED_KEY_EXTRACTOR;
+                    return (JdbcUtil.RowMapper) JdbcUtil.SINGLE_GENERATED_KEY_EXTRACTOR;
                 } else {
-                    return (JdbcUtil.RowMapper) MULTI_GENERATED_KEY_EXTRACTOR;
+                    return (JdbcUtil.RowMapper) JdbcUtil.MULTI_GENERATED_KEY_EXTRACTOR;
                 }
             }
         }
@@ -1206,20 +1130,20 @@ public class SQLExecutor {
     @SuppressWarnings("rawtypes")
     static <ID> JdbcUtil.BiRowMapper<ID> checkBiGeneratedKeysExtractor(JdbcUtil.BiRowMapper<ID> autoGeneratedKeyExtractor, final NamedSQL namedSQL,
             final Object... parameters) {
-        if ((autoGeneratedKeyExtractor == null || autoGeneratedKeyExtractor == SINGLE_BI_GENERATED_KEY_EXTRACTOR
-                || autoGeneratedKeyExtractor == MULTI_BI_GENERATED_KEY_EXTRACTOR) //
+        if ((autoGeneratedKeyExtractor == null || autoGeneratedKeyExtractor == JdbcUtil.SINGLE_BI_GENERATED_KEY_EXTRACTOR
+                || autoGeneratedKeyExtractor == JdbcUtil.MULTI_BI_GENERATED_KEY_EXTRACTOR) //
                 && isEntityOrMapParameter(namedSQL, parameters) && ClassUtil.isEntity(parameters[0].getClass())) {
             final Class<?> cls = parameters[0].getClass();
             @SuppressWarnings("deprecation")
             final List<String> idPropNames = ClassUtil.getIdFieldNames(cls);
 
             if (idPropNames.size() == 0) {
-                return (JdbcUtil.BiRowMapper) NO_BI_GENERATED_KEY_EXTRACTOR;
+                return (JdbcUtil.BiRowMapper) JdbcUtil.NO_BI_GENERATED_KEY_EXTRACTOR;
             } else if (idPropNames.size() == 1) {
                 if (namedSQL.getNamedParameters().contains(idPropNames.get(0))) {
-                    return (JdbcUtil.BiRowMapper) NO_BI_GENERATED_KEY_EXTRACTOR;
+                    return (JdbcUtil.BiRowMapper) JdbcUtil.NO_BI_GENERATED_KEY_EXTRACTOR;
                 } else {
-                    return (JdbcUtil.BiRowMapper) SINGLE_BI_GENERATED_KEY_EXTRACTOR;
+                    return (JdbcUtil.BiRowMapper) JdbcUtil.SINGLE_BI_GENERATED_KEY_EXTRACTOR;
                 }
             } else {
                 List<String> generatedIdPropNames = null;
@@ -1235,11 +1159,11 @@ public class SQLExecutor {
                 }
 
                 if (N.isNullOrEmpty(generatedIdPropNames)) {
-                    return (JdbcUtil.BiRowMapper) NO_BI_GENERATED_KEY_EXTRACTOR;
+                    return (JdbcUtil.BiRowMapper) JdbcUtil.NO_BI_GENERATED_KEY_EXTRACTOR;
                 } else if (generatedIdPropNames.size() == 1) {
-                    return (JdbcUtil.BiRowMapper) SINGLE_BI_GENERATED_KEY_EXTRACTOR;
+                    return (JdbcUtil.BiRowMapper) JdbcUtil.SINGLE_BI_GENERATED_KEY_EXTRACTOR;
                 } else {
-                    return (JdbcUtil.BiRowMapper) MULTI_BI_GENERATED_KEY_EXTRACTOR;
+                    return (JdbcUtil.BiRowMapper) JdbcUtil.MULTI_BI_GENERATED_KEY_EXTRACTOR;
                 }
             }
         }
