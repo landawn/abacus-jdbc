@@ -14570,29 +14570,65 @@ public final class JdbcUtil {
          * @see SQLExecutor#createDao(Class)
          */
         static <T extends Dao> T newInstance(final Class<T> daoInterface, final javax.sql.DataSource ds) {
+            return newInstance(daoInterface, ds, null);
+        }
+
+        /**
+         *
+         * @param <T>
+         * @param daoInterface
+         * @param dsm
+         * @return
+         */
+        static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm) {
+            return newInstance(daoInterface, dsm, null);
+        }
+
+        /**
+         *
+         * @param <T>
+         * @param daoInterface
+         * @param ds
+         * @param sqlMapper
+         * @return
+         * @see SQLExecutor#createDao(Class)
+         */
+        static <T extends Dao> T newInstance(final Class<T> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper) {
             N.checkArgNotNull(daoInterface, "daoInterface");
             N.checkArgNotNull(ds, "dataSource");
 
-            final String key = ClassUtil.getCanonicalClassName(daoInterface) + "_" + System.identityHashCode(ds);
+            final String key = ClassUtil.getCanonicalClassName(daoInterface) + "_" + System.identityHashCode(ds) + "_"
+                    + (sqlMapper == null ? "null" : System.identityHashCode(sqlMapper));
+
             T dao = (T) daoPool.get(key);
 
             if (dao == null) {
-                dao = JdbcUtil.newInstance(daoInterface, ds, null);
+                dao = JdbcUtil.newInstance(daoInterface, ds, null, sqlMapper);
                 daoPool.put(key, dao);
             }
 
             return dao;
         }
 
-        static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm) {
+        /**
+         *
+         * @param <T>
+         * @param daoInterface
+         * @param dsm
+         * @param sqlMapper
+         * @return
+         */
+        static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm, final SQLMapper sqlMapper) {
             N.checkArgNotNull(daoInterface, "daoInterface");
             N.checkArgNotNull(dsm, "dataSourceManager");
 
-            final String key = ClassUtil.getCanonicalClassName(daoInterface) + "_" + System.identityHashCode(dsm);
+            final String key = ClassUtil.getCanonicalClassName(daoInterface) + "_" + System.identityHashCode(dsm) + "_"
+                    + (sqlMapper == null ? "null" : System.identityHashCode(sqlMapper));
+
             T dao = (T) daoPool.get(key);
 
             if (dao == null) {
-                dao = JdbcUtil.newInstance(daoInterface, null, dsm);
+                dao = JdbcUtil.newInstance(daoInterface, null, dsm, sqlMapper);
                 daoPool.put(key, dao);
             }
 
@@ -14606,6 +14642,8 @@ public final class JdbcUtil {
         javax.sql.DataSource dataSource();
 
         SQLExecutor sqlExecutor();
+
+        SQLMapper sqlMapper();
 
         //    /**
         //     *
@@ -15690,9 +15728,10 @@ public final class JdbcUtil {
      * @return
      */
     @SuppressWarnings({ "rawtypes", "deprecation" })
-    static <T extends Dao> T newInstance(final Class<T> daoInterface, final javax.sql.DataSource ds, final DataSourceManager dsm) {
+    static <T extends Dao> T newInstance(final Class<T> daoInterface, final javax.sql.DataSource ds, final DataSourceManager dsm, final SQLMapper sqlMapper) {
         final SQLExecutor sqlExecutor = ds != null ? new SQLExecutor(ds) : new SQLExecutor(dsm);
         final javax.sql.DataSource primaryDataSource = ds != null ? ds : dsm.getPrimaryDataSource();
+        final SQLMapper nonNullSQLMapper = sqlMapper == null ? new SQLMapper() : sqlMapper;
 
         java.lang.reflect.Type[] typeArguments = null;
 
@@ -16982,6 +17021,8 @@ public final class JdbcUtil {
                             call = (proxy, args) -> primaryDataSource;
                         } else if (m.getName().equals("sqlExecutor") && SQLExecutor.class.isAssignableFrom(returnType) && paramLen == 0) {
                             call = (proxy, args) -> sqlExecutor;
+                        } else if (m.getName().equals("sqlMapper") && SQLMapper.class.isAssignableFrom(returnType) && paramLen == 0) {
+                            call = (proxy, args) -> nonNullSQLMapper;
                         } else {
                             call = (proxy, args) -> {
                                 throw new UnsupportedOperationException("Unsupported operation: " + m);
