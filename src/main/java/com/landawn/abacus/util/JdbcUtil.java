@@ -6802,7 +6802,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             try (ResultSet rs = executeQuery()) {
-                return resultExtrator.apply(rs);
+                return checkNotResultSet(resultExtrator.apply(rs));
             } finally {
                 closeAfterExecutionIfAllowed();
             }
@@ -6820,7 +6820,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             try (ResultSet rs = executeQuery()) {
-                return resultExtrator.apply(rs, getColumnLabelList(rs));
+                return checkNotResultSet(resultExtrator.apply(rs, getColumnLabelList(rs)));
             } finally {
                 closeAfterExecutionIfAllowed();
             }
@@ -8464,6 +8464,14 @@ public final class JdbcUtil {
             }
         }
 
+        protected <R> R checkNotResultSet(R result) {
+            if (result instanceof ResultSet) {
+                throw new UnsupportedOperationException("The result value of ResultExtractor/BiResultExtractor.apply can't be ResultSet");
+            }
+
+            return result;
+        }
+
         /**
          * Close.
          */
@@ -9578,7 +9586,7 @@ public final class JdbcUtil {
                 if (stmt.execute()) {
                     if (stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
-                            return Optional.of(resultExtrator1.apply(rs));
+                            return Optional.of(checkNotResultSet(resultExtrator1.apply(rs)));
                         }
                     }
                 }
@@ -9611,13 +9619,13 @@ public final class JdbcUtil {
                 if (stmt.execute()) {
                     if (stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
-                            result1 = Optional.of(resultExtrator1.apply(rs));
+                            result1 = Optional.of(checkNotResultSet(resultExtrator1.apply(rs)));
                         }
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
-                            result2 = Optional.of(resultExtrator2.apply(rs));
+                            result2 = Optional.of(checkNotResultSet(resultExtrator2.apply(rs)));
                         }
                     }
                 }
@@ -9654,19 +9662,19 @@ public final class JdbcUtil {
                 if (stmt.execute()) {
                     if (stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
-                            result1 = Optional.of(resultExtrator1.apply(rs));
+                            result1 = Optional.of(checkNotResultSet(resultExtrator1.apply(rs)));
                         }
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
-                            result2 = Optional.of(resultExtrator2.apply(rs));
+                            result2 = Optional.of(checkNotResultSet(resultExtrator2.apply(rs)));
                         }
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
-                            result3 = Optional.of(resultExtrator3.apply(rs));
+                            result3 = Optional.of(checkNotResultSet(resultExtrator3.apply(rs)));
                         }
                     }
                 }
@@ -9708,25 +9716,25 @@ public final class JdbcUtil {
                 if (stmt.execute()) {
                     if (stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
-                            result1 = Optional.of(resultExtrator1.apply(rs));
+                            result1 = Optional.of(checkNotResultSet(resultExtrator1.apply(rs)));
                         }
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
-                            result2 = Optional.of(resultExtrator2.apply(rs));
+                            result2 = Optional.of(checkNotResultSet(resultExtrator2.apply(rs)));
                         }
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
-                            result3 = Optional.of(resultExtrator3.apply(rs));
+                            result3 = Optional.of(checkNotResultSet(resultExtrator3.apply(rs)));
                         }
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
-                            result4 = Optional.of(resultExtrator4.apply(rs));
+                            result4 = Optional.of(checkNotResultSet(resultExtrator4.apply(rs)));
                         }
                     }
                 }
@@ -9772,31 +9780,31 @@ public final class JdbcUtil {
                 if (stmt.execute()) {
                     if (stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
-                            result1 = Optional.of(resultExtrator1.apply(rs));
+                            result1 = Optional.of(checkNotResultSet(resultExtrator1.apply(rs)));
                         }
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
-                            result2 = Optional.of(resultExtrator2.apply(rs));
+                            result2 = Optional.of(checkNotResultSet(resultExtrator2.apply(rs)));
                         }
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
-                            result3 = Optional.of(resultExtrator3.apply(rs));
+                            result3 = Optional.of(checkNotResultSet(resultExtrator3.apply(rs)));
                         }
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
-                            result4 = Optional.of(resultExtrator4.apply(rs));
+                            result4 = Optional.of(checkNotResultSet(resultExtrator4.apply(rs)));
                         }
                     }
 
                     if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
-                            result5 = Optional.of(resultExtrator5.apply(rs));
+                            result5 = Optional.of(checkNotResultSet(resultExtrator5.apply(rs)));
                         }
                     }
                 }

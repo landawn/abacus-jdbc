@@ -4630,7 +4630,7 @@ public class SQLExecutor {
                     final boolean streamTransactionIndependent = newJdbcSettings.streamTransactionIndependent();
                     final NamedSQL namedSQL = NamedSQL.parse(sql);
                     final DataSource ds = getDataSource(namedSQL.getParameterizedSQL(), parameters, newJdbcSettings);
-                    final Connection localConn = streamTransactionIndependent ? getConnection(ds)
+                    final Connection localConn = streamTransactionIndependent ? directGetConnectionFromPool(ds)
                             : getConnection(inputConn, ds, newJdbcSettings, SQLOperation.SELECT);
 
                     final ResultSet rs = SQLExecutor.this.query(localConn, sql, statementSetter, RESULT_SET_EXTRACTOR, newJdbcSettings, parameters);
@@ -4754,6 +4754,14 @@ public class SQLExecutor {
                 lazyIter.close();
             }
         });
+    }
+
+    private Connection directGetConnectionFromPool(final DataSource ds) throws UncheckedSQLException {
+        try {
+            return ds.getConnection();
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
     }
 
     /**
