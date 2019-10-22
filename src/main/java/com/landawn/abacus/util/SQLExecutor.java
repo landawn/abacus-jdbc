@@ -409,14 +409,6 @@ public class SQLExecutor {
         }
     };
 
-    /** The Constant RESULT_SET_EXTRACTOR. */
-    private static final ResultExtractor<ResultSet> RESULT_SET_EXTRACTOR = new ResultExtractor<ResultSet>() {
-        @Override
-        public ResultSet extractData(ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            return rs;
-        }
-    };
-
     /** The Constant factor. */
     private static final int factor = Math.min(Math.max(1, IOUtil.MAX_MEMORY_IN_MB / 1024), 8);
 
@@ -4298,7 +4290,7 @@ public class SQLExecutor {
      *
      * @param <T>
      * @param targetClass
-     * @param conn
+     * @param inputConn
      * @param sql
      * @param statementSetter
      * @param resultExtractor
@@ -4306,12 +4298,15 @@ public class SQLExecutor {
      * @param parameters
      * @return
      */
-    protected <T> T query(final Class<T> targetClass, final Connection conn, final String sql, StatementSetter statementSetter,
+    protected <T> T query(final Class<T> targetClass, final Connection inputConn, final String sql, StatementSetter statementSetter,
             ResultSetExtractor<T> resultExtractor, JdbcSettings jdbcSettings, final Object... parameters) {
         final NamedSQL namedSQL = getNamedSQL(sql);
         statementSetter = checkStatementSetter(namedSQL, statementSetter);
         resultExtractor = checkResultSetExtractor(namedSQL, resultExtractor);
         jdbcSettings = checkJdbcSettings(jdbcSettings, namedSQL, _sqlMapper.getAttrs(sql));
+
+        final boolean isFromStreamQuery = resultExtractor == RESULT_SET_EXTRACTOR_ONLY_FOR_STREAM;
+        boolean noException = false;
 
         T result = null;
 
@@ -4323,7 +4318,7 @@ public class SQLExecutor {
         try {
             ds = getDataSource(namedSQL.getParameterizedSQL(), parameters, jdbcSettings);
 
-            localConn = getConnection(conn, ds, jdbcSettings, SQLOperation.SELECT);
+            localConn = getConnection(inputConn, ds, jdbcSettings, SQLOperation.SELECT);
 
             stmt = prepareStatement(ds, localConn, namedSQL, statementSetter, jdbcSettings, false, false, parameters);
 
@@ -4334,28 +4329,29 @@ public class SQLExecutor {
             rs = stmt.executeQuery();
 
             result = resultExtractor.extractData(targetClass, namedSQL, rs, jdbcSettings);
+
+            noException = true;
         } catch (SQLException e) {
             String msg = ExceptionUtil.getMessage(e) + ". [SQL] " + namedSQL.getNamedSQL();
             throw new UncheckedSQLException(msg, e);
         } finally {
-            if (result instanceof ResultSet) {
-                if (conn == null) {
+            if (noException && result instanceof ResultSet) {
+                if (isFromStreamQuery) {
+                    // will be closed in stream.
+                } else {
                     try {
                         close(rs, stmt);
                     } finally {
-                        close(localConn, conn, ds);
+                        close(localConn, inputConn, ds);
                     }
 
-                    throw new UnsupportedOperationException(
-                            "The return type of 'ResultSetExtractor' can't be 'ResultSet' when Connection is not specified as input parameter.");
+                    throw new UnsupportedOperationException("The return type of 'ResultSetExtractor' can't be 'ResultSet'.");
                 }
-
-                // delay.
             } else {
                 try {
                     close(rs, stmt);
                 } finally {
-                    close(localConn, conn, ds);
+                    close(localConn, inputConn, ds);
                 }
             }
         }
@@ -4596,6 +4592,15 @@ public class SQLExecutor {
         return stream(sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, parameters);
     }
 
+    /** The Constant RESULT_SET_EXTRACTOR. */
+    private static final ResultSetExtractor<ResultSet> RESULT_SET_EXTRACTOR_ONLY_FOR_STREAM = new ResultSetExtractor<ResultSet>() {
+        @Override
+        public ResultSet extractData(final Class<?> targetClass, final NamedSQL namedSQL, final ResultSet rs, final JdbcSettings jdbcSettings)
+                throws SQLException {
+            return rs;
+        }
+    };
+
     /**
      *
      * Lazy execution, lazy fetch. The query execution and record fetching only happen when a terminal operation of the stream is called.
@@ -4627,121 +4632,132 @@ public class SQLExecutor {
                     newJdbcSettings.setOffset(0);
                     newJdbcSettings.setCount(Integer.MAX_VALUE);
 
-                    final boolean streamTransactionIndependent = newJdbcSettings.streamTransactionIndependent();
+                    final boolean transactionFree = newJdbcSettings.transactionFree();
                     final NamedSQL namedSQL = NamedSQL.parse(sql);
                     final DataSource ds = getDataSource(namedSQL.getParameterizedSQL(), parameters, newJdbcSettings);
-                    final Connection localConn = streamTransactionIndependent ? directGetConnectionFromPool(ds)
+                    final Connection localConn = transactionFree ? directGetConnectionFromPool(ds)
                             : getConnection(inputConn, ds, newJdbcSettings, SQLOperation.SELECT);
 
-                    final ResultSet rs = SQLExecutor.this.query(localConn, sql, statementSetter, RESULT_SET_EXTRACTOR, newJdbcSettings, parameters);
+                    try {
+                        final ResultSet rs = query(null, localConn, sql, statementSetter, RESULT_SET_EXTRACTOR_ONLY_FOR_STREAM, newJdbcSettings, parameters);
 
-                    internalIter = new ObjIteratorEx<T>() {
-                        private boolean skipped = false;
-                        private boolean hasNext = false;
-                        private int cnt = 0;
-                        private List<String> columnLabels = null;
+                        internalIter = new ObjIteratorEx<T>() {
+                            private boolean skipped = false;
+                            private boolean hasNext = false;
+                            private int cnt = 0;
+                            private List<String> columnLabels = null;
 
-                        @Override
-                        public boolean hasNext() {
-                            if (skipped == false) {
-                                skip();
+                            @Override
+                            public boolean hasNext() {
+                                if (skipped == false) {
+                                    skip();
+                                }
+
+                                if (hasNext == false) {
+                                    try {
+                                        if (cnt++ < count && rs.next()) {
+                                            hasNext = true;
+                                        }
+                                    } catch (SQLException e) {
+                                        throw new UncheckedSQLException(e);
+                                    }
+                                }
+
+                                return hasNext;
                             }
 
-                            if (hasNext == false) {
+                            @Override
+                            public T next() {
+                                if (hasNext() == false) {
+                                    throw new NoSuchElementException();
+                                }
+
                                 try {
-                                    if (cnt++ < count && rs.next()) {
-                                        hasNext = true;
-                                    }
+                                    final T result = rowMapper.apply(rs, columnLabels);
+                                    hasNext = false;
+                                    return result;
                                 } catch (SQLException e) {
                                     throw new UncheckedSQLException(e);
                                 }
                             }
 
-                            return hasNext;
-                        }
+                            @Override
+                            public void skip(long n) {
+                                N.checkArgNotNegative(n, "n");
 
-                        @Override
-                        public T next() {
-                            if (hasNext() == false) {
-                                throw new NoSuchElementException();
-                            }
+                                if (skipped == false) {
+                                    skip();
+                                }
 
-                            try {
-                                final T result = rowMapper.apply(rs, columnLabels);
+                                final long m = hasNext ? n - 1 : n;
                                 hasNext = false;
-                                return result;
-                            } catch (SQLException e) {
-                                throw new UncheckedSQLException(e);
-                            }
-                        }
-
-                        @Override
-                        public void skip(long n) {
-                            N.checkArgNotNegative(n, "n");
-
-                            if (skipped == false) {
-                                skip();
-                            }
-
-                            final long m = hasNext ? n - 1 : n;
-                            hasNext = false;
-
-                            try {
-                                JdbcUtil.skip(rs, Math.min(m, count - cnt));
-                            } catch (SQLException e) {
-                                throw new UncheckedSQLException(e);
-                            }
-                        }
-
-                        @Override
-                        public long count() {
-                            if (skipped == false) {
-                                skip();
-                            }
-
-                            long result = hasNext ? 1 : 0;
-                            hasNext = false;
-
-                            try {
-                                while (cnt++ < count && rs.next()) {
-                                    result++;
-                                }
-                            } catch (SQLException e) {
-                                throw new UncheckedSQLException(e);
-                            }
-
-                            return result;
-                        }
-
-                        @Override
-                        public void close() {
-                            try {
-                                JdbcUtil.closeQuietly(rs, true, false);
-                            } finally {
-                                if (streamTransactionIndependent) {
-                                    JdbcUtil.closeQuietly(localConn);
-                                } else {
-                                    SQLExecutor.this.close(localConn, inputConn, ds);
-                                }
-                            }
-                        }
-
-                        private void skip() {
-                            if (skipped == false) {
-                                skipped = true;
 
                                 try {
-                                    columnLabels = JdbcUtil.getColumnLabelList(rs);
-
-                                    if (offset > 0) {
-                                        JdbcUtil.skip(rs, offset);
-                                    }
+                                    JdbcUtil.skip(rs, Math.min(m, count - cnt));
                                 } catch (SQLException e) {
                                     throw new UncheckedSQLException(e);
                                 }
                             }
+
+                            @Override
+                            public long count() {
+                                if (skipped == false) {
+                                    skip();
+                                }
+
+                                long result = hasNext ? 1 : 0;
+                                hasNext = false;
+
+                                try {
+                                    while (cnt++ < count && rs.next()) {
+                                        result++;
+                                    }
+                                } catch (SQLException e) {
+                                    throw new UncheckedSQLException(e);
+                                }
+
+                                return result;
+                            }
+
+                            @Override
+                            public void close() {
+                                try {
+                                    JdbcUtil.closeQuietly(rs, true, false);
+                                } finally {
+                                    if (transactionFree) {
+                                        JdbcUtil.closeQuietly(localConn);
+                                    } else {
+                                        SQLExecutor.this.close(localConn, inputConn, ds);
+                                    }
+                                }
+                            }
+
+                            private void skip() {
+                                if (skipped == false) {
+                                    skipped = true;
+
+                                    try {
+                                        columnLabels = JdbcUtil.getColumnLabelList(rs);
+
+                                        if (offset > 0) {
+                                            JdbcUtil.skip(rs, offset);
+                                        }
+                                    } catch (SQLException e) {
+                                        throw new UncheckedSQLException(e);
+                                    }
+                                }
+                            }
+                        };
+                    } finally {
+                        if (internalIter == null) {
+                            if (transactionFree) {
+                                JdbcUtil.closeQuietly(localConn);
+                            } else {
+                                SQLExecutor.this.close(localConn, inputConn, ds);
+                            }
+
                         }
-                    };
+                    }
                 }
 
                 return internalIter;
@@ -12553,7 +12569,7 @@ public class SQLExecutor {
         private IsolationLevel isolationLevel = null;
 
         /** The stream transaction independent. */
-        private boolean streamTransactionIndependent = false;
+        private boolean transactionFree = false;
 
         /** The fozen. */
         private boolean fozen = false;
@@ -12597,7 +12613,7 @@ public class SQLExecutor {
             copy.queryWithDataSources = this.queryWithDataSources == null ? null : new ArrayList<>(this.queryWithDataSources);
             copy.queryInParallel = this.queryInParallel;
             copy.isolationLevel = this.isolationLevel;
-            copy.streamTransactionIndependent = this.streamTransactionIndependent;
+            copy.transactionFree = this.transactionFree;
 
             return copy;
         }
@@ -13071,20 +13087,20 @@ public class SQLExecutor {
          *
          * @return true, if successful
          */
-        boolean streamTransactionIndependent() {
-            return streamTransactionIndependent;
+        boolean transactionFree() {
+            return transactionFree;
         }
 
         /**
-         * {@code streamTransactionIndependent = true} means the query executed by {@code stream/streamAll(...)} methods won't be in any transaction(using connection started by transaction), even the {@code stream/streamAll(...)} methods are invoked inside of a transaction block.
+         * {@code transactionFree = true} means the query executed by {@code stream/streamAll(...)} methods won't be in any transaction(using connection started by transaction), even the {@code stream/streamAll(...)} methods are invoked inside of a transaction block.
          *
-         * @param streamTransactionIndependent
+         * @param transactionFree
          * @return
          */
-        JdbcSettings setStreamTransactionIndependent(final boolean streamTransactionIndependent) {
+        JdbcSettings setStreamTransactionIndependent(final boolean transactionFree) {
             assertNotFrozen();
 
-            this.streamTransactionIndependent = streamTransactionIndependent;
+            this.transactionFree = transactionFree;
 
             return this;
         }
@@ -13133,7 +13149,7 @@ public class SQLExecutor {
             result = (prime * result) + ((queryWithDataSources == null) ? 0 : queryWithDataSources.hashCode());
             result = (prime * result) + (queryInParallel ? 1231 : 1237);
             result = (prime * result) + ((isolationLevel == null) ? 0 : isolationLevel.hashCode());
-            result = (prime * result) + (streamTransactionIndependent ? 1231 : 1237);
+            result = (prime * result) + (transactionFree ? 1231 : 1237);
 
             return result;
         }
@@ -13160,7 +13176,7 @@ public class SQLExecutor {
                         && N.equals(resultSetConcurrency, other.resultSetConcurrency) && N.equals(resultSetHoldability, other.resultSetHoldability)
                         && N.equals(offset, other.offset) && N.equals(count, other.count) && N.equals(queryWithDataSource, other.queryWithDataSource)
                         && N.equals(queryWithDataSources, other.queryWithDataSources) && N.equals(queryInParallel, other.queryInParallel)
-                        && N.equals(isolationLevel, other.isolationLevel) && N.equals(streamTransactionIndependent, other.streamTransactionIndependent);
+                        && N.equals(isolationLevel, other.isolationLevel) && N.equals(transactionFree, other.transactionFree);
             }
 
             return false;
@@ -13178,7 +13194,7 @@ public class SQLExecutor {
                     + ", fetchDirection=" + fetchDirection + ", resultSetType=" + resultSetType + ", resultSetConcurrency=" + resultSetConcurrency
                     + ", resultSetHoldability=" + resultSetHoldability + ", offset=" + offset + ", count=" + count + ", queryWithDataSource="
                     + queryWithDataSource + ", queryWithDataSources=" + queryWithDataSources + ", queryInParallel=" + queryInParallel + ", isolationLevel="
-                    + isolationLevel + ", streamTransactionIndependent=" + streamTransactionIndependent + "}";
+                    + isolationLevel + ", transactionFree=" + transactionFree + "}";
         }
     }
 }
