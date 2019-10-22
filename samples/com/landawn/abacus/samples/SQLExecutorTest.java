@@ -26,8 +26,11 @@ public class SQLExecutorTest extends Jdbc {
         String sql_insert = NSC.insertInto(User.class, N.asSet("id")).sql();
         List<Long> ids = sqlExecutor.batchInsert(sql_insert, users);
         String sql = NSC.selectFrom(User.class).where(CF.in("id", ids)).sql();
-        assertEquals(99, sqlExecutor.stream(User.class, sql, ids).count());
-        assertEquals(99, userMapper.stream(CF.in("id", ids)).count());
+
+        for (int i = 0; i < 1000; i++) {
+            assertEquals(99, sqlExecutor.stream(User.class, sql, ids).count());
+            assertEquals(99, userMapper.stream(CF.in("id", ids)).count());
+        }
 
         for (int i = 0; i < 1000; i++) {
             try {

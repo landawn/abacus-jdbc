@@ -13097,7 +13097,7 @@ public class SQLExecutor {
          * @param transactionFree
          * @return
          */
-        JdbcSettings setStreamTransactionIndependent(final boolean transactionFree) {
+        JdbcSettings setTransactionFree(final boolean transactionFree) {
             assertNotFrozen();
 
             this.transactionFree = transactionFree;
