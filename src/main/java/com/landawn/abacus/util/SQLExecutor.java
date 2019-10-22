@@ -4637,9 +4637,11 @@ public class SQLExecutor {
                     final DataSource ds = getDataSource(namedSQL.getParameterizedSQL(), parameters, newJdbcSettings);
                     final Connection localConn = transactionFree ? directGetConnectionFromPool(ds)
                             : getConnection(inputConn, ds, newJdbcSettings, SQLOperation.SELECT);
+                    ResultSet resultSet = null;
 
                     try {
-                        final ResultSet rs = query(null, localConn, sql, statementSetter, RESULT_SET_EXTRACTOR_ONLY_FOR_STREAM, newJdbcSettings, parameters);
+                        resultSet = query(null, localConn, sql, statementSetter, RESULT_SET_EXTRACTOR_ONLY_FOR_STREAM, newJdbcSettings, parameters);
+                        final ResultSet rs = resultSet;
 
                         internalIter = new ObjIteratorEx<T>() {
                             private boolean skipped = false;
@@ -4750,12 +4752,15 @@ public class SQLExecutor {
                         };
                     } finally {
                         if (internalIter == null) {
-                            if (transactionFree) {
-                                JdbcUtil.closeQuietly(localConn);
-                            } else {
-                                SQLExecutor.this.close(localConn, inputConn, ds);
+                            try {
+                                JdbcUtil.closeQuietly(resultSet, true, false);
+                            } finally {
+                                if (transactionFree) {
+                                    JdbcUtil.closeQuietly(localConn);
+                                } else {
+                                    SQLExecutor.this.close(localConn, inputConn, ds);
+                                }
                             }
-
                         }
                     }
                 }
