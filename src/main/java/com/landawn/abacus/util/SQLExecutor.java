@@ -4632,10 +4632,10 @@ public class SQLExecutor {
                     newJdbcSettings.setOffset(0);
                     newJdbcSettings.setCount(Integer.MAX_VALUE);
 
-                    final boolean transactionFree = newJdbcSettings.transactionFree();
+                    final boolean noTransactionForStream = newJdbcSettings.noTransactionForStream();
                     final NamedSQL namedSQL = NamedSQL.parse(sql);
                     final DataSource ds = getDataSource(namedSQL.getParameterizedSQL(), parameters, newJdbcSettings);
-                    final Connection localConn = transactionFree ? directGetConnectionFromPool(ds)
+                    final Connection localConn = noTransactionForStream ? directGetConnectionFromPool(ds)
                             : getConnection(inputConn, ds, newJdbcSettings, SQLOperation.SELECT);
                     ResultSet resultSet = null;
 
@@ -4726,7 +4726,7 @@ public class SQLExecutor {
                                 try {
                                     JdbcUtil.closeQuietly(rs, true, false);
                                 } finally {
-                                    if (transactionFree) {
+                                    if (noTransactionForStream) {
                                         JdbcUtil.closeQuietly(localConn);
                                     } else {
                                         SQLExecutor.this.close(localConn, inputConn, ds);
@@ -4755,7 +4755,7 @@ public class SQLExecutor {
                             try {
                                 JdbcUtil.closeQuietly(resultSet, true, false);
                             } finally {
-                                if (transactionFree) {
+                                if (noTransactionForStream) {
                                     JdbcUtil.closeQuietly(localConn);
                                 } else {
                                     SQLExecutor.this.close(localConn, inputConn, ds);
@@ -12574,7 +12574,7 @@ public class SQLExecutor {
         private IsolationLevel isolationLevel = null;
 
         /** The stream transaction independent. */
-        private boolean transactionFree = false;
+        private boolean noTransactionForStream = false;
 
         /** The fozen. */
         private boolean fozen = false;
@@ -12618,7 +12618,7 @@ public class SQLExecutor {
             copy.queryWithDataSources = this.queryWithDataSources == null ? null : new ArrayList<>(this.queryWithDataSources);
             copy.queryInParallel = this.queryInParallel;
             copy.isolationLevel = this.isolationLevel;
-            copy.transactionFree = this.transactionFree;
+            copy.noTransactionForStream = this.noTransactionForStream;
 
             return copy;
         }
@@ -13092,20 +13092,20 @@ public class SQLExecutor {
          *
          * @return true, if successful
          */
-        boolean transactionFree() {
-            return transactionFree;
+        boolean noTransactionForStream() {
+            return noTransactionForStream;
         }
 
         /**
-         * {@code transactionFree = true} means the query executed by {@code stream/streamAll(...)} methods won't be in any transaction(using connection started by transaction), even the {@code stream/streamAll(...)} methods are invoked inside of a transaction block.
+         * {@code noTransactionForStream = true} means the query executed by {@code stream/streamAll(...)} methods won't be in any transaction(using connection started by transaction), even the {@code stream/streamAll(...)} methods are invoked inside of a transaction block.
          *
-         * @param transactionFree
+         * @param noTransactionForStream
          * @return
          */
-        JdbcSettings setTransactionFree(final boolean transactionFree) {
+        JdbcSettings setNoTransactionForStream(final boolean noTransactionForStream) {
             assertNotFrozen();
 
-            this.transactionFree = transactionFree;
+            this.noTransactionForStream = noTransactionForStream;
 
             return this;
         }
@@ -13154,7 +13154,7 @@ public class SQLExecutor {
             result = (prime * result) + ((queryWithDataSources == null) ? 0 : queryWithDataSources.hashCode());
             result = (prime * result) + (queryInParallel ? 1231 : 1237);
             result = (prime * result) + ((isolationLevel == null) ? 0 : isolationLevel.hashCode());
-            result = (prime * result) + (transactionFree ? 1231 : 1237);
+            result = (prime * result) + (noTransactionForStream ? 1231 : 1237);
 
             return result;
         }
@@ -13181,7 +13181,7 @@ public class SQLExecutor {
                         && N.equals(resultSetConcurrency, other.resultSetConcurrency) && N.equals(resultSetHoldability, other.resultSetHoldability)
                         && N.equals(offset, other.offset) && N.equals(count, other.count) && N.equals(queryWithDataSource, other.queryWithDataSource)
                         && N.equals(queryWithDataSources, other.queryWithDataSources) && N.equals(queryInParallel, other.queryInParallel)
-                        && N.equals(isolationLevel, other.isolationLevel) && N.equals(transactionFree, other.transactionFree);
+                        && N.equals(isolationLevel, other.isolationLevel) && N.equals(noTransactionForStream, other.noTransactionForStream);
             }
 
             return false;
@@ -13199,7 +13199,7 @@ public class SQLExecutor {
                     + ", fetchDirection=" + fetchDirection + ", resultSetType=" + resultSetType + ", resultSetConcurrency=" + resultSetConcurrency
                     + ", resultSetHoldability=" + resultSetHoldability + ", offset=" + offset + ", count=" + count + ", queryWithDataSource="
                     + queryWithDataSource + ", queryWithDataSources=" + queryWithDataSources + ", queryInParallel=" + queryInParallel + ", isolationLevel="
-                    + isolationLevel + ", transactionFree=" + transactionFree + "}";
+                    + isolationLevel + ", noTransactionForStream=" + noTransactionForStream + "}";
         }
     }
 }
