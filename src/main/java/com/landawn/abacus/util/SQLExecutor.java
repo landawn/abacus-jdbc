@@ -5943,8 +5943,8 @@ public class SQLExecutor {
             this.idClass = idClass;
             this.isEntityId = idClass.equals(EntityId.class);
             this.isVoidId = idClass.equals(Void.class);
-            this.propNameList = ImmutableList.copyOf(ClassUtil.getPropGetMethodList(entityClass).keySet());
-            this.propNameSet = ImmutableSet.of(N.newLinkedHashSet(ClassUtil.getPropGetMethodList(entityClass).keySet()));
+            this.propNameList = ImmutableList.copyOf(ClassUtil.getPropNameList(entityClass));
+            this.propNameSet = ImmutableSet.of(N.newLinkedHashSet(ClassUtil.getPropNameList(entityClass)));
 
             this.idPropName = idPropNames.get(0);
             this.idPropNameList = ImmutableList.copyOf(idPropNames);
