@@ -14153,7 +14153,7 @@ public final class JdbcUtil {
      * It's a gift from nature and created by thoughts.
      *
      * <br />
-     * Note: Setting parameters by 'ParametersSetter' or Retrieving result/record by 'ResultExtractor/BiResultExtractor/RowMapper/BiRowMapper' is disabled.
+     * Note: Setting parameters by 'ParametersSetter' or Retrieving result/record by 'ResultExtractor/BiResultExtractor/RowMapper/BiRowMapper' is not enabled at present.
      *
      * <br />
      *
@@ -17074,19 +17074,20 @@ public final class JdbcUtil {
 
                     if (hasParameterSetter) {
                         throw new UnsupportedOperationException(
-                                "Setting parameters by 'ParametersSetter/BiParametersSetter/TriParametersSetter' is disabled. Can't use it in method: "
+                                "Setting parameters by 'ParametersSetter/BiParametersSetter/TriParametersSetter' is not enabled at present. Can't use it in method: "
                                         + m.getName());
                     }
 
                     if (hasRowMapperOrExtractor) {
                         throw new UnsupportedOperationException(
-                                "Retrieving result/record by 'ResultExtractor/BiResultExtractor/RowMapper/BiRowMapper' is disabled. Can't use it in method: "
+                                "Retrieving result/record by 'ResultExtractor/BiResultExtractor/RowMapper/BiRowMapper' is not enabled at present. Can't use it in method: "
                                         + m.getName());
                     }
 
                     if (java.util.Optional.class.isAssignableFrom(returnType) || java.util.OptionalInt.class.isAssignableFrom(returnType)
                             || java.util.OptionalLong.class.isAssignableFrom(returnType) || java.util.OptionalDouble.class.isAssignableFrom(returnType)) {
-                        throw new UnsupportedOperationException("the return type of the method: " + m.getName() + " can't be: " + returnType);
+                        throw new UnsupportedOperationException("the return type of the method: " + m.getName() + " can't be: " + returnType
+                                + ". Please use the OptionalXXX classes defined in com.landawn.abacus.util.u");
                     }
 
                     if (StreamEx.of(m.getExceptionTypes()).noneMatch(e -> SQLException.class.equals(e))) {
@@ -17095,7 +17096,7 @@ public final class JdbcUtil {
 
                     if (paramLen > 0 && (Map.class.isAssignableFrom(paramTypes[0]) || ClassUtil.isEntity(paramTypes[0])) && isNamedQuery == false) {
                         throw new IllegalArgumentException(
-                                "Using named query: @NamedSelect/Update/Insert/Delete when parameter type is Map or entity with Getter/Setter methods");
+                                "Using named query: @NamedSelect/NamedUpdate/NamedInsert/NamedDelete when parameter type is Map or entity with Getter/Setter methods");
                     }
 
                     BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter = null;
