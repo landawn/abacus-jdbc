@@ -15942,10 +15942,11 @@ public final class JdbcUtil {
                             }
 
                             if (N.notNullOrEmpty(ids) && N.notNullOrEmpty(entities) && ids.size() == N.size(entities)) {
+                                final PropInfo propInfo = ParserUtil.getEntityInfo(N.first(entities).get().getClass()).getPropInfo(idPropName);
                                 int idx = 0;
 
                                 for (Object e : entities) {
-                                    ClassUtil.setPropValue(e, idPropName, ids.get(idx++));
+                                    propInfo.setPropValue(e, ids.get(idx++));
                                 }
                             }
 
@@ -16002,10 +16003,11 @@ public final class JdbcUtil {
                             }
 
                             if (N.notNullOrEmpty(ids) && N.notNullOrEmpty(entities) && ids.size() == N.size(entities)) {
+                                final PropInfo propInfo = ParserUtil.getEntityInfo(N.first(entities).get().getClass()).getPropInfo(idPropName);
                                 int idx = 0;
 
                                 for (Object e : entities) {
-                                    ClassUtil.setPropValue(e, idPropName, ids.get(idx++));
+                                    propInfo.setPropValue(e, ids.get(idx++));
                                 }
                             }
 
@@ -16642,14 +16644,17 @@ public final class JdbcUtil {
 
                             if (isDefaultIdPropValue) {
                                 if (N.notNullOrEmpty(ids) && N.notNullOrEmpty(entities) && ids.size() == N.size(entities)) {
+                                    final PropInfo propInfo = ParserUtil.getEntityInfo(N.first(entities).get().getClass()).getPropInfo(idPropName);
                                     int idx = 0;
 
                                     for (Object e : entities) {
-                                        ClassUtil.setPropValue(e, idPropName, ids.get(idx++));
+                                        propInfo.setPropValue(e, ids.get(idx++));
                                     }
                                 }
                             } else {
-                                ids = StreamEx.of(entities).map(e -> ClassUtil.getPropValue(e, idPropName)).toList();
+                                final PropInfo propInfo = ParserUtil.getEntityInfo(N.first(entities).get().getClass()).getPropInfo(idPropName);
+
+                                ids = StreamEx.of(entities).map(e -> propInfo.getPropValue(e)).toList();
                             }
 
                             if (N.first(entities).orNull() instanceof DirtyMarker) {
@@ -16693,13 +16698,16 @@ public final class JdbcUtil {
                             }
 
                             if (N.notNullOrEmpty(ids) && N.notNullOrEmpty(entities) && ids.size() == N.size(entities)) {
+                                final PropInfo propInfo = ParserUtil.getEntityInfo(N.first(entities).get().getClass()).getPropInfo(idPropName);
                                 int idx = 0;
 
                                 for (Object e : entities) {
-                                    ClassUtil.setPropValue(e, idPropName, ids.get(idx++));
+                                    propInfo.setPropValue(e, ids.get(idx++));
                                 }
                             } else {
-                                ids = StreamEx.of(entities).map(e -> ClassUtil.getPropValue(e, idPropName)).toList();
+                                final PropInfo propInfo = ParserUtil.getEntityInfo(N.first(entities).get().getClass()).getPropInfo(idPropName);
+
+                                ids = StreamEx.of(entities).map(e -> propInfo.getPropValue(e)).toList();
                             }
 
                             if (N.first(entities).orNull() instanceof DirtyMarker) {
@@ -16959,8 +16967,10 @@ public final class JdbcUtil {
                             }
 
                             if (entities.size() <= batchSize) {
+                                final PropInfo propInfo = ParserUtil.getEntityInfo(N.first(entities).get().getClass()).getPropInfo(idPropName);
+
                                 return N.sum(proxy.prepareQuery(query)
-                                        .addBatchParameters(entities, (q, e) -> q.setObject(1, ClassUtil.getPropValue(e, idPropName)))
+                                        .addBatchParameters(entities, (q, e) -> q.setObject(1, propInfo.getPropValue(e)))
                                         .batchUpdate());
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
@@ -16968,11 +16978,12 @@ public final class JdbcUtil {
 
                                 try {
                                     try (PreparedQuery preparedQuery = proxy.prepareQuery(query).closeAfterExecution(false)) {
+                                        final PropInfo propInfo = ParserUtil.getEntityInfo(N.first(entities).get().getClass()).getPropInfo(idPropName);
+
                                         result = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize)
                                                 .sumInt(bp -> N.sum(
-                                                        preparedQuery.addBatchParameters(bp, (q, e) -> q.setObject(1, ClassUtil.getPropValue(e, idPropName)))
-                                                                .batchUpdate()))
+                                                        preparedQuery.addBatchParameters(bp, (q, e) -> q.setObject(1, propInfo.getPropValue(e))).batchUpdate()))
                                                 .orZero();
                                     }
 
@@ -17542,7 +17553,7 @@ public final class JdbcUtil {
         } catch (Exception e) {
             try {
                 final Constructor<MethodHandles.Lookup> constructor = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class);
-                constructor.setAccessible(true);
+                ClassUtil.setAccessible(constructor, true);
 
                 return constructor.newInstance(declaringClass).in(declaringClass).unreflectSpecial(method, declaringClass);
             } catch (Exception ex) {

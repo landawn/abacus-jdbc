@@ -7874,9 +7874,10 @@ public class SQLExecutor {
             if (id == null) {
                 if (isEntityId) {
                     final Seid entityId = Seid.of(ClassUtil.getSimpleClassName(targetClass));
+                    final EntityInfo entityInfo = ParserUtil.getEntityInfo(entity.getClass());
 
                     for (String propName : idPropNameSet) {
-                        entityId.set(propName, ClassUtil.getPropValue(entity, propName));
+                        entityId.set(propName, entityInfo.getPropValue(entity, propName));
                     }
 
                     return (ID) entityId;
