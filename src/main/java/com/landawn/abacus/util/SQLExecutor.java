@@ -419,10 +419,10 @@ public class SQLExecutor {
     private static final int SQL_CACHE_SIZE = 1000 * factor;
 
     /** The Constant _sqlColumnLabelPool. */
-    private static final Map<String, List<String>> _sqlColumnLabelPool = new ConcurrentHashMap<>();
+    private static final Map<String, ImmutableList<String>> _sqlColumnLabelPool = new ConcurrentHashMap<>();
 
     /** The table column name pool. */
-    private final Map<String, List<String>> _tableColumnNamePool = new ConcurrentHashMap<>();
+    private final Map<String, ImmutableList<String>> _tableColumnNamePool = new ConcurrentHashMap<>();
 
     /** The ds. */
     private final DataSource _ds;
@@ -5234,8 +5234,8 @@ public class SQLExecutor {
      * @param tableName
      * @return
      */
-    public List<String> getColumnNameList(final String tableName) {
-        List<String> columnNameList = _tableColumnNamePool.get(tableName);
+    public ImmutableList<String> getColumnNameList(final String tableName) {
+        ImmutableList<String> columnNameList = _tableColumnNamePool.get(tableName);
 
         if (columnNameList == null) {
             Connection conn = getConnection();
@@ -5780,8 +5780,8 @@ public class SQLExecutor {
      * @return
      * @throws SQLException the SQL exception
      */
-    protected static List<String> getColumnLabelList(final String sql, final ResultSet rs) throws SQLException {
-        List<String> labelList = N.notNullOrEmpty(sql) ? _sqlColumnLabelPool.get(sql) : null;
+    protected static ImmutableList<String> getColumnLabelList(final String sql, final ResultSet rs) throws SQLException {
+        ImmutableList<String> labelList = N.notNullOrEmpty(sql) ? _sqlColumnLabelPool.get(sql) : null;
 
         if (labelList == null) {
             labelList = ImmutableList.of(JdbcUtil.getColumnLabelList(rs));
@@ -5841,10 +5841,10 @@ public class SQLExecutor {
     public static final class Mapper<T, ID> {
 
         /** The Constant EXISTS_SELECT_PROP_NAMES. */
-        static final List<String> EXISTS_SELECT_PROP_NAMES = ImmutableList.of(NSC._1);
+        static final ImmutableList<String> EXISTS_SELECT_PROP_NAMES = ImmutableList.of(NSC._1);
 
         /** The Constant COUNT_SELECT_PROP_NAMES. */
-        static final List<String> COUNT_SELECT_PROP_NAMES = ImmutableList.of(NSC.COUNT_ALL);
+        static final ImmutableList<String> COUNT_SELECT_PROP_NAMES = ImmutableList.of(NSC.COUNT_ALL);
 
         /** The target class. */
         private final Class<T> targetClass;
@@ -5858,22 +5858,22 @@ public class SQLExecutor {
         private final boolean isVoidId;
 
         /** The prop name list. */
-        private final List<String> propNameList;
+        private final ImmutableList<String> propNameList;
 
         /** The prop name set. */
-        private final Set<String> propNameSet;
+        private final ImmutableSet<String> propNameSet;
 
         /** The default select prop name list. */
-        private final List<String> defaultSelectPropNameList;
+        private final ImmutableList<String> defaultSelectPropNameList;
 
         /** The id prop name. */
         private final String idPropName;
 
         /** The id prop name list. */
-        private final List<String> idPropNameList;
+        private final ImmutableList<String> idPropNameList;
 
         /** The id prop name set. */
-        private final Set<String> idPropNameSet;
+        private final ImmutableSet<String> idPropNameSet;
 
         /** The sql executor. */
         private final SQLExecutor sqlExecutor;
