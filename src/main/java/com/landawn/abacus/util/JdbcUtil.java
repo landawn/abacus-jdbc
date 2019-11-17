@@ -15679,19 +15679,10 @@ public final class JdbcUtil {
         default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException {
             final Class<?> cls = entity.getClass();
             final PropInfo propInfo = ParserUtil.getEntityInfo(cls).getPropInfo(joinEntityPropName);
-            final boolean isDirtyMarker = DirtyMarker.class.isAssignableFrom(cls);
 
-            if (isDirtyMarker) {
-                if (DirtyMarkerUtil.signedPropNames((DirtyMarker) entity).contains(propInfo.name)) {
-                    return;
-                }
-            } else {
-                if (propInfo.getPropValue(entity) != null) {
-                    return;
-                }
+            if (propInfo.getPropValue(entity) == null) {
+                loadJoinEntities(entity, joinEntityPropName, selectPropNames);
             }
-
-            loadJoinEntities(entity, joinEntityPropName, selectPropNames);
         }
 
         /**
@@ -15719,15 +15710,7 @@ public final class JdbcUtil {
 
             final Class<?> cls = N.firstOrNullIfEmpty(entities).getClass();
             final PropInfo propInfo = ParserUtil.getEntityInfo(cls).getPropInfo(joinEntityPropName);
-            final boolean isDirtyMarker = DirtyMarker.class.isAssignableFrom(cls);
-
-            final List<T> newEntities = N.filter(entities, entity -> {
-                if (isDirtyMarker) {
-                    return !DirtyMarkerUtil.signedPropNames((DirtyMarker) entity).contains(propInfo.name);
-                } else {
-                    return propInfo.getPropValue(entity) == null;
-                }
-            });
+            final List<T> newEntities = N.filter(entities, entity -> propInfo.getPropValue(entity) == null);
 
             loadJoinEntities(newEntities, joinEntityPropName, selectPropNames);
         }
