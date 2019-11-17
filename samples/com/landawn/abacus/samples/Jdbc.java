@@ -8,6 +8,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -15,6 +16,7 @@ import org.junit.Test;
 
 import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.annotation.Id;
+import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.util.Fn;
@@ -41,12 +43,14 @@ public class Jdbc {
     static final DataSource dataSource = JdbcUtil.createDataSource("jdbc:h2:~/test", "sa", "");
     static final SQLExecutor sqlExecutor = new SQLExecutor(dataSource);
     static final Mapper<User, Long> userMapper = sqlExecutor.mapper(User.class, long.class);
+    static final Mapper<Device, Long> deviceMapper = sqlExecutor.mapper(Device.class, long.class);
+    static final Mapper<Address, Long> addressMapper = sqlExecutor.mapper(Address.class, long.class);
+
     static final UserDao userDao = Dao.newInstance(UserDao.class, dataSource);
 
     // initialize DB schema.
     static {
         final String sql_user_drop_table = "DROP TABLE IF EXISTS user";
-
         final String sql_user_creat_table = "CREATE TABLE IF NOT EXISTS user (" //
                 + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
                 + "first_name varchar(32) NOT NULL, " //
@@ -56,6 +60,28 @@ public class Jdbc {
 
         sqlExecutor.execute(sql_user_drop_table);
         sqlExecutor.execute(sql_user_creat_table);
+
+        final String sql_device_drop_table = "DROP TABLE IF EXISTS device";
+        final String sql_device_creat_table = "CREATE TABLE IF NOT EXISTS device (" //
+                + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
+                + "manufacture varchar(64) NOT NULL, " //
+                + "model varchar(32) NOT NULL, " //
+                + "user_id bigint(20), " //
+                + "FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE)";
+
+        sqlExecutor.execute(sql_device_drop_table);
+        sqlExecutor.execute(sql_device_creat_table);
+
+        final String sql_address_drop_table = "DROP TABLE IF EXISTS address";
+        final String sql_address_creat_table = "CREATE TABLE IF NOT EXISTS address (" //
+                + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
+                + "street varchar(64) NOT NULL, " //
+                + "city varchar(32) NOT NULL, " //
+                + "user_id bigint(20), " //
+                + "FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE)";
+
+        sqlExecutor.execute(sql_address_drop_table);
+        sqlExecutor.execute(sql_address_creat_table);
     }
 
     // Entity Object mapped to record in DB table.
@@ -71,6 +97,36 @@ public class Jdbc {
         private String email;
         @ReadOnly
         private Timestamp createTime;
+
+        @JoinedBy("id=userId")
+        private List<Device> devices;
+
+        @JoinedBy("id=userId")
+        private Address address;
+    }
+
+    @Builder
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Device {
+        @Id
+        private long id;
+        private long userId;
+        private String manufacture;
+        private String model;
+    }
+
+    @Builder
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Address {
+        @Id
+        private long id;
+        private long userId;
+        private String street;
+        private String city;
     }
 
     @Test
@@ -313,5 +369,25 @@ public class Jdbc {
 
         // In you're in Spring and want to use Spring transaction management,
         // then don't need to call beginTransaction because Spring transaction is integrated and supported.
+    }
+
+    @Test
+    public void crud_joinedBy() throws SQLException {
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.insertWithId(user);
+
+        User userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+
+        Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
+        deviceMapper.insert(device);
+
+        Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
+        addressMapper.insert(address);
+
+        userDao.loadAllJoinEntities(userFromDB);
+        System.out.println(userFromDB);
+
+        userDao.deleteById(100L);
     }
 }
