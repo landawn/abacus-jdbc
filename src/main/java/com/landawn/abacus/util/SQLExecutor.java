@@ -5548,7 +5548,7 @@ public class SQLExecutor {
      */
     protected void setParameters(final NamedSQL namedSQL, final PreparedStatement stmt, final StatementSetter statementSetter, final boolean isBatch,
             final Object... parameters) throws SQLException {
-        if (isBatch || N.isNullOrEmpty(parameters)) {
+        if (isBatch || (N.isNullOrEmpty(parameters) && statementSetter == StatementSetter.DEFAULT)) {
             // ignore
         } else {
             statementSetter.setParameters(namedSQL, stmt, parameters);
@@ -8898,7 +8898,7 @@ public class SQLExecutor {
                 c.addAll(sqlExecutor.list(propInfo.type.getElementType().clazz(), sql, statementSetter));
                 propInfo.setPropValue(entity, c);
             } else {
-                propInfo.setPropValue(entity, sqlExecutor.findFirst(propInfo.type.getElementType().clazz(), sql, statementSetter).orNull());
+                propInfo.setPropValue(entity, sqlExecutor.findFirst(propInfo.type.clazz(), sql, statementSetter).orNull());
             }
 
             if (entity instanceof DirtyMarker) {
@@ -8939,7 +8939,7 @@ public class SQLExecutor {
                     c.addAll(sqlExecutor.list(propInfo.type.getElementType().clazz(), sql, statementSetter, entity));
                     propInfo.setPropValue(entity, c);
                 } else {
-                    propInfo.setPropValue(entity, sqlExecutor.findFirst(propInfo.type.getElementType().clazz(), sql, statementSetter, entity).orNull());
+                    propInfo.setPropValue(entity, sqlExecutor.findFirst(propInfo.type.clazz(), sql, statementSetter, entity).orNull());
                 }
 
                 if (entity instanceof DirtyMarker) {

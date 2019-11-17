@@ -385,8 +385,24 @@ public class Jdbc {
         Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
         addressMapper.insert(address);
 
+        User userFromDB2 = N.copy(userFromDB);
         userDao.loadAllJoinEntities(userFromDB);
         System.out.println(userFromDB);
+
+        userMapper.loadAllJoinEntities(userFromDB2);
+        System.out.println(userFromDB2);
+
+        assertEquals(userFromDB, userFromDB2);
+
+        userFromDB = userDao.gett(100L);
+        userFromDB2 = N.copy(userFromDB);
+        userDao.loadJoinEntitiesIfNull(userFromDB);
+        System.out.println(userFromDB);
+
+        userMapper.loadJoinEntitiesIfNull(userFromDB2);
+        System.out.println(userFromDB2);
+
+        assertEquals(userFromDB, userFromDB2);
 
         userDao.deleteById(100L);
     }
