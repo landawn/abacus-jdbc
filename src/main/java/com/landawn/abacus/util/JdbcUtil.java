@@ -179,15 +179,15 @@ public final class JdbcUtil {
     /** The Constant DEFAULT_BATCH_SIZE. */
     public static final int DEFAULT_BATCH_SIZE = 200;
 
-    /** The async executor. */
-    private static final AsyncExecutor asyncExecutor = new AsyncExecutor(Math.max(8, IOUtil.CPU_CORES), Math.max(64, IOUtil.CPU_CORES), 180L, TimeUnit.SECONDS);
-
     /** The Constant CURRENT_DIR_PATH. */
     // ...
-    private static final String CURRENT_DIR_PATH = "./";
+    static final String CURRENT_DIR_PATH = "./";
+
+    /** The async executor. */
+    static final AsyncExecutor asyncExecutor = new AsyncExecutor(Math.max(8, IOUtil.CPU_CORES), Math.max(64, IOUtil.CPU_CORES), 180L, TimeUnit.SECONDS);
 
     /** The Constant DEFAULT_STMT_SETTER. */
-    private static final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super Object[]> DEFAULT_STMT_SETTER = new JdbcUtil.BiParametersSetter<PreparedStatement, Object[]>() {
+    static final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super Object[]> DEFAULT_STMT_SETTER = new JdbcUtil.BiParametersSetter<PreparedStatement, Object[]>() {
         @Override
         public void accept(PreparedStatement stmt, Object[] parameters) throws SQLException {
             for (int i = 0, len = parameters.length; i < len; i++) {
@@ -15907,7 +15907,6 @@ public final class JdbcUtil {
 
             loadJoinEntitiesIfNull(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
         }
-
     }
 
     /**
@@ -16190,7 +16189,7 @@ public final class JdbcUtil {
         }
     };
 
-    private static void complete(final List<ContinuableFuture<Void>> futures) throws SQLException {
+    static void complete(final List<ContinuableFuture<Void>> futures) throws SQLException {
         for (ContinuableFuture<Void> f : futures) {
             f.gett().ifFailure(throwSQLExceptionAction);
         }
@@ -18324,7 +18323,7 @@ public final class JdbcUtil {
 
     private final static Map<Class<?>, Map<String, Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>>>> joinEntityPropSQLPool = new ConcurrentHashMap<>();
 
-    private static Map<String, Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>>> getJoinEntityPropMap(
+    static Map<String, Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>>> getJoinEntityPropMap(
             final Class<?> entityClass) {
 
         Map<String, Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>>> joinEntityPropSQLMap = joinEntityPropSQLPool
@@ -18443,7 +18442,7 @@ public final class JdbcUtil {
         return joinEntityPropSQLMap;
     }
 
-    private static Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> getSQLForJoinEntityProp(
+    static Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> getSQLForJoinEntityProp(
             final Class<?> entityClass, final String joinEntityPropName, final Class<? extends SQLBuilder> sqlBuilderClass) {
 
         final Map<String, Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>>> joinEntityPropSQLMap = getJoinEntityPropMap(

@@ -32,8 +32,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import javax.sql.DataSource;
@@ -64,14 +64,20 @@ import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.Fn.Suppliers;
+import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.SQLBuilder.NAC;
 import com.landawn.abacus.util.SQLBuilder.NLC;
 import com.landawn.abacus.util.SQLBuilder.NSC;
+import com.landawn.abacus.util.SQLBuilder.PAC;
+import com.landawn.abacus.util.SQLBuilder.PLC;
+import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.SQLTransaction.CreatedBy;
 import com.landawn.abacus.util.StringUtil.Strings;
+import com.landawn.abacus.util.Try.Consumer;
+import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -5852,6 +5858,8 @@ public class SQLExecutor {
         /** The target type. */
         private final Type<T> targetType;
 
+        private final EntityInfo entityInfo;
+
         private final Class<ID> idClass;
 
         private final boolean isEntityId;
@@ -5902,8 +5910,7 @@ public class SQLExecutor {
         /** The sql delete by id. */
         private final String sql_delete_by_id;
 
-        /** The async mapper. */
-        private final AsyncMapper<T, ID> asyncMapper;
+        private final Class<? extends SQLBuilder> sbc;
 
         // TODO cache more sqls to improve performance.
 
@@ -5939,7 +5946,8 @@ public class SQLExecutor {
             }
 
             this.targetClass = entityClass;
-            this.targetType = N.typeOf(entityClass);
+            this.targetType = N.typeOf(targetClass);
+            this.entityInfo = ParserUtil.getEntityInfo(targetClass);
             this.idClass = idClass;
             this.isEntityId = idClass.equals(EntityId.class);
             this.isVoidId = idClass.equals(Void.class);
@@ -5974,7 +5982,8 @@ public class SQLExecutor {
             this.sql_update_by_id = this.prepareUpdateSql(SQLBuilder.getUpdatePropNamesByClass(entityClass, idPropNameSet));
             this.sql_delete_by_id = this.prepareDelete(idCond).sql;
 
-            this.asyncMapper = new AsyncMapper<>(this, sqlExecutor._asyncExecutor);
+            this.sbc = namingPolicy.equals(NamingPolicy.LOWER_CASE_WITH_UNDERSCORE) ? PSC.class
+                    : (namingPolicy.equals(NamingPolicy.UPPER_CASE_WITH_UNDERSCORE) ? PAC.class : PLC.class);
         }
 
         /**
@@ -6027,14 +6036,6 @@ public class SQLExecutor {
          */
         Set<String> propNameSet() {
             return propNameSet;
-        }
-
-        /**
-         *
-         * @return
-         */
-        public AsyncMapper<T, ID> async() {
-            return asyncMapper;
         }
 
         /**
@@ -8871,2960 +8872,491 @@ public class SQLExecutor {
 
         /**
          *
+         * @param entity
+         * @param joinEntityPropName
+         */
+        public void loadJoinEntities(final T entity, final String joinEntityPropName) {
+            loadJoinEntities(entity, joinEntityPropName, null);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropName
+         * @param selectPropNames
+         */
+        public void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) {
+            final PropInfo propInfo = entityInfo.getPropInfo(joinEntityPropName);
+            final Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = JdbcUtil
+                    .getSQLForJoinEntityProp(targetClass, joinEntityPropName, sbc);
+
+            final String sql = tp._2.apply(selectPropNames);
+            final StatementSetter statementSetter = (namedSQL, stmt, parameters) -> tp._3.accept(stmt, entity);
+
+            if (propInfo.type.isCollection()) {
+                final Collection<Object> c = (Collection<Object>) N.newInstance(propInfo.clazz);
+                c.addAll(sqlExecutor.list(propInfo.type.getElementType().clazz(), sql, statementSetter));
+                propInfo.setPropValue(entity, c);
+            } else {
+                propInfo.setPropValue(entity, sqlExecutor.findFirst(propInfo.type.getElementType().clazz(), sql, statementSetter).orNull());
+            }
+
+            if (entity instanceof DirtyMarker) {
+                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propInfo.name, false);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         */
+        public void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName) {
+            loadJoinEntities(entities, joinEntityPropName, null);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param selectPropNames
+         */
+        public void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            final PropInfo propInfo = entityInfo.getPropInfo(joinEntityPropName);
+            final Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = JdbcUtil
+                    .getSQLForJoinEntityProp(targetClass, joinEntityPropName, sbc);
+
+            final String sql = tp._2.apply(selectPropNames);
+            final StatementSetter statementSetter = (namedSQL, stmt, parameters) -> tp._3.accept(stmt, parameters[0]);
+
+            for (T entity : entities) {
+                if (propInfo.type.isCollection()) {
+                    final Collection<Object> c = (Collection<Object>) N.newInstance(propInfo.clazz);
+                    c.addAll(sqlExecutor.list(propInfo.type.getElementType().clazz(), sql, statementSetter, entity));
+                    propInfo.setPropValue(entity, c);
+                } else {
+                    propInfo.setPropValue(entity, sqlExecutor.findFirst(propInfo.type.getElementType().clazz(), sql, statementSetter, entity).orNull());
+                }
+
+                if (entity instanceof DirtyMarker) {
+                    DirtyMarkerUtil.markDirty((DirtyMarker) entity, propInfo.name, false);
+                }
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         */
+        public void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames) {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntities(entity, joinEntityPropName);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param inParallel
+         */
+        public void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) {
+            if (inParallel) {
+                loadJoinEntities(entity, joinEntityPropNames, sqlExecutor._asyncExecutor.getExecutor());
+            } else {
+                loadJoinEntities(entity, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param executor
+         */
+        public void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
+                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor))
+                    .toList();
+
+            complete(futures);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         */
+        public void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntities(entities, joinEntityPropName);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param inParallel
+         */
+        public void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) {
+            if (inParallel) {
+                loadJoinEntities(entities, joinEntityPropNames, sqlExecutor._asyncExecutor.getExecutor());
+            } else {
+                loadJoinEntities(entities, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param executor
+         */
+        public void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
+                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entities, joinEntityPropName), executor))
+                    .toList();
+
+            complete(futures);
+        }
+
+        /**
+         *
+         * @param entity
+         */
+        public void loadAllJoinEntities(T entity) {
+            loadJoinEntities(entity, JdbcUtil.getJoinEntityPropMap(entity.getClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entity
+         * @param inParallel
+         */
+        public void loadAllJoinEntities(final T entity, final boolean inParallel) {
+            if (inParallel) {
+                loadAllJoinEntities(entity, sqlExecutor._asyncExecutor.getExecutor());
+            } else {
+                loadAllJoinEntities(entity);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param executor
+         */
+        public void loadAllJoinEntities(final T entity, final Executor executor) {
+            loadJoinEntities(entity, JdbcUtil.getJoinEntityPropMap(entity.getClass()).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entities
+         */
+        public void loadAllJoinEntities(final Collection<T> entities) {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            loadJoinEntities(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entities
+         * @param inParallel
+         */
+        public void loadAllJoinEntities(final Collection<T> entities, final boolean inParallel) {
+            if (inParallel) {
+                loadAllJoinEntities(entities, sqlExecutor._asyncExecutor.getExecutor());
+            } else {
+                loadAllJoinEntities(entities);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param executor
+         */
+        public void loadAllJoinEntities(final Collection<T> entities, final Executor executor) {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            loadJoinEntities(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropName
+         */
+        public void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName) {
+            loadJoinEntitiesIfNull(entity, joinEntityPropName, null);
+        }
+
+        /**
+         *
+         * @param entity
+         * ?
+         * @param joinEntityPropName
+         * @param selectPropNames
+         */
+        public void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) {
+            final Class<?> cls = entity.getClass();
+            final PropInfo propInfo = ParserUtil.getEntityInfo(cls).getPropInfo(joinEntityPropName);
+            final boolean isDirtyMarker = DirtyMarker.class.isAssignableFrom(cls);
+
+            if (isDirtyMarker) {
+                if (DirtyMarkerUtil.signedPropNames((DirtyMarker) entity).contains(propInfo.name)) {
+                    return;
+                }
+            } else {
+                if (propInfo.getPropValue(entity) != null) {
+                    return;
+                }
+            }
+
+            loadJoinEntities(entity, joinEntityPropName, selectPropNames);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         */
+        public void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName) {
+            loadJoinEntitiesIfNull(entities, joinEntityPropName, null);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param selectPropNames
+         */
+        public void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            final Class<?> cls = N.firstOrNullIfEmpty(entities).getClass();
+            final PropInfo propInfo = ParserUtil.getEntityInfo(cls).getPropInfo(joinEntityPropName);
+            final boolean isDirtyMarker = DirtyMarker.class.isAssignableFrom(cls);
+
+            final List<T> newEntities = N.filter(entities, entity -> {
+                if (isDirtyMarker) {
+                    return !DirtyMarkerUtil.signedPropNames((DirtyMarker) entity).contains(propInfo.name);
+                } else {
+                    return propInfo.getPropValue(entity) == null;
+                }
+            });
+
+            loadJoinEntities(newEntities, joinEntityPropName, selectPropNames);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         */
+        public void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames) {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntitiesIfNull(entity, joinEntityPropName);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param inParallel
+         */
+        public void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) {
+            if (inParallel) {
+                loadJoinEntitiesIfNull(entity, joinEntityPropNames, sqlExecutor._asyncExecutor.getExecutor());
+            } else {
+                loadJoinEntitiesIfNull(entity, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param executor
+         */
+        public void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
+                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entity, joinEntityPropName), executor))
+                    .toList();
+
+            complete(futures);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         */
+        public void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames) {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntitiesIfNull(entities, joinEntityPropName);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param inParallel
+         */
+        public void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) {
+            if (inParallel) {
+                loadJoinEntitiesIfNull(entities, joinEntityPropNames, sqlExecutor._asyncExecutor.getExecutor());
+            } else {
+                loadJoinEntitiesIfNull(entities, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param executor
+         */
+        public void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
+                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entities, joinEntityPropName), executor))
+                    .toList();
+
+            complete(futures);
+        }
+
+        /**
+         *
+         * @param entity
+         */
+        public void loadJoinEntitiesIfNull(T entity) {
+            loadJoinEntitiesIfNull(entity, JdbcUtil.getJoinEntityPropMap(entity.getClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entity
+         * @param inParallel
+         */
+        public void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) {
+            if (inParallel) {
+                loadJoinEntitiesIfNull(entity, sqlExecutor._asyncExecutor.getExecutor());
+            } else {
+                loadJoinEntitiesIfNull(entity);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param executor
+         */
+        public void loadJoinEntitiesIfNull(final T entity, final Executor executor) {
+            loadJoinEntitiesIfNull(entity, JdbcUtil.getJoinEntityPropMap(entity.getClass()).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entities
+         */
+        public void loadJoinEntitiesIfNull(final Collection<T> entities) {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            loadJoinEntitiesIfNull(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entities
+         * @param inParallel
+         */
+        public void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) {
+            if (inParallel) {
+                loadJoinEntitiesIfNull(entities, sqlExecutor._asyncExecutor.getExecutor());
+            } else {
+                loadJoinEntitiesIfNull(entities);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param executor
+         */
+        public void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            loadJoinEntitiesIfNull(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
+        }
+
+        private static final Consumer<? super Exception, RuntimeException> throwRuntimeExceptionAction = e -> {
+            throw N.toRuntimeException(e);
+        };
+
+        static void complete(final List<ContinuableFuture<Void>> futures) {
+            for (ContinuableFuture<Void> f : futures) {
+                f.gett().ifFailure(throwRuntimeExceptionAction);
+            }
+        }
+
+        /**
+         *
          * @return
          */
         public String toStirng() {
             return "Mapper[" + ClassUtil.getCanonicalClassName(targetClass) + "]";
-        }
-    }
-
-    /**
-     * The Class AsyncMapper.
-     *
-     * @param <T>
-     * @param <ID>
-     */
-    public static final class AsyncMapper<T, ID> {
-
-        /** The mapper. */
-        private final Mapper<T, ID> mapper;
-
-        /** The async executor. */
-        private final AsyncExecutor asyncExecutor;
-
-        /**
-         * Instantiates a new async mapper.
-         *
-         * @param mapper
-         * @param asyncExecutor
-         */
-        AsyncMapper(Mapper<T, ID> mapper, AsyncExecutor asyncExecutor) {
-            this.mapper = mapper;
-            this.asyncExecutor = asyncExecutor;
-        }
-
-        /**
-         *
-         * @param id
-         * @return
-         */
-        public ContinuableFuture<Boolean> exists(final ID id) {
-            return asyncExecutor.execute(new Callable<Boolean>() {
-                @Override
-                public Boolean call() throws Exception {
-                    return mapper.exists(id);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Boolean> exists(final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Boolean>() {
-                @Override
-                public Boolean call() throws Exception {
-                    return mapper.exists(whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param id
-         * @return
-         */
-        public ContinuableFuture<Boolean> exists(final Connection conn, final ID id) {
-            return asyncExecutor.execute(new Callable<Boolean>() {
-                @Override
-                public Boolean call() throws Exception {
-                    return mapper.exists(conn, id);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Boolean> exists(final Connection conn, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Boolean>() {
-                @Override
-                public Boolean call() throws Exception {
-                    return mapper.exists(conn, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Integer> count(final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.count(whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Integer> count(final Connection conn, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.count(conn, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param id
-         * @return
-         */
-        public ContinuableFuture<Optional<T>> get(final ID id) {
-            return asyncExecutor.execute(new Callable<Optional<T>>() {
-                @Override
-                public Optional<T> call() throws Exception {
-                    return mapper.get(id);
-                }
-            });
-        }
-
-        //    /**
-        //     *
-        //     * @param id
-        //     * @param selectPropNames
-        //     * @return
-        //     * @deprecated replaced by {@code get(id, Arrays.asList(selectPropNames)}
-        //     */
-        //    @Deprecated
-        //    @SafeVarargs
-        //    public final ContinuableFuture<Optional<T>> get(final ID id, final String... selectPropNames) {
-        //        return asyncExecutor.execute(new Callable<Optional<T>>() {
-        //            @Override
-        //            public Optional<T> call() throws Exception {
-        //                return mapper.get(id, selectPropNames);
-        //            }
-        //        });
-        //    }
-
-        /**
-         *
-         * @param id
-         * @param selectPropNames
-         * @return
-         */
-        public ContinuableFuture<Optional<T>> get(final ID id, final Collection<String> selectPropNames) {
-            return asyncExecutor.execute(new Callable<Optional<T>>() {
-                @Override
-                public Optional<T> call() throws Exception {
-                    return mapper.get(id, selectPropNames);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param id
-         * @param selectPropNames
-         * @return
-         */
-        public ContinuableFuture<Optional<T>> get(final Connection conn, final ID id, final Collection<String> selectPropNames) {
-            return asyncExecutor.execute(new Callable<Optional<T>>() {
-                @Override
-                public Optional<T> call() throws Exception {
-                    return mapper.get(conn, id, selectPropNames);
-                }
-            });
-        }
-
-        /**
-         * Gets the t.
-         *
-         * @param id
-         * @return
-         */
-        public ContinuableFuture<T> gett(final ID id) {
-            return asyncExecutor.execute(new Callable<T>() {
-                @Override
-                public T call() throws Exception {
-                    return mapper.gett(id);
-                }
-            });
-        }
-
-        //    /**
-        //     *
-        //     * @param id
-        //     * @param selectPropNames
-        //     * @return
-        //     * @deprecated replaced by {@code gett(id, Arrays.asList(selectPropNames)}
-        //     */
-        //    @Deprecated
-        //    @SafeVarargs
-        //    public final ContinuableFuture<T> gett(final ID id, final String... selectPropNames) {
-        //        return asyncExecutor.execute(new Callable<T>() {
-        //            @Override
-        //            public T call() throws Exception {
-        //                return mapper.gett(id, selectPropNames);
-        //            }
-        //        });
-        //    }
-
-        /**
-         * Gets the t.
-         *
-         * @param id
-         * @param selectPropNames
-         * @return
-         */
-        public ContinuableFuture<T> gett(final ID id, final Collection<String> selectPropNames) {
-            return asyncExecutor.execute(new Callable<T>() {
-                @Override
-                public T call() throws Exception {
-                    return mapper.gett(id, selectPropNames);
-                }
-            });
-        }
-
-        /**
-         * Gets the t.
-         *
-         * @param conn
-         * @param id
-         * @param selectPropNames
-         * @return
-         */
-        public ContinuableFuture<T> gett(final Connection conn, final ID id, final Collection<String> selectPropNames) {
-            return asyncExecutor.execute(new Callable<T>() {
-                @Override
-                public T call() throws Exception {
-                    return mapper.gett(conn, id, selectPropNames);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param ids
-         * @return
-         */
-        public ContinuableFuture<List<T>> batchGet(final Collection<? extends ID> ids) {
-            return asyncExecutor.execute(new Callable<List<T>>() {
-                @Override
-                public List<T> call() throws Exception {
-                    return mapper.batchGet(ids);
-                }
-            });
-        }
-
-        //    /**
-        //     *
-        //     * @param ids
-        //     * @param selectPropNames
-        //     * @return
-        //     * @deprecated replaced by {@code batchGet(ids, Arrays.asList(selectPropNames)}
-        //     */
-        //    @Deprecated
-        //    public ContinuableFuture<List<T>> batchGet(final List<?> ids, final String... selectPropNames) {
-        //        return asyncExecutor.execute(new Callable<List<T>>() {
-        //            @Override
-        //            public List<T> call() throws Exception {
-        //                return mapper.batchGet(ids, selectPropNames);
-        //            }
-        //        });
-        //    }
-
-        /**
-         *
-         * @param ids
-         * @param selectPropNames
-         * @return
-         */
-        public ContinuableFuture<List<T>> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) {
-            return asyncExecutor.execute(new Callable<List<T>>() {
-                @Override
-                public List<T> call() throws Exception {
-                    return mapper.batchGet(ids, selectPropNames);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param ids
-         * @param selectPropNames
-         * @param batchSize
-         * @return
-         */
-        public ContinuableFuture<List<T>> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) {
-            return asyncExecutor.execute(new Callable<List<T>>() {
-                @Override
-                public List<T> call() throws Exception {
-                    return mapper.batchGet(ids, selectPropNames, batchSize);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param ids
-         * @param selectPropNames
-         * @param batchSize
-         * @return
-         */
-        public ContinuableFuture<List<T>> batchGet(final Connection conn, final Collection<? extends ID> ids, final Collection<String> selectPropNames,
-                final int batchSize) {
-            return asyncExecutor.execute(new Callable<List<T>>() {
-                @Override
-                public List<T> call() throws Exception {
-                    return mapper.batchGet(conn, ids, selectPropNames, batchSize);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Optional<T>> findFirst(final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Optional<T>>() {
-                @Override
-                public Optional<T> call() throws Exception {
-                    return mapper.findFirst(whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param selectPropNames
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Optional<T>> findFirst(final Collection<String> selectPropNames, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Optional<T>>() {
-                @Override
-                public Optional<T> call() throws Exception {
-                    return mapper.findFirst(selectPropNames, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param selectPropNames
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public ContinuableFuture<Optional<T>> findFirst(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Optional<T>>() {
-                @Override
-                public Optional<T> call() throws Exception {
-                    return mapper.findFirst(selectPropNames, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Optional<T>> findFirst(final Connection conn, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Optional<T>>() {
-                @Override
-                public Optional<T> call() throws Exception {
-                    return mapper.findFirst(conn, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param selectPropNames
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Optional<T>> findFirst(final Connection conn, final Collection<String> selectPropNames, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Optional<T>>() {
-                @Override
-                public Optional<T> call() throws Exception {
-                    return mapper.findFirst(conn, selectPropNames, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param selectPropNames
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public ContinuableFuture<Optional<T>> findFirst(final Connection conn, final Collection<String> selectPropNames, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Optional<T>>() {
-                @Override
-                public Optional<T> call() throws Exception {
-                    return mapper.findFirst(conn, selectPropNames, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(selectPropName, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(selectPropName, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final Connection conn, final String selectPropName, final JdbcUtil.RowMapper<R> rowMapper,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(conn, selectPropName, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final Connection conn, final String selectPropName, final JdbcUtil.RowMapper<R> rowMapper,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(conn, selectPropName, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(selectPropNames, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(selectPropNames, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final Connection conn, final Collection<String> selectPropNames,
-                final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(conn, selectPropNames, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final Connection conn, final Collection<String> selectPropNames,
-                final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(conn, selectPropNames, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(selectPropName, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(selectPropName, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final Connection conn, final String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(conn, selectPropName, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final Connection conn, final String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(conn, selectPropName, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(selectPropNames, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(selectPropNames, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final Connection conn, final Collection<String> selectPropNames,
-                final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(conn, selectPropNames, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Optional<R>> findFirst(final Connection conn, final Collection<String> selectPropNames,
-                final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Optional<R>>() {
-                @Override
-                public Optional<R> call() throws Exception {
-                    return mapper.findFirst(conn, selectPropNames, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<List<T>> list(final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<List<T>>() {
-                @Override
-                public List<T> call() throws Exception {
-                    return mapper.list(whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param selectPropNames
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<List<T>> list(final Collection<String> selectPropNames, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<List<T>>() {
-                @Override
-                public List<T> call() throws Exception {
-                    return mapper.list(selectPropNames, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param selectPropNames
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public ContinuableFuture<List<T>> list(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<T>>() {
-                @Override
-                public List<T> call() throws Exception {
-                    return mapper.list(selectPropNames, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<List<T>> list(final Connection conn, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<List<T>>() {
-                @Override
-                public List<T> call() throws Exception {
-                    return mapper.list(conn, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param selectPropNames
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<List<T>> list(final Connection conn, final Collection<String> selectPropNames, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<List<T>>() {
-                @Override
-                public List<T> call() throws Exception {
-                    return mapper.list(conn, selectPropNames, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param selectPropNames
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public ContinuableFuture<List<T>> list(final Connection conn, final Collection<String> selectPropNames, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<T>>() {
-                @Override
-                public List<T> call() throws Exception {
-                    return mapper.list(conn, selectPropNames, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(selectPropName, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(selectPropName, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final Connection conn, final String selectPropName, final JdbcUtil.RowMapper<R> rowMapper,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(conn, selectPropName, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final Connection conn, final String selectPropName, final JdbcUtil.RowMapper<R> rowMapper,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(conn, selectPropName, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(selectPropNames, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(selectPropNames, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final Connection conn, final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(conn, selectPropNames, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final Connection conn, final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(conn, selectPropNames, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(selectPropName, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(selectPropName, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final Connection conn, final String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(conn, selectPropName, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final Connection conn, final String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(conn, selectPropName, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(selectPropNames, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(selectPropNames, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final Connection conn, final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(conn, selectPropNames, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> list(final Connection conn, final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.list(conn, selectPropNames, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public ContinuableFuture<List<T>> listAll(final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<T>>() {
-                @Override
-                public List<T> call() throws Exception {
-                    return mapper.listAll(whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param selectPropNames
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public ContinuableFuture<List<T>> listAll(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<T>>() {
-                @Override
-                public List<T> call() throws Exception {
-                    return mapper.listAll(selectPropNames, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> listAll(final String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.listAll(selectPropName, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> listAll(final String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.listAll(selectPropName, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> listAll(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.listAll(selectPropNames, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<List<R>> listAll(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<List<R>>() {
-                @Override
-                public List<R> call() throws Exception {
-                    return mapper.listAll(selectPropNames, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Stream<T>> stream(final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Stream<T>>() {
-                @Override
-                public Stream<T> call() throws Exception {
-                    return mapper.stream(whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param selectPropNames
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Stream<T>> stream(final Collection<String> selectPropNames, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Stream<T>>() {
-                @Override
-                public Stream<T> call() throws Exception {
-                    return mapper.stream(selectPropNames, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param selectPropNames
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public ContinuableFuture<Stream<T>> stream(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Stream<T>>() {
-                @Override
-                public Stream<T> call() throws Exception {
-                    return mapper.stream(selectPropNames, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<Stream<R>> stream(final String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Stream<R>>() {
-                @Override
-                public Stream<R> call() throws Exception {
-                    return mapper.stream(selectPropName, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Stream<R>> stream(final String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Stream<R>>() {
-                @Override
-                public Stream<R> call() throws Exception {
-                    return mapper.stream(selectPropName, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<Stream<R>> stream(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Stream<R>>() {
-                @Override
-                public Stream<R> call() throws Exception {
-                    return mapper.stream(selectPropNames, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Stream<R>> stream(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Stream<R>>() {
-                @Override
-                public Stream<R> call() throws Exception {
-                    return mapper.stream(selectPropNames, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<Stream<R>> stream(final String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Stream<R>>() {
-                @Override
-                public Stream<R> call() throws Exception {
-                    return mapper.stream(selectPropName, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Stream<R>> stream(final String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Stream<R>>() {
-                @Override
-                public Stream<R> call() throws Exception {
-                    return mapper.stream(selectPropName, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> ContinuableFuture<Stream<R>> stream(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Stream<R>>() {
-                @Override
-                public Stream<R> call() throws Exception {
-                    return mapper.stream(selectPropNames, rowMapper, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Stream<R>> stream(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Stream<R>>() {
-                @Override
-                public Stream<R> call() throws Exception {
-                    return mapper.stream(selectPropNames, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public ContinuableFuture<Stream<T>> streamAll(final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Stream<T>>() {
-                @Override
-                public Stream<T> call() throws Exception {
-                    return mapper.streamAll(whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param selectPropNames
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public ContinuableFuture<Stream<T>> streamAll(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Stream<T>>() {
-                @Override
-                public Stream<T> call() throws Exception {
-                    return mapper.streamAll(selectPropNames, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Stream<R>> streamAll(final String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Stream<R>>() {
-                @Override
-                public Stream<R> call() throws Exception {
-                    return mapper.streamAll(selectPropName, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Stream<R>> streamAll(final String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Stream<R>>() {
-                @Override
-                public Stream<R> call() throws Exception {
-                    return mapper.streamAll(selectPropName, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Stream<R>> streamAll(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Stream<R>>() {
-                @Override
-                public Stream<R> call() throws Exception {
-                    return mapper.streamAll(selectPropNames, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropNames
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> ContinuableFuture<Stream<R>> streamAll(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Stream<R>>() {
-                @Override
-                public Stream<R> call() throws Exception {
-                    return mapper.streamAll(selectPropNames, rowMapper, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<DataSet> query(final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<DataSet>() {
-                @Override
-                public DataSet call() throws Exception {
-                    return mapper.query(whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param selectPropNames
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<DataSet> query(final Collection<String> selectPropNames, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<DataSet>() {
-                @Override
-                public DataSet call() throws Exception {
-                    return mapper.query(selectPropNames, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param selectPropNames
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public ContinuableFuture<DataSet> query(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<DataSet>() {
-                @Override
-                public DataSet call() throws Exception {
-                    return mapper.query(selectPropNames, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<DataSet> query(final Connection conn, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<DataSet>() {
-                @Override
-                public DataSet call() throws Exception {
-                    return mapper.query(conn, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param selectPropNames
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<DataSet> query(final Connection conn, final Collection<String> selectPropNames, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<DataSet>() {
-                @Override
-                public DataSet call() throws Exception {
-                    return mapper.query(conn, selectPropNames, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param selectPropNames
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public ContinuableFuture<DataSet> query(final Connection conn, final Collection<String> selectPropNames, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<DataSet>() {
-                @Override
-                public DataSet call() throws Exception {
-                    return mapper.query(conn, selectPropNames, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public ContinuableFuture<DataSet> queryAll(final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<DataSet>() {
-                @Override
-                public DataSet call() throws Exception {
-                    return mapper.queryAll(whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param selectPropNames
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public ContinuableFuture<DataSet> queryAll(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<DataSet>() {
-                @Override
-                public DataSet call() throws Exception {
-                    return mapper.queryAll(selectPropNames, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         * Query for boolean.
-         *
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<OptionalBoolean> queryForBoolean(final String selectPropName, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<OptionalBoolean>() {
-                @Override
-                public OptionalBoolean call() throws Exception {
-                    return mapper.queryForBoolean(selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for byte.
-         *
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<OptionalByte> queryForByte(final String selectPropName, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<OptionalByte>() {
-                @Override
-                public OptionalByte call() throws Exception {
-                    return mapper.queryForByte(selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for short.
-         *
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<OptionalShort> queryForShort(final String selectPropName, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<OptionalShort>() {
-                @Override
-                public OptionalShort call() throws Exception {
-                    return mapper.queryForShort(selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for int.
-         *
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<OptionalInt> queryForInt(final String selectPropName, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<OptionalInt>() {
-                @Override
-                public OptionalInt call() throws Exception {
-                    return mapper.queryForInt(selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for long.
-         *
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<OptionalLong> queryForLong(final String selectPropName, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<OptionalLong>() {
-                @Override
-                public OptionalLong call() throws Exception {
-                    return mapper.queryForLong(selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for float.
-         *
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<OptionalFloat> queryForFloat(final String selectPropName, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<OptionalFloat>() {
-                @Override
-                public OptionalFloat call() throws Exception {
-                    return mapper.queryForFloat(selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for double.
-         *
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<OptionalDouble> queryForDouble(final String selectPropName, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<OptionalDouble>() {
-                @Override
-                public OptionalDouble call() throws Exception {
-                    return mapper.queryForDouble(selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for big decimal.
-         *
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Nullable<BigDecimal>> queryForBigDecimal(final String selectPropName, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Nullable<BigDecimal>>() {
-                @Override
-                public Nullable<BigDecimal> call() throws Exception {
-                    return mapper.queryForBigDecimal(selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for string.
-         *
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Nullable<String>> queryForString(final String selectPropName, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Nullable<String>>() {
-                @Override
-                public Nullable<String> call() throws Exception {
-                    return mapper.queryForString(selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for date.
-         *
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Nullable<java.sql.Date>> queryForDate(final String selectPropName, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Nullable<java.sql.Date>>() {
-                @Override
-                public Nullable<java.sql.Date> call() throws Exception {
-                    return mapper.queryForDate(selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for time.
-         *
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Nullable<java.sql.Time>> queryForTime(final String selectPropName, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Nullable<java.sql.Time>>() {
-                @Override
-                public Nullable<java.sql.Time> call() throws Exception {
-                    return mapper.queryForTime(selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for timestamp.
-         *
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Nullable<java.sql.Timestamp>> queryForTimestamp(final String selectPropName, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Nullable<java.sql.Timestamp>>() {
-                @Override
-                public Nullable<java.sql.Timestamp> call() throws Exception {
-                    return mapper.queryForTimestamp(selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for single result.
-         *
-         * @param <V> the value type
-         * @param targetValueClass
-         * @param selectPropName
-         * @param id
-         * @return
-         */
-        public <V> ContinuableFuture<Nullable<V>> queryForSingleResult(final Class<V> targetValueClass, final String selectPropName, final ID id) {
-            return asyncExecutor.execute(new Callable<Nullable<V>>() {
-                @Override
-                public Nullable<V> call() throws Exception {
-                    return mapper.queryForSingleResult(targetValueClass, selectPropName, id);
-                }
-            });
-        }
-
-        /**
-         * Query for single result.
-         *
-         * @param <V> the value type
-         * @param targetValueClass
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public <V> ContinuableFuture<Nullable<V>> queryForSingleResult(final Class<V> targetValueClass, final String selectPropName,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Nullable<V>>() {
-                @Override
-                public Nullable<V> call() throws Exception {
-                    return mapper.queryForSingleResult(targetValueClass, selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for single result.
-         *
-         * @param <V> the value type
-         * @param targetValueClass
-         * @param selectPropName
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <V> ContinuableFuture<Nullable<V>> queryForSingleResult(final Class<V> targetValueClass, final String selectPropName, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Nullable<V>>() {
-                @Override
-                public Nullable<V> call() throws Exception {
-                    return mapper.queryForSingleResult(targetValueClass, selectPropName, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         * Query for single result.
-         *
-         * @param <V> the value type
-         * @param targetValueClass
-         * @param conn
-         * @param selectPropName
-         * @param id
-         * @return
-         */
-        public <V> ContinuableFuture<Nullable<V>> queryForSingleResult(final Class<V> targetValueClass, final Connection conn, final String selectPropName,
-                final ID id) {
-            return asyncExecutor.execute(new Callable<Nullable<V>>() {
-                @Override
-                public Nullable<V> call() throws Exception {
-                    return mapper.queryForSingleResult(targetValueClass, conn, selectPropName, id);
-                }
-            });
-        }
-
-        /**
-         * Query for single result.
-         *
-         * @param <V> the value type
-         * @param targetValueClass
-         * @param conn
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public <V> ContinuableFuture<Nullable<V>> queryForSingleResult(final Class<V> targetValueClass, final Connection conn, final String selectPropName,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Nullable<V>>() {
-                @Override
-                public Nullable<V> call() throws Exception {
-                    return mapper.queryForSingleResult(targetValueClass, conn, selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for single result.
-         *
-         * @param <V> the value type
-         * @param targetValueClass
-         * @param conn
-         * @param selectPropName
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <V> ContinuableFuture<Nullable<V>> queryForSingleResult(final Class<V> targetValueClass, final Connection conn, final String selectPropName,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Nullable<V>>() {
-                @Override
-                public Nullable<V> call() throws Exception {
-                    return mapper.queryForSingleResult(targetValueClass, conn, selectPropName, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         * Query for unique result.
-         *
-         * @param <V> the value type
-         * @param targetValueClass
-         * @param selectPropName
-         * @param id
-         * @return
-         */
-        public <V> ContinuableFuture<Nullable<V>> queryForUniqueResult(final Class<V> targetValueClass, final String selectPropName, final ID id) {
-            return asyncExecutor.execute(new Callable<Nullable<V>>() {
-                @Override
-                public Nullable<V> call() throws Exception {
-                    return mapper.queryForUniqueResult(targetValueClass, selectPropName, id);
-                }
-            });
-        }
-
-        /**
-         * Query for unique result.
-         *
-         * @param <V> the value type
-         * @param targetValueClass
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public <V> ContinuableFuture<Nullable<V>> queryForUniqueResult(final Class<V> targetValueClass, final String selectPropName,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Nullable<V>>() {
-                @Override
-                public Nullable<V> call() throws Exception {
-                    return mapper.queryForUniqueResult(targetValueClass, selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for unique result.
-         *
-         * @param <V> the value type
-         * @param targetValueClass
-         * @param selectPropName
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <V> ContinuableFuture<Nullable<V>> queryForUniqueResult(final Class<V> targetValueClass, final String selectPropName, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Nullable<V>>() {
-                @Override
-                public Nullable<V> call() throws Exception {
-                    return mapper.queryForUniqueResult(targetValueClass, selectPropName, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         * Query for unique result.
-         *
-         * @param <V> the value type
-         * @param targetValueClass
-         * @param conn
-         * @param selectPropName
-         * @param id
-         * @return
-         */
-        public <V> ContinuableFuture<Nullable<V>> queryForUniqueResult(final Class<V> targetValueClass, final Connection conn, final String selectPropName,
-                final ID id) {
-            return asyncExecutor.execute(new Callable<Nullable<V>>() {
-                @Override
-                public Nullable<V> call() throws Exception {
-                    return mapper.queryForUniqueResult(targetValueClass, conn, selectPropName, id);
-                }
-            });
-        }
-
-        /**
-         * Query for unique result.
-         *
-         * @param <V> the value type
-         * @param targetValueClass
-         * @param conn
-         * @param selectPropName
-         * @param whereCause
-         * @return
-         */
-        public <V> ContinuableFuture<Nullable<V>> queryForUniqueResult(final Class<V> targetValueClass, final Connection conn, final String selectPropName,
-                final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Nullable<V>>() {
-                @Override
-                public Nullable<V> call() throws Exception {
-                    return mapper.queryForUniqueResult(targetValueClass, conn, selectPropName, whereCause);
-                }
-            });
-        }
-
-        /**
-         * Query for unique result.
-         *
-         * @param <V> the value type
-         * @param targetValueClass
-         * @param conn
-         * @param selectPropName
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <V> ContinuableFuture<Nullable<V>> queryForUniqueResult(final Class<V> targetValueClass, final Connection conn, final String selectPropName,
-                final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return asyncExecutor.execute(new Callable<Nullable<V>>() {
-                @Override
-                public Nullable<V> call() throws Exception {
-                    return mapper.queryForUniqueResult(targetValueClass, conn, selectPropName, whereCause, jdbcSettings);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entity
-         * @return
-         */
-        public ContinuableFuture<ID> insert(final T entity) {
-            return asyncExecutor.execute(new Callable<ID>() {
-                @Override
-                public ID call() throws Exception {
-                    return mapper.insert(entity);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entity
-         * @param propNamesToInsert
-         * @return
-         */
-        public ContinuableFuture<ID> insert(final T entity, final Collection<String> propNamesToInsert) {
-            return asyncExecutor.execute(new Callable<ID>() {
-                @Override
-                public ID call() throws Exception {
-                    return mapper.insert(entity, propNamesToInsert);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param props
-         * @return
-         */
-        public ContinuableFuture<ID> insert(final Map<String, Object> props) {
-            return asyncExecutor.execute(new Callable<ID>() {
-                @Override
-                public ID call() throws Exception {
-                    return mapper.insert(props);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param entity
-         * @return
-         */
-        public ContinuableFuture<ID> insert(final Connection conn, final T entity) {
-            return asyncExecutor.execute(new Callable<ID>() {
-                @Override
-                public ID call() throws Exception {
-                    return mapper.insert(conn, entity);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param entity
-         * @param propNamesToInsert
-         * @return
-         */
-        public ContinuableFuture<ID> insert(final Connection conn, final T entity, final Collection<String> propNamesToInsert) {
-            return asyncExecutor.execute(new Callable<ID>() {
-                @Override
-                public ID call() throws Exception {
-                    return mapper.insert(conn, entity, propNamesToInsert);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param props
-         * @return
-         */
-        public ContinuableFuture<ID> insert(final Connection conn, final Map<String, Object> props) {
-            return asyncExecutor.execute(new Callable<ID>() {
-                @Override
-                public ID call() throws Exception {
-                    return mapper.insert(conn, props);
-                }
-            });
-        }
-
-        //        @Deprecated
-        //        public <ID> ContinuableFuture<List<ID>> insertAll(final Collection<? extends T> entities) {
-        //            return asyncExecutor.execute(new Callable<List<ID>>() {
-        //                @Override
-        //                public List<ID> call() throws Exception {
-        //                    return mapper.insertAll(entities);
-        //                }
-        //            });
-        //        }
-        //
-        //        @Deprecated
-        //        public <ID> ContinuableFuture<List<ID>> insertAll(final Collection<? extends T> entities, final IsolationLevel isolationLevel) {
-        //            return asyncExecutor.execute(new Callable<List<ID>>() {
-        //                @Override
-        //                public List<ID> call() throws Exception {
-        //                    return mapper.insertAll(entities, isolationLevel);
-        //                }
-        //            });
-        //        }
-        //
-        //        @Deprecated
-        //        public <ID> ContinuableFuture<List<ID>> insertAll(final Connection conn, final Collection<? extends T> entities) {
-        //            return asyncExecutor.execute(new Callable<List<ID>>() {
-        //                @Override
-        //                public List<ID> call() throws Exception {
-        //                    return mapper.insertAll(conn, entities);
-        //                }
-        //            });
-        //        }
-
-        /**
-         *
-         * @param entities
-         * @return
-         */
-        public ContinuableFuture<List<ID>> batchInsert(final Collection<? extends T> entities) {
-            return asyncExecutor.execute(new Callable<List<ID>>() {
-                @Override
-                public List<ID> call() throws Exception {
-                    return mapper.batchInsert(entities);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entities
-         * @param batchSize
-         * @return
-         */
-        public ContinuableFuture<List<ID>> batchInsert(final Collection<? extends T> entities, final int batchSize) {
-            return asyncExecutor.execute(new Callable<List<ID>>() {
-                @Override
-                public List<ID> call() throws Exception {
-                    return mapper.batchInsert(entities, batchSize);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entities
-         * @param batchSize
-         * @param isolationLevel
-         * @return
-         */
-        public ContinuableFuture<List<ID>> batchInsert(final Collection<? extends T> entities, final int batchSize, final IsolationLevel isolationLevel) {
-            return asyncExecutor.execute(new Callable<List<ID>>() {
-                @Override
-                public List<ID> call() throws Exception {
-                    return mapper.batchInsert(entities, batchSize, isolationLevel);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entities
-         * @param propNamesToInsert
-         * @param batchSize
-         * @param isolationLevel
-         * @return
-         */
-        public ContinuableFuture<List<ID>> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize,
-                final IsolationLevel isolationLevel) {
-            return asyncExecutor.execute(new Callable<List<ID>>() {
-                @Override
-                public List<ID> call() throws Exception {
-                    return mapper.batchInsert(entities, propNamesToInsert, batchSize, isolationLevel);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param entities
-         * @return
-         */
-        public ContinuableFuture<List<ID>> batchInsert(final Connection conn, final Collection<? extends T> entities) {
-            return asyncExecutor.execute(new Callable<List<ID>>() {
-                @Override
-                public List<ID> call() throws Exception {
-                    return mapper.batchInsert(conn, entities);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param entities
-         * @param batchSize
-         * @return
-         */
-        public ContinuableFuture<List<ID>> batchInsert(final Connection conn, final Collection<? extends T> entities, final int batchSize) {
-            return asyncExecutor.execute(new Callable<List<ID>>() {
-                @Override
-                public List<ID> call() throws Exception {
-                    return mapper.batchInsert(conn, entities, batchSize);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param entities
-         * @param propNamesToInsert
-         * @param batchSize
-         * @return
-         */
-        public ContinuableFuture<List<ID>> batchInsert(final Connection conn, final Collection<? extends T> entities,
-                final Collection<String> propNamesToInsert, final int batchSize) {
-            return asyncExecutor.execute(new Callable<List<ID>>() {
-                @Override
-                public List<ID> call() throws Exception {
-                    return mapper.batchInsert(conn, entities, propNamesToInsert, batchSize);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entity
-         * @return
-         */
-        public ContinuableFuture<T> upsert(final T entity) {
-            return asyncExecutor.execute(new Callable<T>() {
-                @Override
-                public T call() throws Exception {
-                    return mapper.upsert(entity);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entity
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<T> upsert(final T entity, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<T>() {
-                @Override
-                public T call() throws Exception {
-                    return mapper.upsert(entity, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entity
-         * @return
-         */
-        public ContinuableFuture<Boolean> refresh(final T entity) {
-            return asyncExecutor.execute(new Callable<Boolean>() {
-                @Override
-                public Boolean call() throws Exception {
-                    return mapper.refresh(entity);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entity
-         * @param propNamesToUpdate
-         * @return
-         */
-        public ContinuableFuture<Boolean> refresh(final T entity, final Collection<String> propNamesToUpdate) {
-            return asyncExecutor.execute(new Callable<Boolean>() {
-                @Override
-                public Boolean call() throws Exception {
-                    return mapper.refresh(entity, propNamesToUpdate);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entity
-         * @return
-         */
-        public ContinuableFuture<Integer> update(final T entity) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.update(entity);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entity
-         * @param propNamesToUpdate
-         * @return
-         */
-        public ContinuableFuture<Integer> update(final T entity, final Collection<String> propNamesToUpdate) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.update(entity, propNamesToUpdate);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param props
-         * @param id
-         * @return
-         */
-        public ContinuableFuture<Integer> update(final Map<String, Object> props, final ID id) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.update(props, id);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param props
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Integer> update(final Map<String, Object> props, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.update(props, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param entity
-         * @return
-         */
-        public ContinuableFuture<Integer> update(final Connection conn, final T entity) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.update(conn, entity);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param entity
-         * @param propNamesToUpdate
-         * @return
-         */
-        public ContinuableFuture<Integer> update(final Connection conn, final T entity, final Collection<String> propNamesToUpdate) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.update(conn, entity, propNamesToUpdate);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param props
-         * @param id
-         * @return
-         */
-        public ContinuableFuture<Integer> update(final Connection conn, final Map<String, Object> props, final ID id) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.update(conn, props, id);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param props
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Integer> update(final Connection conn, final Map<String, Object> props, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.update(conn, props, whereCause);
-                }
-            });
-        }
-
-        //        @Deprecated
-        //        public ContinuableFuture<Integer> updateAll(final Collection<? extends T> entities) {
-        //            return asyncExecutor.execute(new Callable<Integer>() {
-        //                @Override
-        //                public Integer call() throws Exception {
-        //                    return mapper.updateAll(entities);
-        //                }
-        //            });
-        //        }
-        //
-        //        @Deprecated
-        //        public ContinuableFuture<Integer> updateAll(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) {
-        //            return asyncExecutor.execute(new Callable<Integer>() {
-        //                @Override
-        //                public Integer call() throws Exception {
-        //                    return mapper.updateAll(entities, propNamesToUpdate);
-        //                }
-        //            });
-        //        }
-        //
-        //        @Deprecated
-        //        public ContinuableFuture<Integer> updateAll(final Collection<? extends T> entities, final IsolationLevel isolationLevel) {
-        //            return asyncExecutor.execute(new Callable<Integer>() {
-        //                @Override
-        //                public Integer call() throws Exception {
-        //                    return mapper.updateAll(entities, isolationLevel);
-        //                }
-        //            });
-        //        }
-        //
-        //        @Deprecated
-        //        public ContinuableFuture<Integer> updateAll(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate,
-        //                final IsolationLevel isolationLevel) {
-        //            return asyncExecutor.execute(new Callable<Integer>() {
-        //                @Override
-        //                public Integer call() throws Exception {
-        //                    return mapper.updateAll(entities, propNamesToUpdate, isolationLevel);
-        //                }
-        //            });
-        //        }
-        //
-        //        @Deprecated
-        //        public ContinuableFuture<Integer> updateAll(final Connection conn, final Collection<? extends T> entities) {
-        //            return asyncExecutor.execute(new Callable<Integer>() {
-        //                @Override
-        //                public Integer call() throws Exception {
-        //                    return mapper.updateAll(conn, entities);
-        //                }
-        //            });
-        //        }
-        //
-        //        @Deprecated
-        //        public ContinuableFuture<Integer> updateAll(final Connection conn, final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) {
-        //            return asyncExecutor.execute(new Callable<Integer>() {
-        //                @Override
-        //                public Integer call() throws Exception {
-        //                    return mapper.updateAll(conn, entities, propNamesToUpdate);
-        //                }
-        //            });
-        //        }
-
-        /**
-         *
-         * @param entities
-         * @return
-         */
-        public ContinuableFuture<Integer> batchUpdate(final Collection<? extends T> entities) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchUpdate(entities);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entities
-         * @param propNamesToUpdate
-         * @return
-         */
-        public ContinuableFuture<Integer> batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchUpdate(entities, propNamesToUpdate);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entities
-         * @param batchSize
-         * @return
-         */
-        public ContinuableFuture<Integer> batchUpdate(final Collection<? extends T> entities, final int batchSize) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchUpdate(entities, batchSize);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entities
-         * @param propNamesToUpdate
-         * @param batchSize
-         * @return
-         */
-        public ContinuableFuture<Integer> batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchUpdate(entities, propNamesToUpdate, batchSize);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entities
-         * @param batchSize
-         * @param isolationLevel
-         * @return
-         */
-        public ContinuableFuture<Integer> batchUpdate(final Collection<? extends T> entities, final int batchSize, final IsolationLevel isolationLevel) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchUpdate(entities, batchSize, isolationLevel);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entities
-         * @param propNamesToUpdate
-         * @param batchSize
-         * @param isolationLevel
-         * @return
-         */
-        public ContinuableFuture<Integer> batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize,
-                final IsolationLevel isolationLevel) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchUpdate(entities, propNamesToUpdate, batchSize, isolationLevel);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param entities
-         * @return
-         */
-        public ContinuableFuture<Integer> batchUpdate(final Connection conn, final Collection<? extends T> entities) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchUpdate(conn, entities);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param entities
-         * @param propNamesToUpdate
-         * @return
-         */
-        public ContinuableFuture<Integer> batchUpdate(final Connection conn, final Collection<? extends T> entities,
-                final Collection<String> propNamesToUpdate) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchUpdate(conn, entities, propNamesToUpdate);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param entities
-         * @param batchSize
-         * @return
-         */
-        public ContinuableFuture<Integer> batchUpdate(final Connection conn, final Collection<? extends T> entities, final int batchSize) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchUpdate(conn, entities, batchSize);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param entities
-         * @param propNamesToUpdate
-         * @param batchSize
-         * @return
-         */
-        public ContinuableFuture<Integer> batchUpdate(final Connection conn, final Collection<? extends T> entities, final Collection<String> propNamesToUpdate,
-                final int batchSize) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchUpdate(conn, entities, propNamesToUpdate, batchSize);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Integer> delete(final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.delete(whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param whereCause
-         * @return
-         */
-        public ContinuableFuture<Integer> delete(final Connection conn, final Condition whereCause) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.delete(conn, whereCause);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entity
-         * @return
-         */
-        public ContinuableFuture<Integer> delete(final T entity) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.delete(entity);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param entity
-         * @return
-         */
-        public ContinuableFuture<Integer> delete(final Connection conn, final T entity) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.delete(conn, entity);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entities
-         * @return
-         */
-        public ContinuableFuture<Integer> batchDelete(final Collection<T> entities) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchDelete(entities);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entities
-         * @param batchSize
-         * @return
-         */
-        public ContinuableFuture<Integer> batchDelete(final Collection<T> entities, final int batchSize) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchDelete(entities, batchSize);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param entities
-         * @param batchSize
-         * @param isolationLevel
-         * @return
-         */
-        public ContinuableFuture<Integer> batchDelete(final Collection<T> entities, final int batchSize, final IsolationLevel isolationLevel) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchDelete(entities, batchSize, isolationLevel);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param entities
-         * @return
-         */
-        public ContinuableFuture<Integer> batchDelete(final Connection conn, final Collection<T> entities) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchDelete(conn, entities);
-                }
-            });
-        }
-
-        /**
-         *
-         * @param conn
-         * @param entities
-         * @param batchSize
-         * @return
-         */
-        public ContinuableFuture<Integer> batchDelete(final Connection conn, final Collection<T> entities, final int batchSize) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchDelete(conn, entities, batchSize);
-                }
-            });
-        }
-
-        /**
-         * Delete by id.
-         *
-         * @param id
-         * @return
-         */
-        public ContinuableFuture<Integer> deleteById(final ID id) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.deleteById(id);
-                }
-            });
-        }
-
-        /**
-         * Delete by id.
-         *
-         * @param conn
-         * @param id
-         * @return
-         */
-        public ContinuableFuture<Integer> deleteById(final Connection conn, final ID id) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.deleteById(conn, id);
-                }
-            });
-        }
-
-        /**
-         * Batch delete by ids.
-         *
-         * @param ids
-         * @return
-         */
-        public ContinuableFuture<Integer> batchDeleteByIds(final Collection<? extends ID> ids) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchDeleteByIds(ids);
-                }
-            });
-        }
-
-        /**
-         * Batch delete by ids.
-         *
-         * @param ids
-         * @param batchSize
-         * @return
-         */
-        public ContinuableFuture<Integer> batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchDeleteByIds(ids, batchSize);
-                }
-            });
-        }
-
-        /**
-         * Batch delete by ids.
-         *
-         * @param ids
-         * @param batchSize
-         * @param isolationLevel
-         * @return
-         */
-        public ContinuableFuture<Integer> batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize, final IsolationLevel isolationLevel) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchDeleteByIds(ids, batchSize, isolationLevel);
-                }
-            });
-        }
-
-        /**
-         * Batch delete by ids.
-         *
-         * @param conn
-         * @param ids
-         * @return
-         */
-        public ContinuableFuture<Integer> batchDeleteByIds(final Connection conn, final Collection<? extends ID> ids) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchDeleteByIds(conn, ids);
-                }
-            });
-        }
-
-        /**
-         * Batch delete by ids.
-         *
-         * @param conn
-         * @param ids
-         * @param batchSize
-         * @return
-         */
-        public ContinuableFuture<Integer> batchDeleteByIds(final Connection conn, final Collection<? extends ID> ids, final int batchSize) {
-            return asyncExecutor.execute(new Callable<Integer>() {
-                @Override
-                public Integer call() throws Exception {
-                    return mapper.batchDeleteByIds(conn, ids, batchSize);
-                }
-            });
         }
     }
 
