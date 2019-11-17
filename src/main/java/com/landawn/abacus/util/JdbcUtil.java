@@ -14959,7 +14959,7 @@ public final class JdbcUtil {
          * @return true, if successful
          * @throws SQLException the SQL exception
          */
-        boolean exists(Condition cond) throws SQLException;
+        boolean exists(final Condition cond) throws SQLException;
 
         /**
          *
@@ -14967,7 +14967,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        int count(Condition cond) throws SQLException;
+        int count(final Condition cond) throws SQLException;
 
         /**
          *
@@ -14975,7 +14975,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        Optional<T> findFirst(Condition cond) throws SQLException;
+        Optional<T> findFirst(final Condition cond) throws SQLException;
 
         /**
          * @param cond
@@ -14983,7 +14983,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> Optional<R> findFirst(Condition cond, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        <R> Optional<R> findFirst(final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
 
         /**
          * @param cond
@@ -14991,7 +14991,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> Optional<R> findFirst(Condition cond, JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+        <R> Optional<R> findFirst(final Condition cond, final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -15000,17 +15000,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        Optional<T> findFirst(Collection<String> selectPropNames, Condition cond) throws SQLException;
-
-        /**
-         *
-         * @param selectPropNames
-         * @param cond
-         * @param rowMapper
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        <R> Optional<R> findFirst(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
         /**
          *
@@ -15020,7 +15010,17 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> Optional<R> findFirst(Collection<String> selectPropNames, Condition cond, JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+        <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          * Query for boolean.
@@ -15196,7 +15196,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        DataSet query(Condition cond) throws SQLException;
+        DataSet query(final Condition cond) throws SQLException;
 
         /**
          *
@@ -15205,7 +15205,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        DataSet query(Collection<String> selectPropNames, Condition cond) throws SQLException;
+        DataSet query(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
         /**
          *
@@ -15213,16 +15213,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        List<T> list(Condition cond) throws SQLException;
-
-        /**
-         *
-         * @param cond
-         * @param rowMapper
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        <R> List<R> list(Condition cond, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        List<T> list(final Condition cond) throws SQLException;
 
         /**
          *
@@ -15231,7 +15222,16 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> List<R> list(Condition cond, JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+        <R> List<R> list(final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> List<R> list(final Condition cond, final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -15241,7 +15241,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> List<R> list(Condition cond, JdbcUtil.RowFilter rowFilter, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        <R> List<R> list(final Condition cond, final JdbcUtil.RowFilter rowFilter, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -15251,7 +15251,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> List<R> list(Condition cond, JdbcUtil.BiRowFilter rowFilter, JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+        <R> List<R> list(final Condition cond, final JdbcUtil.BiRowFilter rowFilter, final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -15260,17 +15260,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        List<T> list(Collection<String> selectPropNames, Condition cond) throws SQLException;
-
-        /**
-         *
-         * @param selectPropNames
-         * @param cond
-         * @param rowMapper
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        <R> List<R> list(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        List<T> list(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
         /**
          *
@@ -15280,7 +15270,17 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> List<R> list(Collection<String> selectPropNames, Condition cond, JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
         *
@@ -15291,7 +15291,8 @@ public final class JdbcUtil {
         * @return
         * @throws SQLException the SQL exception
         */
-        <R> List<R> list(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowFilter rowFilter, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.RowFilter rowFilter,
+                final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
 
         /**
         *
@@ -15302,41 +15303,53 @@ public final class JdbcUtil {
         * @return
         * @throws SQLException the SQL exception
         */
-        <R> List<R> list(Collection<String> selectPropNames, Condition cond, JdbcUtil.BiRowFilter rowFilter, JdbcUtil.BiRowMapper<R> rowMapper)
+        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.BiRowFilter rowFilter,
+                final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+
+        // Will it cause confusion if it's called in transaction?
+        /**
+         * lazy-execution, lazy-fetch.
+         *
+         * @param cond
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        ExceptionalStream<T, SQLException> stream(final Condition cond) throws SQLException;
+
+        // Will it cause confusion if it's called in transaction?
+        /**
+         * lazy-execution, lazy-fetch.
+         *
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+
+        // Will it cause confusion if it's called in transaction?
+        /**
+         * lazy-execution, lazy-fetch.
+         *
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+
+        /**
+         * lazy-execution, lazy-fetch.
+         *
+         * @param cond
+         * @param rowFilter
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final JdbcUtil.RowFilter rowFilter, final JdbcUtil.RowMapper<R> rowMapper)
                 throws SQLException;
 
-        // Will it cause confusion if it's called in transaction?
-        /**
-         * lazy-execution, lazy-fetch.
-         *
-         * @param cond
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        ExceptionalStream<T, SQLException> stream(Condition cond) throws SQLException;
-
-        // Will it cause confusion if it's called in transaction?
-        /**
-         * lazy-execution, lazy-fetch.
-         *
-         * @param cond
-         * @param rowMapper
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        <R> ExceptionalStream<R, SQLException> stream(Condition cond, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
-
-        // Will it cause confusion if it's called in transaction?
-        /**
-         * lazy-execution, lazy-fetch.
-         *
-         * @param cond
-         * @param rowMapper
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        <R> ExceptionalStream<R, SQLException> stream(Condition cond, JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
-
         /**
          * lazy-execution, lazy-fetch.
          *
@@ -15346,53 +15359,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(Condition cond, JdbcUtil.RowFilter rowFilter, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
-
-        /**
-         * lazy-execution, lazy-fetch.
-         *
-         * @param cond
-         * @param rowFilter
-         * @param rowMapper
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        <R> ExceptionalStream<R, SQLException> stream(Condition cond, JdbcUtil.BiRowFilter rowFilter, JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
-
-        // Will it cause confusion if it's called in transaction?
-        /**
-         * lazy-execution, lazy-fetch.
-         *
-         * @param selectPropNames
-         * @param cond
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        ExceptionalStream<T, SQLException> stream(Collection<String> selectPropNames, Condition cond) throws SQLException;
-
-        // Will it cause confusion if it's called in transaction?
-        /**
-         * lazy-execution, lazy-fetch.
-         *
-         * @param selectPropNames
-         * @param cond
-         * @param rowMapper
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        <R> ExceptionalStream<R, SQLException> stream(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
-
-        // Will it cause confusion if it's called in transaction?
-        /**
-         * lazy-execution, lazy-fetch.
-         *
-         * @param selectPropNames
-         * @param cond
-         * @param rowMapper
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        <R> ExceptionalStream<R, SQLException> stream(Collection<String> selectPropNames, Condition cond, JdbcUtil.BiRowMapper<R> rowMapper)
+        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final JdbcUtil.BiRowFilter rowFilter, final JdbcUtil.BiRowMapper<R> rowMapper)
                 throws SQLException;
 
         // Will it cause confusion if it's called in transaction?
@@ -15401,13 +15368,36 @@ public final class JdbcUtil {
          *
          * @param selectPropNames
          * @param cond
-         * @param rowFilter
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        ExceptionalStream<T, SQLException> stream(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
+
+        // Will it cause confusion if it's called in transaction?
+        /**
+         * lazy-execution, lazy-fetch.
+         *
+         * @param selectPropNames
+         * @param cond
          * @param rowMapper
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(Collection<String> selectPropNames, Condition cond, JdbcUtil.RowFilter rowFilter,
-                JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper)
+                throws SQLException;
+
+        // Will it cause confusion if it's called in transaction?
+        /**
+         * lazy-execution, lazy-fetch.
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.BiRowMapper<R> rowMapper)
+                throws SQLException;
 
         // Will it cause confusion if it's called in transaction?
         /**
@@ -15420,8 +15410,22 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(Collection<String> selectPropNames, Condition cond, JdbcUtil.BiRowFilter rowFilter,
-                JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, JdbcUtil.RowFilter rowFilter,
+                final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+
+        // Will it cause confusion if it's called in transaction?
+        /**
+         * lazy-execution, lazy-fetch.
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowFilter
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.BiRowFilter rowFilter,
+                final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -15430,7 +15434,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        int update(Map<String, Object> updateProps, Condition cond) throws SQLException;
+        int update(final Map<String, Object> updateProps, final Condition cond) throws SQLException;
 
         /**
          *
@@ -15438,7 +15442,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        int delete(Condition cond) throws SQLException;
+        int delete(final Condition cond) throws SQLException;
 
         /**
          *
@@ -15446,7 +15450,7 @@ public final class JdbcUtil {
          * @param joinEntityPropName
          * @throws SQLException the SQL exception
          */
-        default void loadJoinEntities(T entity, String joinEntityPropName) throws SQLException {
+        default void loadJoinEntities(final T entity, final String joinEntityPropName) throws SQLException {
             loadJoinEntities(entity, joinEntityPropName, null);
         }
 
@@ -15457,7 +15461,7 @@ public final class JdbcUtil {
          * @param selectPropNames
          * @throws SQLException the SQL exception
          */
-        void loadJoinEntities(T entity, String joinEntityPropName, Collection<String> selectPropNames) throws SQLException;
+        void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException;
 
         /**
          *
@@ -15465,7 +15469,7 @@ public final class JdbcUtil {
          * @param joinEntityPropName
          * @throws SQLException the SQL exception
          */
-        default void loadJoinEntities(Collection<T> entities, String joinEntityPropName) throws SQLException {
+        default void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws SQLException {
             loadJoinEntities(entities, joinEntityPropName, null);
         }
 
@@ -15476,7 +15480,7 @@ public final class JdbcUtil {
          * @param selectPropNames
          * @throws SQLException the SQL exception
          */
-        void loadJoinEntities(Collection<T> entities, String joinEntityPropName, Collection<String> selectPropNames) throws SQLException;
+        void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException;
 
         /**
          *
@@ -15484,7 +15488,7 @@ public final class JdbcUtil {
          * @param joinEntityPropNames
          * @throws SQLException the SQL exception
          */
-        default void loadJoinEntities(T entity, Collection<String> joinEntityPropNames) throws SQLException {
+        default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
             if (N.isNullOrEmpty(joinEntityPropNames)) {
                 return;
             }
@@ -15501,7 +15505,7 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws SQLException the SQL exception
          */
-        default void loadJoinEntities(T entity, Collection<String> joinEntityPropNames, boolean inParallel) throws SQLException {
+        default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
             if (inParallel) {
                 loadJoinEntities(entity, joinEntityPropNames, JdbcUtil.asyncExecutor.getExecutor());
             } else {
@@ -15516,7 +15520,7 @@ public final class JdbcUtil {
          * @param executor
          * @throws SQLException the SQL exception
          */
-        default void loadJoinEntities(final T entity, Collection<String> joinEntityPropNames, Executor executor) throws SQLException {
+        default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
             if (N.isNullOrEmpty(joinEntityPropNames)) {
                 return;
             }
@@ -15544,7 +15548,7 @@ public final class JdbcUtil {
          * @param joinEntityPropName
          * @throws SQLException the SQL exception
          */
-        default void loadJoinEntities(Collection<T> entities, Collection<String> joinEntityPropNames) throws SQLException {
+        default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
                 return;
             }
@@ -15561,7 +15565,8 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws SQLException the SQL exception
          */
-        default void loadJoinEntities(Collection<T> entities, Collection<String> joinEntityPropNames, boolean inParallel) throws SQLException {
+        default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
+                throws SQLException {
             if (inParallel) {
                 loadJoinEntities(entities, joinEntityPropNames, JdbcUtil.asyncExecutor.getExecutor());
             } else {
@@ -15576,7 +15581,7 @@ public final class JdbcUtil {
          * @param executor
          * @throws SQLException the SQL exception
          */
-        default void loadJoinEntities(Collection<T> entities, Collection<String> joinEntityPropNames, Executor executor) throws SQLException {
+        default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
                 return;
             }
@@ -15613,7 +15618,7 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws SQLException the SQL exception
          */
-        default void loadAllJoinEntities(T entity, boolean inParallel) throws SQLException {
+        default void loadAllJoinEntities(final T entity, final boolean inParallel) throws SQLException {
             if (inParallel) {
                 loadAllJoinEntities(entity, JdbcUtil.asyncExecutor.getExecutor());
             } else {
@@ -15627,7 +15632,7 @@ public final class JdbcUtil {
          * @param executor
          * @throws SQLException the SQL exception
          */
-        default void loadAllJoinEntities(T entity, Executor executor) throws SQLException {
+        default void loadAllJoinEntities(final T entity, final Executor executor) throws SQLException {
             loadJoinEntities(entity, JdbcUtil.getJoinEntityPropMap(entity.getClass()).keySet(), executor);
         }
 
@@ -15636,7 +15641,7 @@ public final class JdbcUtil {
          * @param entities
          * @throws SQLException the SQL exception
          */
-        default void loadAllJoinEntities(Collection<T> entities) throws SQLException {
+        default void loadAllJoinEntities(final Collection<T> entities) throws SQLException {
             if (N.isNullOrEmpty(entities)) {
                 return;
             }
@@ -15650,7 +15655,7 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws SQLException the SQL exception
          */
-        default void loadAllJoinEntities(Collection<T> entities, boolean inParallel) throws SQLException {
+        default void loadAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws SQLException {
             if (inParallel) {
                 loadAllJoinEntities(entities, JdbcUtil.asyncExecutor.getExecutor());
             } else {
@@ -15664,7 +15669,7 @@ public final class JdbcUtil {
          * @param executor
          * @throws SQLException the SQL exception
          */
-        default void loadAllJoinEntities(Collection<T> entities, Executor executor) throws SQLException {
+        default void loadAllJoinEntities(final Collection<T> entities, final Executor executor) throws SQLException {
             if (N.isNullOrEmpty(entities)) {
                 return;
             }
@@ -15744,7 +15749,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        default Optional<T> get(ID id) throws SQLException {
+        default Optional<T> get(final ID id) throws SQLException {
             return get(null, id);
         }
 
@@ -15755,7 +15760,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        Optional<T> get(Collection<String> selectPropNames, ID id) throws SQLException;
+        Optional<T> get(final Collection<String> selectPropNames, final ID id) throws SQLException;
 
         /**
          * Gets the t.
@@ -15764,7 +15769,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        default T gett(ID id) throws SQLException {
+        default T gett(final ID id) throws SQLException {
             return get(id).orNull();
         }
 
@@ -15776,7 +15781,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        default T gett(Collection<String> selectPropNames, ID id) throws SQLException {
+        default T gett(final Collection<String> selectPropNames, final ID id) throws SQLException {
             return get(selectPropNames, id).orNull();
         }
 
@@ -15819,7 +15824,7 @@ public final class JdbcUtil {
          * @return true, if successful
          * @throws SQLException the SQL exception
          */
-        boolean exists(ID id) throws SQLException;
+        boolean exists(final ID id) throws SQLException;
 
         /**
          *
@@ -15827,7 +15832,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        int update(T entityToUpdate) throws SQLException;
+        int update(final T entityToUpdate) throws SQLException;
 
         /**
          *
@@ -15836,7 +15841,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        int update(T entityToUpdate, Collection<String> propNamesToUpdate) throws SQLException;
+        int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws SQLException;
 
         /**
          *
@@ -15845,7 +15850,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        int update(Map<String, Object> updateProps, ID id) throws SQLException;
+        int update(final Map<String, Object> updateProps, final ID id) throws SQLException;
 
         /**
          *
@@ -15853,7 +15858,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        default int batchUpdate(Collection<? extends T> entities) throws SQLException {
+        default int batchUpdate(final Collection<? extends T> entities) throws SQLException {
             return batchUpdate(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
@@ -15864,7 +15869,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        int batchUpdate(Collection<? extends T> entities, int batchSize) throws SQLException;
+        int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws SQLException;
 
         /**
          *
@@ -15873,7 +15878,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        default int batchUpdate(Collection<? extends T> entities, Collection<String> propNamesToUpdate) throws SQLException {
+        default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws SQLException {
             return batchUpdate(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
@@ -15885,7 +15890,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        int batchUpdate(Collection<? extends T> entities, Collection<String> propNamesToUpdate, int batchSize) throws SQLException;
+        int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws SQLException;
 
         /**
          * Delete by id.
@@ -15894,7 +15899,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        int deleteById(ID id) throws SQLException;
+        int deleteById(final ID id) throws SQLException;
 
         /**
          *
@@ -15902,7 +15907,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        int delete(T entity) throws SQLException;
+        int delete(final T entity) throws SQLException;
 
         /**
          *
@@ -15910,7 +15915,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        default int batchDelete(Collection<? extends T> entities) throws SQLException {
+        default int batchDelete(final Collection<? extends T> entities) throws SQLException {
             return batchDelete(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
@@ -15921,7 +15926,7 @@ public final class JdbcUtil {
         * @return
         * @throws SQLException the SQL exception
         */
-        int batchDelete(Collection<? extends T> entities, int batchSize) throws SQLException;
+        int batchDelete(final Collection<? extends T> entities, final int batchSize) throws SQLException;
 
         /**
         *
@@ -15929,7 +15934,7 @@ public final class JdbcUtil {
         * @return
         * @throws SQLException the SQL exception
         */
-        default int batchDeleteByIds(Collection<? extends ID> ids) throws SQLException {
+        default int batchDeleteByIds(final Collection<? extends ID> ids) throws SQLException {
             return batchDeleteByIds(ids, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
@@ -15940,7 +15945,7 @@ public final class JdbcUtil {
         * @return
         * @throws SQLException the SQL exception
         */
-        int batchDeleteByIds(Collection<? extends ID> ids, int batchSize) throws SQLException;
+        int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws SQLException;
     }
 
     /**
