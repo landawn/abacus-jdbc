@@ -89,7 +89,9 @@ import com.landawn.abacus.EntityId;
 import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.SliceSelector;
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.Internal;
+import com.landawn.abacus.annotation.JoinBy;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.core.DirtyMarkerUtil;
@@ -114,6 +116,7 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
+import com.landawn.abacus.util.ExceptionalStream.StreamE;
 import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.SQLBuilder.NAC;
@@ -127,7 +130,6 @@ import com.landawn.abacus.util.SQLExecutor.JdbcSettings;
 import com.landawn.abacus.util.SQLExecutor.StatementSetter;
 import com.landawn.abacus.util.SQLTransaction.CreatedBy;
 import com.landawn.abacus.util.StringUtil.Strings;
-import com.landawn.abacus.util.Try.BiFunction;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.Tuple.Tuple4;
@@ -143,6 +145,7 @@ import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.BiConsumer;
+import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.function.Supplier;
 import com.landawn.abacus.util.stream.Collector;
@@ -8356,12 +8359,7 @@ public final class JdbcUtil {
 
             final Q q = (Q) this;
 
-            return asyncExecutor.execute(new Try.Callable<R, SQLException>() {
-                @Override
-                public R call() throws SQLException {
-                    return func.apply(q);
-                }
-            });
+            return asyncExecutor.execute(() -> func.apply(q));
         }
 
         /**
@@ -8379,12 +8377,7 @@ public final class JdbcUtil {
 
             final Q q = (Q) this;
 
-            return ContinuableFuture.call(new Try.Callable<R, SQLException>() {
-                @Override
-                public R call() throws SQLException {
-                    return func.apply(q);
-                }
-            }, executor);
+            return ContinuableFuture.call(() -> func.apply(q), executor);
         }
 
         /**
@@ -8399,12 +8392,7 @@ public final class JdbcUtil {
 
             final Q q = (Q) this;
 
-            return asyncExecutor.execute(new Try.Runnable<SQLException>() {
-                @Override
-                public void run() throws SQLException {
-                    action.accept(q);
-                }
-            });
+            return asyncExecutor.execute(() -> action.accept(q));
         }
 
         /**
@@ -8421,12 +8409,7 @@ public final class JdbcUtil {
 
             final Q q = (Q) this;
 
-            return ContinuableFuture.run(new Try.Runnable<SQLException>() {
-                @Override
-                public void run() throws SQLException {
-                    action.accept(q);
-                }
-            }, executor);
+            return ContinuableFuture.run(() -> action.accept(q), executor);
         }
 
         /**
@@ -15456,6 +15439,238 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         int delete(Condition cond) throws SQLException;
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropName
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(T entity, String joinEntityPropName) throws SQLException {
+            loadJoinEntities(entity, joinEntityPropName, null);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @throws SQLException the SQL exception
+         */
+        void loadJoinEntities(T entity, String joinEntityPropName, Collection<String> selectPropNames) throws SQLException;
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(Collection<T> entities, String joinEntityPropName) throws SQLException {
+            loadJoinEntities(entities, joinEntityPropName, null);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @throws SQLException the SQL exception
+         */
+        void loadJoinEntities(Collection<T> entities, String joinEntityPropName, Collection<String> selectPropNames) throws SQLException;
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(T entity, Collection<String> joinEntityPropNames) throws SQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntities(entity, joinEntityPropName);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param inParallel
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(T entity, Collection<String> joinEntityPropNames, boolean inParallel) throws SQLException {
+            if (inParallel) {
+                loadJoinEntities(entity, joinEntityPropNames, JdbcUtil.asyncExecutor.getExecutor());
+            } else {
+                loadJoinEntities(entity, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param executor
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final T entity, Collection<String> joinEntityPropNames, Executor executor) throws SQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            final List<ContinuableFuture<Void>> futures = StreamE.of(joinEntityPropNames, SQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor))
+                    .toList();
+
+            for (ContinuableFuture<Void> f : futures) {
+                f.gett().ifFailure(e -> {
+                    if (e instanceof SQLException) {
+                        throw (SQLException) e;
+                    } else if (e.getCause() instanceof SQLException) {
+                        throw (SQLException) e.getCause();
+                    } else {
+                        throw N.toRuntimeException(e);
+                    }
+                });
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(Collection<T> entities, Collection<String> joinEntityPropNames) throws SQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntities(entities, joinEntityPropName);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param inParallel
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(Collection<T> entities, Collection<String> joinEntityPropNames, boolean inParallel) throws SQLException {
+            if (inParallel) {
+                loadJoinEntities(entities, joinEntityPropNames, JdbcUtil.asyncExecutor.getExecutor());
+            } else {
+                loadJoinEntities(entities, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param executor
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(Collection<T> entities, Collection<String> joinEntityPropNames, Executor executor) throws SQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            final List<ContinuableFuture<Void>> futures = StreamE.of(joinEntityPropNames, SQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entities, joinEntityPropName), executor))
+                    .toList();
+
+            for (ContinuableFuture<Void> f : futures) {
+                f.gett().ifFailure(e -> {
+                    if (e instanceof SQLException) {
+                        throw (SQLException) e;
+                    } else if (e.getCause() instanceof SQLException) {
+                        throw (SQLException) e.getCause();
+                    } else {
+                        throw N.toRuntimeException(e);
+                    }
+                });
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @throws SQLException the SQL exception
+         */
+        default void loadAllJoinEntities(T entity) throws SQLException {
+            loadJoinEntities(entity, JdbcUtil.getJoinEntityPropMap(entity.getClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entity
+         * @param inParallel
+         * @throws SQLException the SQL exception
+         */
+        default void loadAllJoinEntities(T entity, boolean inParallel) throws SQLException {
+            if (inParallel) {
+                loadAllJoinEntities(entity, JdbcUtil.asyncExecutor.getExecutor());
+            } else {
+                loadAllJoinEntities(entity);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param executor
+         * @throws SQLException the SQL exception
+         */
+        default void loadAllJoinEntities(T entity, Executor executor) throws SQLException {
+            loadJoinEntities(entity, JdbcUtil.getJoinEntityPropMap(entity.getClass()).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entities
+         * @throws SQLException the SQL exception
+         */
+        default void loadAllJoinEntities(Collection<T> entities) throws SQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            loadJoinEntities(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entities
+         * @param inParallel
+         * @throws SQLException the SQL exception
+         */
+        default void loadAllJoinEntities(Collection<T> entities, boolean inParallel) throws SQLException {
+            if (inParallel) {
+                loadAllJoinEntities(entities, JdbcUtil.asyncExecutor.getExecutor());
+            } else {
+                loadAllJoinEntities(entities);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param executor
+         * @throws SQLException the SQL exception
+         */
+        default void loadAllJoinEntities(Collection<T> entities, Executor executor) throws SQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            loadJoinEntities(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
+        }
     }
 
     /**
@@ -15796,32 +16011,35 @@ public final class JdbcUtil {
 
         final Class<T> entityClass = N.isNullOrEmpty(typeArguments) ? null : (Class) typeArguments[0];
 
-        final Class<?> sbc = N.isNullOrEmpty(typeArguments) ? null
+        final Class<? extends SQLBuilder> sbc = N.isNullOrEmpty(typeArguments) ? PSC.class
                 : (typeArguments.length >= 2 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[1]) ? (Class) typeArguments[1]
-                        : (typeArguments.length >= 3 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[2]) ? (Class) typeArguments[2] : null));
+                        : (typeArguments.length >= 3 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[2]) ? (Class) typeArguments[2] : PSC.class));
 
-        final Function<Class<?>, SQLBuilder> parameterizedSelectFromFunc = sbc == null ? null
-                : (sbc.equals(PSC.class) ? clazz -> PSC.selectFrom(clazz)
-                        : (sbc.equals(PAC.class) ? clazz -> PAC.selectFrom(clazz) : clazz -> PLC.selectFrom(clazz)));
+        final Function<Condition, SQLBuilder.SP> selectFromSQLBuilderFunc = sbc.equals(PSC.class) ? cond -> PSC.selectFrom(entityClass).where(cond).pair()
+                : (sbc.equals(PAC.class) ? cond -> PAC.selectFrom(entityClass).where(cond).pair() : cond -> PLC.selectFrom(entityClass).where(cond).pair());
 
-        final Function<String, SQLBuilder> parameterizedSelectFunc = sbc == null ? null
-                : (sbc.equals(PSC.class) ? selectPropName -> PSC.select(selectPropName)
-                        : (sbc.equals(PAC.class) ? selectPropName -> PAC.select(selectPropName) : selectPropName -> PLC.select(selectPropName)));
+        final BiFunction<String, Condition, SQLBuilder.SP> singleQuerySQLBuilderFunc = sbc.equals(PSC.class)
+                ? (selectPropName, cond) -> PSC.select(selectPropName).from(entityClass).where(cond).pair()
+                : (sbc.equals(PAC.class) ? (selectPropName, cond) -> PAC.select(selectPropName).from(entityClass).where(cond).pair()
+                        : (selectPropName, cond) -> PLC.select(selectPropName).from(entityClass).where(cond).pair());
 
-        final Function<Collection<String>, SQLBuilder> parameterizedSelectFunc2 = sbc == null ? null
-                : (sbc.equals(PSC.class) ? (selectPropNames -> N.isNullOrEmpty(selectPropNames) ? PSC.select(entityClass) : PSC.select(selectPropNames))
-                        : (sbc.equals(PAC.class) ? (selectPropNames -> N.isNullOrEmpty(selectPropNames) ? PAC.select(entityClass) : PAC.select(selectPropNames))
-                                : selectPropNames -> (N.isNullOrEmpty(selectPropNames) ? PLC.select(entityClass) : PLC.select(selectPropNames))));
+        final BiFunction<Collection<String>, Condition, SQLBuilder> selectSQLBuilderFunc = sbc.equals(PSC.class)
+                ? ((selectPropNames, cond) -> N.isNullOrEmpty(selectPropNames) ? PSC.selectFrom(entityClass).where(cond)
+                        : PSC.select(selectPropNames).from(entityClass).where(cond))
+                : (sbc.equals(PAC.class)
+                        ? ((selectPropNames, cond) -> N.isNullOrEmpty(selectPropNames) ? PAC.selectFrom(entityClass).where(cond)
+                                : PAC.select(selectPropNames).from(entityClass).where(cond))
+                        : (selectPropNames, cond) -> (N.isNullOrEmpty(selectPropNames) ? PLC.selectFrom(entityClass).where(cond)
+                                : PLC.select(selectPropNames).from(entityClass).where(cond)));
 
-        final Function<Class<?>, SQLBuilder> parameterizedUpdateFunc = sbc == null ? null
-                : (sbc.equals(PSC.class) ? clazz -> PSC.update(clazz) : (sbc.equals(PAC.class) ? clazz -> PAC.update(clazz) : clazz -> PLC.update(clazz)));
+        final Function<Class<?>, SQLBuilder> parameterizedUpdateFunc = sbc.equals(PSC.class) ? clazz -> PSC.update(clazz)
+                : (sbc.equals(PAC.class) ? clazz -> PAC.update(clazz) : clazz -> PLC.update(clazz));
 
-        final Function<Class<?>, SQLBuilder> parameterizedDeleteFromFunc = sbc == null ? null
-                : (sbc.equals(PSC.class) ? clazz -> PSC.deleteFrom(clazz)
-                        : (sbc.equals(PAC.class) ? clazz -> PAC.deleteFrom(clazz) : clazz -> PLC.deleteFrom(clazz)));
+        final Function<Class<?>, SQLBuilder> parameterizedDeleteFromFunc = sbc.equals(PSC.class) ? clazz -> PSC.deleteFrom(clazz)
+                : (sbc.equals(PAC.class) ? clazz -> PAC.deleteFrom(clazz) : clazz -> PLC.deleteFrom(clazz));
 
-        final Function<Class<?>, SQLBuilder> namedUpdateFunc = sbc == null ? null
-                : (sbc.equals(PSC.class) ? clazz -> NSC.update(clazz) : (sbc.equals(PAC.class) ? clazz -> NAC.update(clazz) : clazz -> NLC.update(clazz)));
+        final Function<Class<?>, SQLBuilder> namedUpdateFunc = sbc.equals(PSC.class) ? clazz -> NSC.update(clazz)
+                : (sbc.equals(PAC.class) ? clazz -> NAC.update(clazz) : clazz -> NLC.update(clazz));
 
         for (Method m : sqlMethods) {
             Try.BiFunction<Dao, Object[], ?, Exception> call = null;
@@ -15842,11 +16060,14 @@ public final class JdbcUtil {
                         .first()
                         .orNull();
 
+                final Class<?> declaringClass = m.getDeclaringClass();
+                final String methodName = m.getName();
                 final Class<?>[] paramTypes = m.getParameterTypes();
                 final Class<?> returnType = m.getReturnType();
                 final int paramLen = paramTypes.length;
+                final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
 
-                if (m.getDeclaringClass().equals(BasicDao.class)) {
+                if (declaringClass.equals(BasicDao.class)) {
                     final List<String> idPropNames = ClassUtil.getIdFieldNames(entityClass, true);
                     final boolean isFakeId = ClassUtil.isFakeId(idPropNames);
                     final String idPropName = idPropNames.get(0);
@@ -15868,7 +16089,7 @@ public final class JdbcUtil {
                     final NamedSQL insertWithIdSQL = NamedSQL.parse(sql_insertWithId);
                     final NamedSQL insertWithoutIdSQL = NamedSQL.parse(sql_insertWithoutId);
 
-                    if (m.getName().equals("save") && paramLen == 1) {
+                    if (methodName.equals("save") && paramLen == 1) {
                         call = (proxy, args) -> {
                             if (isFakeId) {
                                 proxy.prepareNamedQuery(insertWithoutIdSQL).setParameters(args[0]).update();
@@ -15887,7 +16108,7 @@ public final class JdbcUtil {
 
                             return null;
                         };
-                    } else if (m.getName().equals("saveAll") && paramLen == 2 && int.class.equals(paramTypes[1])) {
+                    } else if (methodName.equals("saveAll") && paramLen == 2 && int.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
                             final Collection<?> entities = (Collection<Object>) args[0];
                             final int batchSize = (Integer) args[1];
@@ -15958,7 +16179,7 @@ public final class JdbcUtil {
 
                             return null;
                         };
-                    } else if (m.getName().equals("saveAll") && paramLen == 3 && int.class.equals(paramTypes[2])) {
+                    } else if (methodName.equals("saveAll") && paramLen == 3 && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
                             final String namedInsertSQL = (String) args[0];
                             final Collection<?> entities = (Collection<Object>) args[1];
@@ -16019,219 +16240,218 @@ public final class JdbcUtil {
 
                             return null;
                         };
-                    } else if (m.getName().equals("exists") && paramLen == 1 && Condition.class.isAssignableFrom(m.getParameterTypes()[0])) {
+                    } else if (methodName.equals("exists") && paramLen == 1 && Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply(SQLBuilder._1).from(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply(SQLBuilder._1, (Condition) args[0]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).exists();
                         };
-                    } else if (m.getName().equals("count") && paramLen == 1 && Condition.class.isAssignableFrom(m.getParameterTypes()[0])) {
+                    } else if (methodName.equals("count") && paramLen == 1 && Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply(SQLBuilder.COUNT_ALL).from(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply(SQLBuilder.COUNT_ALL, (Condition) args[0]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForInt().orZero();
                         };
-                    } else if (m.getName().equals("findFirst") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
+                    } else if (methodName.equals("findFirst") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).findFirst(entityClass);
                         };
-                    } else if (m.getName().equals("findFirst") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equals("findFirst") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).findFirst((JdbcUtil.RowMapper) args[1]);
                         };
-                    } else if (m.getName().equals("findFirst") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equals("findFirst") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).findFirst((JdbcUtil.BiRowMapper) args[1]);
                         };
-                    } else if (m.getName().equals("findFirst") && paramLen == 2 && paramTypes[0].equals(Collection.class)
+                    } else if (methodName.equals("findFirst") && paramLen == 2 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).findFirst(entityClass);
                         };
-                    } else if (m.getName().equals("findFirst") && paramLen == 3 && paramTypes[0].equals(Collection.class)
+                    } else if (methodName.equals("findFirst") && paramLen == 3 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).findFirst((JdbcUtil.RowMapper) args[2]);
                         };
-                    } else if (m.getName().equals("findFirst") && paramLen == 3 && paramTypes[0].equals(Collection.class)
+                    } else if (methodName.equals("findFirst") && paramLen == 3 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).findFirst((JdbcUtil.BiRowMapper) args[2]);
                         };
-                    } else if (m.getName().equals("queryForBoolean") && paramLen == 2 && paramTypes[0].equals(String.class)
+                    } else if (methodName.equals("queryForBoolean") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], (Condition) args[1]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForBoolean();
                         };
-                    } else if (m.getName().equals("queryForChar") && paramLen == 2 && paramTypes[0].equals(String.class)
+                    } else if (methodName.equals("queryForChar") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], (Condition) args[1]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForChar();
                         };
-                    } else if (m.getName().equals("queryForByte") && paramLen == 2 && paramTypes[0].equals(String.class)
+                    } else if (methodName.equals("queryForByte") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], (Condition) args[1]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForByte();
                         };
-                    } else if (m.getName().equals("queryForShort") && paramLen == 2 && paramTypes[0].equals(String.class)
+                    } else if (methodName.equals("queryForShort") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], (Condition) args[1]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForShort();
                         };
-                    } else if (m.getName().equals("queryForInt") && paramLen == 2 && paramTypes[0].equals(String.class)
+                    } else if (methodName.equals("queryForInt") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], (Condition) args[1]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForInt();
                         };
-                    } else if (m.getName().equals("queryForLong") && paramLen == 2 && paramTypes[0].equals(String.class)
+                    } else if (methodName.equals("queryForLong") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], (Condition) args[1]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForLong();
                         };
-                    } else if (m.getName().equals("queryForFloat") && paramLen == 2 && paramTypes[0].equals(String.class)
+                    } else if (methodName.equals("queryForFloat") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], (Condition) args[1]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForFloat();
                         };
-                    } else if (m.getName().equals("queryForDouble") && paramLen == 2 && paramTypes[0].equals(String.class)
+                    } else if (methodName.equals("queryForDouble") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], (Condition) args[1]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForDouble();
                         };
-                    } else if (m.getName().equals("queryForString") && paramLen == 2 && paramTypes[0].equals(String.class)
+                    } else if (methodName.equals("queryForString") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], (Condition) args[1]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForString();
                         };
-                    } else if (m.getName().equals("queryForDate") && paramLen == 2 && paramTypes[0].equals(String.class)
+                    } else if (methodName.equals("queryForDate") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], (Condition) args[1]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForDate();
                         };
-                    } else if (m.getName().equals("queryForTime") && paramLen == 2 && paramTypes[0].equals(String.class)
+                    } else if (methodName.equals("queryForTime") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], (Condition) args[1]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForTime();
                         };
-                    } else if (m.getName().equals("queryForTimestamp") && paramLen == 2 && paramTypes[0].equals(String.class)
+                    } else if (methodName.equals("queryForTimestamp") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], (Condition) args[1]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForTimestamp();
                         };
-                    } else if (m.getName().equals("queryForSingleResult") && paramLen == 3 && paramTypes[0].equals(Class.class)
+                    } else if (methodName.equals("queryForSingleResult") && paramLen == 3 && paramTypes[0].equals(Class.class)
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[1]).from(entityClass).where((Condition) args[2]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], (Condition) args[2]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForSingleResult((Class) args[0]);
                         };
-                    } else if (m.getName().equals("queryForSingleNonNull") && paramLen == 3 && paramTypes[0].equals(Class.class)
+                    } else if (methodName.equals("queryForSingleNonNull") && paramLen == 3 && paramTypes[0].equals(Class.class)
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[1]).from(entityClass).where((Condition) args[2]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], (Condition) args[2]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForSingleNonNull((Class) args[0]);
                         };
-                    } else if (m.getName().equals("queryForUniqueResult") && paramLen == 3 && paramTypes[0].equals(Class.class)
+                    } else if (methodName.equals("queryForUniqueResult") && paramLen == 3 && paramTypes[0].equals(Class.class)
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[1]).from(entityClass).where((Condition) args[2]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], (Condition) args[2]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForUniqueResult((Class) args[0]);
                         };
-                    } else if (m.getName().equals("queryForUniqueNonNull") && paramLen == 3 && paramTypes[0].equals(Class.class)
+                    } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 3 && paramTypes[0].equals(Class.class)
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc.apply((String) args[1]).from(entityClass).where((Condition) args[2]).pair();
+                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], (Condition) args[2]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).queryForUniqueNonNull((Class) args[0]);
                         };
-                    } else if (m.getName().equals("query") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
+                    } else if (methodName.equals("query") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).query();
                         };
-                    } else if (m.getName().equals("query") && paramLen == 2 && paramTypes[0].equals(Collection.class)
-                            && paramTypes[1].equals(Condition.class)) {
+                    } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).query();
                         };
-                    } else if (m.getName().equals("list") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
+                    } else if (methodName.equals("list") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list(entityClass);
                         };
-                    } else if (m.getName().equals("list") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.RowMapper) args[1]);
                         };
-                    } else if (m.getName().equals("list") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.BiRowMapper) args[1]);
                         };
-                    } else if (m.getName().equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.RowFilter.class) && paramTypes[2].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.RowFilter) args[1], (JdbcUtil.RowMapper) args[2]);
                         };
-                    } else if (m.getName().equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.BiRowFilter.class) && paramTypes[2].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.BiRowFilter) args[1], (JdbcUtil.BiRowMapper) args[2]);
                         };
-                    } else if (m.getName().equals("list") && paramLen == 2 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)) {
+                    } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list(entityClass);
                         };
-                    } else if (m.getName().equals("list") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                    } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.RowMapper) args[2]);
                         };
-                    } else if (m.getName().equals("list") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                    } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.BiRowMapper) args[2]);
                         };
-                    } else if (m.getName().equals("list") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                    } else if (methodName.equals("list") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.RowFilter.class) && paramTypes[3].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.RowFilter) args[2], (JdbcUtil.RowMapper) args[3]);
                         };
-                    } else if (m.getName().equals("list") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                    } else if (methodName.equals("list") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.BiRowFilter.class) && paramTypes[3].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.BiRowFilter) args[2], (JdbcUtil.BiRowMapper) args[3]);
                         };
-                    } else if (m.getName().equals("stream") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
+                    } else if (methodName.equals("stream") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
                             final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
                                     .of(new Try.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
@@ -16254,10 +16474,10 @@ public final class JdbcUtil {
                                 }
                             });
                         };
-                    } else if (m.getName().equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
                                     .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
@@ -16283,10 +16503,10 @@ public final class JdbcUtil {
                                 }
                             });
                         };
-                    } else if (m.getName().equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
                                     .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
@@ -16312,10 +16532,10 @@ public final class JdbcUtil {
                                 }
                             });
                         };
-                    } else if (m.getName().equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.RowFilter.class) && paramTypes[2].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
                                     .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
@@ -16341,10 +16561,10 @@ public final class JdbcUtil {
                                 }
                             });
                         };
-                    } else if (m.getName().equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.BiRowFilter.class) && paramTypes[2].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
                                     .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
@@ -16370,10 +16590,10 @@ public final class JdbcUtil {
                                 }
                             });
                         };
-                    } else if (m.getName().equals("stream") && paramLen == 2 && paramTypes[0].equals(Collection.class)
+                    } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
                             final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
                                     .of(new Try.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
@@ -16396,10 +16616,10 @@ public final class JdbcUtil {
                                 }
                             });
                         };
-                    } else if (m.getName().equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                    } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
                                     .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
@@ -16425,10 +16645,10 @@ public final class JdbcUtil {
                                 }
                             });
                         };
-                    } else if (m.getName().equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                    } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
                                     .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
@@ -16454,10 +16674,10 @@ public final class JdbcUtil {
                                 }
                             });
                         };
-                    } else if (m.getName().equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                    } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.RowFilter.class) && paramTypes[3].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
                                     .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
@@ -16483,10 +16703,10 @@ public final class JdbcUtil {
                                 }
                             });
                         };
-                    } else if (m.getName().equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                    } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.BiRowFilter.class) && paramTypes[3].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where((Condition) args[1]).pair();
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
                                     .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
@@ -16512,8 +16732,8 @@ public final class JdbcUtil {
                                 }
                             });
                         };
-                    } else if (m.getName().equals("update") && paramLen == 2 && Map.class.equals(paramTypes[0])
-                            && Condition.class.isAssignableFrom(m.getParameterTypes()[1])) {
+                    } else if (methodName.equals("update") && paramLen == 2 && Map.class.equals(paramTypes[0])
+                            && Condition.class.isAssignableFrom(paramTypes[1])) {
                         call = (proxy, args) -> {
                             final Map<String, Object> props = (Map<String, Object>) args[0];
                             final Condition cond = (Condition) args[1];
@@ -16522,10 +16742,60 @@ public final class JdbcUtil {
                             final SP sp = parameterizedUpdateFunc.apply(entityClass).set(props).where(cond).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).update();
                         };
-                    } else if (m.getName().equals("delete") && paramLen == 1 && Condition.class.isAssignableFrom(m.getParameterTypes()[0])) {
+                    } else if (methodName.equals("delete") && paramLen == 1 && Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> {
                             final SP sp = parameterizedDeleteFromFunc.apply(entityClass).where((Condition) args[0]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).update();
+                        };
+                    } else if (methodName.equals("loadJoinEntities") && paramLen == 3 && !Collection.class.isAssignableFrom(paramTypes[0])
+                            && String.class.isAssignableFrom(paramTypes[1]) && Collection.class.isAssignableFrom(paramTypes[2])) {
+                        call = (proxy, args) -> {
+                            final String joinEntityPropName = (String) args[1];
+                            final PropInfo propInfo = entityInfo.getPropInfo(joinEntityPropName);
+                            final Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = JdbcUtil
+                                    .getSQLForJoinEntityProp(entityClass, joinEntityPropName, sbc);
+
+                            final PreparedQuery preparedQuery = proxy.prepareQuery(tp._2.apply((Collection<String>) args[2])).setParameters(args[0], tp._3);
+
+                            if (propInfo.type.isCollection()) {
+                                final Collection<Object> c = (Collection) N.newInstance(propInfo.clazz);
+                                c.addAll(preparedQuery.list(propInfo.type.getElementType().clazz()));
+                                propInfo.setPropValue(args[0], c);
+                            } else {
+                                propInfo.setPropValue(args[0], preparedQuery.findFirst(propInfo.type.clazz()).orNull());
+                            }
+
+                            return null;
+                        };
+                    } else if (methodName.equals("loadJoinEntities") && paramLen == 3 && Collection.class.isAssignableFrom(paramTypes[0])
+                            && String.class.isAssignableFrom(paramTypes[1]) && Collection.class.isAssignableFrom(paramTypes[2])) {
+                        call = (proxy, args) -> {
+                            final Collection<Object> entities = (Collection) args[0];
+
+                            if (N.isNullOrEmpty(entities)) {
+                                return null;
+                            }
+
+                            final String joinEntityPropName = (String) args[1];
+                            final PropInfo propInfo = entityInfo.getPropInfo(joinEntityPropName);
+                            final Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = JdbcUtil
+                                    .getSQLForJoinEntityProp(entityClass, joinEntityPropName, sbc);
+
+                            try (final PreparedQuery preparedQuery = proxy.prepareQuery(tp._2.apply((Collection<String>) args[2])).closeAfterExecution(false)) {
+                                for (Object entity : entities) {
+                                    preparedQuery.setParameters(entity, tp._3);
+
+                                    if (propInfo.type.isCollection()) {
+                                        final Collection<Object> c = (Collection) N.newInstance(propInfo.clazz);
+                                        c.addAll(preparedQuery.list(propInfo.type.getElementType().clazz()));
+                                        propInfo.setPropValue(args[0], c);
+                                    } else {
+                                        propInfo.setPropValue(args[0], preparedQuery.findFirst(propInfo.type.clazz()).orNull());
+                                    }
+                                }
+                            }
+
+                            return null;
                         };
                     } else {
                         call = (proxy, args) -> {
@@ -16571,7 +16841,7 @@ public final class JdbcUtil {
                     final NamedSQL insertWithoutIdSQL = NamedSQL.parse(sql_insertWithoutId);
                     final NamedSQL updateByIdSQL = NamedSQL.parse(sql_updateById);
 
-                    if (m.getName().equals("insert")) {
+                    if (methodName.equals("insert")) {
                         call = (proxy, args) -> {
                             final Object idPropValue = ClassUtil.getPropValue(args[0], idPropName);
 
@@ -16597,7 +16867,7 @@ public final class JdbcUtil {
                                 return idPropValue;
                             }
                         };
-                    } else if (m.getName().equals("batchInsert") && paramLen == 2 && int.class.equals(paramTypes[1])) {
+                    } else if (methodName.equals("batchInsert") && paramLen == 2 && int.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
                             final Collection<?> entities = (Collection<Object>) args[0];
                             final int batchSize = (Integer) args[1];
@@ -16665,7 +16935,7 @@ public final class JdbcUtil {
 
                             return ids;
                         };
-                    } else if (m.getName().equals("batchInsert") && paramLen == 3 && int.class.equals(paramTypes[2])) {
+                    } else if (methodName.equals("batchInsert") && paramLen == 3 && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
                             final String namedInsertSQL = (String) args[0];
                             final Collection<?> entities = (Collection<Object>) args[1];
@@ -16718,17 +16988,16 @@ public final class JdbcUtil {
 
                             return ids;
                         };
-                    } else if (m.getName().equals("get")) {
+                    } else if (methodName.equals("get")) {
                         if (paramLen == 1) {
                             final String query = sql_getById;
                             call = (proxy, args) -> proxy.prepareQuery(query).setObject(1, args[0]).get(entityClass);
                         } else {
-                            call = (proxy, args) -> proxy
-                                    .prepareQuery(parameterizedSelectFunc2.apply((Collection<String>) args[0]).from(entityClass).where(CF.eq(idPropName)).sql())
+                            call = (proxy, args) -> proxy.prepareQuery(selectSQLBuilderFunc.apply((Collection<String>) args[0], CF.eq(idPropName)).sql())
                                     .setObject(1, args[1])
                                     .get(entityClass);
                         }
-                    } else if (m.getName().equals("batchGet") && paramLen == 3 && Collection.class.equals(paramTypes[0])
+                    } else if (methodName.equals("batchGet") && paramLen == 3 && Collection.class.equals(paramTypes[0])
                             && Collection.class.equals(paramTypes[1]) && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
                             final Collection<Object> ids = (Collection<Object>) args[0];
@@ -16753,7 +17022,7 @@ public final class JdbcUtil {
                             final List<T> entities = new ArrayList<>(idList.size());
 
                             if (idPropNames.size() == 1) {
-                                String sql = parameterizedSelectFunc2.apply(selectPropNames).from(entityClass).where(CF.eq(idPropName)).sql();
+                                String sql = selectSQLBuilderFunc.apply(selectPropNames, CF.eq(idPropName)).sql();
                                 sql = sql.substring(0, sql.lastIndexOf('=')) + "IN ";
 
                                 if (ids.size() >= batchSize) {
@@ -16810,10 +17079,10 @@ public final class JdbcUtil {
 
                             return entities;
                         };
-                    } else if (m.getName().equals("exists") && paramLen == 1 && !Condition.class.isAssignableFrom(paramTypes[0])) {
+                    } else if (methodName.equals("exists") && paramLen == 1 && !Condition.class.isAssignableFrom(paramTypes[0])) {
                         final String query = sql_existsById;
                         call = (proxy, args) -> proxy.prepareQuery(query).setObject(1, args[0]).exists();
-                    } else if (m.getName().equals("update") && paramLen == 1) {
+                    } else if (methodName.equals("update") && paramLen == 1) {
                         if (DirtyMarker.class.isAssignableFrom(paramTypes[0])) {
                             call = (proxy, args) -> {
                                 final String sql = namedUpdateFunc.apply(entityClass).set(args[0], idPropNameSet).where(CF.eq(idPropName)).sql();
@@ -16836,7 +17105,7 @@ public final class JdbcUtil {
                                 return result;
                             };
                         }
-                    } else if (m.getName().equals("update") && paramLen == 2 && !Map.class.equals(paramTypes[0]) && Collection.class.equals(paramTypes[1])) {
+                    } else if (methodName.equals("update") && paramLen == 2 && !Map.class.equals(paramTypes[0]) && Collection.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
                             final Collection<String> propNamesToUpdate = (Collection<String>) args[1];
                             N.checkArgNotNullOrEmpty(propNamesToUpdate, "propNamesToUpdate");
@@ -16852,7 +17121,7 @@ public final class JdbcUtil {
 
                             return result;
                         };
-                    } else if (m.getName().equals("update") && paramLen == 2 && Map.class.equals(paramTypes[0])) {
+                    } else if (methodName.equals("update") && paramLen == 2 && Map.class.equals(paramTypes[0])) {
                         call = (proxy, args) -> {
                             final Map<String, Object> props = (Map<String, Object>) args[0];
                             N.checkArgNotNullOrEmpty(props, "updateProps");
@@ -16860,7 +17129,7 @@ public final class JdbcUtil {
 
                             return proxy.prepareQuery(query).setParameters(props.values()).setObject(props.size() + 1, args[1]).update();
                         };
-                    } else if (m.getName().equals("batchUpdate") && paramLen == 2 && int.class.equals(paramTypes[1])) {
+                    } else if (methodName.equals("batchUpdate") && paramLen == 2 && int.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
                             final Collection<Object> entities = (Collection<Object>) args[0];
                             final int batchSize = (Integer) args[1];
@@ -16904,7 +17173,7 @@ public final class JdbcUtil {
 
                             return N.toIntExact(result);
                         };
-                    } else if (m.getName().equals("batchUpdate") && paramLen == 3 && int.class.equals(paramTypes[2])) {
+                    } else if (methodName.equals("batchUpdate") && paramLen == 3 && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
                             final Collection<Object> entities = (Collection<Object>) args[0];
                             final Collection<String> propNamesToUpdate = (Collection<String>) args[1];
@@ -16948,13 +17217,13 @@ public final class JdbcUtil {
 
                             return N.toIntExact(result);
                         };
-                    } else if (m.getName().equals("deleteById")) {
+                    } else if (methodName.equals("deleteById")) {
                         final String query = sql_deleteById;
                         call = (proxy, args) -> proxy.prepareQuery(query).setObject(1, args[0]).update();
-                    } else if (m.getName().equals("delete") && paramLen == 1 && !Condition.class.isAssignableFrom(m.getParameterTypes()[0])) {
+                    } else if (methodName.equals("delete") && paramLen == 1 && !Condition.class.isAssignableFrom(paramTypes[0])) {
                         final String query = sql_deleteById;
                         call = (proxy, args) -> proxy.prepareQuery(query).setObject(1, ClassUtil.getPropValue(args[0], idPropName)).update();
-                    } else if (m.getName().equals("batchDelete") && paramLen == 2 && int.class.equals(paramTypes[1])) {
+                    } else if (methodName.equals("batchDelete") && paramLen == 2 && int.class.equals(paramTypes[1])) {
                         final String query = sql_deleteById;
 
                         call = (proxy, args) -> {
@@ -16995,7 +17264,7 @@ public final class JdbcUtil {
                                 return N.toIntExact(result);
                             }
                         };
-                    } else if (m.getName().equals("batchDeleteByIds") && paramLen == 2 && int.class.equals(paramTypes[1])) {
+                    } else if (methodName.equals("batchDeleteByIds") && paramLen == 2 && int.class.equals(paramTypes[1])) {
                         final String query = sql_deleteById;
 
                         call = (proxy, args) -> {
@@ -17036,11 +17305,11 @@ public final class JdbcUtil {
                     }
                 } else if (sqlAnno == null) {
                     if (Modifier.isAbstract(m.getModifiers())) {
-                        if (m.getName().equals("dataSource") && javax.sql.DataSource.class.isAssignableFrom(returnType) && paramLen == 0) {
+                        if (methodName.equals("dataSource") && javax.sql.DataSource.class.isAssignableFrom(returnType) && paramLen == 0) {
                             call = (proxy, args) -> primaryDataSource;
-                        } else if (m.getName().equals("sqlExecutor") && SQLExecutor.class.isAssignableFrom(returnType) && paramLen == 0) {
+                        } else if (methodName.equals("sqlExecutor") && SQLExecutor.class.isAssignableFrom(returnType) && paramLen == 0) {
                             call = (proxy, args) -> sqlExecutor;
-                        } else if (m.getName().equals("sqlMapper") && SQLMapper.class.isAssignableFrom(returnType) && paramLen == 0) {
+                        } else if (methodName.equals("sqlMapper") && SQLMapper.class.isAssignableFrom(returnType) && paramLen == 0) {
                             call = (proxy, args) -> nonNullSQLMapper;
                         } else {
                             call = (proxy, args) -> {
@@ -17170,14 +17439,14 @@ public final class JdbcUtil {
                                             ((NamedQuery) preparedQuery).setObject(binder.value(), args[0]);
                                         }
                                     };
-                                } else if (Map.class.isAssignableFrom(m.getParameterTypes()[0])) {
+                                } else if (Map.class.isAssignableFrom(paramTypes[0])) {
                                     parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
                                         @Override
                                         public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
                                             ((NamedQuery) preparedQuery).setParameters((Map<String, ?>) args[0]);
                                         }
                                     };
-                                } else if (ClassUtil.isEntity(m.getParameterTypes()[0])) {
+                                } else if (ClassUtil.isEntity(paramTypes[0])) {
                                     parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
                                         @Override
                                         public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
@@ -17187,7 +17456,7 @@ public final class JdbcUtil {
                                 } else {
                                     throw new UnsupportedOperationException("In method: " + ClassUtil.getSimpleClassName(daoInterface) + "." + m.getName()
                                             + ", parameters for named query have to be binded with names through annotation @Bind, or Map/Entity with getter/setter methods. Can not be: "
-                                            + ClassUtil.getSimpleClassName(m.getParameterTypes()[0]));
+                                            + ClassUtil.getSimpleClassName(paramTypes[0]));
                                 }
                             } else {
                                 if (Collection.class.isAssignableFrom(paramTypes[0])) {
@@ -17569,8 +17838,8 @@ public final class JdbcUtil {
     }
 
     @SuppressWarnings("rawtypes")
-    static <R> BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Method method, final boolean hasRowMapperOrExtractor,
-            final boolean hasRowFilter) {
+    static <R> Try.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Method method,
+            final boolean hasRowMapperOrExtractor, final boolean hasRowFilter) {
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
         final int paramLen = paramTypes.length;
@@ -17788,6 +18057,157 @@ public final class JdbcUtil {
         } else {
             return false;
         }
+    }
+
+    private final static Map<Class<?>, Map<String, Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>>>> joinEntityPropSQLPool = new ConcurrentHashMap<>();
+
+    private static Map<String, Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>>> getJoinEntityPropMap(
+            final Class<?> entityClass) {
+
+        Map<String, Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>>> joinEntityPropSQLMap = joinEntityPropSQLPool
+                .get(entityClass);
+
+        if (joinEntityPropSQLMap == null) {
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+            joinEntityPropSQLMap = new HashMap<>();
+
+            for (PropInfo propInfo : entityInfo.propInfoList) {
+                if (!propInfo.isAnnotationPresent(JoinBy.class)) {
+                    continue;
+                }
+
+                final Type<?> referencedEntityType = propInfo.type.isCollection() ? propInfo.type.getElementType() : propInfo.type;
+
+                if (!referencedEntityType.isEntity() || propInfo.isAnnotationPresent(Column.class)) {
+                    throw new IllegalArgumentException(
+                            "Property '" + propInfo.name + "' in class: " + entityClass + " is not an entity type or annotated by @Column");
+                }
+
+                final String joinByVal = propInfo.getAnnotation(JoinBy.class).value();
+
+                if (N.isNullOrEmpty(joinByVal)) {
+                    throw new IllegalArgumentException(
+                            "Invalid value: " + joinByVal + " for annotation @JoinBy on property '" + propInfo.name + "' in class: " + entityClass);
+                }
+
+                final Class<?> referencedEntityClass = referencedEntityType.clazz();
+                final EntityInfo referencedEntityInfo = ParserUtil.getEntityInfo(referencedEntityClass);
+                final String[] joinColumnPairs = StringUtil.split(joinByVal, ',', true);
+                final PropInfo[] joinPropInfos = new PropInfo[joinColumnPairs.length];
+                final List<Condition> conds = new ArrayList<>(joinColumnPairs.length);
+                PropInfo referencedPropInfo = null;
+
+                for (int i = 0, len = joinColumnPairs.length; i < len; i++) {
+                    final String[] tmp = StringUtil.split(joinColumnPairs[i], '=', true);
+
+                    if (tmp.length > 2) {
+                        throw new IllegalArgumentException(
+                                "Invalid value: " + joinByVal + " for annotation @JoinBy on property '" + propInfo.name + "' in class: " + entityClass);
+                    }
+
+                    if ((joinPropInfos[i] = entityInfo.getPropInfo(tmp[0])) == null) {
+                        throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinBy on property '" + propInfo.name
+                                + "' in class: " + entityClass + ". No property found with name: '" + tmp[0] + "' in the class: " + entityClass);
+                    }
+
+                    if ((referencedPropInfo = referencedEntityInfo.getPropInfo(tmp.length == 1 ? tmp[0] : tmp[1])) == null) {
+                        throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinBy on property '" + propInfo.name
+                                + "' in class: " + entityClass + ". No referenced property found with name: '" + (tmp.length == 1 ? tmp[0] : tmp[1])
+                                + "' in the class: " + referencedEntityClass);
+                    }
+
+                    conds.add(CF.eq(referencedPropInfo.name));
+                }
+
+                final Condition cond = joinColumnPairs.length == 1 ? conds.get(0) : CF.and(conds);
+
+                final BiParametersSetter<PreparedStatement, Object> paramSetter = joinPropInfos.length == 1
+                        ? (stmt, entityParam) -> joinPropInfos[0].dbType.set(stmt, 1, joinPropInfos[0].getPropValue(entityParam))
+                        : (stmt, entityParam) -> {
+                            for (int i = 0, len = joinPropInfos.length; i < len; i++) {
+                                joinPropInfos[i].dbType.set(stmt, i + 1, joinPropInfos[i].getPropValue(entityParam));
+                            }
+                        };
+
+                final Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>> sqlBuilderMap = new HashMap<>();
+
+                {
+
+                    final String sql = PSC.selectFrom(referencedEntityClass).where(cond).sql();
+
+                    sqlBuilderMap.put(PSC.class, Tuple.of(joinPropInfos, selectPropNames -> {
+                        if (N.isNullOrEmpty(selectPropNames)) {
+                            return sql;
+                        } else {
+                            return PSC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
+                        }
+                    }, paramSetter));
+
+                }
+                {
+
+                    final String sql = PAC.selectFrom(referencedEntityClass).where(cond).sql();
+
+                    sqlBuilderMap.put(PAC.class, Tuple.of(joinPropInfos, selectPropNames -> {
+                        if (N.isNullOrEmpty(selectPropNames)) {
+                            return sql;
+                        } else {
+                            return PAC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
+                        }
+                    }, paramSetter));
+
+                }
+                {
+
+                    final String sql = PLC.selectFrom(referencedEntityClass).where(cond).sql();
+
+                    sqlBuilderMap.put(PLC.class, Tuple.of(joinPropInfos, selectPropNames -> {
+                        if (N.isNullOrEmpty(selectPropNames)) {
+                            return sql;
+                        } else {
+                            return PLC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
+                        }
+                    }, paramSetter));
+
+                }
+
+                joinEntityPropSQLMap.put(propInfo.name, sqlBuilderMap);
+            }
+
+            joinEntityPropSQLPool.put(entityClass, joinEntityPropSQLMap);
+        }
+
+        return joinEntityPropSQLMap;
+    }
+
+    private static Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> getSQLForJoinEntityProp(
+            final Class<?> entityClass, final String joinEntityPropName, final Class<? extends SQLBuilder> sqlBuilderClass) {
+
+        final Map<String, Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>>> joinEntityPropSQLMap = getJoinEntityPropMap(
+                entityClass);
+
+        final PropInfo joinEntityPropInfo = ParserUtil.getEntityInfo(entityClass).getPropInfo(joinEntityPropName);
+
+        if (joinEntityPropInfo == null) {
+            throw new IllegalArgumentException("No property found with name '" + joinEntityPropName + "' in class: " + entityClass);
+        }
+
+        final Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>> sqlBuilderMap = joinEntityPropSQLMap
+                .get(joinEntityPropInfo.name);
+
+        if (sqlBuilderMap == null) {
+            throw new IllegalArgumentException("'" + joinEntityPropName + "' is not join entity property annotated by @JoinBy in class: " + entityClass);
+
+        }
+
+        final Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = sqlBuilderMap.get(sqlBuilderClass);
+
+        if (tp == null) {
+            throw new IllegalArgumentException("Not supported SQLBuilder type/class: " + sqlBuilderClass);
+
+        }
+
+        return tp;
     }
 
     /**
