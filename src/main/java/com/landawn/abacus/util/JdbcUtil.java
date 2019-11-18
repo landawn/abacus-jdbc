@@ -16362,9 +16362,9 @@ public final class JdbcUtil {
                 final Class<?>[] paramTypes = m.getParameterTypes();
                 final Class<?> returnType = m.getReturnType();
                 final int paramLen = paramTypes.length;
-                final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
 
                 if (declaringClass.equals(BasicDao.class)) {
+                    final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
                     final List<String> idPropNames = ClassUtil.getIdFieldNames(entityClass, true);
                     final boolean isFakeId = ClassUtil.isFakeId(idPropNames);
                     final String idPropName = idPropNames.get(0);
