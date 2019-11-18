@@ -269,7 +269,7 @@ public class Jdbc {
         // see below samples by Dao/Mapper:
     }
 
-    public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC> {
+    public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
         @NamedInsert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
         void insertWithId(User user) throws SQLException;
 

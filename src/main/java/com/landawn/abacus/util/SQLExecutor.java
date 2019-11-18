@@ -76,7 +76,6 @@ import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.SQLTransaction.CreatedBy;
 import com.landawn.abacus.util.StringUtil.Strings;
-import com.landawn.abacus.util.Try.Consumer;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
@@ -89,6 +88,7 @@ import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.BiConsumer;
+import com.landawn.abacus.util.function.Consumer;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.function.Supplier;
 import com.landawn.abacus.util.stream.Collector;
@@ -9324,7 +9324,7 @@ public class SQLExecutor {
             loadJoinEntitiesIfNull(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
         }
 
-        private static final Consumer<? super Exception, RuntimeException> throwRuntimeExceptionAction = e -> {
+        private static final Try.Consumer<? super Exception, RuntimeException> throwRuntimeExceptionAction = e -> {
             throw N.toRuntimeException(e);
         };
 
@@ -9332,6 +9332,60 @@ public class SQLExecutor {
             for (ContinuableFuture<Void> f : futures) {
                 f.gett().ifFailure(throwRuntimeExceptionAction);
             }
+        }
+
+        /**
+         *
+         * @param <R>
+         * @param func
+         * @return
+         */
+        @Beta
+        public <R> ContinuableFuture<R> asyncApply(final Function<Mapper<T, ID>, R> func) {
+            N.checkArgNotNull(func, "func");
+
+            return sqlExecutor._asyncExecutor.execute(() -> func.apply(this));
+        }
+
+        /**
+         *
+         * @param <R>
+         * @param func
+         * @param executor
+         * @return
+         */
+        @Beta
+        public <R> ContinuableFuture<R> asyncApply(final Function<Mapper<T, ID>, R> func, final Executor executor) {
+            N.checkArgNotNull(func, "func");
+            N.checkArgNotNull(executor, "executor");
+
+            return ContinuableFuture.call(() -> func.apply(this), executor);
+        }
+
+        /**
+         *
+         * @param action
+         * @return
+         */
+        @Beta
+        public ContinuableFuture<Void> asyncAccept(final Consumer<Mapper<T, ID>> action) {
+            N.checkArgNotNull(action, "action");
+
+            return sqlExecutor._asyncExecutor.execute(() -> action.accept(this));
+        }
+
+        /**
+         *
+         * @param action
+         * @param executor
+         * @return
+         */
+        @Beta
+        public ContinuableFuture<Void> asyncAccept(final Consumer<Mapper<T, ID>> action, final Executor executor) {
+            N.checkArgNotNull(action, "action");
+            N.checkArgNotNull(executor, "executor");
+
+            return ContinuableFuture.run(() -> action.accept(this), executor);
         }
 
         /**

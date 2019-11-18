@@ -14894,7 +14894,7 @@ public final class JdbcUtil {
      * @See CrudDao
      * @see SQLExecutor.Mapper
      */
-    public interface BasicDao<T, SB extends SQLBuilder> extends Dao {
+    public interface BasicDao<T, SB extends SQLBuilder, TD extends BasicDao<T, SB, TD>> extends Dao {
 
         /**
          *
@@ -15890,6 +15890,68 @@ public final class JdbcUtil {
 
             loadJoinEntitiesIfNull(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
         }
+
+        /**
+         *
+         * @param <R>
+         * @param func
+         * @return
+         */
+        @Beta
+        default <R> ContinuableFuture<R> asyncApply(final Try.Function<TD, R, SQLException> func) {
+            N.checkArgNotNull(func, "func");
+
+            final TD tdao = (TD) this;
+
+            return asyncExecutor.execute(() -> func.apply(tdao));
+        }
+
+        /**
+         *
+         * @param <R>
+         * @param func
+         * @param executor
+         * @return
+         */
+        @Beta
+        default <R> ContinuableFuture<R> asyncApply(final Try.Function<TD, R, SQLException> func, final Executor executor) {
+            N.checkArgNotNull(func, "func");
+            N.checkArgNotNull(executor, "executor");
+
+            final TD tdao = (TD) this;
+
+            return ContinuableFuture.call(() -> func.apply(tdao), executor);
+        }
+
+        /**
+         *
+         * @param action
+         * @return
+         */
+        @Beta
+        default ContinuableFuture<Void> asyncAccept(final Try.Consumer<TD, SQLException> action) {
+            N.checkArgNotNull(action, "action");
+
+            final TD tdao = (TD) this;
+
+            return asyncExecutor.execute(() -> action.accept(tdao));
+        }
+
+        /**
+         *
+         * @param action
+         * @param executor
+         * @return
+         */
+        @Beta
+        default ContinuableFuture<Void> asyncAccept(final Try.Consumer<TD, SQLException> action, final Executor executor) {
+            N.checkArgNotNull(action, "action");
+            N.checkArgNotNull(executor, "executor");
+
+            final TD tdao = (TD) this;
+
+            return ContinuableFuture.run(() -> action.accept(tdao), executor);
+        }
     }
 
     /**
@@ -15905,7 +15967,7 @@ public final class JdbcUtil {
      * @see BasicDao
      * @see SQLExecutor.Mapper
      */
-    public interface CrudDao<T, ID, SB extends SQLBuilder> extends BasicDao<T, SB> {
+    public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends BasicDao<T, SB, TD> {
 
         /**
          *

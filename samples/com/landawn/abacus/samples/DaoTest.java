@@ -1,6 +1,9 @@
 package com.landawn.abacus.samples;
 
+import static com.landawn.abacus.samples.Jdbc.addressMapper;
+import static com.landawn.abacus.samples.Jdbc.deviceMapper;
 import static com.landawn.abacus.samples.Jdbc.userDao;
+import static com.landawn.abacus.samples.Jdbc.userMapper;
 import static org.junit.Assert.assertEquals;
 
 import java.sql.SQLException;
@@ -10,6 +13,8 @@ import java.util.List;
 import org.junit.Test;
 
 import com.landawn.abacus.condition.ConditionFactory.CF;
+import com.landawn.abacus.samples.Jdbc.Address;
+import com.landawn.abacus.samples.Jdbc.Device;
 import com.landawn.abacus.samples.Jdbc.User;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
@@ -190,5 +195,41 @@ public class DaoTest {
         userDao.deleteById(100L);
 
         assertEquals(1, userDao.sqlExecutor().update("delete from user where id = ? ", 101));
+    }
+
+    @Test
+    public void crud_joinedBy() throws SQLException {
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.insertWithId(user);
+
+        User userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+
+        Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
+        deviceMapper.insert(device);
+
+        Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
+        addressMapper.insert(address);
+
+        User userFromDB2 = N.copy(userFromDB);
+        userDao.loadAllJoinEntities(userFromDB);
+        System.out.println(userFromDB);
+
+        userMapper.loadAllJoinEntities(userFromDB2);
+        System.out.println(userFromDB2);
+
+        assertEquals(userFromDB, userFromDB2);
+
+        userFromDB = userDao.gett(100L);
+        userFromDB2 = N.copy(userFromDB);
+        userDao.loadJoinEntitiesIfNull(userFromDB);
+        System.out.println(userFromDB);
+
+        userMapper.loadJoinEntitiesIfNull(userFromDB2);
+        System.out.println(userFromDB2);
+
+        assertEquals(userFromDB, userFromDB2);
+
+        userDao.deleteById(100L);
     }
 }
