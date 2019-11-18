@@ -101,8 +101,15 @@ public class Jdbc {
         @JoinedBy("id=userId")
         private List<Device> devices;
 
+        // Supposed to be empty.
+        @JoinedBy("id=userId, firstName=model")
+        private Device devices2;
+
         @JoinedBy("id=userId")
         private Address address;
+
+        @JoinedBy("id=userId, lastName=street")
+        private List<Address> address2;
     }
 
     @Builder
