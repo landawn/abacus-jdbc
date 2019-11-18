@@ -230,6 +230,26 @@ public class DaoTest {
 
         assertEquals(userFromDB, userFromDB2);
 
+        userFromDB = userDao.gett(100L);
+        userFromDB2 = N.copy(userFromDB);
+        userDao.loadJoinEntities(userFromDB, Device.class);
+        System.out.println(userFromDB);
+
+        userMapper.loadJoinEntities(userFromDB2, Device.class);
+        System.out.println(userFromDB2);
+
+        assertEquals(userFromDB, userFromDB2);
+
+        userFromDB = userDao.gett(100L);
+        userFromDB2 = N.copy(userFromDB);
+        userDao.loadJoinEntitiesIfNull(userFromDB, Address.class);
+        System.out.println(userFromDB);
+
+        userMapper.loadJoinEntitiesIfNull(userFromDB2, Address.class);
+        System.out.println(userFromDB2);
+
+        assertEquals(userFromDB, userFromDB2);
+
         userDao.deleteById(100L);
     }
 }

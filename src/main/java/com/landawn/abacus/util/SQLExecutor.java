@@ -8873,6 +8873,68 @@ public class SQLExecutor {
         /**
          *
          * @param entity
+         * @param joinEntityClass
+         */
+        public void loadJoinEntities(final T entity, final Class<?> joinEntityClass) {
+            loadJoinEntities(entity, joinEntityClass, null);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @param selectPropNames
+         */
+        public void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) {
+            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entity.getClass());
+
+            if (joinEntityPropNames.size() == 1) {
+                loadJoinEntities(entity, joinEntityPropNames.get(0), selectPropNames);
+            } else {
+                for (String joinEntityPropName : joinEntityPropNames) {
+                    loadJoinEntities(entity, joinEntityPropName, selectPropNames);
+                }
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         */
+        public void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) {
+            loadJoinEntities(entities, joinEntityClass, null);
+        }
+
+        // TODO performance improvement by one query.
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @param selectPropNames
+         */
+        public void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            final Class<?> entityClass = N.firstOrNullIfEmpty(entities).getClass();
+            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entityClass);
+
+            if (joinEntityPropNames.size() == 1) {
+                loadJoinEntities(entities, joinEntityPropNames.get(0), selectPropNames);
+            } else {
+                for (String joinEntityPropName : joinEntityPropNames) {
+                    loadJoinEntities(entities, joinEntityPropName, selectPropNames);
+                }
+            }
+        }
+
+        /**
+         *
+         * @param entity
          * @param joinEntityPropName
          */
         public void loadJoinEntities(final T entity, final String joinEntityPropName) {
@@ -8915,6 +8977,7 @@ public class SQLExecutor {
             loadJoinEntities(entities, joinEntityPropName, null);
         }
 
+        // TODO performance improvement by one query.
         /**
          *
          * @param entities
@@ -9113,6 +9176,68 @@ public class SQLExecutor {
         /**
          *
          * @param entity
+         * @param joinEntityClass
+         */
+        public void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass) {
+            loadJoinEntitiesIfNull(entity, joinEntityClass, null);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @param selectPropNames
+         */
+        public void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) {
+            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entity.getClass());
+
+            if (joinEntityPropNames.size() == 1) {
+                loadJoinEntitiesIfNull(entity, joinEntityPropNames.get(0), selectPropNames);
+            } else {
+                for (String joinEntityPropName : joinEntityPropNames) {
+                    loadJoinEntitiesIfNull(entity, joinEntityPropName, selectPropNames);
+                }
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         */
+        public void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass) {
+            loadJoinEntitiesIfNull(entities, joinEntityClass, null);
+        }
+
+        // TODO performance improvement by one query.
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @param selectPropNames
+         */
+        public void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            final Class<?> entityClass = N.firstOrNullIfEmpty(entities).getClass();
+            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entityClass);
+
+            if (joinEntityPropNames.size() == 1) {
+                loadJoinEntitiesIfNull(entities, joinEntityPropNames.get(0), selectPropNames);
+            } else {
+                for (String joinEntityPropName : joinEntityPropNames) {
+                    loadJoinEntitiesIfNull(entities, joinEntityPropName, selectPropNames);
+                }
+            }
+        }
+
+        /**
+         *
+         * @param entity
          * @param joinEntityPropName
          */
         public void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName) {
@@ -9144,6 +9269,7 @@ public class SQLExecutor {
             loadJoinEntitiesIfNull(entities, joinEntityPropName, null);
         }
 
+        // TODO performance improvement by one query.
         /**
          *
          * @param entities

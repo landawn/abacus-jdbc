@@ -15448,6 +15448,73 @@ public final class JdbcUtil {
         /**
          *
          * @param entity
+         * @param joinEntityClass
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final T entity, final Class<?> joinEntityClass) throws SQLException {
+            loadJoinEntities(entity, joinEntityClass, null);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @param selectPropNames
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
+            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entity.getClass());
+
+            if (joinEntityPropNames.size() == 1) {
+                loadJoinEntities(entity, joinEntityPropNames.get(0), selectPropNames);
+            } else {
+                for (String joinEntityPropName : joinEntityPropNames) {
+                    loadJoinEntities(entity, joinEntityPropName, selectPropNames);
+                }
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
+            loadJoinEntities(entities, joinEntityClass, null);
+        }
+
+        // TODO performance improvement by one query.
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @param selectPropNames
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+                throws SQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            final Class<?> entityClass = N.firstOrNullIfEmpty(entities).getClass();
+            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entityClass);
+
+            if (joinEntityPropNames.size() == 1) {
+                loadJoinEntities(entities, joinEntityPropNames.get(0), selectPropNames);
+            } else {
+                for (String joinEntityPropName : joinEntityPropNames) {
+                    loadJoinEntities(entities, joinEntityPropName, selectPropNames);
+                }
+            }
+        }
+
+        /**
+         *
+         * @param entity
          * @param joinEntityPropName
          * @throws SQLException the SQL exception
          */
@@ -15474,6 +15541,7 @@ public final class JdbcUtil {
             loadJoinEntities(entities, joinEntityPropName, null);
         }
 
+        // TODO performance improvement by one query.
         /**
          *
          * @param entities
@@ -15656,6 +15724,73 @@ public final class JdbcUtil {
             }
 
             loadJoinEntities(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass) throws SQLException {
+            loadJoinEntitiesIfNull(entity, joinEntityClass, null);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @param selectPropNames
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
+            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entity.getClass());
+
+            if (joinEntityPropNames.size() == 1) {
+                loadJoinEntitiesIfNull(entity, joinEntityPropNames.get(0), selectPropNames);
+            } else {
+                for (String joinEntityPropName : joinEntityPropNames) {
+                    loadJoinEntitiesIfNull(entity, joinEntityPropName, selectPropNames);
+                }
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
+            loadJoinEntitiesIfNull(entities, joinEntityClass, null);
+        }
+
+        // TODO performance improvement by one query.
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @param selectPropNames
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+                throws SQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            final Class<?> entityClass = N.firstOrNullIfEmpty(entities).getClass();
+            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entityClass);
+
+            if (joinEntityPropNames.size() == 1) {
+                loadJoinEntitiesIfNull(entities, joinEntityPropNames.get(0), selectPropNames);
+            } else {
+                for (String joinEntityPropName : joinEntityPropNames) {
+                    loadJoinEntitiesIfNull(entities, joinEntityPropName, selectPropNames);
+                }
+            }
         }
 
         /**
@@ -18364,6 +18499,42 @@ public final class JdbcUtil {
         } else {
             return false;
         }
+    }
+
+    private final static Map<Class<?>, Map<Class<?>, List<String>>> joinEntityPropNamesByTypePool = new ConcurrentHashMap<>();
+
+    static List<String> getJoinEntityPropNamesByType(final Class<?> entityClass, final Class<?> joinPropEntityClass) {
+        Map<Class<?>, List<String>> joinEntityPropNamesByTypeMap = joinEntityPropNamesByTypePool.get(entityClass);
+
+        if (joinEntityPropNamesByTypeMap == null) {
+            joinEntityPropNamesByTypeMap = new HashMap<>();
+
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+            List<String> joinPropNames = null;
+            Class<?> concretePropTypeClass;
+
+            for (PropInfo propInfo : entityInfo.propInfoList) {
+                if (!propInfo.isAnnotationPresent(JoinedBy.class)) {
+                    continue;
+                }
+
+                concretePropTypeClass = (propInfo.type.isCollection() ? propInfo.type.getElementType() : propInfo.type).clazz();
+                joinPropNames = joinEntityPropNamesByTypeMap.get(concretePropTypeClass);
+
+                if (joinPropNames == null) {
+                    joinPropNames = new ArrayList<>(1);
+                    joinEntityPropNamesByTypeMap.put(concretePropTypeClass, joinPropNames);
+
+                }
+
+                joinPropNames.add(propInfo.name);
+
+            }
+
+            joinEntityPropNamesByTypePool.put(entityClass, joinEntityPropNamesByTypeMap);
+        }
+
+        return joinEntityPropNamesByTypeMap.get(joinPropEntityClass);
     }
 
     private final static Map<Class<?>, Map<String, Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>>>> joinEntityPropSQLPool = new ConcurrentHashMap<>();
