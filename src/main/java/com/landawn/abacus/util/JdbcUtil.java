@@ -14562,18 +14562,7 @@ public final class JdbcUtil {
          * @see SQLExecutor#createDao(Class)
          */
         static <T extends Dao> T newInstance(final Class<T> daoInterface, final javax.sql.DataSource ds) {
-            return newInstance(daoInterface, ds, null);
-        }
-
-        /**
-         *
-         * @param <T>
-         * @param daoInterface
-         * @param dsm
-         * @return
-         */
-        static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm) {
-            return newInstance(daoInterface, dsm, null);
+            return newInstance(daoInterface, ds, JdbcUtil.asyncExecutor.getExecutor());
         }
 
         /**
@@ -14586,16 +14575,43 @@ public final class JdbcUtil {
          * @see SQLExecutor#createDao(Class)
          */
         static <T extends Dao> T newInstance(final Class<T> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper) {
+            return newInstance(daoInterface, ds, sqlMapper, JdbcUtil.asyncExecutor.getExecutor());
+        }
+
+        /**
+         *
+         * @param <T>
+         * @param daoInterface
+         * @param ds
+         * @param executor
+         * @return
+         * @see SQLExecutor#createDao(Class)
+         */
+        static <T extends Dao> T newInstance(final Class<T> daoInterface, final javax.sql.DataSource ds, final Executor executor) {
+            return newInstance(daoInterface, ds, null, executor);
+        }
+
+        /**
+         *
+         * @param <T>
+         * @param daoInterface
+         * @param ds
+         * @param sqlMapper
+         * @param executor
+         * @return
+         * @see SQLExecutor#createDao(Class)
+         */
+        static <T extends Dao> T newInstance(final Class<T> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper, final Executor executor) {
             N.checkArgNotNull(daoInterface, "daoInterface");
             N.checkArgNotNull(ds, "dataSource");
 
             final String key = ClassUtil.getCanonicalClassName(daoInterface) + "_" + System.identityHashCode(ds) + "_"
-                    + (sqlMapper == null ? "null" : System.identityHashCode(sqlMapper));
+                    + (sqlMapper == null ? "null" : System.identityHashCode(sqlMapper)) + "_" + (executor == null ? "null" : System.identityHashCode(executor));
 
             T dao = (T) daoPool.get(key);
 
             if (dao == null) {
-                dao = JdbcUtil.newInstance(daoInterface, ds, null, sqlMapper);
+                dao = JdbcUtil.newInstance(daoInterface, ds, null, sqlMapper, executor);
                 daoPool.put(key, dao);
             }
 
@@ -14607,20 +14623,60 @@ public final class JdbcUtil {
          * @param <T>
          * @param daoInterface
          * @param dsm
+         * @return
+         * @see SQLExecutor#createDao(Class)
+         */
+        static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm) {
+            return newInstance(daoInterface, dsm, JdbcUtil.asyncExecutor.getExecutor());
+        }
+
+        /**
+         *
+         * @param <T>
+         * @param daoInterface
+         * @param dsm
          * @param sqlMapper
          * @return
+         * @see SQLExecutor#createDao(Class)
          */
         static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm, final SQLMapper sqlMapper) {
+            return newInstance(daoInterface, dsm, sqlMapper, JdbcUtil.asyncExecutor.getExecutor());
+        }
+
+        /**
+         *
+         * @param <T>
+         * @param daoInterface
+         * @param dsm
+         * @param executor
+         * @return
+         * @see SQLExecutor#createDao(Class)
+         */
+        static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm, final Executor executor) {
+            return newInstance(daoInterface, dsm, null, executor);
+        }
+
+        /**
+         *
+         * @param <T>
+         * @param daoInterface
+         * @param dsm
+         * @param sqlMapper
+         * @param executor
+         * @return
+         * @see SQLExecutor#createDao(Class)
+         */
+        static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm, final SQLMapper sqlMapper, final Executor executor) {
             N.checkArgNotNull(daoInterface, "daoInterface");
-            N.checkArgNotNull(dsm, "dataSourceManager");
+            N.checkArgNotNull(dsm, "dataSourcemManager");
 
             final String key = ClassUtil.getCanonicalClassName(daoInterface) + "_" + System.identityHashCode(dsm) + "_"
-                    + (sqlMapper == null ? "null" : System.identityHashCode(sqlMapper));
+                    + (sqlMapper == null ? "null" : System.identityHashCode(sqlMapper)) + "_" + (executor == null ? "null" : System.identityHashCode(executor));
 
             T dao = (T) daoPool.get(key);
 
             if (dao == null) {
-                dao = JdbcUtil.newInstance(daoInterface, null, dsm, sqlMapper);
+                dao = JdbcUtil.newInstance(daoInterface, null, dsm, sqlMapper, executor);
                 daoPool.put(key, dao);
             }
 
@@ -14636,6 +14692,8 @@ public final class JdbcUtil {
         SQLExecutor sqlExecutor();
 
         SQLMapper sqlMapper();
+
+        Executor executor();
 
         //    /**
         //     *
@@ -15576,7 +15634,7 @@ public final class JdbcUtil {
          */
         default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
             if (inParallel) {
-                loadJoinEntities(entity, joinEntityPropNames, JdbcUtil.asyncExecutor.getExecutor());
+                loadJoinEntities(entity, joinEntityPropNames, executor());
             } else {
                 loadJoinEntities(entity, joinEntityPropNames);
             }
@@ -15627,7 +15685,7 @@ public final class JdbcUtil {
         default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
                 throws SQLException {
             if (inParallel) {
-                loadJoinEntities(entities, joinEntityPropNames, JdbcUtil.asyncExecutor.getExecutor());
+                loadJoinEntities(entities, joinEntityPropNames, executor());
             } else {
                 loadJoinEntities(entities, joinEntityPropNames);
             }
@@ -15669,7 +15727,7 @@ public final class JdbcUtil {
          */
         default void loadAllJoinEntities(final T entity, final boolean inParallel) throws SQLException {
             if (inParallel) {
-                loadAllJoinEntities(entity, JdbcUtil.asyncExecutor.getExecutor());
+                loadAllJoinEntities(entity, executor());
             } else {
                 loadAllJoinEntities(entity);
             }
@@ -15706,7 +15764,7 @@ public final class JdbcUtil {
          */
         default void loadAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws SQLException {
             if (inParallel) {
-                loadAllJoinEntities(entities, JdbcUtil.asyncExecutor.getExecutor());
+                loadAllJoinEntities(entities, executor());
             } else {
                 loadAllJoinEntities(entities);
             }
@@ -15875,7 +15933,7 @@ public final class JdbcUtil {
          */
         default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
             if (inParallel) {
-                loadJoinEntitiesIfNull(entity, joinEntityPropNames, JdbcUtil.asyncExecutor.getExecutor());
+                loadJoinEntitiesIfNull(entity, joinEntityPropNames, executor());
             } else {
                 loadJoinEntitiesIfNull(entity, joinEntityPropNames);
             }
@@ -15926,7 +15984,7 @@ public final class JdbcUtil {
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
                 throws SQLException {
             if (inParallel) {
-                loadJoinEntitiesIfNull(entities, joinEntityPropNames, JdbcUtil.asyncExecutor.getExecutor());
+                loadJoinEntitiesIfNull(entities, joinEntityPropNames, executor());
             } else {
                 loadJoinEntitiesIfNull(entities, joinEntityPropNames);
             }
@@ -15969,7 +16027,7 @@ public final class JdbcUtil {
          */
         default void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) throws SQLException {
             if (inParallel) {
-                loadJoinEntitiesIfNull(entity, JdbcUtil.asyncExecutor.getExecutor());
+                loadJoinEntitiesIfNull(entity, executor());
             } else {
                 loadJoinEntitiesIfNull(entity);
             }
@@ -16006,7 +16064,7 @@ public final class JdbcUtil {
          */
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) throws SQLException {
             if (inParallel) {
-                loadJoinEntitiesIfNull(entities, JdbcUtil.asyncExecutor.getExecutor());
+                loadJoinEntitiesIfNull(entities, executor());
             } else {
                 loadJoinEntitiesIfNull(entities);
             }
@@ -16034,11 +16092,7 @@ public final class JdbcUtil {
          */
         @Beta
         default <R> ContinuableFuture<R> asyncApply(final Try.Function<TD, R, SQLException> func) {
-            N.checkArgNotNull(func, "func");
-
-            final TD tdao = (TD) this;
-
-            return asyncExecutor.execute(() -> func.apply(tdao));
+            return asyncApply(func, executor());
         }
 
         /**
@@ -16065,11 +16119,7 @@ public final class JdbcUtil {
          */
         @Beta
         default ContinuableFuture<Void> asyncAccept(final Try.Consumer<TD, SQLException> action) {
-            N.checkArgNotNull(action, "action");
-
-            final TD tdao = (TD) this;
-
-            return asyncExecutor.execute(() -> action.accept(tdao));
+            return asyncAccept(action, executor());
         }
 
         /**
@@ -16375,18 +16425,15 @@ public final class JdbcUtil {
         }
     }
 
-    /**
-     *
-     * @param <T>
-     * @param daoInterface
-     * @param dsm
-     * @return
-     */
     @SuppressWarnings({ "rawtypes", "deprecation" })
-    static <T extends Dao> T newInstance(final Class<T> daoInterface, final javax.sql.DataSource ds, final DataSourceManager dsm, final SQLMapper sqlMapper) {
-        final SQLExecutor sqlExecutor = ds != null ? new SQLExecutor(ds) : new SQLExecutor(dsm);
+    static <T extends Dao> T newInstance(final Class<T> daoInterface, final javax.sql.DataSource ds, final DataSourceManager dsm, final SQLMapper sqlMapper,
+            final Executor executor) {
         final javax.sql.DataSource primaryDataSource = ds != null ? ds : dsm.getPrimaryDataSource();
         final SQLMapper nonNullSQLMapper = sqlMapper == null ? new SQLMapper() : sqlMapper;
+        final Executor nonNullExecutor = executor == null ? JdbcUtil.asyncExecutor.getExecutor() : executor;
+        final AsyncExecutor nonNullAsyncExecutor = new AsyncExecutor(nonNullExecutor);
+        final SQLExecutor sqlExecutor = ds != null ? new SQLExecutor(ds, null, nonNullSQLMapper, null, nonNullAsyncExecutor)
+                : new SQLExecutor(dsm, null, nonNullSQLMapper, null, nonNullAsyncExecutor);
 
         java.lang.reflect.Type[] typeArguments = null;
 
@@ -17753,6 +17800,8 @@ public final class JdbcUtil {
                             call = (proxy, args) -> sqlExecutor;
                         } else if (methodName.equals("sqlMapper") && SQLMapper.class.isAssignableFrom(returnType) && paramLen == 0) {
                             call = (proxy, args) -> nonNullSQLMapper;
+                        } else if (methodName.equals("executor") && Executor.class.isAssignableFrom(returnType) && paramLen == 0) {
+                            call = (proxy, args) -> nonNullExecutor;
                         } else {
                             call = (proxy, args) -> {
                                 throw new UnsupportedOperationException("Unsupported operation: " + m);
