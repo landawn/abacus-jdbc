@@ -18647,7 +18647,6 @@ public final class JdbcUtil {
                 final Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>> sqlBuilderMap = new HashMap<>();
 
                 {
-
                     final String sql = PSC.selectFrom(referencedEntityClass).where(cond).sql();
 
                     sqlBuilderMap.put(PSC.class, Tuple.of(joinPropInfos, selectPropNames -> {
@@ -18657,10 +18656,9 @@ public final class JdbcUtil {
                             return PSC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
                         }
                     }, paramSetter));
-
                 }
-                {
 
+                {
                     final String sql = PAC.selectFrom(referencedEntityClass).where(cond).sql();
 
                     sqlBuilderMap.put(PAC.class, Tuple.of(joinPropInfos, selectPropNames -> {
@@ -18670,10 +18668,9 @@ public final class JdbcUtil {
                             return PAC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
                         }
                     }, paramSetter));
-
                 }
-                {
 
+                {
                     final String sql = PLC.selectFrom(referencedEntityClass).where(cond).sql();
 
                     sqlBuilderMap.put(PLC.class, Tuple.of(joinPropInfos, selectPropNames -> {
@@ -18683,7 +18680,6 @@ public final class JdbcUtil {
                             return PLC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
                         }
                     }, paramSetter));
-
                 }
 
                 joinEntityPropSQLMap.put(propInfo.name, sqlBuilderMap);
