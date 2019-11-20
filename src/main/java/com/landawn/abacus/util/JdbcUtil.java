@@ -15524,12 +15524,8 @@ public final class JdbcUtil {
             final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entity.getClass());
 
-            if (joinEntityPropNames.size() == 1) {
-                loadJoinEntities(entity, joinEntityPropNames.get(0), selectPropNames);
-            } else {
-                for (String joinEntityPropName : joinEntityPropNames) {
-                    loadJoinEntities(entity, joinEntityPropName, selectPropNames);
-                }
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntities(entity, joinEntityPropName, selectPropNames);
             }
         }
 
@@ -15561,12 +15557,8 @@ public final class JdbcUtil {
             final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entityClass);
 
-            if (joinEntityPropNames.size() == 1) {
-                loadJoinEntities(entities, joinEntityPropNames.get(0), selectPropNames);
-            } else {
-                for (String joinEntityPropName : joinEntityPropNames) {
-                    loadJoinEntities(entities, joinEntityPropName, selectPropNames);
-                }
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntities(entities, joinEntityPropName, selectPropNames);
             }
         }
 
@@ -15805,12 +15797,8 @@ public final class JdbcUtil {
             final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entity.getClass());
 
-            if (joinEntityPropNames.size() == 1) {
-                loadJoinEntitiesIfNull(entity, joinEntityPropNames.get(0), selectPropNames);
-            } else {
-                for (String joinEntityPropName : joinEntityPropNames) {
-                    loadJoinEntitiesIfNull(entity, joinEntityPropName, selectPropNames);
-                }
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntitiesIfNull(entity, joinEntityPropName, selectPropNames);
             }
         }
 
