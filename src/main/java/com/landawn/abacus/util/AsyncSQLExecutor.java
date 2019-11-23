@@ -22,7 +22,6 @@ import java.util.concurrent.Callable;
 import com.landawn.abacus.DataSet;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
-import com.landawn.abacus.util.SQLExecutor.JdbcSettings;
 import com.landawn.abacus.util.SQLExecutor.ResultExtractor;
 import com.landawn.abacus.util.SQLExecutor.StatementSetter;
 import com.landawn.abacus.util.u.Nullable;

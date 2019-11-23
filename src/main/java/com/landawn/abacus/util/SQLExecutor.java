@@ -76,7 +76,7 @@ import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.SQLTransaction.CreatedBy;
 import com.landawn.abacus.util.StringUtil.Strings;
-import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -5839,6 +5839,7 @@ public class SQLExecutor {
      * @see {@link com.landawn.abacus.annotation.Transient}
      * @see {@link com.landawn.abacus.annotation.Table}
      * @see {@link com.landawn.abacus.annotation.Column}
+     * @see {@link com.landawn.abacus.annotation.JoinedBy}
      * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html</a>
      * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html</a>
      * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
@@ -8886,7 +8887,7 @@ public class SQLExecutor {
          * @param selectPropNames
          */
         public void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) {
-            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entity.getClass());
 
             for (String joinEntityPropName : joinEntityPropNames) {
@@ -8916,7 +8917,7 @@ public class SQLExecutor {
             }
 
             final Class<?> entityClass = N.firstOrNullIfEmpty(entities).getClass();
-            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entityClass);
 
             for (String joinEntityPropName : joinEntityPropNames) {
@@ -8941,11 +8942,11 @@ public class SQLExecutor {
          */
         public void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) {
             final PropInfo propInfo = entityInfo.getPropInfo(joinEntityPropName);
-            final Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = JdbcUtil
-                    .getSQLForJoinEntityProp(targetClass, joinEntityPropName, sbc);
+            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(targetClass, joinEntityPropName);
+            final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.sqlBuilderMap.get(sbc);
 
-            final String sql = tp._2.apply(selectPropNames);
-            final StatementSetter statementSetter = (namedSQL, stmt, parameters) -> tp._3.accept(stmt, entity);
+            final String sql = tp._1.apply(selectPropNames);
+            final StatementSetter statementSetter = (namedSQL, stmt, parameters) -> tp._2.accept(stmt, entity);
 
             if (propInfo.type.isCollection()) {
                 final Collection<Object> c = (Collection<Object>) N.newInstance(propInfo.clazz);
@@ -8982,11 +8983,11 @@ public class SQLExecutor {
             }
 
             final PropInfo propInfo = entityInfo.getPropInfo(joinEntityPropName);
-            final Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = JdbcUtil
-                    .getSQLForJoinEntityProp(targetClass, joinEntityPropName, sbc);
+            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(targetClass, joinEntityPropName);
+            final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.sqlBuilderMap.get(sbc);
 
-            final String sql = tp._2.apply(selectPropNames);
-            final StatementSetter statementSetter = (namedSQL, stmt, parameters) -> tp._3.accept(stmt, parameters[0]);
+            final String sql = tp._1.apply(selectPropNames);
+            final StatementSetter statementSetter = (namedSQL, stmt, parameters) -> tp._2.accept(stmt, parameters[0]);
 
             for (T entity : entities) {
                 if (propInfo.type.isCollection()) {
@@ -9102,7 +9103,7 @@ public class SQLExecutor {
          * @param entity
          */
         public void loadAllJoinEntities(T entity) {
-            loadJoinEntities(entity, JdbcUtil.getJoinEntityPropMap(entity.getClass()).keySet());
+            loadJoinEntities(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet());
         }
 
         /**
@@ -9124,7 +9125,7 @@ public class SQLExecutor {
          * @param executor
          */
         public void loadAllJoinEntities(final T entity, final Executor executor) {
-            loadJoinEntities(entity, JdbcUtil.getJoinEntityPropMap(entity.getClass()).keySet(), executor);
+            loadJoinEntities(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet(), executor);
         }
 
         /**
@@ -9136,7 +9137,7 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntities(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet());
+            loadJoinEntities(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet());
         }
 
         /**
@@ -9162,7 +9163,7 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntities(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
+            loadJoinEntities(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
         }
 
         /**
@@ -9181,7 +9182,7 @@ public class SQLExecutor {
          * @param selectPropNames
          */
         public void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) {
-            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entity.getClass());
 
             for (String joinEntityPropName : joinEntityPropNames) {
@@ -9211,7 +9212,7 @@ public class SQLExecutor {
             }
 
             final Class<?> entityClass = N.firstOrNullIfEmpty(entities).getClass();
-            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entityClass);
 
             for (String joinEntityPropName : joinEntityPropNames) {
@@ -9371,7 +9372,7 @@ public class SQLExecutor {
          * @param entity
          */
         public void loadJoinEntitiesIfNull(T entity) {
-            loadJoinEntitiesIfNull(entity, JdbcUtil.getJoinEntityPropMap(entity.getClass()).keySet());
+            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet());
         }
 
         /**
@@ -9393,7 +9394,7 @@ public class SQLExecutor {
          * @param executor
          */
         public void loadJoinEntitiesIfNull(final T entity, final Executor executor) {
-            loadJoinEntitiesIfNull(entity, JdbcUtil.getJoinEntityPropMap(entity.getClass()).keySet(), executor);
+            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet(), executor);
         }
 
         /**
@@ -9405,7 +9406,7 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntitiesIfNull(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet());
+            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet());
         }
 
         /**
@@ -9431,7 +9432,7 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntitiesIfNull(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
+            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
         }
 
         private static final Try.Consumer<? super Exception, RuntimeException> throwRuntimeExceptionAction = e -> {
@@ -10165,721 +10166,5 @@ public class SQLExecutor {
          * @return
          */
         protected abstract T convert(final DataSet dataSet);
-    }
-
-    /**
-     * The Class JdbcSettings.
-     */
-    public static class JdbcSettings {
-
-        /** The Constant DEFAULT_GENERATED_ID_PROP_NAME. */
-        public static final String DEFAULT_GENERATED_ID_PROP_NAME = "id";
-
-        /** The Constant DEFAULT_BATCH_SIZE. */
-        public static final int DEFAULT_BATCH_SIZE = JdbcUtil.DEFAULT_BATCH_SIZE;
-
-        /** The Constant DEFAULT_NO_GENERATED_KEYS. */
-        public static final int DEFAULT_NO_GENERATED_KEYS = Statement.NO_GENERATED_KEYS;
-
-        /** The Constant DEFAULT_FETCH_DIRECTION. */
-        public static final int DEFAULT_FETCH_DIRECTION = ResultSet.FETCH_FORWARD;
-
-        /** The Constant DEFAULT_RESULT_SET_TYPE. */
-        public static final int DEFAULT_RESULT_SET_TYPE = ResultSet.TYPE_FORWARD_ONLY;
-
-        /** The Constant DEFAULT_RESULT_SET_CONCURRENCY. */
-        public static final int DEFAULT_RESULT_SET_CONCURRENCY = ResultSet.CONCUR_READ_ONLY;
-
-        /** The Constant DEFAULT_RESULT_SET_HOLDABILITY. */
-        public static final int DEFAULT_RESULT_SET_HOLDABILITY = ResultSet.HOLD_CURSORS_OVER_COMMIT;
-
-        /** The log SQL. */
-        private boolean logSQL = false;
-
-        /** The log SQL with parameters. */
-        private boolean logSQLWithParameters = false;
-
-        /** The batch size. */
-        private int batchSize = -1;
-
-        /** The query timeout. */
-        private int queryTimeout = -1;
-
-        /** The auto generated keys. */
-        private boolean autoGeneratedKeys = false;
-
-        /** The returned column indexes. */
-        private int[] returnedColumnIndexes = null;
-
-        /** The returned column names. */
-        private String[] returnedColumnNames = null;
-
-        /** The max rows. */
-        private int maxRows = -1;
-
-        /** The max field size. */
-        private int maxFieldSize = -1;
-
-        /** The fetch size. */
-        private int fetchSize = -1;
-
-        /** The fetch direction. */
-        private int fetchDirection = -1;
-
-        /** The result set type. */
-        private int resultSetType = -1;
-
-        /** The result set concurrency. */
-        private int resultSetConcurrency = -1;
-
-        /** The result set holdability. */
-        private int resultSetHoldability = -1;
-
-        /** The offset. */
-        private int offset = 0;
-
-        /** The count. */
-        private int count = Integer.MAX_VALUE;
-
-        /** The query with data source. */
-        private String queryWithDataSource;
-
-        /** The query with data sources. */
-        private Collection<String> queryWithDataSources;
-
-        /** The query in parallel. */
-        private boolean queryInParallel = false;
-
-        /** The isolation level. */
-        private IsolationLevel isolationLevel = null;
-
-        /** The stream transaction independent. */
-        private boolean noTransactionForStream = false;
-
-        /** The fozen. */
-        private boolean fozen = false;
-
-        /**
-         * Instantiates a new jdbc settings.
-         */
-        protected JdbcSettings() {
-        }
-
-        /**
-         *
-         * @return
-         */
-        public static JdbcSettings create() {
-            return new JdbcSettings();
-        }
-
-        /**
-         *
-         * @return
-         */
-        public JdbcSettings copy() {
-            JdbcSettings copy = new JdbcSettings();
-            copy.logSQL = this.logSQL;
-            copy.batchSize = this.batchSize;
-            copy.queryTimeout = this.queryTimeout;
-            copy.autoGeneratedKeys = this.autoGeneratedKeys;
-            copy.returnedColumnIndexes = (this.returnedColumnIndexes == null) ? null : N.copyOf(this.returnedColumnIndexes, this.returnedColumnIndexes.length);
-            copy.returnedColumnNames = (this.returnedColumnNames == null) ? null : N.copyOf(this.returnedColumnNames, this.returnedColumnNames.length);
-            copy.maxRows = this.maxRows;
-            copy.maxFieldSize = this.maxFieldSize;
-            copy.fetchSize = this.fetchSize;
-            copy.fetchDirection = this.fetchDirection;
-            copy.resultSetType = this.resultSetType;
-            copy.resultSetConcurrency = this.resultSetConcurrency;
-            copy.resultSetHoldability = this.resultSetHoldability;
-            copy.offset = this.offset;
-            copy.count = this.count;
-            copy.queryWithDataSource = this.queryWithDataSource;
-            copy.queryWithDataSources = this.queryWithDataSources == null ? null : new ArrayList<>(this.queryWithDataSources);
-            copy.queryInParallel = this.queryInParallel;
-            copy.isolationLevel = this.isolationLevel;
-            copy.noTransactionForStream = this.noTransactionForStream;
-
-            return copy;
-        }
-
-        /**
-         * Checks if is log SQL.
-         *
-         * @return true, if is log SQL
-         */
-        public boolean isLogSQL() {
-            return logSQL;
-        }
-
-        /**
-         * Sets the log SQL.
-         *
-         * @param logSQL
-         * @return
-         */
-        public JdbcSettings setLogSQL(final boolean logSQL) {
-            assertNotFrozen();
-
-            this.logSQL = logSQL;
-
-            return this;
-        }
-
-        /**
-         * Checks if is log SQL with parameters.
-         *
-         * @return true, if is log SQL with parameters
-         */
-        public boolean isLogSQLWithParameters() {
-            return logSQLWithParameters;
-        }
-
-        /**
-         * Sets the log SQL with parameters.
-         *
-         * @param logSQLWithParameters
-         * @return
-         */
-        public JdbcSettings setLogSQLWithParameters(final boolean logSQLWithParameters) {
-            assertNotFrozen();
-
-            this.logSQLWithParameters = logSQLWithParameters;
-
-            return this;
-        }
-
-        /**
-         * Gets the batch size.
-         *
-         * @return
-         */
-        public int getBatchSize() {
-            return batchSize;
-        }
-
-        /**
-         * Sets the batch size.
-         *
-         * @param batchSize
-         * @return
-         */
-        public JdbcSettings setBatchSize(final int batchSize) {
-            assertNotFrozen();
-
-            this.batchSize = batchSize;
-
-            return this;
-        }
-
-        /**
-         * Gets the query timeout.
-         *
-         * @return
-         */
-        public int getQueryTimeout() {
-            return queryTimeout;
-        }
-
-        /**
-         * Sets the query timeout.
-         *
-         * @param queryTimeout
-         * @return
-         */
-        public JdbcSettings setQueryTimeout(final int queryTimeout) {
-            assertNotFrozen();
-
-            this.queryTimeout = queryTimeout;
-
-            return this;
-        }
-
-        /**
-         * Checks if is auto generated keys.
-         *
-         * @return true, if is auto generated keys
-         */
-        public boolean isAutoGeneratedKeys() {
-            return autoGeneratedKeys;
-        }
-
-        /**
-         * Sets the auto generated keys.
-         *
-         * @param autoGeneratedKeys
-         * @return
-         */
-        public JdbcSettings setAutoGeneratedKeys(final boolean autoGeneratedKeys) {
-            assertNotFrozen();
-
-            this.autoGeneratedKeys = autoGeneratedKeys;
-
-            return this;
-        }
-
-        /**
-         * Gets the returned column indexes.
-         *
-         * @return
-         * @see {@link Connection#prepareStatement(String, int[])}
-         */
-        public int[] getReturnedColumnIndexes() {
-            return returnedColumnIndexes;
-        }
-
-        /**
-         * Sets the returned column indexes.
-         *
-         * @param columnIndexes
-         * @return
-         * @see {@link Connection#prepareStatement(String, int[])}
-         */
-        public JdbcSettings setReturnedColumnIndexes(final int[] columnIndexes) {
-            assertNotFrozen();
-
-            this.returnedColumnIndexes = columnIndexes;
-
-            return this;
-        }
-
-        /**
-         * Gets the returned column names.
-         *
-         * @return
-         * @see {@link Connection#prepareStatement(String, String[])}
-         */
-        public String[] getReturnedColumnNames() {
-            return returnedColumnNames;
-        }
-
-        /**
-         * Sets the returned column names.
-         *
-         * @param columnNames
-         * @return
-         * @see {@link Connection#prepareStatement(String, String[])}
-         */
-        public JdbcSettings setReturnedColumnNames(final String[] columnNames) {
-            assertNotFrozen();
-
-            this.returnedColumnNames = columnNames;
-
-            return this;
-        }
-
-        /**
-         * Gets the max rows.
-         *
-         * @return
-         */
-        public int getMaxRows() {
-            return maxRows;
-        }
-
-        /**
-         * Sets the max rows.
-         *
-         * @param maxRows
-         * @return
-         */
-        public JdbcSettings setMaxRows(final int maxRows) {
-            assertNotFrozen();
-
-            this.maxRows = maxRows;
-
-            return this;
-        }
-
-        /**
-         * Gets the max field size.
-         *
-         * @return
-         */
-        public int getMaxFieldSize() {
-            return maxFieldSize;
-        }
-
-        /**
-         * Sets the max field size.
-         *
-         * @param maxFieldSize
-         * @return
-         */
-        public JdbcSettings setMaxFieldSize(final int maxFieldSize) {
-            assertNotFrozen();
-
-            this.maxFieldSize = maxFieldSize;
-
-            return this;
-        }
-
-        /**
-         * Gets the fetch size.
-         *
-         * @return
-         */
-        public int getFetchSize() {
-            return fetchSize;
-        }
-
-        /**
-         * Sets the fetch size.
-         *
-         * @param fetchSize
-         * @return
-         */
-        public JdbcSettings setFetchSize(final int fetchSize) {
-            assertNotFrozen();
-
-            this.fetchSize = fetchSize;
-
-            return this;
-        }
-
-        /**
-         * Gets the fetch direction.
-         *
-         * @return
-         */
-        public int getFetchDirection() {
-            return fetchDirection;
-        }
-
-        /**
-         * Sets the fetch direction.
-         *
-         * @param fetchDirection
-         * @return
-         */
-        public JdbcSettings setFetchDirection(final int fetchDirection) {
-            assertNotFrozen();
-
-            this.fetchDirection = fetchDirection;
-
-            return this;
-        }
-
-        /**
-         * Gets the result set type.
-         *
-         * @return
-         */
-        public int getResultSetType() {
-            return resultSetType;
-        }
-
-        /**
-         * Sets the result set type.
-         *
-         * @param resultSetType
-         * @return
-         */
-        public JdbcSettings setResultSetType(final int resultSetType) {
-            assertNotFrozen();
-
-            this.resultSetType = resultSetType;
-
-            return this;
-        }
-
-        /**
-         * Gets the result set concurrency.
-         *
-         * @return
-         */
-        public int getResultSetConcurrency() {
-            return resultSetConcurrency;
-        }
-
-        /**
-         * Sets the result set concurrency.
-         *
-         * @param resultSetConcurrency
-         * @return
-         */
-        public JdbcSettings setResultSetConcurrency(final int resultSetConcurrency) {
-            assertNotFrozen();
-
-            this.resultSetConcurrency = resultSetConcurrency;
-
-            return this;
-        }
-
-        /**
-         * Gets the result set holdability.
-         *
-         * @return
-         */
-        public int getResultSetHoldability() {
-            return resultSetHoldability;
-        }
-
-        /**
-         * Sets the result set holdability.
-         *
-         * @param resultSetHoldability
-         * @return
-         */
-        public JdbcSettings setResultSetHoldability(final int resultSetHoldability) {
-            assertNotFrozen();
-
-            this.resultSetHoldability = resultSetHoldability;
-
-            return this;
-        }
-
-        /**
-         * Gets the offset.
-         *
-         * @return
-         */
-        public int getOffset() {
-            return offset;
-        }
-
-        /**
-         * Sets the offset.
-         *
-         * @param offset
-         * @return
-         */
-        public JdbcSettings setOffset(final int offset) {
-            assertNotFrozen();
-
-            this.offset = offset;
-
-            return this;
-        }
-
-        /**
-         * Gets the count.
-         *
-         * @return
-         */
-        public int getCount() {
-            return count;
-        }
-
-        /**
-         * Sets the count.
-         *
-         * @param count
-         * @return
-         */
-        public JdbcSettings setCount(final int count) {
-            assertNotFrozen();
-
-            this.count = count;
-
-            return this;
-        }
-
-        /**
-         * Gets the query with data source.
-         *
-         * @return
-         */
-        public String getQueryWithDataSource() {
-            return queryWithDataSource;
-        }
-
-        /**
-         * Sets the query with data source.
-         *
-         * @param queryWithDataSource
-         * @return
-         */
-        public JdbcSettings setQueryWithDataSource(final String queryWithDataSource) {
-            assertNotFrozen();
-
-            this.queryWithDataSource = queryWithDataSource;
-
-            return this;
-        }
-
-        /**
-         * Gets the query with data sources.
-         *
-         * @return
-         */
-        public Collection<String> getQueryWithDataSources() {
-            return queryWithDataSources;
-        }
-
-        /**
-         * Sets the query with data sources.
-         *
-         * @param queryWithDataSources
-         * @return
-         */
-        public JdbcSettings setQueryWithDataSources(final Collection<String> queryWithDataSources) {
-            assertNotFrozen();
-
-            this.queryWithDataSources = queryWithDataSources;
-
-            return this;
-        }
-
-        /**
-         * Checks if is query in parallel.
-         *
-         * @return true, if is query in parallel
-         */
-        public boolean isQueryInParallel() {
-            return queryInParallel;
-        }
-
-        /**
-         * Sets the query in parallel.
-         *
-         * @param queryInParallel
-         * @return
-         */
-        public JdbcSettings setQueryInParallel(final boolean queryInParallel) {
-            assertNotFrozen();
-
-            this.queryInParallel = queryInParallel;
-
-            return this;
-        }
-
-        /**
-         * Gets the isolation level.
-         *
-         * @return
-         */
-        public IsolationLevel getIsolationLevel() {
-            return isolationLevel;
-        }
-
-        /**
-         * Sets the isolation level.
-         *
-         * @param isolationLevel
-         * @return
-         */
-        public JdbcSettings setIsolationLevel(IsolationLevel isolationLevel) {
-            assertNotFrozen();
-
-            this.isolationLevel = isolationLevel;
-
-            return this;
-        }
-
-        /**
-         * Stream transaction independent.
-         *
-         * @return true, if successful
-         */
-        boolean noTransactionForStream() {
-            return noTransactionForStream;
-        }
-
-        /**
-         * {@code noTransactionForStream = true} means the query executed by {@code stream/streamAll(...)} methods won't be in any transaction(using connection started by transaction), even the {@code stream/streamAll(...)} methods are invoked inside of a transaction block.
-         *
-         * @param noTransactionForStream
-         * @return
-         */
-        JdbcSettings setNoTransactionForStream(final boolean noTransactionForStream) {
-            assertNotFrozen();
-
-            this.noTransactionForStream = noTransactionForStream;
-
-            return this;
-        }
-
-        /**
-         * Freeze.
-         */
-        void freeze() {
-            fozen = true;
-        }
-
-        /**
-         * Assert not frozen.
-         */
-        void assertNotFrozen() {
-            if (fozen) {
-                throw new AbacusException("It's finalized. No change is allowed");
-            }
-        }
-
-        /**
-         *
-         * @return
-         */
-        @Override
-        public int hashCode() {
-            final int prime = 31;
-            int result = 1;
-            result = (prime * result) + (logSQL ? 1231 : 1237);
-            result = (prime * result) + (logSQLWithParameters ? 1231 : 1237);
-            result = (prime * result) + batchSize;
-            result = (prime * result) + queryTimeout;
-            result = (prime * result) + (autoGeneratedKeys ? 1231 : 1237);
-            result = (prime * result) + Arrays.hashCode(returnedColumnIndexes);
-            result = (prime * result) + Arrays.hashCode(returnedColumnNames);
-            result = (prime * result) + maxRows;
-            result = (prime * result) + maxFieldSize;
-            result = (prime * result) + fetchSize;
-            result = (prime * result) + fetchDirection;
-            result = (prime * result) + resultSetType;
-            result = (prime * result) + resultSetConcurrency;
-            result = (prime * result) + resultSetHoldability;
-            result = (prime * result) + offset;
-            result = (prime * result) + count;
-            result = (prime * result) + ((queryWithDataSource == null) ? 0 : queryWithDataSource.hashCode());
-            result = (prime * result) + ((queryWithDataSources == null) ? 0 : queryWithDataSources.hashCode());
-            result = (prime * result) + (queryInParallel ? 1231 : 1237);
-            result = (prime * result) + ((isolationLevel == null) ? 0 : isolationLevel.hashCode());
-            result = (prime * result) + (noTransactionForStream ? 1231 : 1237);
-
-            return result;
-        }
-
-        /**
-         *
-         * @param obj
-         * @return true, if successful
-         */
-        @Override
-        public boolean equals(final Object obj) {
-            if (this == obj) {
-                return true;
-            }
-
-            if (obj instanceof JdbcSettings) {
-                JdbcSettings other = (JdbcSettings) obj;
-
-                return N.equals(logSQL, other.logSQL) && N.equals(logSQLWithParameters, other.logSQLWithParameters) && N.equals(batchSize, other.batchSize)
-                        && N.equals(queryTimeout, other.queryTimeout) && N.equals(autoGeneratedKeys, other.autoGeneratedKeys)
-                        && N.equals(returnedColumnIndexes, other.returnedColumnIndexes) && N.equals(returnedColumnNames, other.returnedColumnNames)
-                        && N.equals(maxRows, other.maxRows) && N.equals(maxFieldSize, other.maxFieldSize) && N.equals(fetchSize, other.fetchSize)
-                        && N.equals(fetchDirection, other.fetchDirection) && N.equals(resultSetType, other.resultSetType)
-                        && N.equals(resultSetConcurrency, other.resultSetConcurrency) && N.equals(resultSetHoldability, other.resultSetHoldability)
-                        && N.equals(offset, other.offset) && N.equals(count, other.count) && N.equals(queryWithDataSource, other.queryWithDataSource)
-                        && N.equals(queryWithDataSources, other.queryWithDataSources) && N.equals(queryInParallel, other.queryInParallel)
-                        && N.equals(isolationLevel, other.isolationLevel) && N.equals(noTransactionForStream, other.noTransactionForStream);
-            }
-
-            return false;
-        }
-
-        /**
-         *
-         * @return
-         */
-        @Override
-        public String toString() {
-            return "{logSQL=" + logSQL + ", logSQLWithParameters=" + logSQLWithParameters + ", batchSize=" + batchSize + ", queryTimeout=" + queryTimeout
-                    + ", autoGeneratedKeys=" + autoGeneratedKeys + ", returnedColumnIndexes=" + N.toString(returnedColumnIndexes) + ", returnedColumnNames="
-                    + N.toString(returnedColumnNames) + ", maxRows=" + maxRows + ", maxFieldSize=" + maxFieldSize + ", fetchSize=" + fetchSize
-                    + ", fetchDirection=" + fetchDirection + ", resultSetType=" + resultSetType + ", resultSetConcurrency=" + resultSetConcurrency
-                    + ", resultSetHoldability=" + resultSetHoldability + ", offset=" + offset + ", count=" + count + ", queryWithDataSource="
-                    + queryWithDataSource + ", queryWithDataSources=" + queryWithDataSources + ", queryInParallel=" + queryInParallel + ", isolationLevel="
-                    + isolationLevel + ", noTransactionForStream=" + noTransactionForStream + "}";
-        }
     }
 }

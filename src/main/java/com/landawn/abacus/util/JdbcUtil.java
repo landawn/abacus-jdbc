@@ -28,7 +28,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.io.Reader;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
@@ -54,7 +53,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLType;
 import java.sql.Statement;
 import java.sql.Time;
@@ -83,15 +81,11 @@ import org.xml.sax.SAXException;
 import com.landawn.abacus.DataSet;
 import com.landawn.abacus.DataSource;
 import com.landawn.abacus.DataSourceManager;
-import com.landawn.abacus.DataSourceSelector;
 import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.EntityId;
 import com.landawn.abacus.IsolationLevel;
-import com.landawn.abacus.SliceSelector;
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.Internal;
-import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.core.DirtyMarkerUtil;
@@ -99,10 +93,8 @@ import com.landawn.abacus.core.RowDataSet;
 import com.landawn.abacus.core.Seid;
 import com.landawn.abacus.dataSource.DataSourceConfiguration;
 import com.landawn.abacus.dataSource.DataSourceManagerConfiguration;
-import com.landawn.abacus.dataSource.NonSliceSelector;
 import com.landawn.abacus.dataSource.SQLDataSource;
 import com.landawn.abacus.dataSource.SQLDataSourceManager;
-import com.landawn.abacus.dataSource.SimpleSourceSelector;
 import com.landawn.abacus.exception.AbacusException;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.ParseException;
@@ -126,7 +118,6 @@ import com.landawn.abacus.util.SQLBuilder.PAC;
 import com.landawn.abacus.util.SQLBuilder.PLC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
-import com.landawn.abacus.util.SQLExecutor.JdbcSettings;
 import com.landawn.abacus.util.SQLExecutor.StatementSetter;
 import com.landawn.abacus.util.SQLTransaction.CreatedBy;
 import com.landawn.abacus.util.StringUtil.Strings;
@@ -15521,7 +15512,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
-            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entity.getClass());
 
             for (String joinEntityPropName : joinEntityPropNames) {
@@ -15554,7 +15545,7 @@ public final class JdbcUtil {
             }
 
             final Class<?> entityClass = N.firstOrNullIfEmpty(entities).getClass();
-            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entityClass);
 
             for (String joinEntityPropName : joinEntityPropNames) {
@@ -15708,7 +15699,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default void loadAllJoinEntities(T entity) throws SQLException {
-            loadJoinEntities(entity, JdbcUtil.getJoinEntityPropMap(entity.getClass()).keySet());
+            loadJoinEntities(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet());
         }
 
         /**
@@ -15732,7 +15723,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default void loadAllJoinEntities(final T entity, final Executor executor) throws SQLException {
-            loadJoinEntities(entity, JdbcUtil.getJoinEntityPropMap(entity.getClass()).keySet(), executor);
+            loadJoinEntities(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet(), executor);
         }
 
         /**
@@ -15745,7 +15736,7 @@ public final class JdbcUtil {
                 return;
             }
 
-            loadJoinEntities(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet());
+            loadJoinEntities(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet());
         }
 
         /**
@@ -15773,7 +15764,7 @@ public final class JdbcUtil {
                 return;
             }
 
-            loadJoinEntities(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
+            loadJoinEntities(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
         }
 
         /**
@@ -15794,7 +15785,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
-            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entity.getClass());
 
             for (String joinEntityPropName : joinEntityPropNames) {
@@ -15827,7 +15818,7 @@ public final class JdbcUtil {
             }
 
             final Class<?> entityClass = N.firstOrNullIfEmpty(entities).getClass();
-            final List<String> joinEntityPropNames = JdbcUtil.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entityClass);
 
             if (joinEntityPropNames.size() == 1) {
@@ -16004,7 +15995,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default void loadJoinEntitiesIfNull(T entity) throws SQLException {
-            loadJoinEntitiesIfNull(entity, JdbcUtil.getJoinEntityPropMap(entity.getClass()).keySet());
+            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet());
         }
 
         /**
@@ -16028,7 +16019,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws SQLException {
-            loadJoinEntitiesIfNull(entity, JdbcUtil.getJoinEntityPropMap(entity.getClass()).keySet(), executor);
+            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet(), executor);
         }
 
         /**
@@ -16041,7 +16032,7 @@ public final class JdbcUtil {
                 return;
             }
 
-            loadJoinEntitiesIfNull(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet());
+            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet());
         }
 
         /**
@@ -16069,7 +16060,7 @@ public final class JdbcUtil {
                 return;
             }
 
-            loadJoinEntitiesIfNull(entities, JdbcUtil.getJoinEntityPropMap(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
+            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
         }
 
         /**
@@ -17219,10 +17210,11 @@ public final class JdbcUtil {
                         call = (proxy, args) -> {
                             final String joinEntityPropName = (String) args[1];
                             final PropInfo propInfo = entityInfo.getPropInfo(joinEntityPropName);
-                            final Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = JdbcUtil
-                                    .getSQLForJoinEntityProp(entityClass, joinEntityPropName, sbc);
+                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(entityClass, joinEntityPropName);
+                            final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.sqlBuilderMap
+                                    .get(sbc);
 
-                            final PreparedQuery preparedQuery = proxy.prepareQuery(tp._2.apply((Collection<String>) args[2])).setParameters(args[0], tp._3);
+                            final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply((Collection<String>) args[2])).setParameters(args[0], tp._2);
 
                             if (propInfo.type.isCollection()) {
                                 final Collection<Object> c = (Collection) N.newInstance(propInfo.clazz);
@@ -17251,12 +17243,13 @@ public final class JdbcUtil {
 
                             final String joinEntityPropName = (String) args[1];
                             final PropInfo propInfo = entityInfo.getPropInfo(joinEntityPropName);
-                            final Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = JdbcUtil
-                                    .getSQLForJoinEntityProp(entityClass, joinEntityPropName, sbc);
+                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(entityClass, joinEntityPropName);
+                            final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.sqlBuilderMap
+                                    .get(sbc);
 
-                            try (final PreparedQuery preparedQuery = proxy.prepareQuery(tp._2.apply((Collection<String>) args[2])).closeAfterExecution(false)) {
+                            try (final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply((Collection<String>) args[2])).closeAfterExecution(false)) {
                                 for (Object entity : entities) {
-                                    preparedQuery.setParameters(entity, tp._3);
+                                    preparedQuery.setParameters(entity, tp._2);
 
                                     if (propInfo.type.isCollection()) {
                                         final Collection<Object> c = (Collection) N.newInstance(propInfo.clazz);
@@ -18535,543 +18528,6 @@ public final class JdbcUtil {
             return !(method.getName().startsWith("get") || method.getName().startsWith("findFirst") || method.getName().startsWith("findOne"));
         } else {
             return false;
-        }
-    }
-
-    private final static Map<Class<?>, Map<Class<?>, List<String>>> joinEntityPropNamesByTypePool = new ConcurrentHashMap<>();
-
-    static List<String> getJoinEntityPropNamesByType(final Class<?> entityClass, final Class<?> joinPropEntityClass) {
-        Map<Class<?>, List<String>> joinEntityPropNamesByTypeMap = joinEntityPropNamesByTypePool.get(entityClass);
-
-        if (joinEntityPropNamesByTypeMap == null) {
-            joinEntityPropNamesByTypeMap = new HashMap<>();
-
-            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
-            List<String> joinPropNames = null;
-            Class<?> concretePropTypeClass;
-
-            for (PropInfo propInfo : entityInfo.propInfoList) {
-                if (!propInfo.isAnnotationPresent(JoinedBy.class)) {
-                    continue;
-                }
-
-                concretePropTypeClass = (propInfo.type.isCollection() ? propInfo.type.getElementType() : propInfo.type).clazz();
-                joinPropNames = joinEntityPropNamesByTypeMap.get(concretePropTypeClass);
-
-                if (joinPropNames == null) {
-                    joinPropNames = new ArrayList<>(1);
-                    joinEntityPropNamesByTypeMap.put(concretePropTypeClass, joinPropNames);
-
-                }
-
-                joinPropNames.add(propInfo.name);
-
-            }
-
-            joinEntityPropNamesByTypePool.put(entityClass, joinEntityPropNamesByTypeMap);
-        }
-
-        return joinEntityPropNamesByTypeMap.get(joinPropEntityClass);
-    }
-
-    private final static Map<Class<?>, Map<String, Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>>>> joinEntityPropSQLPool = new ConcurrentHashMap<>();
-
-    static Map<String, Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>>> getJoinEntityPropMap(
-            final Class<?> entityClass) {
-
-        Map<String, Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>>> joinEntityPropSQLMap = joinEntityPropSQLPool
-                .get(entityClass);
-
-        if (joinEntityPropSQLMap == null) {
-            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
-            joinEntityPropSQLMap = new HashMap<>();
-
-            for (PropInfo propInfo : entityInfo.propInfoList) {
-                if (!propInfo.isAnnotationPresent(JoinedBy.class)) {
-                    continue;
-                }
-
-                final Type<?> referencedEntityType = propInfo.type.isCollection() ? propInfo.type.getElementType() : propInfo.type;
-
-                if (!referencedEntityType.isEntity() || propInfo.isAnnotationPresent(Column.class)) {
-                    throw new IllegalArgumentException(
-                            "Property '" + propInfo.name + "' in class: " + entityClass + " is not an entity type or annotated by @Column");
-                }
-
-                final String joinByVal = propInfo.getAnnotation(JoinedBy.class).value();
-
-                if (N.isNullOrEmpty(joinByVal)) {
-                    throw new IllegalArgumentException(
-                            "Invalid value: " + joinByVal + " for annotation @JoinBy on property '" + propInfo.name + "' in class: " + entityClass);
-                }
-
-                final Class<?> referencedEntityClass = referencedEntityType.clazz();
-                final EntityInfo referencedEntityInfo = ParserUtil.getEntityInfo(referencedEntityClass);
-                final String[] joinColumnPairs = StringUtil.split(joinByVal, ',', true);
-                final PropInfo[] joinPropInfos = new PropInfo[joinColumnPairs.length];
-                final List<Condition> conds = new ArrayList<>(joinColumnPairs.length);
-                PropInfo referencedPropInfo = null;
-
-                for (int i = 0, len = joinColumnPairs.length; i < len; i++) {
-                    final String[] tmp = StringUtil.split(joinColumnPairs[i], '=', true);
-
-                    if (tmp.length > 2) {
-                        throw new IllegalArgumentException(
-                                "Invalid value: " + joinByVal + " for annotation @JoinBy on property '" + propInfo.name + "' in class: " + entityClass);
-                    }
-
-                    if ((joinPropInfos[i] = entityInfo.getPropInfo(tmp[0])) == null) {
-                        throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinBy on property '" + propInfo.name
-                                + "' in class: " + entityClass + ". No property found with name: '" + tmp[0] + "' in the class: " + entityClass);
-                    }
-
-                    if ((referencedPropInfo = referencedEntityInfo.getPropInfo(tmp.length == 1 ? tmp[0] : tmp[1])) == null) {
-                        throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinBy on property '" + propInfo.name
-                                + "' in class: " + entityClass + ". No referenced property found with name: '" + (tmp.length == 1 ? tmp[0] : tmp[1])
-                                + "' in the class: " + referencedEntityClass);
-                    }
-
-                    conds.add(CF.eq(referencedPropInfo.name));
-                }
-
-                final Condition cond = joinColumnPairs.length == 1 ? conds.get(0) : CF.and(conds);
-
-                final BiParametersSetter<PreparedStatement, Object> paramSetter = joinPropInfos.length == 1
-                        ? (stmt, entityParam) -> joinPropInfos[0].dbType.set(stmt, 1, joinPropInfos[0].getPropValue(entityParam))
-                        : (stmt, entityParam) -> {
-                            for (int i = 0, len = joinPropInfos.length; i < len; i++) {
-                                joinPropInfos[i].dbType.set(stmt, i + 1, joinPropInfos[i].getPropValue(entityParam));
-                            }
-                        };
-
-                final Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>> sqlBuilderMap = new HashMap<>();
-
-                {
-                    final String sql = PSC.selectFrom(referencedEntityClass).where(cond).sql();
-
-                    sqlBuilderMap.put(PSC.class, Tuple.of(joinPropInfos, selectPropNames -> {
-                        if (N.isNullOrEmpty(selectPropNames)) {
-                            return sql;
-                        } else {
-                            return PSC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
-                        }
-                    }, paramSetter));
-                }
-
-                {
-                    final String sql = PAC.selectFrom(referencedEntityClass).where(cond).sql();
-
-                    sqlBuilderMap.put(PAC.class, Tuple.of(joinPropInfos, selectPropNames -> {
-                        if (N.isNullOrEmpty(selectPropNames)) {
-                            return sql;
-                        } else {
-                            return PAC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
-                        }
-                    }, paramSetter));
-                }
-
-                {
-                    final String sql = PLC.selectFrom(referencedEntityClass).where(cond).sql();
-
-                    sqlBuilderMap.put(PLC.class, Tuple.of(joinPropInfos, selectPropNames -> {
-                        if (N.isNullOrEmpty(selectPropNames)) {
-                            return sql;
-                        } else {
-                            return PLC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
-                        }
-                    }, paramSetter));
-                }
-
-                joinEntityPropSQLMap.put(propInfo.name, sqlBuilderMap);
-            }
-
-            joinEntityPropSQLPool.put(entityClass, joinEntityPropSQLMap);
-        }
-
-        return joinEntityPropSQLMap;
-    }
-
-    static Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> getSQLForJoinEntityProp(
-            final Class<?> entityClass, final String joinEntityPropName, final Class<? extends SQLBuilder> sqlBuilderClass) {
-
-        final Map<String, Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>>> joinEntityPropSQLMap = getJoinEntityPropMap(
-                entityClass);
-
-        final PropInfo joinEntityPropInfo = ParserUtil.getEntityInfo(entityClass).getPropInfo(joinEntityPropName);
-
-        if (joinEntityPropInfo == null) {
-            throw new IllegalArgumentException("No property found with name '" + joinEntityPropName + "' in class: " + entityClass);
-        }
-
-        final Map<Class<? extends SQLBuilder>, Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>> sqlBuilderMap = joinEntityPropSQLMap
-                .get(joinEntityPropInfo.name);
-
-        if (sqlBuilderMap == null) {
-            throw new IllegalArgumentException("'" + joinEntityPropName + "' is not join entity property annotated by @JoinBy in class: " + entityClass);
-
-        }
-
-        final Tuple3<PropInfo[], Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = sqlBuilderMap.get(sqlBuilderClass);
-
-        if (tp == null) {
-            throw new IllegalArgumentException("Not supported SQLBuilder type/class: " + sqlBuilderClass);
-
-        }
-
-        return tp;
-    }
-
-    /**
-     * The Class SimpleDataSource.
-     */
-    static class SimpleDataSource implements DataSource {
-
-        /** The Constant PRIMARY. */
-        static final String PRIMARY = "primary";
-
-        /** The sql data source. */
-        private final javax.sql.DataSource sqlDataSource;
-
-        /** The props. */
-        private final Properties<String, String> props = new Properties<>();
-
-        /** The slice selector. */
-        private final SliceSelector sliceSelector = new NonSliceSelector();
-
-        /** The close method. */
-        private final Method closeMethod;
-
-        /** The is closed. */
-        private boolean isClosed = false;
-
-        /**
-         * Instantiates a new simple data source.
-         *
-         * @param sqlDataSource
-         */
-        public SimpleDataSource(final javax.sql.DataSource sqlDataSource) {
-            this.sqlDataSource = sqlDataSource;
-
-            Method method = null;
-
-            try {
-                method = ClassUtil.getDeclaredMethod(sqlDataSource.getClass(), "close");
-            } catch (Exception e) {
-
-            }
-
-            closeMethod = method != null && Modifier.isPublic(method.getModifiers()) ? method : null;
-        }
-
-        /**
-         * Gets the connection.
-         *
-         * @param username
-         * @param password
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        @Override
-        public Connection getConnection(final String username, final String password) throws SQLException {
-            return sqlDataSource.getConnection(username, password);
-        }
-
-        /**
-         * Gets the log writer.
-         *
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        @Override
-        public PrintWriter getLogWriter() throws SQLException {
-            return sqlDataSource.getLogWriter();
-        }
-
-        /**
-         * Sets the log writer.
-         *
-         * @param out the new log writer
-         * @throws SQLException the SQL exception
-         */
-        @Override
-        public void setLogWriter(final PrintWriter out) throws SQLException {
-            sqlDataSource.setLogWriter(out);
-        }
-
-        /**
-         * Sets the login timeout.
-         *
-         * @param seconds the new login timeout
-         * @throws SQLException the SQL exception
-         */
-        @Override
-        public void setLoginTimeout(final int seconds) throws SQLException {
-            sqlDataSource.setLoginTimeout(seconds);
-        }
-
-        /**
-         * Gets the login timeout.
-         *
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        @Override
-        public int getLoginTimeout() throws SQLException {
-            return sqlDataSource.getLoginTimeout();
-        }
-
-        /**
-         * Gets the parent logger.
-         *
-         * @return
-         * @throws SQLFeatureNotSupportedException the SQL feature not supported exception
-         */
-        @Override
-        public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
-            return sqlDataSource.getParentLogger();
-        }
-
-        /**
-         *
-         * @param <T>
-         * @param iface
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        @Override
-        public <T> T unwrap(final Class<T> iface) throws SQLException {
-            return sqlDataSource.unwrap(iface);
-        }
-
-        /**
-         * Checks if is wrapper for.
-         *
-         * @param iface
-         * @return true, if is wrapper for
-         * @throws SQLException the SQL exception
-         */
-        @Override
-        public boolean isWrapperFor(final Class<?> iface) throws SQLException {
-            return sqlDataSource.isWrapperFor(iface);
-        }
-
-        /**
-         * Gets the connection.
-         *
-         * @return
-         */
-        @Override
-        public Connection getConnection() {
-            try {
-                return sqlDataSource.getConnection();
-            } catch (SQLException e) {
-                throw new UncheckedSQLException(e);
-            }
-        }
-
-        /**
-         * Gets the read only connection.
-         *
-         * @return
-         */
-        @Override
-        public Connection getReadOnlyConnection() {
-            try {
-                return sqlDataSource.getConnection();
-            } catch (SQLException e) {
-                throw new UncheckedSQLException(e);
-            }
-        }
-
-        /**
-         * Gets the slice selector.
-         *
-         * @return
-         */
-        @Override
-        public SliceSelector getSliceSelector() {
-            return sliceSelector;
-        }
-
-        /**
-         * Gets the name.
-         *
-         * @return
-         */
-        @Override
-        public String getName() {
-            return PRIMARY;
-        }
-
-        /**
-         * Gets the properties.
-         *
-         * @return
-         */
-        @Override
-        public Properties<String, String> getProperties() {
-            return props;
-        }
-
-        /**
-         * Gets the max active.
-         *
-         * @return
-         */
-        @Override
-        public int getMaxActive() {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         * Gets the current active.
-         *
-         * @return
-         */
-        @Override
-        public int getCurrentActive() {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         * Close.
-         */
-        @Override
-        public void close() {
-            if (isClosed) {
-                return;
-            }
-
-            if (closeMethod != null) {
-                try {
-                    ClassUtil.invokeMethod(sqlDataSource, closeMethod);
-                } catch (Exception e) {
-                    // ignore.
-                }
-            }
-
-            isClosed = true;
-        }
-
-        /**
-         * Checks if is closed.
-         *
-         * @return true, if is closed
-         */
-        @Override
-        public boolean isClosed() {
-            return isClosed;
-        }
-    }
-
-    /**
-     * The Class SimpleDataSourceManager.
-     */
-    static class SimpleDataSourceManager implements DataSourceManager {
-
-        /** The primary data source. */
-        private final DataSource primaryDataSource;
-
-        /** The active data sources. */
-        private final Map<String, DataSource> activeDataSources;
-
-        /** The props. */
-        private final Properties<String, String> props = new Properties<>();
-
-        /** The data source selector. */
-        private final DataSourceSelector dataSourceSelector = new SimpleSourceSelector();
-
-        /** The is closed. */
-        private boolean isClosed = false;
-
-        /**
-         * Instantiates a new simple data source manager.
-         *
-         * @param ds
-         */
-        public SimpleDataSourceManager(final DataSource ds) {
-            this.primaryDataSource = ds;
-
-            if (N.isNullOrEmpty(ds.getName())) {
-                this.activeDataSources = N.asMap(SimpleDataSource.PRIMARY, ds);
-            } else {
-                this.activeDataSources = N.asMap(ds.getName(), ds);
-            }
-        }
-
-        /**
-         * Gets the primary data source.
-         *
-         * @return
-         */
-        @Override
-        public DataSource getPrimaryDataSource() {
-            return primaryDataSource;
-        }
-
-        /**
-         * Gets the active data source.
-         *
-         * @param dataSourceName
-         * @return
-         */
-        @Override
-        public DataSource getActiveDataSource(String dataSourceName) {
-            return activeDataSources.get(dataSourceName);
-        }
-
-        /**
-         * Gets the active data sources.
-         *
-         * @return
-         */
-        @Override
-        public Map<String, DataSource> getActiveDataSources() {
-            return activeDataSources;
-        }
-
-        /**
-         * Gets the data source selector.
-         *
-         * @return
-         */
-        @Override
-        public DataSourceSelector getDataSourceSelector() {
-            return dataSourceSelector;
-        }
-
-        /**
-         * Gets the properties.
-         *
-         * @return
-         */
-        @Override
-        public Properties<String, String> getProperties() {
-            return props;
-        }
-
-        /**
-         * Close.
-         */
-        @Override
-        public void close() {
-            if (isClosed) {
-                return;
-            }
-
-            primaryDataSource.close();
-
-            isClosed = true;
-        }
-
-        /**
-         * Checks if is closed.
-         *
-         * @return true, if is closed
-         */
-        @Override
-        public boolean isClosed() {
-            return isClosed;
         }
     }
 }

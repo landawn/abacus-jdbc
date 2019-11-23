@@ -10,10 +10,10 @@ import org.junit.Test;
 
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.util.JdbcSettings;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
-import com.landawn.abacus.util.SQLExecutor.JdbcSettings;
 
 /**
  * All I want to do is: insert -> read -> update -> delete a record in DB table.
