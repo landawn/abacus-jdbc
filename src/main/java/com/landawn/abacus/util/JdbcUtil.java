@@ -17217,9 +17217,15 @@ public final class JdbcUtil {
                             final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
 
                             if (propJoinInfo.joinPropInfo.type.isCollection()) {
-                                final Collection<Object> c = (Collection) N.newInstance(propJoinInfo.joinPropInfo.clazz);
-                                c.addAll(preparedQuery.list(propJoinInfo.referencedEntityClass));
-                                propJoinInfo.joinPropInfo.setPropValue(entity, c);
+                                final List<?> propEntities = preparedQuery.list(propJoinInfo.referencedEntityClass);
+
+                                if (propJoinInfo.joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
+                                    propJoinInfo.joinPropInfo.setPropValue(entity, propEntities);
+                                } else {
+                                    final Collection<Object> c = (Collection) N.newInstance(propJoinInfo.joinPropInfo.clazz);
+                                    c.addAll(propEntities);
+                                    propJoinInfo.joinPropInfo.setPropValue(entity, c);
+                                }
                             } else {
                                 propJoinInfo.joinPropInfo.setPropValue(entity, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orNull());
                             }
@@ -17248,9 +17254,15 @@ public final class JdbcUtil {
                                 final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
 
                                 if (propJoinInfo.joinPropInfo.type.isCollection()) {
-                                    final Collection<Object> c = (Collection) N.newInstance(propJoinInfo.joinPropInfo.clazz);
-                                    c.addAll(preparedQuery.list(propJoinInfo.referencedEntityClass));
-                                    propJoinInfo.joinPropInfo.setPropValue(entity, c);
+                                    final List<?> propEntities = preparedQuery.list(propJoinInfo.referencedEntityClass);
+
+                                    if (propJoinInfo.joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
+                                        propJoinInfo.joinPropInfo.setPropValue(entity, propEntities);
+                                    } else {
+                                        final Collection<Object> c = (Collection) N.newInstance(propJoinInfo.joinPropInfo.clazz);
+                                        c.addAll(propEntities);
+                                        propJoinInfo.joinPropInfo.setPropValue(entity, c);
+                                    }
                                 } else {
                                     propJoinInfo.joinPropInfo.setPropValue(entity, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orNull());
                                 }

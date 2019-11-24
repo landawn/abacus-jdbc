@@ -108,11 +108,14 @@ final class JoinInfo {
 
         final BiParametersSetter<PreparedStatement, Object> paramSetter = srcPropInfos.length == 1
                 ? (stmt, entityParam) -> srcPropInfos[0].dbType.set(stmt, 1, srcPropInfos[0].getPropValue(entityParam))
-                : (stmt, entityParam) -> {
+                : (srcPropInfos.length == 2 ? (stmt, entityParam) -> {
+                    srcPropInfos[0].dbType.set(stmt, 1, srcPropInfos[0].getPropValue(entityParam));
+                    srcPropInfos[1].dbType.set(stmt, 2, srcPropInfos[1].getPropValue(entityParam));
+                } : (stmt, entityParam) -> {
                     for (int i = 0, len = srcPropInfos.length; i < len; i++) {
                         srcPropInfos[i].dbType.set(stmt, i + 1, srcPropInfos[i].getPropValue(entityParam));
                     }
-                };
+                });
 
         final BiParametersSetter<PreparedStatement, Collection<?>> paramSetter2 = srcPropInfos.length == 1 ? (stmt, entities) -> {
             int index = 1;

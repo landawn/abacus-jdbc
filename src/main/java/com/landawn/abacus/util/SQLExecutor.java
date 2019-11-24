@@ -8886,8 +8886,8 @@ public class SQLExecutor {
          * @param selectPropNames
          */
         public void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) {
-            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
-            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entity.getClass());
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(targetClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetClass);
 
             for (String joinEntityPropName : joinEntityPropNames) {
                 loadJoinEntities(entity, joinEntityPropName, selectPropNames);
@@ -8914,9 +8914,8 @@ public class SQLExecutor {
                 return;
             }
 
-            final Class<?> entityClass = N.firstOrNullIfEmpty(entities).getClass();
-            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
-            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entityClass);
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(targetClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetClass);
 
             for (String joinEntityPropName : joinEntityPropNames) {
                 loadJoinEntities(entities, joinEntityPropName, selectPropNames);
@@ -8948,9 +8947,15 @@ public class SQLExecutor {
             Object propValue = null;
 
             if (propJoinInfo.joinPropInfo.type.isCollection()) {
-                final Collection<Object> c = (Collection<Object>) N.newInstance(propJoinInfo.joinPropInfo.clazz);
-                c.addAll(sqlExecutor.list(propJoinInfo.referencedEntityClass, sql, statementSetter));
-                propValue = c;
+                final List<?> propEntities = sqlExecutor.list(propJoinInfo.referencedEntityClass, sql, statementSetter);
+
+                if (propJoinInfo.joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
+                    propValue = propEntities;
+                } else {
+                    final Collection<Object> c = (Collection<Object>) N.newInstance(propJoinInfo.joinPropInfo.clazz);
+                    c.addAll(propEntities);
+                    propValue = c;
+                }
             } else {
                 propValue = sqlExecutor.findFirst(propJoinInfo.referencedEntityClass, sql, statementSetter).orNull();
             }
@@ -8989,7 +8994,7 @@ public class SQLExecutor {
 
                 final String sql = tp._1.apply(selectPropNames, entities.size());
                 final StatementSetter statementSetter = (namedSQL, stmt, parameters) -> tp._2.accept(stmt, entities);
-                final List<?> joinPropEntities = sqlExecutor.list(propJoinInfo.referencedEntityClass, sql, statementSetter, entities);
+                final List<?> joinPropEntities = sqlExecutor.list(propJoinInfo.referencedEntityClass, sql, statementSetter);
                 propJoinInfo.setJoinPropEntities(entities, joinPropEntities);
             }
         }
