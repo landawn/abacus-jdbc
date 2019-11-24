@@ -9,10 +9,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
+import com.landawn.abacus.core.DirtyMarkerUtil;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -22,7 +24,9 @@ import com.landawn.abacus.util.SQLBuilder.PAC;
 import com.landawn.abacus.util.SQLBuilder.PLC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.Tuple.Tuple2;
+import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Function;
+import com.landawn.abacus.util.stream.Stream;
 
 final class JoinInfo {
     final Class<?> entityClass;
@@ -33,8 +37,12 @@ final class JoinInfo {
     final Type<?> referencedEntityType;
     final Class<?> referencedEntityClass;
     final EntityInfo referencedEntityInfo;
+    final Function<Object, Object> srcEntityKeyExtractor;
+    final Function<Object, Object> referencedEntityKeyExtractor;
 
-    final Map<Class<? extends SQLBuilder>, Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>> sqlBuilderMap = new HashMap<>();
+    private final Map<Class<? extends SQLBuilder>, Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>> sqlBuilderSetterForSingleEntityMap = new HashMap<>();
+
+    private final Map<Class<? extends SQLBuilder>, Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>>> sqlBuilderSetterForEntitiesMap = new HashMap<>();
 
     JoinInfo(final Class<?> entityClass, final String joinEntityPropName) {
         this.entityClass = entityClass;
@@ -106,46 +114,219 @@ final class JoinInfo {
                     }
                 };
 
+        final BiParametersSetter<PreparedStatement, Collection<?>> paramSetter2 = srcPropInfos.length == 1 ? (stmt, entities) -> {
+            int index = 1;
+
+            for (Object entity : entities) {
+                srcPropInfos[0].dbType.set(stmt, index++, srcPropInfos[0].getPropValue(entity));
+            }
+        } : (stmt, entities) -> {
+            int index = 1;
+
+            for (Object entity : entities) {
+                for (int i = 0, len = srcPropInfos.length; i < len; i++) {
+                    srcPropInfos[i].dbType.set(stmt, index++, srcPropInfos[i].getPropValue(entity));
+                }
+            }
+        };
+
         {
             final String sql = PSC.selectFrom(referencedEntityClass).where(cond).sql();
 
-            sqlBuilderMap.put(PSC.class, Tuple.of(selectPropNames -> {
+            final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
                 if (N.isNullOrEmpty(selectPropNames)) {
                     return sql;
                 } else {
                     return PSC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
                 }
-            }, paramSetter));
+            };
+
+            sqlBuilderSetterForSingleEntityMap.put(PSC.class, Tuple.of(sqlBuilder, paramSetter));
+
+            final BiFunction<Collection<String>, Integer, String> sqlBuilder2 = (selectPropNames, size) -> {
+                if (size == 1) {
+                    return sqlBuilder.apply(selectPropNames);
+                } else {
+                    if (N.isNullOrEmpty(selectPropNames)) {
+                        return PSC.selectFrom(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
+                    } else {
+                        return PSC.select(selectPropNames).from(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
+                    }
+                }
+            };
+
+            sqlBuilderSetterForEntitiesMap.put(PSC.class, Tuple.of(sqlBuilder2, paramSetter2));
         }
 
         {
             final String sql = PAC.selectFrom(referencedEntityClass).where(cond).sql();
 
-            sqlBuilderMap.put(PAC.class, Tuple.of(selectPropNames -> {
+            final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
                 if (N.isNullOrEmpty(selectPropNames)) {
                     return sql;
                 } else {
                     return PAC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
                 }
-            }, paramSetter));
+            };
+
+            sqlBuilderSetterForSingleEntityMap.put(PAC.class, Tuple.of(sqlBuilder, paramSetter));
+
+            final BiFunction<Collection<String>, Integer, String> sqlBuilder2 = (selectPropNames, size) -> {
+                if (size == 1) {
+                    return sqlBuilder.apply(selectPropNames);
+                } else {
+                    if (N.isNullOrEmpty(selectPropNames)) {
+                        return PAC.selectFrom(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
+                    } else {
+                        return PAC.select(selectPropNames).from(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
+                    }
+                }
+            };
+
+            sqlBuilderSetterForEntitiesMap.put(PAC.class, Tuple.of(sqlBuilder2, paramSetter2));
         }
 
         {
             final String sql = PLC.selectFrom(referencedEntityClass).where(cond).sql();
 
-            sqlBuilderMap.put(PLC.class, Tuple.of(selectPropNames -> {
+            final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
                 if (N.isNullOrEmpty(selectPropNames)) {
                     return sql;
                 } else {
                     return PLC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
                 }
-            }, paramSetter));
+            };
+
+            sqlBuilderSetterForSingleEntityMap.put(PLC.class, Tuple.of(sqlBuilder, paramSetter));
+
+            final BiFunction<Collection<String>, Integer, String> sqlBuilder2 = (selectPropNames, size) -> {
+                if (size == 1) {
+                    return sqlBuilder.apply(selectPropNames);
+                } else {
+                    if (N.isNullOrEmpty(selectPropNames)) {
+                        return PLC.selectFrom(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
+                    } else {
+                        return PLC.select(selectPropNames).from(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
+                    }
+                }
+            };
+
+            sqlBuilderSetterForEntitiesMap.put(PLC.class, Tuple.of(sqlBuilder2, paramSetter2));
+        }
+
+        Function<Object, Object> srcEntityKeyExtractorTmp = null;
+        Function<Object, Object> referencedEntityKeyExtractorTmp = null;
+
+        if (srcPropInfos.length == 1) {
+            final PropInfo srcPropInfo = srcPropInfos[0];
+            final PropInfo referencedPropInfo = referencedPropInfos[0];
+
+            srcEntityKeyExtractorTmp = entity -> srcPropInfo.getPropValue(entity);
+            referencedEntityKeyExtractorTmp = entity -> referencedPropInfo.getPropValue(entity);
+        } else if (srcPropInfos.length == 2) {
+            final PropInfo srcPropInfo_1 = srcPropInfos[0];
+            final PropInfo srcPropInfo_2 = srcPropInfos[1];
+            final PropInfo referencedPropInfo_1 = referencedPropInfos[0];
+            final PropInfo referencedPropInfo_2 = referencedPropInfos[1];
+
+            srcEntityKeyExtractorTmp = entity -> Tuple.of(srcPropInfo_1.getPropValue(entity), srcPropInfo_2.getPropValue(entity));
+            referencedEntityKeyExtractorTmp = entity -> Tuple.of(referencedPropInfo_1.getPropValue(entity), referencedPropInfo_2.getPropValue(entity));
+        } else if (srcPropInfos.length == 3) {
+            final PropInfo srcPropInfo_1 = srcPropInfos[0];
+            final PropInfo srcPropInfo_2 = srcPropInfos[1];
+            final PropInfo srcPropInfo_3 = srcPropInfos[2];
+            final PropInfo referencedPropInfo_1 = referencedPropInfos[0];
+            final PropInfo referencedPropInfo_2 = referencedPropInfos[1];
+            final PropInfo referencedPropInfo_3 = referencedPropInfos[2];
+
+            srcEntityKeyExtractorTmp = entity -> Tuple.of(srcPropInfo_1.getPropValue(entity), srcPropInfo_2.getPropValue(entity),
+                    srcPropInfo_3.getPropValue(entity));
+
+            referencedEntityKeyExtractorTmp = entity -> Tuple.of(referencedPropInfo_1.getPropValue(entity), referencedPropInfo_2.getPropValue(entity),
+                    referencedPropInfo_3.getPropValue(entity));
+        } else {
+            srcEntityKeyExtractorTmp = entity -> {
+                final List<Object> keys = new ArrayList<>(srcPropInfos.length);
+
+                for (PropInfo srcPropInfo : srcPropInfos) {
+                    keys.add(srcPropInfo.getPropValue(entity));
+                }
+
+                return keys;
+            };
+
+            referencedEntityKeyExtractorTmp = entity -> {
+                final List<Object> keys = new ArrayList<>(referencedPropInfos.length);
+
+                for (PropInfo referencedPropInfo : referencedPropInfos) {
+                    keys.add(referencedPropInfo.getPropValue(entity));
+                }
+
+                return keys;
+            };
+        }
+
+        srcEntityKeyExtractor = srcEntityKeyExtractorTmp;
+        referencedEntityKeyExtractor = referencedEntityKeyExtractorTmp;
+    }
+
+    public Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> getSQLBuilderSetterForSingleEntity(
+            final Class<? extends SQLBuilder> sbc) {
+        final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = sqlBuilderSetterForSingleEntityMap.get(sbc);
+
+        if (tp == null) {
+            throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
+        }
+
+        return tp;
+    }
+
+    public Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> getSQLBuilderSetterForEntities(
+            final Class<? extends SQLBuilder> sbc) {
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = sqlBuilderSetterForEntitiesMap
+                .get(sbc);
+
+        if (tp == null) {
+            throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
+        }
+
+        return tp;
+    }
+
+    public void setJoinPropEntities(final Collection<?> entities, final Collection<?> joinPropEntities) {
+        final Map<Object, List<Object>> groupedPropEntities = Stream.of((Collection<Object>) joinPropEntities).groupTo(referencedEntityKeyExtractor);
+        final boolean isDirtyMarker = DirtyMarkerUtil.isDirtyMarker(entityClass);
+        final boolean isCollectionProp = joinPropInfo.type.isCollection();
+        final boolean isListProp = joinPropInfo.clazz.isAssignableFrom(List.class);
+
+        List<Object> propEntities = null;
+
+        for (Object entity : entities) {
+            propEntities = groupedPropEntities.get(srcEntityKeyExtractor.apply(entity));
+
+            if (propEntities != null) {
+                if (isCollectionProp) {
+                    if (isListProp || joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
+                        joinPropInfo.setPropValue(entity, propEntities);
+                    } else {
+                        final Collection<Object> c = (Collection<Object>) N.newInstance(joinPropInfo.clazz);
+                        c.addAll(propEntities);
+                        joinPropInfo.setPropValue(entity, c);
+                    }
+                } else {
+                    joinPropInfo.setPropValue(entity, propEntities.get(0));
+                }
+
+                if (isDirtyMarker) {
+                    DirtyMarkerUtil.markDirty((DirtyMarker) entity, joinPropInfo.name, false);
+                }
+            }
         }
     }
 
     private final static Map<Class<?>, Map<String, JoinInfo>> entityJoinInfoPool = new ConcurrentHashMap<>();
 
-    public static Map<String, JoinInfo> getEntityJoinInfos(final Class<?> entityClass) {
+    public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> entityClass) {
         Map<String, JoinInfo> joinInfoMap = entityJoinInfoPool.get(entityClass);
 
         if (joinInfoMap == null) {
@@ -167,7 +348,7 @@ final class JoinInfo {
     }
 
     public static JoinInfo getPropJoinInfo(final Class<?> entityClass, final String joinEntityPropName) {
-        final JoinInfo joinInfo = getEntityJoinInfos(entityClass).get(joinEntityPropName);
+        final JoinInfo joinInfo = getEntityJoinInfo(entityClass).get(joinEntityPropName);
 
         if (joinInfo == null) {
             throw new IllegalArgumentException(
@@ -186,7 +367,7 @@ final class JoinInfo {
             joinEntityPropNamesByTypeMap = new HashMap<>();
             List<String> joinPropNames = null;
 
-            for (JoinInfo joinInfo : getEntityJoinInfos(entityClass).values()) {
+            for (JoinInfo joinInfo : getEntityJoinInfo(entityClass).values()) {
                 joinPropNames = joinEntityPropNamesByTypeMap.get(joinInfo.referencedEntityClass);
 
                 if (joinPropNames == null) {

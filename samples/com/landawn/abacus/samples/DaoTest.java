@@ -7,6 +7,7 @@ import static com.landawn.abacus.samples.Jdbc.userMapper;
 import static org.junit.Assert.assertEquals;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -21,6 +22,7 @@ import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.stream.Stream;
 
 public class DaoTest {
 
@@ -261,5 +263,82 @@ public class DaoTest {
         assertEquals(userFromDB, userFromDB2);
 
         userDao.deleteById(100L);
+    }
+
+    @Test
+    public void crud_joinedBy_2() throws SQLException {
+        final List<User> users = new ArrayList<>();
+
+        for (int i = 0; i < 100; i++) {
+            User user = User.builder().id(100 + i).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+            userDao.insertWithId(user);
+
+            User userFromDB = userDao.gett(100L + i);
+            System.out.println(userFromDB);
+            users.add(userFromDB);
+
+            Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
+            deviceMapper.insert(device);
+
+            Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
+            addressMapper.insert(address);
+        }
+
+        List<User> users2 = Stream.of(users).map(N::copy).toList();
+        List<User> users3 = Stream.of(users).map(N::copy).toList();
+
+        userDao.loadAllJoinEntities(users2);
+        System.out.println(users2);
+
+        userMapper.loadAllJoinEntities(users3);
+        System.out.println(users3);
+
+        assertEquals(users2, users3);
+
+        users2 = Stream.of(users).map(N::copy).toList();
+        users3 = Stream.of(users).map(N::copy).toList();
+
+        userDao.loadJoinEntitiesIfNull(users2);
+        System.out.println(users2);
+
+        userMapper.loadJoinEntitiesIfNull(users3);
+        System.out.println(users3);
+
+        assertEquals(users2, users3);
+
+        users2 = Stream.of(users).map(N::copy).toList();
+        users3 = Stream.of(users).map(N::copy).toList();
+
+        userDao.loadJoinEntities(users2, Device.class);
+        System.out.println(users2);
+
+        userMapper.loadJoinEntities(users3, Device.class);
+        System.out.println(users3);
+
+        assertEquals(users2, users3);
+
+        users2 = Stream.of(users).map(N::copy).toList();
+        users3 = Stream.of(users).map(N::copy).toList();
+
+        userDao.loadJoinEntitiesIfNull(users2, Address.class);
+        System.out.println(users2);
+
+        userMapper.loadJoinEntitiesIfNull(users3, Address.class);
+        System.out.println(users3);
+
+        assertEquals(users2, users3);
+
+        users2 = Stream.of(users).map(N::copy).toList();
+        users3 = Stream.of(users).map(N::copy).toList();
+
+        userDao.loadAllJoinEntities(users2, true);
+        System.out.println(users2);
+
+        userMapper.loadAllJoinEntities(users3, true);
+        System.out.println(users3);
+
+        assertEquals(users2, users3);
+
+        userDao.batchDelete(users);
     }
 }

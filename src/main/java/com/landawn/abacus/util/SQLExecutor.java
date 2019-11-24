@@ -88,6 +88,7 @@ import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.BiConsumer;
+import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Consumer;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.function.Supplier;
@@ -5839,6 +5840,7 @@ public class SQLExecutor {
      * @see {@link com.landawn.abacus.annotation.Transient}
      * @see {@link com.landawn.abacus.annotation.Table}
      * @see {@link com.landawn.abacus.annotation.Column}
+     * @see {@link com.landawn.abacus.annotation.AccessFieldByMethod}
      * @see {@link com.landawn.abacus.annotation.JoinedBy}
      * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html</a>
      * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html</a>
@@ -5858,8 +5860,6 @@ public class SQLExecutor {
 
         /** The target type. */
         private final Type<T> targetType;
-
-        private final EntityInfo entityInfo;
 
         private final Class<ID> idClass;
 
@@ -5948,7 +5948,6 @@ public class SQLExecutor {
 
             this.targetClass = entityClass;
             this.targetType = N.typeOf(targetClass);
-            this.entityInfo = ParserUtil.getEntityInfo(targetClass);
             this.idClass = idClass;
             this.isEntityId = idClass.equals(EntityId.class);
             this.isVoidId = idClass.equals(Void.class);
@@ -8904,7 +8903,6 @@ public class SQLExecutor {
             loadJoinEntities(entities, joinEntityClass, null);
         }
 
-        // TODO performance improvement by one query.
         /**
          *
          * @param entities
@@ -8941,23 +8939,26 @@ public class SQLExecutor {
          * @param selectPropNames
          */
         public void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) {
-            final PropInfo propInfo = entityInfo.getPropInfo(joinEntityPropName);
             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(targetClass, joinEntityPropName);
-            final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.sqlBuilderMap.get(sbc);
+            final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
+                    .getSQLBuilderSetterForSingleEntity(sbc);
 
             final String sql = tp._1.apply(selectPropNames);
             final StatementSetter statementSetter = (namedSQL, stmt, parameters) -> tp._2.accept(stmt, entity);
+            Object propValue = null;
 
-            if (propInfo.type.isCollection()) {
-                final Collection<Object> c = (Collection<Object>) N.newInstance(propInfo.clazz);
-                c.addAll(sqlExecutor.list(propInfo.type.getElementType().clazz(), sql, statementSetter));
-                propInfo.setPropValue(entity, c);
+            if (propJoinInfo.joinPropInfo.type.isCollection()) {
+                final Collection<Object> c = (Collection<Object>) N.newInstance(propJoinInfo.joinPropInfo.clazz);
+                c.addAll(sqlExecutor.list(propJoinInfo.referencedEntityClass, sql, statementSetter));
+                propValue = c;
             } else {
-                propInfo.setPropValue(entity, sqlExecutor.findFirst(propInfo.type.clazz(), sql, statementSetter).orNull());
+                propValue = sqlExecutor.findFirst(propJoinInfo.referencedEntityClass, sql, statementSetter).orNull();
             }
 
+            propJoinInfo.joinPropInfo.setPropValue(entity, propValue);
+
             if (entity instanceof DirtyMarker) {
-                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propInfo.name, false);
+                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propJoinInfo.joinPropInfo.name, false);
             }
         }
 
@@ -8970,7 +8971,6 @@ public class SQLExecutor {
             loadJoinEntities(entities, joinEntityPropName, null);
         }
 
-        // TODO performance improvement by one query.
         /**
          *
          * @param entities
@@ -8980,27 +8980,17 @@ public class SQLExecutor {
         public void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) {
             if (N.isNullOrEmpty(entities)) {
                 return;
-            }
+            } else if (entities.size() == 1) {
+                loadJoinEntities(N.firstOrNullIfEmpty(entities), joinEntityPropName, selectPropNames);
+            } else {
+                final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(targetClass, joinEntityPropName);
+                final Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
+                        .getSQLBuilderSetterForEntities(sbc);
 
-            final PropInfo propInfo = entityInfo.getPropInfo(joinEntityPropName);
-            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(targetClass, joinEntityPropName);
-            final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.sqlBuilderMap.get(sbc);
-
-            final String sql = tp._1.apply(selectPropNames);
-            final StatementSetter statementSetter = (namedSQL, stmt, parameters) -> tp._2.accept(stmt, parameters[0]);
-
-            for (T entity : entities) {
-                if (propInfo.type.isCollection()) {
-                    final Collection<Object> c = (Collection<Object>) N.newInstance(propInfo.clazz);
-                    c.addAll(sqlExecutor.list(propInfo.type.getElementType().clazz(), sql, statementSetter, entity));
-                    propInfo.setPropValue(entity, c);
-                } else {
-                    propInfo.setPropValue(entity, sqlExecutor.findFirst(propInfo.type.clazz(), sql, statementSetter, entity).orNull());
-                }
-
-                if (entity instanceof DirtyMarker) {
-                    DirtyMarkerUtil.markDirty((DirtyMarker) entity, propInfo.name, false);
-                }
+                final String sql = tp._1.apply(selectPropNames, entities.size());
+                final StatementSetter statementSetter = (namedSQL, stmt, parameters) -> tp._2.accept(stmt, entities);
+                final List<?> joinPropEntities = sqlExecutor.list(propJoinInfo.referencedEntityClass, sql, statementSetter, entities);
+                propJoinInfo.setJoinPropEntities(entities, joinPropEntities);
             }
         }
 
@@ -9103,7 +9093,7 @@ public class SQLExecutor {
          * @param entity
          */
         public void loadAllJoinEntities(T entity) {
-            loadJoinEntities(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet());
+            loadJoinEntities(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet());
         }
 
         /**
@@ -9125,7 +9115,7 @@ public class SQLExecutor {
          * @param executor
          */
         public void loadAllJoinEntities(final T entity, final Executor executor) {
-            loadJoinEntities(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet(), executor);
+            loadJoinEntities(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet(), executor);
         }
 
         /**
@@ -9137,7 +9127,7 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntities(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet());
+            loadJoinEntities(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet());
         }
 
         /**
@@ -9163,7 +9153,7 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntities(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
+            loadJoinEntities(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
         }
 
         /**
@@ -9199,7 +9189,6 @@ public class SQLExecutor {
             loadJoinEntitiesIfNull(entities, joinEntityClass, null);
         }
 
-        // TODO performance improvement by one query.
         /**
          *
          * @param entities
@@ -9254,7 +9243,6 @@ public class SQLExecutor {
             loadJoinEntitiesIfNull(entities, joinEntityPropName, null);
         }
 
-        // TODO performance improvement by one query.
         /**
          *
          * @param entities
@@ -9372,7 +9360,7 @@ public class SQLExecutor {
          * @param entity
          */
         public void loadJoinEntitiesIfNull(T entity) {
-            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet());
+            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet());
         }
 
         /**
@@ -9394,7 +9382,7 @@ public class SQLExecutor {
          * @param executor
          */
         public void loadJoinEntitiesIfNull(final T entity, final Executor executor) {
-            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet(), executor);
+            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet(), executor);
         }
 
         /**
@@ -9406,7 +9394,7 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet());
+            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet());
         }
 
         /**
@@ -9432,7 +9420,7 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
+            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
         }
 
         private static final Try.Consumer<? super Exception, RuntimeException> throwRuntimeExceptionAction = e -> {

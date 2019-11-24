@@ -84,6 +84,7 @@ import com.landawn.abacus.DataSourceManager;
 import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.EntityId;
 import com.landawn.abacus.IsolationLevel;
+import com.landawn.abacus.annotation.AccessFieldByMethod;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.condition.Condition;
@@ -14263,6 +14264,7 @@ public final class JdbcUtil {
      * @see BasicDao
      * @see CrudDao
      * @see SQLExecutor.Mapper
+     * @see AccessFieldByMethod
      */
     public interface Dao {
 
@@ -14942,6 +14944,7 @@ public final class JdbcUtil {
      * @see Dao
      * @See CrudDao
      * @see SQLExecutor.Mapper
+     * @see AccessFieldByMethod
      */
     public interface BasicDao<T, SB extends SQLBuilder, TD extends BasicDao<T, SB, TD>> extends Dao {
 
@@ -15530,7 +15533,6 @@ public final class JdbcUtil {
             loadJoinEntities(entities, joinEntityClass, null);
         }
 
-        // TODO performance improvement by one query.
         /**
          *
          * @param entities
@@ -15582,7 +15584,6 @@ public final class JdbcUtil {
             loadJoinEntities(entities, joinEntityPropName, null);
         }
 
-        // TODO performance improvement by one query.
         /**
          *
          * @param entities
@@ -15699,7 +15700,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default void loadAllJoinEntities(T entity) throws SQLException {
-            loadJoinEntities(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet());
+            loadJoinEntities(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet());
         }
 
         /**
@@ -15723,7 +15724,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default void loadAllJoinEntities(final T entity, final Executor executor) throws SQLException {
-            loadJoinEntities(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet(), executor);
+            loadJoinEntities(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet(), executor);
         }
 
         /**
@@ -15736,7 +15737,7 @@ public final class JdbcUtil {
                 return;
             }
 
-            loadJoinEntities(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet());
+            loadJoinEntities(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet());
         }
 
         /**
@@ -15764,7 +15765,7 @@ public final class JdbcUtil {
                 return;
             }
 
-            loadJoinEntities(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
+            loadJoinEntities(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
         }
 
         /**
@@ -15803,7 +15804,6 @@ public final class JdbcUtil {
             loadJoinEntitiesIfNull(entities, joinEntityClass, null);
         }
 
-        // TODO performance improvement by one query.
         /**
          *
          * @param entities
@@ -15995,7 +15995,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default void loadJoinEntitiesIfNull(T entity) throws SQLException {
-            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet());
+            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet());
         }
 
         /**
@@ -16019,7 +16019,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws SQLException {
-            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfos(entity.getClass()).keySet(), executor);
+            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet(), executor);
         }
 
         /**
@@ -16032,7 +16032,7 @@ public final class JdbcUtil {
                 return;
             }
 
-            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet());
+            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet());
         }
 
         /**
@@ -16060,7 +16060,7 @@ public final class JdbcUtil {
                 return;
             }
 
-            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfos(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
+            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
         }
 
         /**
@@ -16525,7 +16525,6 @@ public final class JdbcUtil {
                 final int paramLen = paramTypes.length;
 
                 if (declaringClass.equals(BasicDao.class)) {
-                    final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
                     final List<String> idPropNames = ClassUtil.getIdFieldNames(entityClass, true);
                     final boolean isFakeId = ClassUtil.isFakeId(idPropNames);
                     final String idPropName = idPropNames.get(0);
@@ -17208,24 +17207,25 @@ public final class JdbcUtil {
                     } else if (methodName.equals("loadJoinEntities") && paramLen == 3 && !Collection.class.isAssignableFrom(paramTypes[0])
                             && String.class.isAssignableFrom(paramTypes[1]) && Collection.class.isAssignableFrom(paramTypes[2])) {
                         call = (proxy, args) -> {
+                            final Object entity = args[0];
                             final String joinEntityPropName = (String) args[1];
-                            final PropInfo propInfo = entityInfo.getPropInfo(joinEntityPropName);
+                            final Collection<String> selectPropNames = (Collection<String>) args[2];
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(entityClass, joinEntityPropName);
-                            final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.sqlBuilderMap
-                                    .get(sbc);
+                            final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
+                                    .getSQLBuilderSetterForSingleEntity(sbc);
 
-                            final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply((Collection<String>) args[2])).setParameters(args[0], tp._2);
+                            final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
 
-                            if (propInfo.type.isCollection()) {
-                                final Collection<Object> c = (Collection) N.newInstance(propInfo.clazz);
-                                c.addAll(preparedQuery.list(propInfo.type.getElementType().clazz()));
-                                propInfo.setPropValue(args[0], c);
+                            if (propJoinInfo.joinPropInfo.type.isCollection()) {
+                                final Collection<Object> c = (Collection) N.newInstance(propJoinInfo.joinPropInfo.clazz);
+                                c.addAll(preparedQuery.list(propJoinInfo.referencedEntityClass));
+                                propJoinInfo.joinPropInfo.setPropValue(entity, c);
                             } else {
-                                propInfo.setPropValue(args[0], preparedQuery.findFirst(propInfo.type.clazz()).orNull());
+                                propJoinInfo.joinPropInfo.setPropValue(entity, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orNull());
                             }
 
-                            if (args[0] instanceof DirtyMarker) {
-                                DirtyMarkerUtil.markDirty((DirtyMarker) args[0], propInfo.name, false);
+                            if (entity instanceof DirtyMarker) {
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propJoinInfo.joinPropInfo.name, false);
                             }
 
                             return null;
@@ -17234,35 +17234,39 @@ public final class JdbcUtil {
                             && String.class.isAssignableFrom(paramTypes[1]) && Collection.class.isAssignableFrom(paramTypes[2])) {
                         call = (proxy, args) -> {
                             final Collection<Object> entities = (Collection) args[0];
+                            final String joinEntityPropName = (String) args[1];
+                            final Collection<String> selectPropNames = (Collection<String>) args[2];
+                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(entityClass, joinEntityPropName);
 
                             if (N.isNullOrEmpty(entities)) {
-                                return null;
-                            }
+                                // Do nothing.
+                            } else if (entities.size() == 1) {
+                                final Object entity = N.firstOrNullIfEmpty(entities);
+                                final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
+                                        .getSQLBuilderSetterForSingleEntity(sbc);
 
-                            final boolean isDirtyMarker = DirtyMarker.class.isAssignableFrom(entityClass);
+                                final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
 
-                            final String joinEntityPropName = (String) args[1];
-                            final PropInfo propInfo = entityInfo.getPropInfo(joinEntityPropName);
-                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(entityClass, joinEntityPropName);
-                            final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.sqlBuilderMap
-                                    .get(sbc);
-
-                            try (final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply((Collection<String>) args[2])).closeAfterExecution(false)) {
-                                for (Object entity : entities) {
-                                    preparedQuery.setParameters(entity, tp._2);
-
-                                    if (propInfo.type.isCollection()) {
-                                        final Collection<Object> c = (Collection) N.newInstance(propInfo.clazz);
-                                        c.addAll(preparedQuery.list(propInfo.type.getElementType().clazz()));
-                                        propInfo.setPropValue(args[0], c);
-                                    } else {
-                                        propInfo.setPropValue(args[0], preparedQuery.findFirst(propInfo.type.clazz()).orNull());
-                                    }
-
-                                    if (isDirtyMarker) {
-                                        DirtyMarkerUtil.markDirty((DirtyMarker) entity, propInfo.name, false);
-                                    }
+                                if (propJoinInfo.joinPropInfo.type.isCollection()) {
+                                    final Collection<Object> c = (Collection) N.newInstance(propJoinInfo.joinPropInfo.clazz);
+                                    c.addAll(preparedQuery.list(propJoinInfo.referencedEntityClass));
+                                    propJoinInfo.joinPropInfo.setPropValue(entity, c);
+                                } else {
+                                    propJoinInfo.joinPropInfo.setPropValue(entity, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orNull());
                                 }
+
+                                if (entity instanceof DirtyMarker) {
+                                    DirtyMarkerUtil.markDirty((DirtyMarker) entity, propJoinInfo.joinPropInfo.name, false);
+                                }
+                            } else {
+                                final Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
+                                        .getSQLBuilderSetterForEntities(sbc);
+
+                                final List<?> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
+                                        .setParameters(entities, tp._2)
+                                        .list(propJoinInfo.referencedEntityClass);
+
+                                propJoinInfo.setJoinPropEntities(entities, joinPropEntities);
                             }
 
                             return null;
@@ -18467,7 +18471,7 @@ public final class JdbcUtil {
      * @param proxy
      * @param query
      * @param isNamedQuery
-     * @param namedSQL TODO
+     * @param namedSQL
      * @param fetchSize
      * @param queryTimeout
      * @param returnGeneratedKeys
