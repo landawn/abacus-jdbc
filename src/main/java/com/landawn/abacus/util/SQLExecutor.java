@@ -5866,12 +5866,6 @@ public class SQLExecutor {
         private final boolean isEntityId;
         private final boolean isVoidId;
 
-        /** The prop name list. */
-        private final ImmutableList<String> propNameList;
-
-        /** The prop name set. */
-        private final ImmutableSet<String> propNameSet;
-
         /** The default select prop name list. */
         private final ImmutableList<String> defaultSelectPropNameList;
 
@@ -5951,8 +5945,6 @@ public class SQLExecutor {
             this.idClass = idClass;
             this.isEntityId = idClass.equals(EntityId.class);
             this.isVoidId = idClass.equals(Void.class);
-            this.propNameList = ImmutableList.copyOf(ClassUtil.getPropNameList(entityClass));
-            this.propNameSet = ImmutableSet.of(N.newLinkedHashSet(ClassUtil.getPropNameList(entityClass)));
 
             this.idPropName = idPropNames.get(0);
             this.idPropNameList = ImmutableList.copyOf(idPropNames);
@@ -6018,24 +6010,6 @@ public class SQLExecutor {
          */
         Set<String> idPropNameSet() {
             return idPropNameSet;
-        }
-
-        /**
-         * Prop name list.
-         *
-         * @return
-         */
-        List<String> propNameList() {
-            return propNameList;
-        }
-
-        /**
-         * Prop name set.
-         *
-         * @return
-         */
-        Set<String> propNameSet() {
-            return propNameSet;
         }
 
         /**
