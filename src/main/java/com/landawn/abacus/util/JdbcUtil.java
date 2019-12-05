@@ -14611,70 +14611,70 @@ public final class JdbcUtil {
             return dao;
         }
 
-        /**
-         *
-         * @param <T>
-         * @param daoInterface
-         * @param dsm
-         * @return
-         * @see SQLExecutor#createDao(Class)
-         */
-        static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm) {
-            return newInstance(daoInterface, dsm, JdbcUtil.asyncExecutor.getExecutor());
-        }
-
-        /**
-         *
-         * @param <T>
-         * @param daoInterface
-         * @param dsm
-         * @param sqlMapper
-         * @return
-         * @see SQLExecutor#createDao(Class)
-         */
-        static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm, final SQLMapper sqlMapper) {
-            return newInstance(daoInterface, dsm, sqlMapper, JdbcUtil.asyncExecutor.getExecutor());
-        }
-
-        /**
-         *
-         * @param <T>
-         * @param daoInterface
-         * @param dsm
-         * @param executor
-         * @return
-         * @see SQLExecutor#createDao(Class)
-         */
-        static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm, final Executor executor) {
-            return newInstance(daoInterface, dsm, null, executor);
-        }
-
-        /**
-         *
-         * @param <T>
-         * @param daoInterface
-         * @param dsm
-         * @param sqlMapper
-         * @param executor
-         * @return
-         * @see SQLExecutor#createDao(Class)
-         */
-        static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm, final SQLMapper sqlMapper, final Executor executor) {
-            N.checkArgNotNull(daoInterface, "daoInterface");
-            N.checkArgNotNull(dsm, "dataSourcemManager");
-
-            final String key = ClassUtil.getCanonicalClassName(daoInterface) + "_" + System.identityHashCode(dsm) + "_"
-                    + (sqlMapper == null ? "null" : System.identityHashCode(sqlMapper)) + "_" + (executor == null ? "null" : System.identityHashCode(executor));
-
-            T dao = (T) daoPool.get(key);
-
-            if (dao == null) {
-                dao = JdbcUtil.newInstance(daoInterface, null, dsm, sqlMapper, executor);
-                daoPool.put(key, dao);
-            }
-
-            return dao;
-        }
+        //    /**
+        //     *
+        //     * @param <T>
+        //     * @param daoInterface
+        //     * @param dsm
+        //     * @return
+        //     * @see SQLExecutor#createDao(Class)
+        //     */
+        //    static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm) {
+        //        return newInstance(daoInterface, dsm, JdbcUtil.asyncExecutor.getExecutor());
+        //    }
+        //
+        //    /**
+        //     *
+        //     * @param <T>
+        //     * @param daoInterface
+        //     * @param dsm
+        //     * @param sqlMapper
+        //     * @return
+        //     * @see SQLExecutor#createDao(Class)
+        //     */
+        //    static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm, final SQLMapper sqlMapper) {
+        //        return newInstance(daoInterface, dsm, sqlMapper, JdbcUtil.asyncExecutor.getExecutor());
+        //    }
+        //
+        //    /**
+        //     *
+        //     * @param <T>
+        //     * @param daoInterface
+        //     * @param dsm
+        //     * @param executor
+        //     * @return
+        //     * @see SQLExecutor#createDao(Class)
+        //     */
+        //    static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm, final Executor executor) {
+        //        return newInstance(daoInterface, dsm, null, executor);
+        //    }
+        //
+        //    /**
+        //     *
+        //     * @param <T>
+        //     * @param daoInterface
+        //     * @param dsm
+        //     * @param sqlMapper
+        //     * @param executor
+        //     * @return
+        //     * @see SQLExecutor#createDao(Class)
+        //     */
+        //    static <T extends Dao> T newInstance(final Class<T> daoInterface, final DataSourceManager dsm, final SQLMapper sqlMapper, final Executor executor) {
+        //        N.checkArgNotNull(daoInterface, "daoInterface");
+        //        N.checkArgNotNull(dsm, "dataSourcemManager");
+        //
+        //        final String key = ClassUtil.getCanonicalClassName(daoInterface) + "_" + System.identityHashCode(dsm) + "_"
+        //                + (sqlMapper == null ? "null" : System.identityHashCode(sqlMapper)) + "_" + (executor == null ? "null" : System.identityHashCode(executor));
+        //
+        //        T dao = (T) daoPool.get(key);
+        //
+        //        if (dao == null) {
+        //            dao = JdbcUtil.newInstance(daoInterface, null, dsm, sqlMapper, executor);
+        //            daoPool.put(key, dao);
+        //        }
+        //
+        //        return dao;
+        //    }
 
         /**
          *
@@ -14682,7 +14682,7 @@ public final class JdbcUtil {
          */
         javax.sql.DataSource dataSource();
 
-        SQLExecutor sqlExecutor();
+        // SQLExecutor sqlExecutor();
 
         SQLMapper sqlMapper();
 

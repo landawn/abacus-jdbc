@@ -2,6 +2,7 @@ package com.landawn.abacus.samples;
 
 import static com.landawn.abacus.samples.Jdbc.addressMapper;
 import static com.landawn.abacus.samples.Jdbc.deviceMapper;
+import static com.landawn.abacus.samples.Jdbc.sqlExecutor;
 import static com.landawn.abacus.samples.Jdbc.userDao;
 import static com.landawn.abacus.samples.Jdbc.userMapper;
 import static org.junit.Assert.assertEquals;
@@ -186,7 +187,7 @@ public class DaoTest {
         userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
                 BiRowMapper.builder().defauLt((i, rs) -> rs.getObject(i)).column("firstName", (i, rs) -> rs.getString(i)).to(User.class)).forEach(Fn.println());
 
-        userDao.sqlExecutor().mapper(User.class, int.class).get(100).ifPresent(Fn.println());
+        userMapper.get(100L).ifPresent(Fn.println());
 
         userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.to(User.class)).forEach(Fn.println());
 
@@ -196,7 +197,7 @@ public class DaoTest {
 
         userDao.deleteById(100L);
 
-        assertEquals(1, userDao.sqlExecutor().update("delete from user where id = ? ", 101));
+        assertEquals(1, sqlExecutor.update("delete from user where id = ? ", 101));
     }
 
     @Test
