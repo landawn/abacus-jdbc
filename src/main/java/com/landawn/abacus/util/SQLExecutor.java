@@ -5349,7 +5349,7 @@ public class SQLExecutor {
             tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
         }
 
-        if (tran != null && (tran.isForUpdateOnly() == false || op != SQLOperation.SELECT)) {
+        if (tran == null || (tran.isForUpdateOnly() && op == SQLOperation.SELECT)) {
             return tran.connection();
         }
 

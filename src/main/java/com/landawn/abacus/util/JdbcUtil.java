@@ -2074,10 +2074,10 @@ public final class JdbcUtil {
         final SQLOperation sqlOperation = JdbcUtil.getSQLOperation(sql);
         final SQLTransaction tran = SQLTransaction.getTransaction(ds, createdBy);
 
-        if (tran != null && (tran.isForUpdateOnly() == false || sqlOperation != SQLOperation.SELECT)) {
-            return tran;
-        } else {
+        if (tran == null || (tran.isForUpdateOnly() && sqlOperation == SQLOperation.SELECT)) {
             return null;
+        } else {
+            return tran;
         }
     }
 
