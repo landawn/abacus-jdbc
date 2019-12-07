@@ -2611,8 +2611,12 @@ public final class JdbcUtil {
         if (tran != null) {
             return executeQuery(tran.connection(), sql, parameters);
         } else {
-            try (Connection conn = getConnection(ds)) {
+            final Connection conn = getConnection(ds);
+
+            try {
                 return executeQuery(conn, sql, parameters);
+            } finally {
+                JdbcUtil.closeQuietly(conn);
             }
         }
     }
@@ -2682,8 +2686,12 @@ public final class JdbcUtil {
         if (tran != null) {
             return executeUpdate(tran.connection(), sql, parameters);
         } else {
-            try (Connection conn = getConnection(ds)) {
+            final Connection conn = getConnection(ds);
+
+            try {
                 return executeUpdate(conn, sql, parameters);
+            } finally {
+                JdbcUtil.closeQuietly(conn);
             }
         }
     }
@@ -2721,18 +2729,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static int executeBatchUpdate(final DataSource ds, final String sql, final List<?> listOfParameters) throws SQLException {
-        N.checkArgNotNull(ds, "ds");
-        N.checkArgNotNull(sql, "sql");
-
-        final SQLTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
-
-        if (tran != null) {
-            return executeBatchUpdate(tran.connection(), sql, listOfParameters);
-        } else {
-            try (Connection conn = getConnection(ds)) {
-                return executeBatchUpdate(conn, sql, listOfParameters);
-            }
-        }
+        return executeBatchUpdate(ds, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -2747,15 +2744,32 @@ public final class JdbcUtil {
     public static int executeBatchUpdate(final DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize) throws SQLException {
         N.checkArgNotNull(ds, "ds");
         N.checkArgNotNull(sql, "sql");
+        N.checkArgPositive(batchSize, "batchSize");
 
         final SQLTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
             return executeBatchUpdate(tran.connection(), sql, listOfParameters, batchSize);
-        } else {
-            try (Connection conn = getConnection(ds)) {
+        } else if (listOfParameters.size() <= batchSize) {
+            final Connection conn = getConnection(ds);
+
+            try {
                 return executeBatchUpdate(conn, sql, listOfParameters, batchSize);
+            } finally {
+                JdbcUtil.closeQuietly(conn);
             }
+        } else {
+            final SQLTransaction tran2 = JdbcUtil.beginTransaction(ds);
+            int ret = 0;
+
+            try {
+                ret = executeBatchUpdate(tran2.connection(), sql, listOfParameters, batchSize);
+                tran2.commit();
+            } finally {
+                tran2.rollbackIfNotCommitted();
+            }
+
+            return ret;
         }
     }
 
@@ -2769,9 +2783,6 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static int executeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters) throws SQLException {
-        N.checkArgNotNull(conn, "conn");
-        N.checkArgNotNull(sql, "sql");
-
         return executeBatchUpdate(conn, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -2866,8 +2877,12 @@ public final class JdbcUtil {
         if (tran != null) {
             return execute(tran.connection(), sql, parameters);
         } else {
-            try (Connection conn = getConnection(ds)) {
+            final Connection conn = getConnection(ds);
+
+            try {
                 return execute(conn, sql, parameters);
+            } finally {
+                JdbcUtil.closeQuietly(conn);
             }
         }
     }
