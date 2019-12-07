@@ -2595,6 +2595,30 @@ public final class JdbcUtil {
 
     /**
      *
+     * @param ds
+     * @param sql
+     * @param parameters
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    @SafeVarargs
+    public static DataSet executeQuery(final DataSource ds, final String sql, final Object... parameters) throws SQLException {
+        N.checkArgNotNull(ds, "ds");
+        N.checkArgNotNull(sql, "sql");
+
+        final SQLTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+
+        if (tran != null) {
+            return executeQuery(tran.connection(), sql, parameters);
+        } else {
+            try (Connection conn = getConnection(ds)) {
+                return executeQuery(conn, sql, parameters);
+            }
+        }
+    }
+
+    /**
+     *
      * @param conn
      * @param sql
      * @param parameters
@@ -2642,6 +2666,30 @@ public final class JdbcUtil {
 
     /**
      *
+     * @param ds
+     * @param sql
+     * @param parameters
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    @SafeVarargs
+    public static int executeUpdate(final DataSource ds, final String sql, final Object... parameters) throws SQLException {
+        N.checkArgNotNull(ds, "ds");
+        N.checkArgNotNull(sql, "sql");
+
+        final SQLTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+
+        if (tran != null) {
+            return executeUpdate(tran.connection(), sql, parameters);
+        } else {
+            try (Connection conn = getConnection(ds)) {
+                return executeUpdate(conn, sql, parameters);
+            }
+        }
+    }
+
+    /**
+     *
      * @param conn
      * @param sql
      * @param parameters
@@ -2661,6 +2709,53 @@ public final class JdbcUtil {
             return stmt.executeUpdate();
         } finally {
             closeQuietly(stmt);
+        }
+    }
+
+    /**
+     *
+     * @param ds
+     * @param sql
+     * @param listOfParameters
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public static int executeBatchUpdate(final DataSource ds, final String sql, final List<?> listOfParameters) throws SQLException {
+        N.checkArgNotNull(ds, "ds");
+        N.checkArgNotNull(sql, "sql");
+
+        final SQLTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+
+        if (tran != null) {
+            return executeBatchUpdate(tran.connection(), sql, listOfParameters);
+        } else {
+            try (Connection conn = getConnection(ds)) {
+                return executeBatchUpdate(conn, sql, listOfParameters);
+            }
+        }
+    }
+
+    /**
+     *
+     * @param ds
+     * @param sql
+     * @param listOfParameters
+     * @param batchSize
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public static int executeBatchUpdate(final DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize) throws SQLException {
+        N.checkArgNotNull(ds, "ds");
+        N.checkArgNotNull(sql, "sql");
+
+        final SQLTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+
+        if (tran != null) {
+            return executeBatchUpdate(tran.connection(), sql, listOfParameters, batchSize);
+        } else {
+            try (Connection conn = getConnection(ds)) {
+                return executeBatchUpdate(conn, sql, listOfParameters, batchSize);
+            }
         }
     }
 
@@ -2749,6 +2844,30 @@ public final class JdbcUtil {
                 }
             } else {
                 JdbcUtil.closeQuietly(stmt);
+            }
+        }
+    }
+
+    /**
+    *
+    * @param ds
+    * @param sql
+    * @param parameters
+    * @return
+    * @throws SQLException the SQL exception
+    */
+    @SafeVarargs
+    public static boolean execute(final DataSource ds, final String sql, final Object... parameters) throws SQLException {
+        N.checkArgNotNull(ds, "ds");
+        N.checkArgNotNull(sql, "sql");
+
+        final SQLTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+
+        if (tran != null) {
+            return execute(tran.connection(), sql, parameters);
+        } else {
+            try (Connection conn = getConnection(ds)) {
+                return execute(conn, sql, parameters);
             }
         }
     }
