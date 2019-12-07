@@ -5350,10 +5350,10 @@ public class SQLExecutor {
         }
 
         if (tran == null || (tran.isForUpdateOnly() && op == SQLOperation.SELECT)) {
-            return tran.connection();
+            return getConnection(ds);
         }
 
-        return getConnection(ds);
+        return tran.connection();
     }
 
     /**
