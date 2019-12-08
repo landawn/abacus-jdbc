@@ -15132,6 +15132,11 @@ public final class JdbcUtil {
      * @see AccessFieldByMethod
      */
     public interface BasicDao<T, SB extends SQLBuilder, TD extends BasicDao<T, SB, TD>> extends Dao {
+        /**
+         *
+         * @return
+         */
+        Class<T> targetEntityClass();
 
         /**
          *
@@ -15503,7 +15508,10 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws SQLException {
-            return list(singleSelectPropName, cond, JdbcUtil.RowMapper.GET_OBJECT);
+            final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
+            final RowMapper<R> rowMapper = propInfo == null ? RowMapper.GET_OBJECT : RowMapper.get((Type<R>) propInfo.dbType);
+
+            return list(singleSelectPropName, cond, rowMapper);
         }
 
         /**
@@ -15635,7 +15643,10 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) throws SQLException {
-            return stream(singleSelectPropName, cond, JdbcUtil.RowMapper.GET_OBJECT);
+            final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
+            final RowMapper<R> rowMapper = propInfo == null ? RowMapper.GET_OBJECT : RowMapper.get((Type<R>) propInfo.dbType);
+
+            return stream(singleSelectPropName, cond, rowMapper);
         }
 
         /**
@@ -16740,6 +16751,12 @@ public final class JdbcUtil {
                 : (sbc.equals(PAC.class) ? clazz -> NAC.update(clazz) : clazz -> NLC.update(clazz));
 
         for (Method m : sqlMethods) {
+            final Class<?> declaringClass = m.getDeclaringClass();
+            final String methodName = m.getName();
+            final Class<?>[] paramTypes = m.getParameterTypes();
+            final Class<?> returnType = m.getReturnType();
+            final int paramLen = paramTypes.length;
+
             Try.BiFunction<Dao, Object[], ?, Exception> call = null;
 
             if (!Modifier.isAbstract(m.getModifiers())) {
@@ -16752,17 +16769,13 @@ public final class JdbcUtil {
                         throw new Exception(e);
                     }
                 };
+            } else if (m.getName().equals("targetEntityClass") && Class.class.isAssignableFrom(returnType) && paramLen == 0) {
+                call = (proxy, args) -> entityClass;
             } else {
                 final Annotation sqlAnno = StreamEx.of(m.getAnnotations())
                         .filter(anno -> JdbcUtil.sqlAnnoMap.containsKey(anno.annotationType()))
                         .first()
                         .orNull();
-
-                final Class<?> declaringClass = m.getDeclaringClass();
-                final String methodName = m.getName();
-                final Class<?>[] paramTypes = m.getParameterTypes();
-                final Class<?> returnType = m.getReturnType();
-                final int paramLen = paramTypes.length;
 
                 if (declaringClass.equals(BasicDao.class)) {
                     final List<String> idPropNames = ClassUtil.getIdFieldNames(entityClass, true);
