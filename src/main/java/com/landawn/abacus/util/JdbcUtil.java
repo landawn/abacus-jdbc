@@ -17672,6 +17672,13 @@ public final class JdbcUtil {
                                 }
                             }
 
+                            if (N.notNullOrEmpty(ids) && ids.size() != entities.size()) {
+                                if (logger.isWarnEnabled()) {
+                                    logger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
+                                            entities.size());
+                                }
+                            }
+
                             return ids;
                         };
                     } else if (methodName.equals("batchInsert") && paramLen == 3 && int.class.equals(paramTypes[2])) {
@@ -17722,6 +17729,13 @@ public final class JdbcUtil {
                             if (N.first(entities).orNull() instanceof DirtyMarker) {
                                 for (Object e : entities) {
                                     DirtyMarkerUtil.markDirty((DirtyMarker) e, false);
+                                }
+                            }
+
+                            if (N.notNullOrEmpty(ids) && ids.size() != entities.size()) {
+                                if (logger.isWarnEnabled()) {
+                                    logger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
+                                            entities.size());
                                 }
                             }
 

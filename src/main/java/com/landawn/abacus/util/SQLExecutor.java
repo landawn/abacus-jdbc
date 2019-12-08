@@ -1509,6 +1509,13 @@ public class SQLExecutor {
             close(localConn, conn, ds);
         }
 
+        if (N.notNullOrEmpty(resultIdList) && resultIdList.size() != parametersList.size()) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("The size of returned id list: {} is different from the size of input parameter list: {}", resultIdList.size(),
+                        parametersList.size());
+            }
+        }
+
         if (isEntityOrMapParameter(namedSQL, parametersList.get(0))) {
             if (N.notNullOrEmpty(resultIdList)) {
                 if (resultIdList.size() == len && ClassUtil.isEntity(parametersList.get(0).getClass())) {
