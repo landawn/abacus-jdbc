@@ -6530,7 +6530,7 @@ public class SQLExecutor {
          * @return
          */
         public List<T> list(final Connection conn, final Condition whereCause) {
-            return list(conn, null, whereCause);
+            return list(conn, (Collection<String>) null, whereCause);
         }
 
         /**
@@ -6561,55 +6561,49 @@ public class SQLExecutor {
         /**
          *
          * @param <R>
-         * @param targetValueClass
          * @param singleSelectPropName
          * @param whereCause
          * @return
          */
-        public <R> List<R> list(final Class<R> targetValueClass, final String singleSelectPropName, final Condition whereCause) {
-            return list(targetValueClass, singleSelectPropName, whereCause, null);
+        public <R> List<R> list(final String singleSelectPropName, final Condition whereCause) {
+            return list(singleSelectPropName, whereCause, null);
         }
 
         /**
          *
          * @param <R>
-         * @param targetValueClass
          * @param singleSelectPropName
          * @param whereCause
          * @param jdbcSettings
          * @return
          */
-        public <R> List<R> list(final Class<R> targetValueClass, final String singleSelectPropName, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return list(targetValueClass, null, singleSelectPropName, whereCause, jdbcSettings);
+        public <R> List<R> list(final String singleSelectPropName, final Condition whereCause, final JdbcSettings jdbcSettings) {
+            return list(null, singleSelectPropName, whereCause, jdbcSettings);
         }
 
         /**
          *
          * @param <R>
-         * @param targetValueClass
          * @param conn
          * @param singleSelectPropName
          * @param whereCause
          * @return
          */
-        public <R> List<R> list(final Class<R> targetValueClass, final Connection conn, final String singleSelectPropName, final Condition whereCause) {
-            return list(targetValueClass, conn, singleSelectPropName, whereCause, null);
+        public <R> List<R> list(final Connection conn, final String singleSelectPropName, final Condition whereCause) {
+            return list(conn, singleSelectPropName, whereCause, null);
         }
 
         /**
          *
          * @param <R>
-         * @param targetValueClass
          * @param conn
          * @param singleSelectPropName
          * @param whereCause
          * @param jdbcSettings
          * @return
          */
-        public <R> List<R> list(final Class<R> targetValueClass, final Connection conn, final String singleSelectPropName, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return list(conn, singleSelectPropName, RowMapper.get(targetValueClass), whereCause, jdbcSettings);
+        public <R> List<R> list(final Connection conn, final String singleSelectPropName, final Condition whereCause, final JdbcSettings jdbcSettings) {
+            return list(conn, singleSelectPropName, RowMapper.GET_OBJECT, whereCause, jdbcSettings);
         }
 
         /**
@@ -6797,7 +6791,7 @@ public class SQLExecutor {
          * @see SQLExecutor#listAll(Class, String, StatementSetter, JdbcSettings, Object...)
          */
         public List<T> listAll(final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return listAll(null, whereCause, jdbcSettings);
+            return listAll((Collection<String>) null, whereCause, jdbcSettings);
         }
 
         /**
@@ -6821,15 +6815,13 @@ public class SQLExecutor {
          * It's designed for partition.
          *
          * @param <R>
-         * @param targetValueClass
          * @param singleSelectPropName
          * @param whereCause
          * @param jdbcSettings
          * @return
          */
-        public <R> List<R> listAll(final Class<R> targetValueClass, final String singleSelectPropName, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return listAll(singleSelectPropName, JdbcUtil.RowMapper.get(targetValueClass), whereCause, jdbcSettings);
+        public <R> List<R> listAll(final String singleSelectPropName, final Condition whereCause, final JdbcSettings jdbcSettings) {
+            return listAll(singleSelectPropName, JdbcUtil.RowMapper.GET_OBJECT, whereCause, jdbcSettings);
         }
 
         /**
@@ -6929,27 +6921,24 @@ public class SQLExecutor {
         /**
          *
          * @param <R>
-         * @param targetValueClass
          * @param singleSelectPropName
          * @param whereCause
          * @return
          */
-        public <R> Stream<R> stream(final Class<R> targetValueClass, final String singleSelectPropName, final Condition whereCause) {
-            return stream(targetValueClass, singleSelectPropName, whereCause, null);
+        public <R> Stream<R> stream(final String singleSelectPropName, final Condition whereCause) {
+            return stream(singleSelectPropName, whereCause, null);
         }
 
         /**
          *
          * @param <R>
-         * @param targetValueClass
          * @param singleSelectPropName
          * @param whereCause
          * @param jdbcSettings
          * @return
          */
-        public <R> Stream<R> stream(final Class<R> targetValueClass, final String singleSelectPropName, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return stream(singleSelectPropName, JdbcUtil.RowMapper.get(targetValueClass), whereCause, jdbcSettings);
+        public <R> Stream<R> stream(final String singleSelectPropName, final Condition whereCause, final JdbcSettings jdbcSettings) {
+            return stream(singleSelectPropName, JdbcUtil.RowMapper.GET_OBJECT, whereCause, jdbcSettings);
         }
 
         /**
@@ -7057,7 +7046,7 @@ public class SQLExecutor {
          * @see SQLExecutor#streamAll(Class, String, StatementSetter, JdbcSettings, Object...)
          */
         public Stream<T> streamAll(final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return streamAll(null, whereCause, jdbcSettings);
+            return streamAll((Collection<String>) null, whereCause, jdbcSettings);
         }
 
         /**
@@ -7081,15 +7070,13 @@ public class SQLExecutor {
          * It's designed for partition.
          *
          * @param <R>
-         * @param targetValueClass
          * @param singleSelectPropName
          * @param whereCause
          * @param jdbcSettings
          * @return
          */
-        public <R> Stream<R> streamAll(final Class<R> targetValueClass, final String singleSelectPropName, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return streamAll(singleSelectPropName, JdbcUtil.RowMapper.get(targetValueClass), whereCause, jdbcSettings);
+        public <R> Stream<R> streamAll(final String singleSelectPropName, final Condition whereCause, final JdbcSettings jdbcSettings) {
+            return streamAll(singleSelectPropName, JdbcUtil.RowMapper.GET_OBJECT, whereCause, jdbcSettings);
         }
 
         /**

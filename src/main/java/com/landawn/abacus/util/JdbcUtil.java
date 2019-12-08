@@ -13287,6 +13287,15 @@ public final class JdbcUtil {
             }
         };
 
+        /** The Constant GET_OBJECT. */
+        @SuppressWarnings("rawtypes")
+        RowMapper GET_OBJECT = new RowMapper<Object>() {
+            @Override
+            public Object apply(final ResultSet rs) throws SQLException {
+                return rs.getObject(1);
+            }
+        };
+
         /**
          *
          * @param rs
@@ -15488,14 +15497,13 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param targetValueClass
          * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        default <R> List<R> list(final Class<R> targetValueClass, final String singleSelectPropName, final Condition cond) throws SQLException {
-            return list(singleSelectPropName, cond, JdbcUtil.RowMapper.get(targetValueClass));
+        default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws SQLException {
+            return list(singleSelectPropName, cond, JdbcUtil.RowMapper.GET_OBJECT);
         }
 
         /**
@@ -15609,15 +15617,13 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param targetValueClass
          * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        default <R> ExceptionalStream<R, SQLException> stream(final Class<R> targetValueClass, final String singleSelectPropName, final Condition cond)
-                throws SQLException {
-            return stream(singleSelectPropName, cond, JdbcUtil.RowMapper.get(targetValueClass));
+        default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) throws SQLException {
+            return stream(singleSelectPropName, cond, JdbcUtil.RowMapper.GET_OBJECT);
         }
 
         /**

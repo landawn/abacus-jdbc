@@ -140,6 +140,10 @@ public class DaoTest {
             userDao.list(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), rs -> rs.getString(1)).forEach(Fn.println());
 
             userDao.list(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fn.println());
+
+            userDao.list("firstName", CF.eq("firstName", "Forrest")).forEach(Fn.println());
+
+            userDao.stream("firstName", CF.alwaysTrue()).forEach(Fn.println());
         }
 
         userDao.updateFirstAndLastName("Tom", "Hanks", 100);
