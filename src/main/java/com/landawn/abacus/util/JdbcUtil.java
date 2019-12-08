@@ -13180,6 +13180,9 @@ public final class JdbcUtil {
         }
     };
 
+    @SuppressWarnings("rawtypes")
+    private static final Map<Type<?>, RowMapper> singleGetRowMapperPool = new ObjectPool<>(1024);
+
     /**
      * Don't use {@code RowMapper} in {@link PreparedQuery#list(RowMapper)} or any place where multiple records will be retrieved by it, if column labels/count are used in {@link RowMapper#apply(ResultSet)}.
      * Consider using {@code BiRowMapper} instead because it's more efficient to retrieve multiple records when column labels/count are used.
@@ -13191,7 +13194,7 @@ public final class JdbcUtil {
         /** The Constant GET_BOOLEAN. */
         RowMapper<Boolean> GET_BOOLEAN = new RowMapper<Boolean>() {
             @Override
-            public Boolean apply(final ResultSet rs) throws SQLException, RuntimeException {
+            public Boolean apply(final ResultSet rs) throws SQLException {
                 return rs.getBoolean(1);
             }
         };
@@ -13199,7 +13202,7 @@ public final class JdbcUtil {
         /** The Constant GET_BYTE. */
         RowMapper<Byte> GET_BYTE = new RowMapper<Byte>() {
             @Override
-            public Byte apply(final ResultSet rs) throws SQLException, RuntimeException {
+            public Byte apply(final ResultSet rs) throws SQLException {
                 return rs.getByte(1);
             }
         };
@@ -13207,7 +13210,7 @@ public final class JdbcUtil {
         /** The Constant GET_SHORT. */
         RowMapper<Short> GET_SHORT = new RowMapper<Short>() {
             @Override
-            public Short apply(final ResultSet rs) throws SQLException, RuntimeException {
+            public Short apply(final ResultSet rs) throws SQLException {
                 return rs.getShort(1);
             }
         };
@@ -13215,7 +13218,7 @@ public final class JdbcUtil {
         /** The Constant GET_INT. */
         RowMapper<Integer> GET_INT = new RowMapper<Integer>() {
             @Override
-            public Integer apply(final ResultSet rs) throws SQLException, RuntimeException {
+            public Integer apply(final ResultSet rs) throws SQLException {
                 return rs.getInt(1);
             }
         };
@@ -13223,7 +13226,7 @@ public final class JdbcUtil {
         /** The Constant GET_LONG. */
         RowMapper<Long> GET_LONG = new RowMapper<Long>() {
             @Override
-            public Long apply(final ResultSet rs) throws SQLException, RuntimeException {
+            public Long apply(final ResultSet rs) throws SQLException {
                 return rs.getLong(1);
             }
         };
@@ -13231,7 +13234,7 @@ public final class JdbcUtil {
         /** The Constant GET_FLOAT. */
         RowMapper<Float> GET_FLOAT = new RowMapper<Float>() {
             @Override
-            public Float apply(final ResultSet rs) throws SQLException, RuntimeException {
+            public Float apply(final ResultSet rs) throws SQLException {
                 return rs.getFloat(1);
             }
         };
@@ -13239,7 +13242,7 @@ public final class JdbcUtil {
         /** The Constant GET_DOUBLE. */
         RowMapper<Double> GET_DOUBLE = new RowMapper<Double>() {
             @Override
-            public Double apply(final ResultSet rs) throws SQLException, RuntimeException {
+            public Double apply(final ResultSet rs) throws SQLException {
                 return rs.getDouble(1);
             }
         };
@@ -13247,7 +13250,7 @@ public final class JdbcUtil {
         /** The Constant GET_BIG_DECIMAL. */
         RowMapper<BigDecimal> GET_BIG_DECIMAL = new RowMapper<BigDecimal>() {
             @Override
-            public BigDecimal apply(final ResultSet rs) throws SQLException, RuntimeException {
+            public BigDecimal apply(final ResultSet rs) throws SQLException {
                 return rs.getBigDecimal(1);
             }
         };
@@ -13255,7 +13258,7 @@ public final class JdbcUtil {
         /** The Constant GET_STRING. */
         RowMapper<String> GET_STRING = new RowMapper<String>() {
             @Override
-            public String apply(final ResultSet rs) throws SQLException, RuntimeException {
+            public String apply(final ResultSet rs) throws SQLException {
                 return rs.getString(1);
             }
         };
@@ -13263,7 +13266,7 @@ public final class JdbcUtil {
         /** The Constant GET_DATE. */
         RowMapper<Date> GET_DATE = new RowMapper<Date>() {
             @Override
-            public Date apply(final ResultSet rs) throws SQLException, RuntimeException {
+            public Date apply(final ResultSet rs) throws SQLException {
                 return rs.getDate(1);
             }
         };
@@ -13271,7 +13274,7 @@ public final class JdbcUtil {
         /** The Constant GET_TIME. */
         RowMapper<Time> GET_TIME = new RowMapper<Time>() {
             @Override
-            public Time apply(final ResultSet rs) throws SQLException, RuntimeException {
+            public Time apply(final ResultSet rs) throws SQLException {
                 return rs.getTime(1);
             }
         };
@@ -13279,7 +13282,7 @@ public final class JdbcUtil {
         /** The Constant GET_TIMESTAMP. */
         RowMapper<Timestamp> GET_TIMESTAMP = new RowMapper<Timestamp>() {
             @Override
-            public Timestamp apply(final ResultSet rs) throws SQLException, RuntimeException {
+            public Timestamp apply(final ResultSet rs) throws SQLException {
                 return rs.getTimestamp(1);
             }
         };
@@ -13292,6 +13295,41 @@ public final class JdbcUtil {
          */
         @Override
         T apply(ResultSet rs) throws SQLException;
+
+        /**
+         * Gets the values from the first column.
+         *
+         * @param <T>
+         * @param firstColumnType
+         * @return
+         */
+        static <T> RowMapper<T> get(final Class<? extends T> firstColumnType) {
+            return get(N.typeOf(firstColumnType));
+        }
+
+        /**
+         * Gets the values from the first column.
+         *
+         * @param <T>
+         * @param firstColumnType
+         * @return
+         */
+        static <T> RowMapper<T> get(final Type<? extends T> firstColumnType) {
+            RowMapper<T> result = singleGetRowMapperPool.get(firstColumnType);
+
+            if (result == null) {
+                result = new RowMapper<T>() {
+                    @Override
+                    public T apply(final ResultSet rs) throws SQLException {
+                        return firstColumnType.get(rs, 1);
+                    }
+                };
+
+                singleGetRowMapperPool.put(firstColumnType, result);
+            }
+
+            return result;
+        }
 
         static RowMapperBuilder builder() {
             return new RowMapperBuilder();
@@ -13638,7 +13676,7 @@ public final class JdbcUtil {
         /** The Constant GET_BOOLEAN. */
         BiRowMapper<Boolean> GET_BOOLEAN = new BiRowMapper<Boolean>() {
             @Override
-            public Boolean apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public Boolean apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 return rs.getBoolean(1);
             }
         };
@@ -13646,7 +13684,7 @@ public final class JdbcUtil {
         /** The Constant GET_BYTE. */
         BiRowMapper<Byte> GET_BYTE = new BiRowMapper<Byte>() {
             @Override
-            public Byte apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public Byte apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 return rs.getByte(1);
             }
         };
@@ -13654,7 +13692,7 @@ public final class JdbcUtil {
         /** The Constant GET_SHORT. */
         BiRowMapper<Short> GET_SHORT = new BiRowMapper<Short>() {
             @Override
-            public Short apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public Short apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 return rs.getShort(1);
             }
         };
@@ -13662,7 +13700,7 @@ public final class JdbcUtil {
         /** The Constant GET_INT. */
         BiRowMapper<Integer> GET_INT = new BiRowMapper<Integer>() {
             @Override
-            public Integer apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public Integer apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 return rs.getInt(1);
             }
         };
@@ -13670,7 +13708,7 @@ public final class JdbcUtil {
         /** The Constant GET_LONG. */
         BiRowMapper<Long> GET_LONG = new BiRowMapper<Long>() {
             @Override
-            public Long apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public Long apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 return rs.getLong(1);
             }
         };
@@ -13678,7 +13716,7 @@ public final class JdbcUtil {
         /** The Constant GET_FLOAT. */
         BiRowMapper<Float> GET_FLOAT = new BiRowMapper<Float>() {
             @Override
-            public Float apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public Float apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 return rs.getFloat(1);
             }
         };
@@ -13686,7 +13724,7 @@ public final class JdbcUtil {
         /** The Constant GET_DOUBLE. */
         BiRowMapper<Double> GET_DOUBLE = new BiRowMapper<Double>() {
             @Override
-            public Double apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public Double apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 return rs.getDouble(1);
             }
         };
@@ -13694,7 +13732,7 @@ public final class JdbcUtil {
         /** The Constant GET_BIG_DECIMAL. */
         BiRowMapper<BigDecimal> GET_BIG_DECIMAL = new BiRowMapper<BigDecimal>() {
             @Override
-            public BigDecimal apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public BigDecimal apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 return rs.getBigDecimal(1);
             }
         };
@@ -13702,7 +13740,7 @@ public final class JdbcUtil {
         /** The Constant GET_STRING. */
         BiRowMapper<String> GET_STRING = new BiRowMapper<String>() {
             @Override
-            public String apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public String apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 return rs.getString(1);
             }
         };
@@ -13710,7 +13748,7 @@ public final class JdbcUtil {
         /** The Constant GET_DATE. */
         BiRowMapper<Date> GET_DATE = new BiRowMapper<Date>() {
             @Override
-            public Date apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public Date apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 return rs.getDate(1);
             }
         };
@@ -13718,7 +13756,7 @@ public final class JdbcUtil {
         /** The Constant GET_TIME. */
         BiRowMapper<Time> GET_TIME = new BiRowMapper<Time>() {
             @Override
-            public Time apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public Time apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 return rs.getTime(1);
             }
         };
@@ -13726,7 +13764,7 @@ public final class JdbcUtil {
         /** The Constant GET_TIMESTAMP. */
         BiRowMapper<Timestamp> GET_TIMESTAMP = new BiRowMapper<Timestamp>() {
             @Override
-            public Timestamp apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public Timestamp apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 return rs.getTimestamp(1);
             }
         };
@@ -13734,7 +13772,7 @@ public final class JdbcUtil {
         /** The Constant TO_ARRAY. */
         BiRowMapper<Object[]> TO_ARRAY = new BiRowMapper<Object[]>() {
             @Override
-            public Object[] apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public Object[] apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 final int columnCount = columnLabels.size();
                 final Object[] result = new Object[columnCount];
 
@@ -13749,7 +13787,7 @@ public final class JdbcUtil {
         /** The Constant TO_LIST. */
         BiRowMapper<List<Object>> TO_LIST = new BiRowMapper<List<Object>>() {
             @Override
-            public List<Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public List<Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 final int columnCount = columnLabels.size();
                 final List<Object> result = new ArrayList<>(columnCount);
 
@@ -13764,7 +13802,7 @@ public final class JdbcUtil {
         /** The Constant TO_MAP. */
         BiRowMapper<Map<String, Object>> TO_MAP = new BiRowMapper<Map<String, Object>>() {
             @Override
-            public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 final int columnCount = columnLabels.size();
                 final Map<String, Object> result = new HashMap<>(columnCount);
 
@@ -13779,7 +13817,7 @@ public final class JdbcUtil {
         /** The Constant TO_LINKED_HASH_MAP. */
         BiRowMapper<Map<String, Object>> TO_LINKED_HASH_MAP = new BiRowMapper<Map<String, Object>>() {
             @Override
-            public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException, RuntimeException {
+            public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 final int columnCount = columnLabels.size();
                 final Map<String, Object> result = new LinkedHashMap<>(columnCount);
 
@@ -14160,7 +14198,7 @@ public final class JdbcUtil {
         /** The Constant ALWAYS_TRUE. */
         RowFilter ALWAYS_TRUE = new RowFilter() {
             @Override
-            public boolean test(ResultSet rs) throws SQLException, RuntimeException {
+            public boolean test(ResultSet rs) throws SQLException {
                 return true;
             }
         };
@@ -14168,7 +14206,7 @@ public final class JdbcUtil {
         /** The Constant ALWAYS_FALSE. */
         RowFilter ALWAYS_FALSE = new RowFilter() {
             @Override
-            public boolean test(ResultSet rs) throws SQLException, RuntimeException {
+            public boolean test(ResultSet rs) throws SQLException {
                 return false;
             }
         };
@@ -14193,7 +14231,7 @@ public final class JdbcUtil {
         /** The Constant ALWAYS_TRUE. */
         BiRowFilter ALWAYS_TRUE = new BiRowFilter() {
             @Override
-            public boolean test(ResultSet rs, List<String> columnLabels) throws SQLException, RuntimeException {
+            public boolean test(ResultSet rs, List<String> columnLabels) throws SQLException {
                 return true;
             }
         };
@@ -14201,7 +14239,7 @@ public final class JdbcUtil {
         /** The Constant ALWAYS_FALSE. */
         BiRowFilter ALWAYS_FALSE = new BiRowFilter() {
             @Override
-            public boolean test(ResultSet rs, List<String> columnLabels) throws SQLException, RuntimeException {
+            public boolean test(ResultSet rs, List<String> columnLabels) throws SQLException {
                 return false;
             }
         };
@@ -14236,6 +14274,10 @@ public final class JdbcUtil {
          * @throws SQLException
          */
         V apply(int columnIndex, ResultSet rs) throws SQLException;
+
+        static <T> ColumnGetter<T> get(final Class<? extends T> cls) {
+            return get(N.typeOf(cls));
+        }
 
         static <T> ColumnGetter<T> get(final Type<? extends T> type) {
             ColumnGetter<?> columnGetter = COLUMN_GETTER_POOL.get(type);
@@ -15212,170 +15254,174 @@ public final class JdbcUtil {
         /**
          * Query for boolean.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        OptionalBoolean queryForBoolean(final String selectPropName, final Condition cond) throws SQLException;
+        OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond) throws SQLException;
 
         /**
          * Query for char.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        OptionalChar queryForChar(final String selectPropName, final Condition cond) throws SQLException;
+        OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws SQLException;
 
         /**
          * Query for byte.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        OptionalByte queryForByte(final String selectPropName, final Condition cond) throws SQLException;
+        OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws SQLException;
 
         /**
          * Query for short.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        OptionalShort queryForShort(final String selectPropName, final Condition cond) throws SQLException;
+        OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws SQLException;
 
         /**
          * Query for int.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        OptionalInt queryForInt(final String selectPropName, final Condition cond) throws SQLException;
+        OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws SQLException;
 
         /**
          * Query for long.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        OptionalLong queryForLong(final String selectPropName, final Condition cond) throws SQLException;
+        OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws SQLException;
 
         /**
          * Query for float.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        OptionalFloat queryForFloat(final String selectPropName, final Condition cond) throws SQLException;
+        OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws SQLException;
 
         /**
          * Query for double.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        OptionalDouble queryForDouble(final String selectPropName, final Condition cond) throws SQLException;
+        OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws SQLException;
 
         /**
          * Query for string.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        Nullable<String> queryForString(final String selectPropName, final Condition cond) throws SQLException;
+        Nullable<String> queryForString(final String singleSelectPropName, final Condition cond) throws SQLException;
 
         /**
          * Query for date.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        Nullable<java.sql.Date> queryForDate(final String selectPropName, final Condition cond) throws SQLException;
+        Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond) throws SQLException;
 
         /**
          * Query for time.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        Nullable<java.sql.Time> queryForTime(final String selectPropName, final Condition cond) throws SQLException;
+        Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond) throws SQLException;
 
         /**
          * Query for timestamp.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        Nullable<java.sql.Timestamp> queryForTimestamp(final String selectPropName, final Condition cond) throws SQLException;
+        Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond) throws SQLException;
 
         /**
          * Query for single result.
          *
          * @param <V> the value type
          * @param targetValueClass
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String selectPropName, final Condition cond) throws SQLException;
+        <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond) throws SQLException;
 
         /**
          * Query for single non null.
          *
          * @param <V> the value type
          * @param targetValueClass
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
+         * @throws DuplicatedResultException if more than one record found.
          * @throws SQLException the SQL exception
          */
-        <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String selectPropName, final Condition cond) throws SQLException;
+        <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond) throws SQLException;
 
         /**
          * Query for unique result.
          *
          * @param <V> the value type
          * @param targetValueClass
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
+         * @throws DuplicatedResultException if more than one record found.
          * @throws SQLException the SQL exception
          */
-        <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String selectPropName, final Condition cond) throws SQLException;
+        <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
+                throws DuplicatedResultException, SQLException;
 
         /**
          * Query for unique non null.
          *
          * @param <V> the value type
          * @param targetValueClass
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
-        <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String selectPropName, final Condition cond) throws SQLException;
+        <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
+                throws DuplicatedResultException, SQLException;
 
         /**
          *
@@ -15439,6 +15485,26 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         <R> List<R> list(final Condition cond, final JdbcUtil.BiRowFilter rowFilter, final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+
+        //        /**
+        //         *
+        //         * @param targetValueClass
+        //         * @param singleSelectPropName
+        //         * @param cond
+        //         * @return
+        //         * @throws SQLException the SQL exception
+        //         */
+        //        <R> List<R> list(final Class<R> targetValueClass, final String singleSelectPropName, final Condition cond) throws SQLException;
+        //
+        //        /**
+        //        *
+        //        * @param singleSelectPropName
+        //        * @param cond
+        //         * @param rowMapper
+        //        * @return
+        //        * @throws SQLException the SQL exception
+        //        */
+        //        <R> List<R> list(final String singleSelectPropName, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -16364,9 +16430,10 @@ public final class JdbcUtil {
          *
          * @param ids
          * @return
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException the SQL exception
          */
-        default List<T> batchGet(final Collection<? extends ID> ids) throws SQLException {
+        default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicatedResultException, SQLException {
             return batchGet(ids, (Collection<String>) null);
         }
 
@@ -16376,9 +16443,10 @@ public final class JdbcUtil {
          * @param ids
          * @param selectPropNames
          * @return
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException the SQL exception
          */
-        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws SQLException {
+        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws DuplicatedResultException, SQLException {
             return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
@@ -16388,9 +16456,11 @@ public final class JdbcUtil {
          * @param selectPropNames
          * @param batchSize
          * @return
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException the SQL exception
          */
-        List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) throws SQLException;
+        List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize)
+                throws DuplicatedResultException, SQLException;
 
         /**
          *
@@ -17639,7 +17709,7 @@ public final class JdbcUtil {
                                     "Input 'ids' can not be EntityIds/Maps or entities for single id ");
 
                             final List idList = ids instanceof List ? (List) ids : new ArrayList(ids);
-                            final List<T> entities = new ArrayList<>(idList.size());
+                            final List<T> resultList = new ArrayList<>(idList.size());
 
                             if (idPropNames.size() == 1) {
                                 String sql = selectSQLBuilderFunc.apply(selectPropNames, CF.eq(idPropName)).sql();
@@ -17655,7 +17725,7 @@ public final class JdbcUtil {
                                     String inSQL = sql + joiner.toString();
 
                                     for (int i = 0, to = ids.size() - batchSize; i <= to; i += batchSize) {
-                                        entities.addAll(proxy.prepareQuery(inSQL).setParameters(idList.subList(i, i + batchSize)).list(entityClass));
+                                        resultList.addAll(proxy.prepareQuery(inSQL).setParameters(idList.subList(i, i + batchSize)).list(entityClass));
                                     }
                                 }
 
@@ -17668,18 +17738,18 @@ public final class JdbcUtil {
                                     }
 
                                     String inSQL = sql + joiner.toString();
-                                    entities.addAll(
+                                    resultList.addAll(
                                             proxy.prepareQuery(inSQL).setParameters(idList.subList(ids.size() - remaining, ids.size())).list(entityClass));
                                 }
                             } else {
                                 if (ids.size() >= batchSize) {
                                     for (int i = 0, to = ids.size() - batchSize; i <= to; i += batchSize) {
                                         if (isMap) {
-                                            entities.addAll(((BasicDao) proxy).list(CF.eqAndOr(idList.subList(i, i + batchSize))));
+                                            resultList.addAll(((BasicDao) proxy).list(CF.eqAndOr(idList.subList(i, i + batchSize))));
                                         } else if (isEntityId) {
-                                            entities.addAll(((BasicDao) proxy).list(CF.id2Cond(idList.subList(i, i + batchSize))));
+                                            resultList.addAll(((BasicDao) proxy).list(CF.id2Cond(idList.subList(i, i + batchSize))));
                                         } else {
-                                            entities.addAll(((BasicDao) proxy).list(CF.eqAndOr(idList.subList(i, i + batchSize), idPropNames)));
+                                            resultList.addAll(((BasicDao) proxy).list(CF.eqAndOr(idList.subList(i, i + batchSize), idPropNames)));
                                         }
                                     }
                                 }
@@ -17688,16 +17758,21 @@ public final class JdbcUtil {
                                     final int remaining = ids.size() % batchSize;
 
                                     if (isMap) {
-                                        entities.addAll(((BasicDao) proxy).list(CF.eqAndOr(idList.subList(ids.size() - remaining, ids.size()))));
+                                        resultList.addAll(((BasicDao) proxy).list(CF.eqAndOr(idList.subList(ids.size() - remaining, ids.size()))));
                                     } else if (isEntityId) {
-                                        entities.addAll(((BasicDao) proxy).list(CF.id2Cond(idList.subList(idList.size() - remaining, ids.size()))));
+                                        resultList.addAll(((BasicDao) proxy).list(CF.id2Cond(idList.subList(idList.size() - remaining, ids.size()))));
                                     } else {
-                                        entities.addAll(((BasicDao) proxy).list(CF.eqAndOr(idList.subList(ids.size() - remaining, ids.size()), idPropNames)));
+                                        resultList.addAll(((BasicDao) proxy).list(CF.eqAndOr(idList.subList(ids.size() - remaining, ids.size()), idPropNames)));
                                     }
                                 }
                             }
 
-                            return entities;
+                            if (resultList.size() > ids.size()) {
+                                throw new DuplicatedResultException(
+                                        "The size of result: " + resultList.size() + " is bigger than the size of input ids: " + ids.size());
+                            }
+
+                            return resultList;
                         };
                     } else if (methodName.equals("exists") && paramLen == 1 && !Condition.class.isAssignableFrom(paramTypes[0])) {
                         final String query = sql_existsById;

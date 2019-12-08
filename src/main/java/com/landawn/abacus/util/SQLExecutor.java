@@ -6178,8 +6178,9 @@ public class SQLExecutor {
          *
          * @param ids
          * @return
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          */
-        public List<T> batchGet(final Collection<? extends ID> ids) {
+        public List<T> batchGet(final Collection<? extends ID> ids) throws DuplicatedResultException {
             return batchGet(ids, (Collection<String>) null);
         }
 
@@ -6189,8 +6190,9 @@ public class SQLExecutor {
          * @param ids
          * @param selectPropNames
          * @return
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          */
-        public List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) {
+        public List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws DuplicatedResultException {
             return batchGet(ids, selectPropNames, JdbcSettings.DEFAULT_BATCH_SIZE);
         }
 
@@ -6200,8 +6202,10 @@ public class SQLExecutor {
          * @param selectPropNames
          * @param batchSize
          * @return
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          */
-        public List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) {
+        public List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize)
+                throws DuplicatedResultException {
             return batchGet(null, ids, selectPropNames, batchSize);
         }
 
@@ -6213,8 +6217,10 @@ public class SQLExecutor {
          * @param selectPropNames
          * @param batchSize
          * @return
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          */
-        public List<T> batchGet(final Connection conn, final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) {
+        public List<T> batchGet(final Connection conn, final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize)
+                throws DuplicatedResultException {
             N.checkArgPositive(batchSize, "batchSize");
 
             if (N.isNullOrEmpty(ids)) {
@@ -6230,7 +6236,7 @@ public class SQLExecutor {
                     "Input 'ids' can not be EntityIds/Maps or entities for single id ");
 
             final List<ID> idList = ids instanceof List ? (List<ID>) ids : new ArrayList<>(ids);
-            final List<T> entities = new ArrayList<>(idList.size());
+            final List<T> resultList = new ArrayList<>(idList.size());
 
             if (idPropNameList.size() == 1) {
                 String sql = prepareQuery(selectPropNames, idCond).sql;
@@ -6246,7 +6252,7 @@ public class SQLExecutor {
                     String inSQL = sql + joiner.toString();
 
                     for (int i = 0, to = ids.size() - batchSize; i <= to; i += batchSize) {
-                        entities.addAll(sqlExecutor.list(targetClass, conn, inSQL, null, null, idList.subList(i, i + batchSize).toArray()));
+                        resultList.addAll(sqlExecutor.list(targetClass, conn, inSQL, null, null, idList.subList(i, i + batchSize).toArray()));
                     }
                 }
 
@@ -6259,17 +6265,17 @@ public class SQLExecutor {
                     }
 
                     String inSQL = sql + joiner.toString();
-                    entities.addAll(sqlExecutor.list(targetClass, conn, inSQL, null, null, idList.subList(ids.size() - remaining, ids.size()).toArray()));
+                    resultList.addAll(sqlExecutor.list(targetClass, conn, inSQL, null, null, idList.subList(ids.size() - remaining, ids.size()).toArray()));
                 }
             } else {
                 if (ids.size() >= batchSize) {
                     for (int i = 0, to = ids.size() - batchSize; i <= to; i += batchSize) {
                         if (isMap) {
-                            entities.addAll(list(CF.eqAndOr((List<Map<String, ?>>) idList.subList(i, i + batchSize))));
+                            resultList.addAll(list(CF.eqAndOr((List<Map<String, ?>>) idList.subList(i, i + batchSize))));
                         } else if (isEntityId) {
-                            entities.addAll(list(CF.id2Cond((List<EntityId>) idList.subList(i, i + batchSize))));
+                            resultList.addAll(list(CF.id2Cond((List<EntityId>) idList.subList(i, i + batchSize))));
                         } else {
-                            entities.addAll(list(CF.eqAndOr(idList.subList(i, i + batchSize), idPropNameList)));
+                            resultList.addAll(list(CF.eqAndOr(idList.subList(i, i + batchSize), idPropNameList)));
                         }
                     }
                 }
@@ -6278,16 +6284,20 @@ public class SQLExecutor {
                     final int remaining = ids.size() % batchSize;
 
                     if (isMap) {
-                        entities.addAll(list(CF.eqAndOr((List<Map<String, ?>>) idList.subList(ids.size() - remaining, ids.size()))));
+                        resultList.addAll(list(CF.eqAndOr((List<Map<String, ?>>) idList.subList(ids.size() - remaining, ids.size()))));
                     } else if (isEntityId) {
-                        entities.addAll(list(CF.id2Cond((List<EntityId>) idList.subList(idList.size() - remaining, ids.size()))));
+                        resultList.addAll(list(CF.id2Cond((List<EntityId>) idList.subList(idList.size() - remaining, ids.size()))));
                     } else {
-                        entities.addAll(list(CF.eqAndOr(idList.subList(ids.size() - remaining, ids.size()), idPropNameList)));
+                        resultList.addAll(list(CF.eqAndOr(idList.subList(ids.size() - remaining, ids.size()), idPropNameList)));
                     }
                 }
             }
 
-            return entities;
+            if (resultList.size() > ids.size()) {
+                throw new DuplicatedResultException("The size of result: " + resultList.size() + " is bigger than the size of input ids: " + ids.size());
+            }
+
+            return resultList;
         }
 
         /**
@@ -6359,120 +6369,12 @@ public class SQLExecutor {
         /**
          *
          * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> Optional<R> findFirst(String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
-            return findFirst(selectPropName, rowMapper, whereCause, null);
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> Optional<R> findFirst(String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return findFirst(null, selectPropName, rowMapper, whereCause, jdbcSettings);
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> Optional<R> findFirst(final Connection conn, String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
-            return findFirst(conn, selectPropName, rowMapper, whereCause, null);
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> Optional<R> findFirst(final Connection conn, String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return findFirst(conn, Arrays.asList(selectPropName), rowMapper, whereCause, jdbcSettings);
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> Optional<R> findFirst(String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
-            return findFirst(selectPropName, rowMapper, whereCause, null);
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> Optional<R> findFirst(String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return findFirst(null, selectPropName, rowMapper, whereCause, jdbcSettings);
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> Optional<R> findFirst(final Connection conn, String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
-            return findFirst(conn, selectPropName, rowMapper, whereCause, null);
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> Optional<R> findFirst(final Connection conn, String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
-            return findFirst(conn, Arrays.asList(selectPropName), rowMapper, whereCause, jdbcSettings);
-        }
-
-        /**
-         *
-         * @param <R>
          * @param selectPropNames
          * @param rowMapper
          * @param whereCause
          * @return
          */
-        public <R> Optional<R> findFirst(Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
+        public <R> Optional<R> findFirst(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
             return findFirst(selectPropNames, rowMapper, whereCause, null);
         }
 
@@ -6485,7 +6387,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
-        public <R> Optional<R> findFirst(Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
+        public <R> Optional<R> findFirst(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             return findFirst(null, selectPropNames, rowMapper, whereCause, jdbcSettings);
         }
@@ -6499,7 +6401,7 @@ public class SQLExecutor {
          * @param whereCause
          * @return
          */
-        public <R> Optional<R> findFirst(final Connection conn, Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper,
+        public <R> Optional<R> findFirst(final Connection conn, final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper,
                 final Condition whereCause) {
             return findFirst(conn, selectPropNames, rowMapper, whereCause, null);
         }
@@ -6514,7 +6416,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
-        public <R> Optional<R> findFirst(final Connection conn, Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper,
+        public <R> Optional<R> findFirst(final Connection conn, final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper,
                 final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
@@ -6529,7 +6431,7 @@ public class SQLExecutor {
          * @param whereCause
          * @return
          */
-        public <R> Optional<R> findFirst(Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
+        public <R> Optional<R> findFirst(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
             return findFirst(selectPropNames, rowMapper, whereCause, null);
         }
 
@@ -6542,7 +6444,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
-        public <R> Optional<R> findFirst(Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
+        public <R> Optional<R> findFirst(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             return findFirst(null, selectPropNames, rowMapper, whereCause, jdbcSettings);
         }
@@ -6556,7 +6458,7 @@ public class SQLExecutor {
          * @param whereCause
          * @return
          */
-        public <R> Optional<R> findFirst(final Connection conn, Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
+        public <R> Optional<R> findFirst(final Connection conn, final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
                 final Condition whereCause) {
             return findFirst(conn, selectPropNames, rowMapper, whereCause, null);
         }
@@ -6571,7 +6473,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
-        public <R> Optional<R> findFirst(final Connection conn, Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
+        public <R> Optional<R> findFirst(final Connection conn, final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
                 final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
@@ -6659,107 +6561,109 @@ public class SQLExecutor {
         /**
          *
          * @param <R>
-         * @param selectPropName
-         * @param rowMapper
+         * @param targetValueClass
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          */
-        public <R> List<R> list(String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
-            return list(selectPropName, rowMapper, whereCause, null);
+        public <R> List<R> list(final Class<R> targetValueClass, final String singleSelectPropName, final Condition whereCause) {
+            return list(targetValueClass, singleSelectPropName, whereCause, null);
         }
 
         /**
          *
          * @param <R>
-         * @param selectPropName
-         * @param rowMapper
+         * @param targetValueClass
+         * @param singleSelectPropName
          * @param whereCause
          * @param jdbcSettings
          * @return
          */
-        public <R> List<R> list(String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return list(null, selectPropName, rowMapper, whereCause, jdbcSettings);
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> List<R> list(final Connection conn, String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
-            return list(conn, selectPropName, rowMapper, whereCause, null);
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> List<R> list(final Connection conn, String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
+        public <R> List<R> list(final Class<R> targetValueClass, final String singleSelectPropName, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
-            return list(conn, Arrays.asList(selectPropName), rowMapper, whereCause, jdbcSettings);
+            return list(targetValueClass, null, singleSelectPropName, whereCause, jdbcSettings);
         }
 
         /**
          *
          * @param <R>
-         * @param selectPropName
-         * @param rowMapper
+         * @param targetValueClass
+         * @param conn
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          */
-        public <R> List<R> list(String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
-            return list(selectPropName, rowMapper, whereCause, null);
+        public <R> List<R> list(final Class<R> targetValueClass, final Connection conn, final String singleSelectPropName, final Condition whereCause) {
+            return list(targetValueClass, conn, singleSelectPropName, whereCause, null);
         }
 
         /**
          *
          * @param <R>
-         * @param selectPropName
-         * @param rowMapper
+         * @param targetValueClass
+         * @param conn
+         * @param singleSelectPropName
          * @param whereCause
          * @param jdbcSettings
          * @return
          */
-        public <R> List<R> list(String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return list(null, selectPropName, rowMapper, whereCause, jdbcSettings);
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> List<R> list(final Connection conn, String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
-            return list(conn, selectPropName, rowMapper, whereCause, null);
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param conn
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> List<R> list(final Connection conn, String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
+        public <R> List<R> list(final Class<R> targetValueClass, final Connection conn, final String singleSelectPropName, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
-            return list(conn, Arrays.asList(selectPropName), rowMapper, whereCause, jdbcSettings);
+            return list(conn, singleSelectPropName, RowMapper.get(targetValueClass), whereCause, jdbcSettings);
+        }
+
+        /**
+         *
+         * @param <R>
+         * @param singleSelectPropName
+         * @param rowMapper
+         * @param whereCause
+         * @return
+         */
+        public <R> List<R> list(final String singleSelectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
+            return list(singleSelectPropName, rowMapper, whereCause, null);
+        }
+
+        /**
+         *
+         * @param <R>
+         * @param singleSelectPropName
+         * @param rowMapper
+         * @param whereCause
+         * @param jdbcSettings
+         * @return
+         */
+        public <R> List<R> list(final String singleSelectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
+                final JdbcSettings jdbcSettings) {
+            return list(null, singleSelectPropName, rowMapper, whereCause, jdbcSettings);
+        }
+
+        /**
+         *
+         * @param <R>
+         * @param conn
+         * @param singleSelectPropName
+         * @param rowMapper
+         * @param whereCause
+         * @return
+         */
+        public <R> List<R> list(final Connection conn, final String singleSelectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
+            return list(conn, singleSelectPropName, rowMapper, whereCause, null);
+        }
+
+        /**
+         *
+         * @param <R>
+         * @param conn
+         * @param singleSelectPropName
+         * @param rowMapper
+         * @param whereCause
+         * @param jdbcSettings
+         * @return
+         */
+        public <R> List<R> list(final Connection conn, final String singleSelectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
+                final JdbcSettings jdbcSettings) {
+            return list(conn, Arrays.asList(singleSelectPropName), rowMapper, whereCause, jdbcSettings);
         }
 
         /**
@@ -6770,7 +6674,7 @@ public class SQLExecutor {
          * @param whereCause
          * @return
          */
-        public <R> List<R> list(Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
+        public <R> List<R> list(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
             return list(selectPropNames, rowMapper, whereCause, null);
         }
 
@@ -6783,7 +6687,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
-        public <R> List<R> list(Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
+        public <R> List<R> list(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             return list(null, selectPropNames, rowMapper, whereCause, jdbcSettings);
         }
@@ -6797,7 +6701,8 @@ public class SQLExecutor {
          * @param whereCause
          * @return
          */
-        public <R> List<R> list(final Connection conn, Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
+        public <R> List<R> list(final Connection conn, final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper,
+                final Condition whereCause) {
             return list(conn, selectPropNames, rowMapper, whereCause, null);
         }
 
@@ -6811,8 +6716,8 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
-        public <R> List<R> list(final Connection conn, Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
+        public <R> List<R> list(final Connection conn, final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper,
+                final Condition whereCause, final JdbcSettings jdbcSettings) {
             N.checkArgNotNull(rowMapper);
 
             final JdbcUtil.BiRowMapper<R> biRowMapper = new JdbcUtil.BiRowMapper<R>() {
@@ -6833,7 +6738,7 @@ public class SQLExecutor {
          * @param whereCause
          * @return
          */
-        public <R> List<R> list(Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
+        public <R> List<R> list(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
             return list(selectPropNames, rowMapper, whereCause, null);
         }
 
@@ -6846,7 +6751,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
-        public <R> List<R> list(Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
+        public <R> List<R> list(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             return list(null, selectPropNames, rowMapper, whereCause, jdbcSettings);
         }
@@ -6860,7 +6765,7 @@ public class SQLExecutor {
          * @param whereCause
          * @return
          */
-        public <R> List<R> list(final Connection conn, Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
+        public <R> List<R> list(final Connection conn, final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
                 final Condition whereCause) {
             return list(conn, selectPropNames, rowMapper, whereCause, null);
         }
@@ -6875,8 +6780,8 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
-        public <R> List<R> list(final Connection conn, Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
-                final JdbcSettings jdbcSettings) {
+        public <R> List<R> list(final Connection conn, final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper,
+                final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
             return sqlExecutor.list(conn, sp.sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, sp.parameters.toArray());
@@ -6916,14 +6821,15 @@ public class SQLExecutor {
          * It's designed for partition.
          *
          * @param <R>
-         * @param selectPropName
-         * @param rowMapper
+         * @param targetValueClass
+         * @param singleSelectPropName
          * @param whereCause
          * @param jdbcSettings
          * @return
          */
-        public <R> List<R> listAll(String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return listAll(Arrays.asList(selectPropName), rowMapper, whereCause, jdbcSettings);
+        public <R> List<R> listAll(final Class<R> targetValueClass, final String singleSelectPropName, final Condition whereCause,
+                final JdbcSettings jdbcSettings) {
+            return listAll(singleSelectPropName, JdbcUtil.RowMapper.get(targetValueClass), whereCause, jdbcSettings);
         }
 
         /**
@@ -6931,15 +6837,15 @@ public class SQLExecutor {
          * It's designed for partition.
          *
          * @param <R>
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param rowMapper
          * @param whereCause
          * @param jdbcSettings
          * @return
          */
-        public <R> List<R> listAll(String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
+        public <R> List<R> listAll(final String singleSelectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
-            return listAll(Arrays.asList(selectPropName), rowMapper, whereCause, jdbcSettings);
+            return listAll(Arrays.asList(singleSelectPropName), rowMapper, whereCause, jdbcSettings);
         }
 
         /**
@@ -6953,7 +6859,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
-        public <R> List<R> listAll(Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
+        public <R> List<R> listAll(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             N.checkArgNotNull(rowMapper);
 
@@ -6978,7 +6884,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
-        public <R> List<R> listAll(Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
+        public <R> List<R> listAll(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
@@ -7021,58 +6927,57 @@ public class SQLExecutor {
         }
 
         /**
-         * Lazy execution, lazy fetch. The query execution and record fetching only happen when a terminal operation of the stream is called.
          *
          * @param <R>
-         * @param selectPropName
-         * @param rowMapper
+         * @param targetValueClass
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          */
-        public <R> Stream<R> stream(String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
-            return stream(selectPropName, rowMapper, whereCause, null);
+        public <R> Stream<R> stream(final Class<R> targetValueClass, final String singleSelectPropName, final Condition whereCause) {
+            return stream(targetValueClass, singleSelectPropName, whereCause, null);
         }
 
         /**
-         * Lazy execution, lazy fetch. The query execution and record fetching only happen when a terminal operation of the stream is called.
          *
          * @param <R>
-         * @param selectPropName
-         * @param rowMapper
+         * @param targetValueClass
+         * @param singleSelectPropName
          * @param whereCause
          * @param jdbcSettings
          * @return
          */
-        public <R> Stream<R> stream(String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause, final JdbcSettings jdbcSettings) {
-            return stream(Arrays.asList(selectPropName), rowMapper, whereCause, jdbcSettings);
-        }
-
-        /**
-         * Lazy execution, lazy fetch. The query execution and record fetching only happen when a terminal operation of the stream is called.
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @return
-         */
-        public <R> Stream<R> stream(String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
-            return stream(selectPropName, rowMapper, whereCause, null);
-        }
-
-        /**
-         * Lazy execution, lazy fetch. The query execution and record fetching only happen when a terminal operation of the stream is called.
-         *
-         * @param <R>
-         * @param selectPropName
-         * @param rowMapper
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         */
-        public <R> Stream<R> stream(String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
+        public <R> Stream<R> stream(final Class<R> targetValueClass, final String singleSelectPropName, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
-            return stream(Arrays.asList(selectPropName), rowMapper, whereCause, jdbcSettings);
+            return stream(singleSelectPropName, JdbcUtil.RowMapper.get(targetValueClass), whereCause, jdbcSettings);
+        }
+
+        /**
+         * Lazy execution, lazy fetch. The query execution and record fetching only happen when a terminal operation of the stream is called.
+         *
+         * @param <R>
+         * @param singleSelectPropName
+         * @param rowMapper
+         * @param whereCause
+         * @return
+         */
+        public <R> Stream<R> stream(final String singleSelectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
+            return stream(singleSelectPropName, rowMapper, whereCause, null);
+        }
+
+        /**
+         * Lazy execution, lazy fetch. The query execution and record fetching only happen when a terminal operation of the stream is called.
+         *
+         * @param <R>
+         * @param singleSelectPropName
+         * @param rowMapper
+         * @param whereCause
+         * @param jdbcSettings
+         * @return
+         */
+        public <R> Stream<R> stream(final String singleSelectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
+                final JdbcSettings jdbcSettings) {
+            return stream(Arrays.asList(singleSelectPropName), rowMapper, whereCause, jdbcSettings);
         }
 
         /**
@@ -7084,7 +6989,7 @@ public class SQLExecutor {
          * @param whereCause
          * @return
          */
-        public <R> Stream<R> stream(Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
+        public <R> Stream<R> stream(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
             return stream(selectPropNames, rowMapper, whereCause, null);
         }
 
@@ -7098,7 +7003,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
-        public <R> Stream<R> stream(Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
+        public <R> Stream<R> stream(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             N.checkArgNotNull(rowMapper);
 
@@ -7121,7 +7026,7 @@ public class SQLExecutor {
          * @param whereCause
          * @return
          */
-        public <R> Stream<R> stream(Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
+        public <R> Stream<R> stream(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
             return stream(selectPropNames, rowMapper, whereCause, null);
         }
 
@@ -7135,7 +7040,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
-        public <R> Stream<R> stream(Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
+        public <R> Stream<R> stream(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
@@ -7176,15 +7081,15 @@ public class SQLExecutor {
          * It's designed for partition.
          *
          * @param <R>
-         * @param selectPropName
-         * @param rowMapper
+         * @param targetValueClass
+         * @param singleSelectPropName
          * @param whereCause
          * @param jdbcSettings
          * @return
          */
-        public <R> Stream<R> streamAll(String selectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
+        public <R> Stream<R> streamAll(final Class<R> targetValueClass, final String singleSelectPropName, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
-            return streamAll(Arrays.asList(selectPropName), rowMapper, whereCause, jdbcSettings);
+            return streamAll(singleSelectPropName, JdbcUtil.RowMapper.get(targetValueClass), whereCause, jdbcSettings);
         }
 
         /**
@@ -7192,15 +7097,15 @@ public class SQLExecutor {
          * It's designed for partition.
          *
          * @param <R>
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param rowMapper
          * @param whereCause
          * @param jdbcSettings
          * @return
          */
-        public <R> Stream<R> streamAll(String selectPropName, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
+        public <R> Stream<R> streamAll(final String singleSelectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
-            return streamAll(Arrays.asList(selectPropName), rowMapper, whereCause, jdbcSettings);
+            return streamAll(Arrays.asList(singleSelectPropName), rowMapper, whereCause, jdbcSettings);
         }
 
         /**
@@ -7214,7 +7119,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
-        public <R> Stream<R> streamAll(Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
+        public <R> Stream<R> streamAll(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             N.checkArgNotNull(rowMapper);
 
@@ -7240,7 +7145,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
-        public <R> Stream<R> streamAll(Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
+        public <R> Stream<R> streamAll(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
@@ -7344,13 +7249,13 @@ public class SQLExecutor {
         /**
          * Query for boolean.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public OptionalBoolean queryForBoolean(final String selectPropName, final Condition whereCause) {
-            final SP sp = prepareQuery(Arrays.asList(selectPropName), whereCause, 1);
+        public OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition whereCause) {
+            final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
             return sqlExecutor.queryForBoolean(sp.sql, sp.parameters.toArray());
         }
@@ -7358,13 +7263,13 @@ public class SQLExecutor {
         /**
          * Query for char.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public OptionalChar queryForChar(final String selectPropName, final Condition whereCause) {
-            final SP sp = prepareQuery(Arrays.asList(selectPropName), whereCause, 1);
+        public OptionalChar queryForChar(final String singleSelectPropName, final Condition whereCause) {
+            final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
             return sqlExecutor.queryForChar(sp.sql, sp.parameters.toArray());
         }
@@ -7372,13 +7277,13 @@ public class SQLExecutor {
         /**
          * Query for byte.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public OptionalByte queryForByte(final String selectPropName, final Condition whereCause) {
-            final SP sp = prepareQuery(Arrays.asList(selectPropName), whereCause, 1);
+        public OptionalByte queryForByte(final String singleSelectPropName, final Condition whereCause) {
+            final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
             return sqlExecutor.queryForByte(sp.sql, sp.parameters.toArray());
         }
@@ -7386,13 +7291,13 @@ public class SQLExecutor {
         /**
          * Query for short.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public OptionalShort queryForShort(final String selectPropName, final Condition whereCause) {
-            final SP sp = prepareQuery(Arrays.asList(selectPropName), whereCause, 1);
+        public OptionalShort queryForShort(final String singleSelectPropName, final Condition whereCause) {
+            final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
             return sqlExecutor.queryForShort(sp.sql, sp.parameters.toArray());
         }
@@ -7400,13 +7305,13 @@ public class SQLExecutor {
         /**
          * Query for int.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public OptionalInt queryForInt(final String selectPropName, final Condition whereCause) {
-            final SP sp = prepareQuery(Arrays.asList(selectPropName), whereCause, 1);
+        public OptionalInt queryForInt(final String singleSelectPropName, final Condition whereCause) {
+            final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
             return sqlExecutor.queryForInt(sp.sql, sp.parameters.toArray());
         }
@@ -7414,13 +7319,13 @@ public class SQLExecutor {
         /**
          * Query for long.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public OptionalLong queryForLong(final String selectPropName, final Condition whereCause) {
-            final SP sp = prepareQuery(Arrays.asList(selectPropName), whereCause, 1);
+        public OptionalLong queryForLong(final String singleSelectPropName, final Condition whereCause) {
+            final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
             return sqlExecutor.queryForLong(sp.sql, sp.parameters.toArray());
         }
@@ -7428,13 +7333,13 @@ public class SQLExecutor {
         /**
          * Query for float.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public OptionalFloat queryForFloat(final String selectPropName, final Condition whereCause) {
-            final SP sp = prepareQuery(Arrays.asList(selectPropName), whereCause, 1);
+        public OptionalFloat queryForFloat(final String singleSelectPropName, final Condition whereCause) {
+            final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
             return sqlExecutor.queryForFloat(sp.sql, sp.parameters.toArray());
         }
@@ -7442,13 +7347,13 @@ public class SQLExecutor {
         /**
          * Query for double.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public OptionalDouble queryForDouble(final String selectPropName, final Condition whereCause) {
-            final SP sp = prepareQuery(Arrays.asList(selectPropName), whereCause, 1);
+        public OptionalDouble queryForDouble(final String singleSelectPropName, final Condition whereCause) {
+            final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
             return sqlExecutor.queryForDouble(sp.sql, sp.parameters.toArray());
         }
@@ -7456,13 +7361,13 @@ public class SQLExecutor {
         /**
          * Query for big decimal.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public Nullable<BigDecimal> queryForBigDecimal(final String selectPropName, final Condition whereCause) {
-            final SP sp = prepareQuery(Arrays.asList(selectPropName), whereCause, 1);
+        public Nullable<BigDecimal> queryForBigDecimal(final String singleSelectPropName, final Condition whereCause) {
+            final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
             return sqlExecutor.queryForBigDecimal(sp.sql, sp.parameters.toArray());
         }
@@ -7470,13 +7375,13 @@ public class SQLExecutor {
         /**
          * Query for string.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public Nullable<String> queryForString(final String selectPropName, final Condition whereCause) {
-            final SP sp = prepareQuery(Arrays.asList(selectPropName), whereCause, 1);
+        public Nullable<String> queryForString(final String singleSelectPropName, final Condition whereCause) {
+            final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
             return sqlExecutor.queryForString(sp.sql, sp.parameters.toArray());
         }
@@ -7484,13 +7389,13 @@ public class SQLExecutor {
         /**
          * Query for date.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public Nullable<java.sql.Date> queryForDate(final String selectPropName, final Condition whereCause) {
-            final SP sp = prepareQuery(Arrays.asList(selectPropName), whereCause, 1);
+        public Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition whereCause) {
+            final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
             return sqlExecutor.queryForDate(sp.sql, sp.parameters.toArray());
         }
@@ -7498,13 +7403,13 @@ public class SQLExecutor {
         /**
          * Query for time.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public Nullable<java.sql.Time> queryForTime(final String selectPropName, final Condition whereCause) {
-            final SP sp = prepareQuery(Arrays.asList(selectPropName), whereCause, 1);
+        public Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition whereCause) {
+            final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
             return sqlExecutor.queryForTime(sp.sql, sp.parameters.toArray());
         }
@@ -7512,13 +7417,13 @@ public class SQLExecutor {
         /**
          * Query for timestamp.
          *
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public Nullable<java.sql.Timestamp> queryForTimestamp(final String selectPropName, final Condition whereCause) {
-            final SP sp = prepareQuery(Arrays.asList(selectPropName), whereCause, 1);
+        public Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition whereCause) {
+            final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
             return sqlExecutor.queryForTimestamp(sp.sql, sp.parameters.toArray());
         }
@@ -7528,13 +7433,13 @@ public class SQLExecutor {
          *
          * @param <V> the value type
          * @param targetValueClass
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param id
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String selectPropName, final ID id) {
-            return queryForSingleResult(targetValueClass, selectPropName, id2Cond(id, false));
+        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final ID id) {
+            return queryForSingleResult(targetValueClass, singleSelectPropName, id2Cond(id, false));
         }
 
         /**
@@ -7542,13 +7447,13 @@ public class SQLExecutor {
          *
          * @param <V> the value type
          * @param targetValueClass
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String selectPropName, final Condition whereCause) {
-            return queryForSingleResult(targetValueClass, selectPropName, whereCause, null);
+        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition whereCause) {
+            return queryForSingleResult(targetValueClass, singleSelectPropName, whereCause, null);
         }
 
         /**
@@ -7556,15 +7461,15 @@ public class SQLExecutor {
          *
          * @param <V> the value type
          * @param targetValueClass
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @param jdbcSettings
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String selectPropName, final Condition whereCause,
+        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
-            return queryForSingleResult(targetValueClass, null, selectPropName, whereCause, jdbcSettings);
+            return queryForSingleResult(targetValueClass, null, singleSelectPropName, whereCause, jdbcSettings);
         }
 
         /**
@@ -7573,13 +7478,13 @@ public class SQLExecutor {
          * @param <V> the value type
          * @param targetValueClass
          * @param conn
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param id
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final Connection conn, final String selectPropName, final ID id) {
-            return queryForSingleResult(targetValueClass, conn, selectPropName, id2Cond(id, false));
+        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final Connection conn, final String singleSelectPropName, final ID id) {
+            return queryForSingleResult(targetValueClass, conn, singleSelectPropName, id2Cond(id, false));
         }
 
         /**
@@ -7588,14 +7493,14 @@ public class SQLExecutor {
          * @param <V> the value type
          * @param targetValueClass
          * @param conn
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final Connection conn, final String selectPropName,
+        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final Connection conn, final String singleSelectPropName,
                 final Condition whereCause) {
-            return queryForSingleResult(targetValueClass, conn, selectPropName, whereCause, null);
+            return queryForSingleResult(targetValueClass, conn, singleSelectPropName, whereCause, null);
         }
 
         /**
@@ -7604,15 +7509,15 @@ public class SQLExecutor {
          * @param <V> the value type
          * @param targetValueClass
          * @param conn
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @param jdbcSettings
          * @return
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
-        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final Connection conn, final String selectPropName,
+        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final Connection conn, final String singleSelectPropName,
                 final Condition whereCause, final JdbcSettings jdbcSettings) {
-            final SP sp = prepareQuery(Arrays.asList(selectPropName), whereCause, 1);
+            final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
             return sqlExecutor.queryForSingleResult(targetValueClass, conn, sp.sql, StatementSetter.DEFAULT, jdbcSettings, sp.parameters.toArray());
         }
@@ -7622,14 +7527,14 @@ public class SQLExecutor {
          *
          * @param <V> the value type
          * @param targetValueClass
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param id
          * @return
          * @throws DuplicatedResultException if two or more records are found.
          */
-        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String selectPropName, final ID id)
+        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final ID id)
                 throws DuplicatedResultException {
-            return queryForUniqueResult(targetValueClass, selectPropName, id2Cond(id, false));
+            return queryForUniqueResult(targetValueClass, singleSelectPropName, id2Cond(id, false));
         }
 
         /**
@@ -7637,14 +7542,14 @@ public class SQLExecutor {
          *
          * @param <V> the value type
          * @param targetValueClass
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @throws DuplicatedResultException the duplicated result exception
          */
-        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String selectPropName, final Condition whereCause)
+        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition whereCause)
                 throws DuplicatedResultException {
-            return queryForUniqueResult(targetValueClass, selectPropName, whereCause, null);
+            return queryForUniqueResult(targetValueClass, singleSelectPropName, whereCause, null);
         }
 
         /**
@@ -7652,15 +7557,15 @@ public class SQLExecutor {
          *
          * @param <V> the value type
          * @param targetValueClass
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @param jdbcSettings
          * @return
          * @throws DuplicatedResultException if two or more records are found.
          */
-        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String selectPropName, final Condition whereCause,
+        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition whereCause,
                 final JdbcSettings jdbcSettings) throws DuplicatedResultException {
-            return queryForUniqueResult(targetValueClass, null, selectPropName, whereCause, jdbcSettings);
+            return queryForUniqueResult(targetValueClass, null, singleSelectPropName, whereCause, jdbcSettings);
         }
 
         /**
@@ -7669,14 +7574,14 @@ public class SQLExecutor {
          * @param <V> the value type
          * @param targetValueClass
          * @param conn
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param id
          * @return
          * @throws DuplicatedResultException if two or more records are found.
          */
-        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final Connection conn, final String selectPropName, final ID id)
+        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final Connection conn, final String singleSelectPropName, final ID id)
                 throws DuplicatedResultException {
-            return queryForUniqueResult(targetValueClass, conn, selectPropName, id2Cond(id, false));
+            return queryForUniqueResult(targetValueClass, conn, singleSelectPropName, id2Cond(id, false));
         }
 
         /**
@@ -7685,14 +7590,14 @@ public class SQLExecutor {
          * @param <V> the value type
          * @param targetValueClass
          * @param conn
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @return
          * @throws DuplicatedResultException if two or more records are found.
          */
-        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final Connection conn, final String selectPropName,
+        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final Connection conn, final String singleSelectPropName,
                 final Condition whereCause) throws DuplicatedResultException {
-            return queryForUniqueResult(targetValueClass, conn, selectPropName, whereCause, null);
+            return queryForUniqueResult(targetValueClass, conn, singleSelectPropName, whereCause, null);
         }
 
         /**
@@ -7701,15 +7606,15 @@ public class SQLExecutor {
          * @param <V> the value type
          * @param targetValueClass
          * @param conn
-         * @param selectPropName
+         * @param singleSelectPropName
          * @param whereCause
          * @param jdbcSettings
          * @return
          * @throws DuplicatedResultException if two or more records are found.
          */
-        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final Connection conn, final String selectPropName,
+        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final Connection conn, final String singleSelectPropName,
                 final Condition whereCause, final JdbcSettings jdbcSettings) throws DuplicatedResultException {
-            final SP sp = prepareQuery(Arrays.asList(selectPropName), whereCause, 1);
+            final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
             return sqlExecutor.queryForUniqueResult(targetValueClass, conn, sp.sql, StatementSetter.DEFAULT, jdbcSettings, sp.parameters.toArray());
         }
