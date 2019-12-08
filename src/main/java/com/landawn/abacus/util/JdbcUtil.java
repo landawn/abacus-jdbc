@@ -15616,6 +15616,18 @@ public final class JdbcUtil {
                 throws SQLException;
 
         /**
+         * lazy-execution, lazy-fetch.
+         *
+         * @param cond
+         * @param rowFilter
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final JdbcUtil.BiRowFilter rowFilter, final JdbcUtil.BiRowMapper<R> rowMapper)
+                throws SQLException;
+
+        /**
          *
          * @param singleSelectPropName
          * @param cond
@@ -15638,18 +15650,6 @@ public final class JdbcUtil {
                 throws SQLException {
             return stream(N.asList(singleSelectPropName), cond, rowMapper);
         }
-
-        /**
-         * lazy-execution, lazy-fetch.
-         *
-         * @param cond
-         * @param rowFilter
-         * @param rowMapper
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final JdbcUtil.BiRowFilter rowFilter, final JdbcUtil.BiRowMapper<R> rowMapper)
-                throws SQLException;
 
         // Will it cause confusion if it's called in transaction?
         /**

@@ -6798,22 +6798,6 @@ public class SQLExecutor {
          * Execute the query in one or more data sources specified by {@code jdbcSettings} and merge the results.
          * It's designed for partition.
          *
-         * @param selectPropNames
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         * @see SQLExecutor#listAll(Class, String, StatementSetter, JdbcSettings, Object...)
-         */
-        public List<T> listAll(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
-            final SP sp = prepareQuery(selectPropNames, whereCause);
-
-            return sqlExecutor.listAll(targetClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, sp.parameters.toArray());
-        }
-
-        /**
-         * Execute the query in one or more data sources specified by {@code jdbcSettings} and merge the results.
-         * It's designed for partition.
-         *
          * @param <R>
          * @param singleSelectPropName
          * @param whereCause
@@ -6838,6 +6822,22 @@ public class SQLExecutor {
         public <R> List<R> listAll(final String singleSelectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             return listAll(Arrays.asList(singleSelectPropName), rowMapper, whereCause, jdbcSettings);
+        }
+
+        /**
+         * Execute the query in one or more data sources specified by {@code jdbcSettings} and merge the results.
+         * It's designed for partition.
+         *
+         * @param selectPropNames
+         * @param whereCause
+         * @param jdbcSettings
+         * @return
+         * @see SQLExecutor#listAll(Class, String, StatementSetter, JdbcSettings, Object...)
+         */
+        public List<T> listAll(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
+            final SP sp = prepareQuery(selectPropNames, whereCause);
+
+            return sqlExecutor.listAll(targetClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, sp.parameters.toArray());
         }
 
         /**
@@ -7053,22 +7053,6 @@ public class SQLExecutor {
          * Execute the query in one or more data sources specified by {@code jdbcSettings} and merge the results.
          * It's designed for partition.
          *
-         * @param selectPropNames
-         * @param whereCause
-         * @param jdbcSettings
-         * @return
-         * @see SQLExecutor#streamAll(Class, String, StatementSetter, JdbcSettings, Object...)
-         */
-        public Stream<T> streamAll(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
-            final SP sp = prepareQuery(selectPropNames, whereCause);
-
-            return sqlExecutor.streamAll(targetClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, sp.parameters.toArray());
-        }
-
-        /**
-         * Execute the query in one or more data sources specified by {@code jdbcSettings} and merge the results.
-         * It's designed for partition.
-         *
          * @param <R>
          * @param singleSelectPropName
          * @param whereCause
@@ -7093,6 +7077,22 @@ public class SQLExecutor {
         public <R> Stream<R> streamAll(final String singleSelectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             return streamAll(Arrays.asList(singleSelectPropName), rowMapper, whereCause, jdbcSettings);
+        }
+
+        /**
+         * Execute the query in one or more data sources specified by {@code jdbcSettings} and merge the results.
+         * It's designed for partition.
+         *
+         * @param selectPropNames
+         * @param whereCause
+         * @param jdbcSettings
+         * @return
+         * @see SQLExecutor#streamAll(Class, String, StatementSetter, JdbcSettings, Object...)
+         */
+        public Stream<T> streamAll(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
+            final SP sp = prepareQuery(selectPropNames, whereCause);
+
+            return sqlExecutor.streamAll(targetClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, sp.parameters.toArray());
         }
 
         /**
