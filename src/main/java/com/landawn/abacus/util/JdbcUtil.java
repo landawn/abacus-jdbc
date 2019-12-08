@@ -15486,25 +15486,29 @@ public final class JdbcUtil {
          */
         <R> List<R> list(final Condition cond, final JdbcUtil.BiRowFilter rowFilter, final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
 
-        //        /**
-        //         *
-        //         * @param targetValueClass
-        //         * @param singleSelectPropName
-        //         * @param cond
-        //         * @return
-        //         * @throws SQLException the SQL exception
-        //         */
-        //        <R> List<R> list(final Class<R> targetValueClass, final String singleSelectPropName, final Condition cond) throws SQLException;
-        //
-        //        /**
-        //        *
-        //        * @param singleSelectPropName
-        //        * @param cond
-        //         * @param rowMapper
-        //        * @return
-        //        * @throws SQLException the SQL exception
-        //        */
-        //        <R> List<R> list(final String singleSelectPropName, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        /**
+         *
+         * @param targetValueClass
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default <R> List<R> list(final Class<R> targetValueClass, final String singleSelectPropName, final Condition cond) throws SQLException {
+            return list(singleSelectPropName, cond, JdbcUtil.RowMapper.get(targetValueClass));
+        }
+
+        /**
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default <R> List<R> list(final String singleSelectPropName, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException {
+            return list(N.asList(singleSelectPropName), cond, rowMapper);
+        }
 
         /**
          *
@@ -15536,26 +15540,26 @@ public final class JdbcUtil {
         <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
-        *
-        * @param selectPropNames
-        * @param cond
-        * @param rowFilter
-        * @param rowMapper
-        * @return
-        * @throws SQLException the SQL exception
-        */
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowFilter
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
         <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.RowFilter rowFilter,
                 final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
 
         /**
-        *
-        * @param selectPropNames
-        * @param cond
-        * @param rowFilter
-        * @param rowMapper
-        * @return
-        * @throws SQLException the SQL exception
-        */
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowFilter
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
         <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.BiRowFilter rowFilter,
                 final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
 
@@ -15602,6 +15606,32 @@ public final class JdbcUtil {
          */
         <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final JdbcUtil.RowFilter rowFilter, final JdbcUtil.RowMapper<R> rowMapper)
                 throws SQLException;
+
+        /**
+         *
+         * @param targetValueClass
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default <R> ExceptionalStream<R, SQLException> stream(final Class<R> targetValueClass, final String singleSelectPropName, final Condition cond)
+                throws SQLException {
+            return stream(singleSelectPropName, cond, JdbcUtil.RowMapper.get(targetValueClass));
+        }
+
+        /**
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper)
+                throws SQLException {
+            return stream(N.asList(singleSelectPropName), cond, rowMapper);
+        }
 
         /**
          * lazy-execution, lazy-fetch.
@@ -16564,31 +16594,31 @@ public final class JdbcUtil {
         }
 
         /**
-        *
-        * @param entities
-        * @param batchSize
-        * @return
-        * @throws SQLException the SQL exception
-        */
+         *
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws SQLException the SQL exception
+         */
         int batchDelete(final Collection<? extends T> entities, final int batchSize) throws SQLException;
 
         /**
-        *
-        * @param ids
-        * @return
-        * @throws SQLException the SQL exception
-        */
+         *
+         * @param ids
+         * @return
+         * @throws SQLException the SQL exception
+         */
         default int batchDeleteByIds(final Collection<? extends ID> ids) throws SQLException {
             return batchDeleteByIds(ids, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
         /**
-        *
-        * @param ids
-        * @param batchSize
-        * @return
-        * @throws SQLException the SQL exception
-        */
+         *
+         * @param ids
+         * @param batchSize
+         * @return
+         * @throws SQLException the SQL exception
+         */
         int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws SQLException;
     }
 
