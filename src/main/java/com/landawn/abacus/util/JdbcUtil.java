@@ -16584,6 +16584,51 @@ public final class JdbcUtil {
         int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws SQLException;
 
         /**
+         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+         *
+         * @param entity
+         * @param whereCause to verify if the record exists or not.
+         * @return
+         */
+        default T upsert(final T entity, final Condition whereCause) throws SQLException {
+            N.checkArgNotNull(whereCause, "whereCause");
+
+            final T dbEntity = findFirst(whereCause).orNull();
+
+            if (dbEntity == null) {
+                save(entity);
+                return entity;
+            } else {
+                @SuppressWarnings("deprecation")
+                final List<String> idPropNameList = ClassUtil.getIdFieldNames(targetEntityClass());
+                N.merge(entity, dbEntity, false, N.newHashSet(idPropNameList));
+                update(dbEntity);
+                return dbEntity;
+            }
+        }
+
+        /**
+         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+         *
+         * @param entity
+         * @return
+         */
+        default T upsert(final T entity) throws SQLException {
+            @SuppressWarnings("deprecation")
+            final List<String> idPropNameList = ClassUtil.getIdFieldNames(targetEntityClass());
+            final T dbEntity = idPropNameList.size() == 1 ? gett((ID) ClassUtil.getPropValue(entity, idPropNameList.get(0))) : gett((ID) entity);
+
+            if (dbEntity == null) {
+                insert(entity);
+                return entity;
+            } else {
+                N.merge(entity, dbEntity, false, N.newHashSet(idPropNameList));
+                update(dbEntity);
+                return dbEntity;
+            }
+        }
+
+        /**
          * Delete by id.
          *
          * @param id
@@ -16658,6 +16703,9 @@ public final class JdbcUtil {
     @SuppressWarnings({ "rawtypes", "deprecation" })
     static <T extends Dao> T newInstance(final Class<T> daoInterface, final javax.sql.DataSource ds, final DataSourceManager dsm, final SQLMapper sqlMapper,
             final Executor executor) {
+
+        final Logger logger = LoggerFactory.getLogger(daoInterface);
+
         final javax.sql.DataSource primaryDataSource = ds != null ? ds : dsm.getPrimaryDataSource();
         final SQLMapper nonNullSQLMapper = sqlMapper == null ? new SQLMapper() : sqlMapper;
         final Executor nonNullExecutor = executor == null ? JdbcUtil.asyncExecutor.getExecutor() : executor;
@@ -18563,9 +18611,12 @@ public final class JdbcUtil {
 
     static {
         noLogMethods.add("dataSource");
+        noLogMethods.add("sqlMapper");
+        noLogMethods.add("executor");
         noLogMethods.add("prepareQuery");
         noLogMethods.add("prepareNamedQuery");
         noLogMethods.add("prepareCallableQuery");
+        noLogMethods.add("targetEntityClass");
     }
 
     /**
