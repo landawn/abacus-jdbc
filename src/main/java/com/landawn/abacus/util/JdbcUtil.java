@@ -87,6 +87,7 @@ import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.annotation.AccessFieldByMethod;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
+import com.landawn.abacus.condition.And;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.core.DirtyMarkerUtil;
@@ -16740,18 +16741,19 @@ public final class JdbcUtil {
                 if (CrudDao.class.isAssignableFrom(daoInterface)) {
                     final List<String> idFieldNames = ClassUtil.getIdFieldNames((Class) typeArguments[0]);
 
-                    if (idFieldNames.size() != 1) {
+                    if (idFieldNames.size() == 0) {
                         throw new IllegalArgumentException("To support CRUD operations by extending CrudDao interface, the entity class: " + typeArguments[0]
-                                + " must have one and only one field annotated with @Id");
-                    }
-
-                    if (typeArguments.length >= 2 && typeArguments[1].equals(EntityId.class)) {
-                        throw new IllegalArgumentException("EntityId for id is not supported yet");
-                    } else if (((Class) typeArguments[1])
-                            .isAssignableFrom(ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType())) {
-                        throw new IllegalArgumentException("The id type declared in Dao type parameters: " + typeArguments[1]
-                                + " is not assignable from the id property type in the entity class: "
-                                + ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType());
+                                + " must have at least one field annotated with @Id");
+                    } else if (idFieldNames.size() == 1) {
+                        if (((Class) typeArguments[1])
+                                .isAssignableFrom(ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType())) {
+                            throw new IllegalArgumentException("The id type declared in Dao type parameters: " + typeArguments[1]
+                                    + " is not assignable from the id property type in the entity class: "
+                                    + ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType());
+                        }
+                    } else if (!typeArguments[1].equals(EntityId.class)) {
+                        // throw new IllegalArgumentException("To support multiple ids, the ID type must be EntityId. It can't be: " + typeArguments[1]);
+                        throw new UnsupportedOperationException("EntityId is not supported yet");
                     }
                 }
             }
@@ -17594,6 +17596,22 @@ public final class JdbcUtil {
                     final Set<String> idPropNameSet = N.newHashSet(idPropNames);
                     final String idPropName = idPropNames.get(0);
 
+                    Condition cond = null;
+
+                    if (idPropNames.size() == 1) {
+                        cond = CF.eq(idPropName);
+                    } else {
+                        final And and = CF.and();
+
+                        for (String idName : idPropNames) {
+                            and.add(CF.eq(idName));
+                        }
+
+                        cond = and;
+                    }
+
+                    final Condition idCond = cond;
+
                     String sql_getById = null;
                     String sql_existsById = null;
                     String sql_insertWithId = null;
@@ -17602,26 +17620,26 @@ public final class JdbcUtil {
                     String sql_deleteById = null;
 
                     if (sbc.equals(PSC.class)) {
-                        sql_getById = PSC.selectFrom(entityClass).where(CF.eq(idPropName)).sql();
-                        sql_existsById = PSC.select(SQLBuilder._1).from(entityClass).where(CF.eq(idPropName)).sql();
+                        sql_getById = PSC.selectFrom(entityClass).where(idCond).sql();
+                        sql_existsById = PSC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
                         sql_insertWithId = NSC.insertInto(entityClass).sql();
-                        sql_insertWithoutId = NSC.insertInto(entityClass, N.asSet(idPropName)).sql();
-                        sql_updateById = NSC.update(entityClass, idPropNameSet).where(CF.eq(idPropName)).sql();
-                        sql_deleteById = PSC.deleteFrom(entityClass).where(CF.eq(idPropName)).sql();
+                        sql_insertWithoutId = NSC.insertInto(entityClass, idPropNameSet).sql();
+                        sql_updateById = NSC.update(entityClass, idPropNameSet).where(idCond).sql();
+                        sql_deleteById = PSC.deleteFrom(entityClass).where(idCond).sql();
                     } else if (sbc.equals(PAC.class)) {
-                        sql_getById = PAC.selectFrom(entityClass).where(CF.eq(idPropName)).sql();
-                        sql_existsById = PAC.select(SQLBuilder._1).from(entityClass).where(CF.eq(idPropName)).sql();
-                        sql_updateById = NAC.update(entityClass, idPropNameSet).where(CF.eq(idPropName)).sql();
+                        sql_getById = PAC.selectFrom(entityClass).where(idCond).sql();
+                        sql_existsById = PAC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
+                        sql_updateById = NAC.update(entityClass, idPropNameSet).where(idCond).sql();
                         sql_insertWithId = NAC.insertInto(entityClass).sql();
-                        sql_insertWithoutId = NAC.insertInto(entityClass, N.asSet(idPropName)).sql();
-                        sql_deleteById = PAC.deleteFrom(entityClass).where(CF.eq(idPropName)).sql();
+                        sql_insertWithoutId = NAC.insertInto(entityClass, idPropNameSet).sql();
+                        sql_deleteById = PAC.deleteFrom(entityClass).where(idCond).sql();
                     } else {
-                        sql_getById = PLC.selectFrom(entityClass).where(CF.eq(idPropName)).sql();
-                        sql_existsById = PLC.select(SQLBuilder._1).from(entityClass).where(CF.eq(idPropName)).sql();
+                        sql_getById = PLC.selectFrom(entityClass).where(idCond).sql();
+                        sql_existsById = PLC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
                         sql_insertWithId = NLC.insertInto(entityClass).sql();
-                        sql_insertWithoutId = NLC.insertInto(entityClass, N.asSet(idPropName)).sql();
-                        sql_updateById = NLC.update(entityClass, idPropNameSet).where(CF.eq(idPropName)).sql();
-                        sql_deleteById = PLC.deleteFrom(entityClass).where(CF.eq(idPropName)).sql();
+                        sql_insertWithoutId = NLC.insertInto(entityClass, idPropNameSet).sql();
+                        sql_updateById = NLC.update(entityClass, idPropNameSet).where(idCond).sql();
+                        sql_deleteById = PLC.deleteFrom(entityClass).where(idCond).sql();
                     }
 
                     final NamedSQL insertWithIdSQL = NamedSQL.parse(sql_insertWithId);
@@ -17891,7 +17909,7 @@ public final class JdbcUtil {
                     } else if (methodName.equals("update") && paramLen == 1) {
                         if (DirtyMarker.class.isAssignableFrom(paramTypes[0])) {
                             call = (proxy, args) -> {
-                                final String sql = namedUpdateFunc.apply(entityClass).set(args[0], idPropNameSet).where(CF.eq(idPropName)).sql();
+                                final String sql = namedUpdateFunc.apply(entityClass).set(args[0], idPropNameSet).where(idCond).sql();
                                 final NamedSQL namedSQL = NamedSQL.parse(sql);
 
                                 final int result = proxy.prepareNamedQuery(namedSQL).setParameters(args[0]).update();
@@ -17916,7 +17934,7 @@ public final class JdbcUtil {
                             final Collection<String> propNamesToUpdate = (Collection<String>) args[1];
                             N.checkArgNotNullOrEmpty(propNamesToUpdate, "propNamesToUpdate");
 
-                            final String sql = namedUpdateFunc.apply(entityClass).set(propNamesToUpdate).where(CF.eq(idPropName)).sql();
+                            final String sql = namedUpdateFunc.apply(entityClass).set(propNamesToUpdate).where(idCond).sql();
                             final NamedSQL namedSQL = NamedSQL.parse(sql);
 
                             final int result = proxy.prepareNamedQuery(namedSQL).setParameters(args[0]).update();
@@ -17931,7 +17949,7 @@ public final class JdbcUtil {
                         call = (proxy, args) -> {
                             final Map<String, Object> props = (Map<String, Object>) args[0];
                             N.checkArgNotNullOrEmpty(props, "updateProps");
-                            final String query = parameterizedUpdateFunc.apply(entityClass).set(props.keySet()).where(CF.eq(idPropName)).sql();
+                            final String query = parameterizedUpdateFunc.apply(entityClass).set(props.keySet()).where(idCond).sql();
 
                             return proxy.prepareQuery(query).setParameters(props.values()).setObject(props.size() + 1, args[1]).update();
                         };
@@ -17946,7 +17964,7 @@ public final class JdbcUtil {
                             }
 
                             final Object entity = N.firstNonNull(entities).get();
-                            final String sql = namedUpdateFunc.apply(entityClass).set(entity, idPropNameSet).where(CF.eq(idPropName)).sql();
+                            final String sql = namedUpdateFunc.apply(entityClass).set(entity, idPropNameSet).where(idCond).sql();
                             final NamedSQL namedSQL = NamedSQL.parse(sql);
                             long result = 0;
 
@@ -17992,7 +18010,7 @@ public final class JdbcUtil {
                                 return 0;
                             }
 
-                            final String sql = namedUpdateFunc.apply(entityClass).set(propNamesToUpdate).where(CF.eq(idPropName)).sql();
+                            final String sql = namedUpdateFunc.apply(entityClass).set(propNamesToUpdate).where(idCond).sql();
                             final NamedSQL namedSQL = NamedSQL.parse(sql);
                             long result = 0;
 
@@ -18028,7 +18046,19 @@ public final class JdbcUtil {
                         call = (proxy, args) -> proxy.prepareQuery(query).setObject(1, args[0]).update();
                     } else if (methodName.equals("delete") && paramLen == 1 && !Condition.class.isAssignableFrom(paramTypes[0])) {
                         final String query = sql_deleteById;
-                        call = (proxy, args) -> proxy.prepareQuery(query).setObject(1, ClassUtil.getPropValue(args[0], idPropName)).update();
+                        if (idPropNames.size() == 1) {
+                            call = (proxy, args) -> proxy.prepareQuery(query).setObject(1, ClassUtil.getPropValue(args[0], idPropName)).update();
+                        } else {
+                            call = (proxy, args) -> {
+                                final PreparedQuery preparedQuery = proxy.prepareQuery(query);
+
+                                for (int i = 0, size = idPropNames.size(); i < size; i++) {
+                                    preparedQuery.setObject(i + 1, ClassUtil.getPropValue(args[0], idPropNames.get(i)));
+                                }
+
+                                return preparedQuery.update();
+                            };
+                        }
                     } else if (methodName.equals("batchDelete") && paramLen == 2 && int.class.equals(paramTypes[1])) {
                         final String query = sql_deleteById;
 

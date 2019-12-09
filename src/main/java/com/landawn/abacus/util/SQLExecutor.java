@@ -5940,7 +5940,7 @@ public class SQLExecutor {
             //            idPropNames);
 
             if (N.isNullOrEmpty(idPropNames)) {
-                if (!(idClass.equals(Void.class) || idClass.equals(EntityId.class))) {
+                if (!idClass.equals(Void.class)) {
                     throw new IllegalArgumentException("Id class only can be Void or EntityId class for entity with no id property");
                 }
             } else if (idPropNames.size() > 1) {
