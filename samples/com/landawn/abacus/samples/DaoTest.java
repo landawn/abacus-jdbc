@@ -2,6 +2,7 @@ package com.landawn.abacus.samples;
 
 import static com.landawn.abacus.samples.Jdbc.addressMapper;
 import static com.landawn.abacus.samples.Jdbc.deviceMapper;
+import static com.landawn.abacus.samples.Jdbc.employeeDeptRelationshipDao;
 import static com.landawn.abacus.samples.Jdbc.sqlExecutor;
 import static com.landawn.abacus.samples.Jdbc.userDao;
 import static com.landawn.abacus.samples.Jdbc.userMapper;
@@ -15,8 +16,10 @@ import java.util.List;
 import org.junit.Test;
 
 import com.landawn.abacus.condition.ConditionFactory.CF;
+import com.landawn.abacus.core.Seid;
 import com.landawn.abacus.samples.Jdbc.Address;
 import com.landawn.abacus.samples.Jdbc.Device;
+import com.landawn.abacus.samples.Jdbc.EmployeeDeptRelationship;
 import com.landawn.abacus.samples.Jdbc.User;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
@@ -26,6 +29,26 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.stream.Stream;
 
 public class DaoTest {
+
+    @Test
+    public void test_entityId() throws SQLException {
+        List<EmployeeDeptRelationship> edrs = new ArrayList<>();
+
+        for (int i = 0; i < 1001; i++) {
+            edrs.add(EmployeeDeptRelationship.builder().employeeId(i * 1).deptId(i * 2).build());
+        }
+
+        employeeDeptRelationshipDao.saveAll(edrs);
+
+        List<Seid> ids = Stream.of(edrs).map(edr -> Seid.of("EmployeeDeptRelationship.employeeId", edr.getEmployeeId(), "deptId", edr.getDeptId())).toList();
+
+        employeeDeptRelationshipDao.batchGet(ids);
+
+        assertEquals(1, employeeDeptRelationshipDao.delete(edrs.get(0)));
+        assertEquals(1, employeeDeptRelationshipDao.deleteById(ids.get(1)));
+        assertEquals(ids.size() - 2, employeeDeptRelationshipDao.batchDeleteByIds(ids));
+        assertEquals(0, employeeDeptRelationshipDao.batchDelete(edrs));
+    }
 
     @Test
     public void test_batchGet() throws SQLException {

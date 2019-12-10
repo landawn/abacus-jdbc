@@ -14,6 +14,7 @@ import javax.sql.DataSource;
 
 import org.junit.Test;
 
+import com.landawn.abacus.EntityId;
 import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.JoinedBy;
@@ -47,6 +48,7 @@ public class Jdbc {
     static final Mapper<Address, Long> addressMapper = sqlExecutor.mapper(Address.class, long.class);
 
     static final UserDao userDao = Dao.newInstance(UserDao.class, dataSource);
+    static final EmployeeDeptRelationshipDao employeeDeptRelationshipDao = Dao.newInstance(EmployeeDeptRelationshipDao.class, dataSource);
 
     // initialize DB schema.
     static {
@@ -82,6 +84,14 @@ public class Jdbc {
 
         sqlExecutor.execute(sql_address_drop_table);
         sqlExecutor.execute(sql_address_creat_table);
+
+        final String sql_employee_dept_relationship_drop_table = "DROP TABLE IF EXISTS employee_dept_relationship";
+        final String sql_employee_dept_relationship_creat_table = "CREATE TABLE IF NOT EXISTS employee_dept_relationship (" //
+                + "employee_id bigint(20) NOT NULL, " //
+                + "dept_id bigint(20) NOT NULL)";
+
+        sqlExecutor.execute(sql_employee_dept_relationship_drop_table);
+        sqlExecutor.execute(sql_employee_dept_relationship_creat_table);
     }
 
     // Entity Object mapped to record in DB table.
@@ -134,6 +144,18 @@ public class Jdbc {
         private long userId;
         private String street;
         private String city;
+    }
+
+    @Builder
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Id({ "employeeId", "deptId" })
+    public static class EmployeeDeptRelationship {
+        @Id
+        private long employeeId;
+        @Id
+        private long deptId;
     }
 
     @Test
@@ -288,6 +310,9 @@ public class Jdbc {
 
         @NamedSelect("SELECT id, first_name, last_name, email FROM user")
         Stream<User> allUsers() throws SQLException;
+    }
+
+    public interface EmployeeDeptRelationshipDao extends JdbcUtil.CrudDao<EmployeeDeptRelationship, EntityId, SQLBuilder.PSC, EmployeeDeptRelationshipDao> {
     }
 
     @Test
