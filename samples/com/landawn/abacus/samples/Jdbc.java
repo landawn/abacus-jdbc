@@ -152,9 +152,7 @@ public class Jdbc {
     @AllArgsConstructor
     @Id({ "employeeId", "deptId" })
     public static class EmployeeDeptRelationship {
-        @Id
         private long employeeId;
-        @Id
         private long deptId;
     }
 
