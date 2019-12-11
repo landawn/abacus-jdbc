@@ -16823,13 +16823,14 @@ public final class JdbcUtil {
 
         final List<String> idPropNameList = entityClass == null ? N.emptyList() : ClassUtil.getIdFieldNames(entityClass);
         final Set<String> idPropNameSet = entityClass == null ? N.emptySet() : N.newHashSet(idPropNameList);
-        final String oneIdPropName = entityClass == null ? null : idPropNameList.get(0);
+        final String oneIdPropName = (entityClass == null || N.isNullOrEmpty(idPropNameList)) ? null : idPropNameList.get(0);
         final EntityInfo entityInfo = entityClass == null ? null : ParserUtil.getEntityInfo(entityClass);
         final List<PropInfo> idPropInfoList = entityClass == null ? null : Stream.of(idPropNameList).map(entityInfo::getPropInfo).toList();
-        final PropInfo idPropInfo = entityClass == null ? null : entityInfo.getPropInfo(oneIdPropName);
+        final PropInfo idPropInfo = entityClass == null || N.isNullOrEmpty(oneIdPropName) ? null : entityInfo.getPropInfo(oneIdPropName);
         final boolean isOneId = entityClass == null ? false : idPropNameList.size() == 1;
-        final boolean isFakeId = entityClass == null ? false : ClassUtil.isFakeId(idPropNameList);
-        final Condition idCond = entityClass == null ? null : isOneId ? CF.eq(oneIdPropName) : CF.and(StreamEx.of(idPropNameList).map(CF::eq).toList());
+        final boolean isFakeId = entityClass == null || N.isNullOrEmpty(idPropNameList) ? true : ClassUtil.isFakeId(idPropNameList);
+        final Condition idCond = entityClass == null || N.isNullOrEmpty(oneIdPropName) ? null
+                : isOneId ? CF.eq(oneIdPropName) : CF.and(StreamEx.of(idPropNameList).map(CF::eq).toList());
 
         String sql_getById = null;
         String sql_existsById = null;
@@ -16839,29 +16840,29 @@ public final class JdbcUtil {
         String sql_deleteById = null;
 
         if (sbc.equals(PSC.class)) {
-            sql_getById = entityClass == null ? null : NSC.selectFrom(entityClass).where(idCond).sql();
-            sql_existsById = entityClass == null ? null : NSC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
+            sql_getById = entityClass == null || idCond == null ? null : NSC.selectFrom(entityClass).where(idCond).sql();
+            sql_existsById = entityClass == null || idCond == null ? null : NSC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
             sql_insertWithId = entityClass == null ? null : NSC.insertInto(entityClass).sql();
             sql_insertWithoutId = entityClass == null ? null
                     : (idPropNameSet.containsAll(ClassUtil.getPropNameList(entityClass)) ? sql_insertWithId : NSC.insertInto(entityClass, idPropNameSet).sql());
-            sql_updateById = entityClass == null ? null : NSC.update(entityClass, idPropNameSet).where(idCond).sql();
-            sql_deleteById = entityClass == null ? null : NSC.deleteFrom(entityClass).where(idCond).sql();
+            sql_updateById = entityClass == null || idCond == null ? null : NSC.update(entityClass, idPropNameSet).where(idCond).sql();
+            sql_deleteById = entityClass == null || idCond == null ? null : NSC.deleteFrom(entityClass).where(idCond).sql();
         } else if (sbc.equals(PAC.class)) {
-            sql_getById = entityClass == null ? null : NAC.selectFrom(entityClass).where(idCond).sql();
-            sql_existsById = entityClass == null ? null : NAC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
-            sql_updateById = entityClass == null ? null : NAC.update(entityClass, idPropNameSet).where(idCond).sql();
+            sql_getById = entityClass == null || idCond == null ? null : NAC.selectFrom(entityClass).where(idCond).sql();
+            sql_existsById = entityClass == null || idCond == null ? null : NAC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
+            sql_updateById = entityClass == null || idCond == null ? null : NAC.update(entityClass, idPropNameSet).where(idCond).sql();
             sql_insertWithId = entityClass == null ? null : NAC.insertInto(entityClass).sql();
             sql_insertWithoutId = entityClass == null ? null
                     : (idPropNameSet.containsAll(ClassUtil.getPropNameList(entityClass)) ? sql_insertWithId : NAC.insertInto(entityClass, idPropNameSet).sql());
-            sql_deleteById = entityClass == null ? null : NAC.deleteFrom(entityClass).where(idCond).sql();
+            sql_deleteById = entityClass == null || idCond == null ? null : NAC.deleteFrom(entityClass).where(idCond).sql();
         } else {
-            sql_getById = entityClass == null ? null : NLC.selectFrom(entityClass).where(idCond).sql();
-            sql_existsById = entityClass == null ? null : NLC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
+            sql_getById = entityClass == null || idCond == null ? null : NLC.selectFrom(entityClass).where(idCond).sql();
+            sql_existsById = entityClass == null || idCond == null ? null : NLC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
             sql_insertWithId = entityClass == null ? null : NLC.insertInto(entityClass).sql();
             sql_insertWithoutId = entityClass == null ? null
                     : (idPropNameSet.containsAll(ClassUtil.getPropNameList(entityClass)) ? sql_insertWithId : NLC.insertInto(entityClass, idPropNameSet).sql());
-            sql_updateById = entityClass == null ? null : NLC.update(entityClass, idPropNameSet).where(idCond).sql();
-            sql_deleteById = entityClass == null ? null : NLC.deleteFrom(entityClass).where(idCond).sql();
+            sql_updateById = entityClass == null || idCond == null ? null : NLC.update(entityClass, idPropNameSet).where(idCond).sql();
+            sql_deleteById = entityClass == null || idCond == null ? null : NLC.deleteFrom(entityClass).where(idCond).sql();
         }
 
         final NamedSQL namedGetByIdSQL = N.isNullOrEmpty(sql_getById) ? null : NamedSQL.parse(sql_getById);
