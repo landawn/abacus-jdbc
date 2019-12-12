@@ -17566,7 +17566,7 @@ public final class JdbcUtil {
                                             .insert(keyExtractor)
                                             .ifPresent(ret -> idSetter.accept(ret, entity));
                                 } else {
-                                    proxy.prepareNamedQuery(namedInsertWithIdSQL).setParameters(args[0]).update();
+                                    proxy.prepareNamedQuery(namedInsertWithIdSQL).setParameters(entity).update();
                                 }
                             }
 
@@ -17609,7 +17609,7 @@ public final class JdbcUtil {
                             List<Object> ids = null;
 
                             if (entities.size() <= batchSize) {
-                                if (isFakeId) {
+                                if (isFakeId || N.isNullOrEmpty(oneIdPropName)) {
                                     proxy.prepareNamedQuery(namedInsertWithoutIdSQL).addBatchParameters(entities).batchUpdate();
                                 } else {
                                     final Object idPropValue = idGetter.apply(N.firstOrNullIfEmpty(entities));
@@ -17625,7 +17625,7 @@ public final class JdbcUtil {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    if (isFakeId) {
+                                    if (isFakeId || N.isNullOrEmpty(oneIdPropName)) {
                                         try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertWithoutIdSQL).closeAfterExecution(false)) {
                                             ExceptionalStream.of(entities)
                                                     .splitToList(batchSize) //
@@ -17671,6 +17671,13 @@ public final class JdbcUtil {
                                 }
                             }
 
+                            if (N.notNullOrEmpty(ids) && ids.size() != entities.size()) {
+                                if (logger.isWarnEnabled()) {
+                                    logger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
+                                            entities.size());
+                                }
+                            }
+
                             return null;
                         };
                     } else if (methodName.equals("saveAll") && paramLen == 3 && int.class.equals(paramTypes[2])) {
@@ -17687,7 +17694,7 @@ public final class JdbcUtil {
                             List<Object> ids = null;
 
                             if (entities.size() <= batchSize) {
-                                if (isFakeId) {
+                                if (isFakeId || N.isNullOrEmpty(oneIdPropName)) {
                                     proxy.prepareNamedQuery(namedInsertSQL).addBatchParameters(entities).batchUpdate();
                                 } else {
                                     ids = proxy.prepareNamedQuery(namedInsertSQL, true).addBatchParameters(entities).batchInsert(keyExtractor);
@@ -17696,7 +17703,7 @@ public final class JdbcUtil {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    if (isFakeId) {
+                                    if (isFakeId || N.isNullOrEmpty(oneIdPropName)) {
                                         try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
                                             ExceptionalStream.of(entities)
                                                     .splitToList(batchSize) //
@@ -17728,6 +17735,13 @@ public final class JdbcUtil {
                             if (N.firstOrNullIfEmpty(entities) instanceof DirtyMarker) {
                                 for (Object e : entities) {
                                     DirtyMarkerUtil.markDirty((DirtyMarker) e, false);
+                                }
+                            }
+
+                            if (N.notNullOrEmpty(ids) && ids.size() != entities.size()) {
+                                if (logger.isWarnEnabled()) {
+                                    logger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
+                                            entities.size());
                                 }
                             }
 
