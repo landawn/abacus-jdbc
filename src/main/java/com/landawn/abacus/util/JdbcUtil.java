@@ -15743,23 +15743,6 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param updateProps
-         * @param cond
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        int update(final Map<String, Object> updateProps, final Condition cond) throws SQLException;
-
-        /**
-         *
-         * @param cond
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        int delete(final Condition cond) throws SQLException;
-
-        /**
-         *
          * @param entity
          * @param joinEntityClass
          * @throws SQLException the SQL exception
@@ -16326,6 +16309,23 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param updateProps
+         * @param cond
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        int update(final Map<String, Object> updateProps, final Condition cond) throws SQLException;
+
+        /**
+         *
+         * @param cond
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        int delete(final Condition cond) throws SQLException;
+
+        /**
+         *
          * @param <R>
          * @param func
          * @return
@@ -16643,6 +16643,67 @@ public final class JdbcUtil {
         }
 
         /**
+         *
+         * @param entity
+         * @return true, if successful
+         * @throws SQLException
+         */
+        default boolean refresh(final T entity) throws SQLException {
+            final Class<?> cls = entity.getClass();
+            final Collection<String> propNamesToRefresh = DirtyMarkerUtil.isDirtyMarker(cls) ? DirtyMarkerUtil.signedPropNames((DirtyMarker) entity)
+                    : SQLBuilder.getSelectPropNamesByClass(cls, false, null);
+
+            return refresh(entity, propNamesToRefresh);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param propNamesToRefresh
+         * @return {@code false} if no record found by the ids in the specified {@code entity}.
+         * @throws SQLException
+         */
+        @SuppressWarnings("deprecation")
+        default boolean refresh(final T entity, Collection<String> propNamesToRefresh) throws SQLException {
+            final Class<?> cls = entity.getClass();
+            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+
+            ID id = null;
+
+            if (idPropNameList.size() == 1) {
+                id = entityInfo.getPropInfo(idPropNameList.get(0)).getPropValue(entity);
+
+            } else {
+                Seid entityId = Seid.of(ClassUtil.getSimpleClassName(cls));
+
+                for (String idPropName : idPropNameList) {
+                    entityId.set(idPropName, entityInfo.getPropInfo(idPropName).getPropValue(entity));
+                }
+
+                id = (ID) entityId;
+            }
+
+            if (N.isNullOrEmpty(propNamesToRefresh)) {
+                return exists(id);
+            }
+
+            final T dbEntity = gett(propNamesToRefresh, id);
+
+            if (dbEntity == null) {
+                return false;
+            } else {
+                N.merge(dbEntity, entity, propNamesToRefresh);
+
+                if (DirtyMarkerUtil.isDirtyMarker(cls)) {
+                    DirtyMarkerUtil.markDirty((DirtyMarker) entity, propNamesToRefresh, false);
+                }
+
+                return true;
+            }
+        }
+
+        /**
          * Delete by id.
          *
          * @param id
@@ -16696,6 +16757,518 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws SQLException;
+    }
+
+    /**
+     * TODO
+     *
+     * @param <T>
+     * @param <SB>
+     * @param <TD>
+     */
+    @Beta
+    public static interface NoUpdateBasicDao<T, SB extends SQLBuilder, TD extends NoUpdateBasicDao<T, SB, TD>> extends BasicDao<T, SB, TD> {
+
+        /**
+         *
+         * @param updateProps
+         * @param cond
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final Map<String, Object> updateProps, final Condition cond) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param cond
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int delete(final Condition cond) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param <R>
+         * @param func
+         * @return
+         * @throws UnsupportedOperationException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default <R> ContinuableFuture<R> asyncApply(final Try.Function<TD, R, SQLException> func) throws UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param <R>
+         * @param func
+         * @param executor
+         * @return
+         * @throws UnsupportedOperationException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default <R> ContinuableFuture<R> asyncApply(final Try.Function<TD, R, SQLException> func, final Executor executor)
+                throws UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param action
+         * @return
+         * @throws UnsupportedOperationException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default ContinuableFuture<Void> asyncAccept(final Try.Consumer<TD, SQLException> action) throws UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param action
+         * @param executor
+         * @return
+         * @throws UnsupportedOperationException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default ContinuableFuture<Void> asyncAccept(final Try.Consumer<TD, SQLException> action, final Executor executor) throws UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    /**
+     * TODO
+     *
+     * @param <T>
+     * @param <SB>
+     * @param <TD>
+     */
+    @Beta
+    public static interface ReadOnlyBasicDao<T, SB extends SQLBuilder, TD extends ReadOnlyBasicDao<T, SB, TD>> extends NoUpdateBasicDao<T, SB, TD> {
+
+        /**
+         *
+         * @param entityToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void save(final T entityToSave) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Always throws {@code UnsupportedOperationException}.
+         *
+         * @param entitiesToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void saveAll(final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Always throws {@code UnsupportedOperationException}.
+         *
+         * @param entitiesToSave
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void saveAll(final Collection<? extends T> entitiesToSave, final int batchSize) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Always throws {@code UnsupportedOperationException}.
+         *
+         * @param namedInsertSQL
+         * @param entitiesToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void saveAll(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Always throws {@code UnsupportedOperationException}.
+         *
+         * @param namedInsertSQL
+         * @param entitiesToSave
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void saveAll(final String namedInsertSQL, final Collection<? extends T> entitiesToSave, final int batchSize)
+                throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    /**
+     * TODO
+     *
+     * @param <T>
+     * @param <ID>
+     * @param <SB>
+     * @param <TD>
+     */
+    @Beta
+    public static interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpdateCrudDao<T, ID, SB, TD>>
+            extends NoUpdateBasicDao<T, SB, TD>, CrudDao<T, ID, SB, TD> {
+
+        /**
+         *
+         * @param entityToUpdate
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final T entityToUpdate) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entityToUpdate
+         * @param propNamesToUpdate
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param updateProps
+         * @param id
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final Map<String, Object> updateProps, final ID id) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchUpdate(final Collection<? extends T> entities) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToUpdate
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate)
+                throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToUpdate
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize)
+                throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+         *
+         * @param entity
+         * @param whereCause to verify if the record exists or not.
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default T upsert(final T entity, final Condition whereCause) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+         *
+         * @param entity
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default T upsert(final T entity) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Delete by id.
+         *
+         * @param id
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteById(final ID id) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int delete(final T entity) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchDelete(final Collection<? extends T> entities) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchDelete(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param ids
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchDeleteByIds(final Collection<? extends ID> ids) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param ids
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    /**
+     * TODO
+     *
+     * @param <T>
+     * @param <ID>
+     * @param <SB>
+     * @param <TD>
+     */
+    @Beta
+    public static interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOnlyCrudDao<T, ID, SB, TD>>
+            extends ReadOnlyBasicDao<T, SB, TD>, NoUpdateCrudDao<T, ID, SB, TD> {
+
+        /**
+         *
+         * @param entityToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default ID insert(final T entityToSave) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default List<ID> batchInsert(final Collection<? extends T> entities) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param namedInsertSQL
+         * @param entities
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param namedInsertSQL
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities, final int batchSize)
+                throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private static final Consumer<? super Exception, SQLException> throwSQLExceptionAction = e -> {
@@ -16922,6 +17495,8 @@ public final class JdbcUtil {
                 call = (proxy, args) -> {
                     try {
                         return methodHandle.bindTo(proxy).invokeWithArguments(args);
+                    } catch (RuntimeException | SQLException e) {
+                        throw e;
                     } catch (Throwable e) {
                         throw new Exception(e);
                     }

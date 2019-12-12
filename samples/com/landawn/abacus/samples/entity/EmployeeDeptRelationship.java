@@ -11,10 +11,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Device {
-    @Id
-    private long id;
-    private long userId;
-    private String manufacture;
-    private String model;
+@Id({ "employeeId", "deptId" })
+public class EmployeeDeptRelationship {
+    private long employeeId;
+    private long deptId;
 }

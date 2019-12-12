@@ -3,11 +3,14 @@ package com.landawn.abacus.samples;
 import static com.landawn.abacus.samples.Jdbc.addressMapper;
 import static com.landawn.abacus.samples.Jdbc.deviceMapper;
 import static com.landawn.abacus.samples.Jdbc.employeeDeptRelationshipDao;
+import static com.landawn.abacus.samples.Jdbc.noUpdateUserDao;
+import static com.landawn.abacus.samples.Jdbc.readOnlyUserDao;
 import static com.landawn.abacus.samples.Jdbc.sqlExecutor;
 import static com.landawn.abacus.samples.Jdbc.userDao;
 import static com.landawn.abacus.samples.Jdbc.userMapper;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -18,10 +21,10 @@ import org.junit.Test;
 
 import com.landawn.abacus.EntityId;
 import com.landawn.abacus.condition.ConditionFactory.CF;
-import com.landawn.abacus.samples.Jdbc.Address;
-import com.landawn.abacus.samples.Jdbc.Device;
-import com.landawn.abacus.samples.Jdbc.EmployeeDeptRelationship;
-import com.landawn.abacus.samples.Jdbc.User;
+import com.landawn.abacus.samples.entity.Address;
+import com.landawn.abacus.samples.entity.Device;
+import com.landawn.abacus.samples.entity.EmployeeDeptRelationship;
+import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
@@ -30,6 +33,42 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.stream.Stream;
 
 public class DaoTest {
+
+    @Test
+    public void test_readOnlyDao() throws SQLException {
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+
+        try {
+            readOnlyUserDao.save(user);
+            fail("Should throw UnsupportedOperationException");
+        } catch (UnsupportedOperationException e) {
+            //
+        } catch (Exception e) {
+            //
+            e.printStackTrace();
+        }
+
+        noUpdateUserDao.save(user);
+
+        User userFromDB = readOnlyUserDao.gett(100L);
+        System.out.println(userFromDB);
+
+        try {
+            readOnlyUserDao.delete(user);
+            fail("Should throw UnsupportedOperationException");
+        } catch (UnsupportedOperationException e) {
+            //
+        }
+
+        try {
+            noUpdateUserDao.delete(user);
+            fail("Should throw UnsupportedOperationException");
+        } catch (UnsupportedOperationException e) {
+            //
+        }
+
+        userDao.delete(user);
+    }
 
     @Test
     public void test_entityId() throws SQLException {

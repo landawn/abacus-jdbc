@@ -10,6 +10,7 @@ import org.junit.Test;
 
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.JdbcSettings;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.NSC;

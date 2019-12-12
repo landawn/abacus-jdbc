@@ -8099,7 +8099,7 @@ public class SQLExecutor {
             if (dbEntity == null) {
                 return false;
             } else {
-                N.merge(dbEntity, entity);
+                N.merge(dbEntity, entity, propNamesToRefresh);
 
                 if (DirtyMarkerUtil.isDirtyMarker(entity.getClass())) {
                     DirtyMarkerUtil.markDirty((DirtyMarker) entity, propNamesToRefresh, false);

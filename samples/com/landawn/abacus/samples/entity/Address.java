@@ -11,10 +11,10 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Device {
+public class Address {
     @Id
     private long id;
     private long userId;
-    private String manufacture;
-    private String model;
+    private String street;
+    private String city;
 }

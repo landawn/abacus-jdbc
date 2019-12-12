@@ -11,7 +11,7 @@ import org.apache.ibatis.transaction.TransactionFactory;
 import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.samples.Jdbc.User;
+import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.N;
 
 class MyBatisTest {

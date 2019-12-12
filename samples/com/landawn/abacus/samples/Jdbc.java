@@ -7,35 +7,29 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.util.List;
 
 import javax.sql.DataSource;
 
 import org.junit.Test;
 
-import com.landawn.abacus.EntityId;
 import com.landawn.abacus.IsolationLevel;
-import com.landawn.abacus.annotation.Id;
-import com.landawn.abacus.annotation.JoinedBy;
-import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.condition.ConditionFactory.CF;
+import com.landawn.abacus.samples.dao.EmployeeDeptRelationshipDao;
+import com.landawn.abacus.samples.dao.NoUpdateUserDao;
+import com.landawn.abacus.samples.dao.ReadOnlyUserDao;
+import com.landawn.abacus.samples.dao.UserDao;
+import com.landawn.abacus.samples.entity.Address;
+import com.landawn.abacus.samples.entity.Device;
+import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.JdbcUtil.Dao;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLExecutor;
 import com.landawn.abacus.util.SQLExecutor.Mapper;
 import com.landawn.abacus.util.SQLTransaction;
-import com.landawn.abacus.util.stream.Stream;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * CRUD: insert -> read -> update -> delete a record in DB table.
@@ -48,6 +42,8 @@ public class Jdbc {
     static final Mapper<Address, Long> addressMapper = sqlExecutor.mapper(Address.class, long.class);
 
     static final UserDao userDao = Dao.newInstance(UserDao.class, dataSource);
+    static final NoUpdateUserDao noUpdateUserDao = Dao.newInstance(NoUpdateUserDao.class, dataSource);
+    static final ReadOnlyUserDao readOnlyUserDao = Dao.newInstance(ReadOnlyUserDao.class, dataSource);
     static final EmployeeDeptRelationshipDao employeeDeptRelationshipDao = Dao.newInstance(EmployeeDeptRelationshipDao.class, dataSource);
 
     // initialize DB schema.
@@ -92,68 +88,6 @@ public class Jdbc {
 
         sqlExecutor.execute(sql_employee_dept_relationship_drop_table);
         sqlExecutor.execute(sql_employee_dept_relationship_creat_table);
-    }
-
-    // Entity Object mapped to record in DB table.
-    @Builder
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class User {
-        @Id
-        private long id;
-        private String firstName;
-        private String lastName;
-        private String email;
-        @ReadOnly
-        private Timestamp createTime;
-
-        @JoinedBy("id=userId")
-        private List<Device> devices;
-
-        // Supposed to be empty.
-        @JoinedBy("id=userId, firstName=model")
-        private Device devices2;
-
-        @JoinedBy("id=userId")
-        private Address address;
-
-        @JoinedBy("id=userId, lastName=street")
-        private List<Address> address2;
-    }
-
-    @Builder
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class Device {
-        @Id
-        private long id;
-        private long userId;
-        private String manufacture;
-        private String model;
-    }
-
-    @Builder
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class Address {
-        @Id
-        private long id;
-        private long userId;
-        private String street;
-        private String city;
-    }
-
-    @Builder
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Id({ "employeeId", "deptId" })
-    public static class EmployeeDeptRelationship {
-        private long employeeId;
-        private long deptId;
     }
 
     @Test
@@ -294,23 +228,6 @@ public class Jdbc {
         // 4, Flexible/fluent APIs
         // But how to manage/maintain/reuse the tens/hundreds/thousands of SQL scripts?
         // see below samples by Dao/Mapper:
-    }
-
-    public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
-        @NamedInsert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
-        void insertWithId(User user) throws SQLException;
-
-        @NamedUpdate("UPDATE user SET first_name = :firstName, last_name = :lastName WHERE id = :id")
-        int updateFirstAndLastName(@Bind("firstName") String newFirstName, @Bind("lastName") String newLastName, @Bind("id") long id) throws SQLException;
-
-        @NamedSelect("SELECT first_name, last_name FROM user WHERE id = :id")
-        User getFirstAndLastNameBy(@Bind("id") long id) throws SQLException;
-
-        @NamedSelect("SELECT id, first_name, last_name, email FROM user")
-        Stream<User> allUsers() throws SQLException;
-    }
-
-    public interface EmployeeDeptRelationshipDao extends JdbcUtil.CrudDao<EmployeeDeptRelationship, EntityId, SQLBuilder.PSC, EmployeeDeptRelationshipDao> {
     }
 
     @Test

@@ -5,8 +5,8 @@ import java.util.Random;
 import org.junit.Test;
 
 import com.landawn.abacus.DataSet;
-import com.landawn.abacus.samples.entity.Account;
-import com.landawn.abacus.samples.entity.Contact;
+import com.landawn.abacus.samples.entity.Address;
+import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.N;
 
 public class DataSetTest {
@@ -14,17 +14,17 @@ public class DataSetTest {
 
     @Test
     public void test_join() {
-        Account account = Account.builder().id(1001).firstName("Tom").build();
-        Contact contact = Contact.builder().id(2001).accountId(1001).address("1 Rd").build();
+        User user = User.builder().id(1001).firstName("Tom").build();
+        Address address = Address.builder().id(2001).userId(1001).street("1 Rd").build();
 
-        DataSet ds1 = N.newDataSet(N.asList("id", "firstName"), N.asList(account));
+        DataSet ds1 = N.newDataSet(N.asList("id", "firstName"), N.asList(user));
         ds1.println();
 
-        DataSet ds2 = N.newDataSet(N.asList("id", "accountId", "address"), N.asList(contact));
+        DataSet ds2 = N.newDataSet(N.asList("id", "userId", "street"), N.asList(address));
+        ds2.renameColumn("id", "addressId");
         ds2.println();
-        ds2.renameColumn("id", "contactId");
 
-        DataSet ds3 = ds1.innerJoin(ds2, N.asMap("id", "accountId"));
+        DataSet ds3 = ds1.innerJoin(ds2, N.asMap("id", "userId"));
         ds3.println();
     }
 

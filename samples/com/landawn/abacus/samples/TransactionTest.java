@@ -6,6 +6,7 @@ import org.junit.Test;
 
 import com.landawn.abacus.Transaction.Status;
 import com.landawn.abacus.condition.ConditionFactory.CF;
+import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
