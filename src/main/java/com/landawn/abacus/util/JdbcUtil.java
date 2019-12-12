@@ -15161,6 +15161,15 @@ public final class JdbcUtil {
         void save(final T entityToSave) throws SQLException;
 
         /**
+         *
+         * @param namedInsertSQL
+         * @param entityToSave
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void save(final String namedInsertSQL, final T entityToSave) throws SQLException;
+
+        /**
          * Insert the specified entities to database by batch.
          *
          * @param entitiesToSave
@@ -16404,6 +16413,15 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param namedInsertSQL
+         * @param entityToSave
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        ID insert(final String namedInsertSQL, final T entityToSave) throws SQLException;
+
+        /**
+         *
          * @param entities
          * @return
          * @throws SQLException the SQL exception
@@ -16881,6 +16899,21 @@ public final class JdbcUtil {
         }
 
         /**
+         *
+         * @param namedInsertSQL
+         * @param entityToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void save(final String namedInsertSQL, final T entityToSave) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
          * Always throws {@code UnsupportedOperationException}.
          *
          * @param entitiesToSave
@@ -17211,6 +17244,21 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param namedInsertSQL
+         * @param entityToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default ID insert(final String namedInsertSQL, final T entityToSave) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
          * @param entities
          * @return
          * @throws UnsupportedOperationException
@@ -17504,19 +17552,46 @@ public final class JdbcUtil {
                 if (declaringClass.equals(BasicDao.class)) {
                     if (methodName.equals("save") && paramLen == 1) {
                         call = (proxy, args) -> {
-                            if (isFakeId) {
-                                proxy.prepareNamedQuery(namedInsertWithoutIdSQL).setParameters(args[0]).update();
-                            } else if (JdbcUtil.isDefaultIdPropValue(ClassUtil.getPropValue(args[0], oneIdPropName))) {
-                                proxy.prepareNamedQuery(namedInsertWithoutIdSQL, true)
-                                        .setParameters(args[0])
-                                        .insert()
-                                        .ifPresent(id -> ClassUtil.setPropValue(args[0], oneIdPropName, id));
+                            final Object entity = args[0];
+
+                            if (isFakeId || N.isNullOrEmpty(oneIdPropName)) {
+                                proxy.prepareNamedQuery(namedInsertWithoutIdSQL).setParameters(entity).update();
                             } else {
-                                proxy.prepareNamedQuery(namedInsertWithIdSQL).setParameters(args[0]).update();
+                                final Object id = idGetter.apply(entity);
+                                final boolean isDefaultIdPropValue = isDefaultIdTester.test(id);
+
+                                if (isDefaultIdPropValue) {
+                                    proxy.prepareNamedQuery(namedInsertWithoutIdSQL, true)
+                                            .setParameters(entity)
+                                            .insert(keyExtractor)
+                                            .ifPresent(ret -> idSetter.accept(ret, entity));
+                                } else {
+                                    proxy.prepareNamedQuery(namedInsertWithIdSQL).setParameters(args[0]).update();
+                                }
                             }
 
-                            if (args[0] instanceof DirtyMarker) {
-                                DirtyMarkerUtil.markDirty((DirtyMarker) args[0], false);
+                            if (entity instanceof DirtyMarker) {
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
+                            }
+
+                            return null;
+                        };
+                    } else if (methodName.equals("save") && paramLen == 2) {
+                        call = (proxy, args) -> {
+                            final String namedInsertSQL = (String) args[0];
+                            final Object entity = args[1];
+
+                            if (isFakeId || N.isNullOrEmpty(oneIdPropName)) {
+                                proxy.prepareNamedQuery(namedInsertSQL).setParameters(entity).update();
+                            } else {
+                                proxy.prepareNamedQuery(namedInsertSQL, true)
+                                        .setParameters(entity)
+                                        .insert(keyExtractor)
+                                        .ifPresent(ret -> idSetter.accept(ret, entity));
+                            }
+
+                            if (entity instanceof DirtyMarker) {
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
                             }
 
                             return null;
@@ -17532,17 +17607,19 @@ public final class JdbcUtil {
                             }
 
                             List<Object> ids = null;
-                            final Object idPropValue = isFakeId || N.isNullOrEmpty(entities) ? null
-                                    : ClassUtil.getPropValue(N.first(entities).get(), oneIdPropName);
-                            final boolean isDefaultIdPropValue = JdbcUtil.isDefaultIdPropValue(idPropValue);
 
                             if (entities.size() <= batchSize) {
                                 if (isFakeId) {
                                     proxy.prepareNamedQuery(namedInsertWithoutIdSQL).addBatchParameters(entities).batchUpdate();
-                                } else if (isDefaultIdPropValue) {
-                                    ids = proxy.prepareNamedQuery(namedInsertWithoutIdSQL, true).addBatchParameters(entities).batchInsert();
                                 } else {
-                                    proxy.prepareNamedQuery(namedInsertWithIdSQL).addBatchParameters(entities).batchUpdate();
+                                    final Object idPropValue = idGetter.apply(N.firstOrNullIfEmpty(entities));
+                                    final boolean isDefaultIdPropValue = isDefaultIdTester.test(idPropValue);
+
+                                    if (isDefaultIdPropValue) {
+                                        ids = proxy.prepareNamedQuery(namedInsertWithoutIdSQL, true).addBatchParameters(entities).batchInsert(keyExtractor);
+                                    } else {
+                                        proxy.prepareNamedQuery(namedInsertWithIdSQL).addBatchParameters(entities).batchUpdate();
+                                    }
                                 }
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
@@ -17554,18 +17631,23 @@ public final class JdbcUtil {
                                                     .splitToList(batchSize) //
                                                     .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
                                         }
-                                    } else if (isDefaultIdPropValue) {
-                                        try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertWithoutIdSQL, true).closeAfterExecution(false)) {
-                                            ids = ExceptionalStream.of(entities)
-                                                    .splitToList(batchSize)
-                                                    .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert())
-                                                    .toList();
-                                        }
                                     } else {
-                                        try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertWithIdSQL).closeAfterExecution(false)) {
-                                            ExceptionalStream.of(entities)
-                                                    .splitToList(batchSize) //
-                                                    .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
+                                        final Object idPropValue = idGetter.apply(N.firstOrNullIfEmpty(entities));
+                                        final boolean isDefaultIdPropValue = isDefaultIdTester.test(idPropValue);
+
+                                        if (isDefaultIdPropValue) {
+                                            try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertWithoutIdSQL, true).closeAfterExecution(false)) {
+                                                ids = ExceptionalStream.of(entities)
+                                                        .splitToList(batchSize)
+                                                        .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor))
+                                                        .toList();
+                                            }
+                                        } else {
+                                            try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertWithIdSQL).closeAfterExecution(false)) {
+                                                ExceptionalStream.of(entities)
+                                                        .splitToList(batchSize) //
+                                                        .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
+                                            }
                                         }
                                     }
 
@@ -17576,15 +17658,14 @@ public final class JdbcUtil {
                             }
 
                             if (N.notNullOrEmpty(ids) && N.notNullOrEmpty(entities) && ids.size() == N.size(entities)) {
-                                final PropInfo propInfo = ParserUtil.getEntityInfo(N.first(entities).get().getClass()).getPropInfo(oneIdPropName);
                                 int idx = 0;
 
                                 for (Object e : entities) {
-                                    propInfo.setPropValue(e, ids.get(idx++));
+                                    idSetter.accept(ids.get(idx++), e);
                                 }
                             }
 
-                            if (N.first(entities).orNull() instanceof DirtyMarker) {
+                            if (N.firstOrNullIfEmpty(entities) instanceof DirtyMarker) {
                                 for (Object e : entities) {
                                     DirtyMarkerUtil.markDirty((DirtyMarker) e, false);
                                 }
@@ -17609,7 +17690,7 @@ public final class JdbcUtil {
                                 if (isFakeId) {
                                     proxy.prepareNamedQuery(namedInsertSQL).addBatchParameters(entities).batchUpdate();
                                 } else {
-                                    ids = proxy.prepareNamedQuery(namedInsertSQL, true).addBatchParameters(entities).batchInsert();
+                                    ids = proxy.prepareNamedQuery(namedInsertSQL, true).addBatchParameters(entities).batchInsert(keyExtractor);
                                 }
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
@@ -17625,7 +17706,7 @@ public final class JdbcUtil {
                                         try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, true).closeAfterExecution(false)) {
                                             ids = ExceptionalStream.of(entities)
                                                     .splitToList(batchSize)
-                                                    .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert())
+                                                    .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor))
                                                     .toList();
                                         }
                                     }
@@ -17637,15 +17718,14 @@ public final class JdbcUtil {
                             }
 
                             if (N.notNullOrEmpty(ids) && N.notNullOrEmpty(entities) && ids.size() == N.size(entities)) {
-                                final PropInfo propInfo = ParserUtil.getEntityInfo(N.first(entities).get().getClass()).getPropInfo(oneIdPropName);
                                 int idx = 0;
 
                                 for (Object e : entities) {
-                                    propInfo.setPropValue(e, ids.get(idx++));
+                                    idSetter.accept(ids.get(idx++), e);
                                 }
                             }
 
-                            if (N.first(entities).orNull() instanceof DirtyMarker) {
+                            if (N.firstOrNullIfEmpty(entities) instanceof DirtyMarker) {
                                 for (Object e : entities) {
                                     DirtyMarkerUtil.markDirty((DirtyMarker) e, false);
                                 }
@@ -18245,33 +18325,44 @@ public final class JdbcUtil {
                         };
                     }
                 } else if (m.getDeclaringClass().equals(CrudDao.class)) {
-                    if (methodName.equals("insert")) {
+                    if (methodName.equals("insert") && paramLen == 1) {
                         call = (proxy, args) -> {
                             final Object entity = args[0];
-                            final Object id = idGetter.apply(entity);
+                            Object id = idGetter.apply(entity);
                             final boolean isDefaultIdPropValue = isDefaultIdTester.test(id);
 
                             if (isDefaultIdPropValue) {
-                                final Object newId = proxy.prepareNamedQuery(namedInsertWithoutIdSQL, true)
+                                id = proxy.prepareNamedQuery(namedInsertWithoutIdSQL, true)
                                         .setParameters(entity)
                                         .insert(keyExtractor)
                                         .ifPresent(ret -> idSetter.accept(ret, entity))
                                         .orElse(N.defaultValueOf(returnType));
-
-                                if (entity instanceof DirtyMarker) {
-                                    DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
-                                }
-
-                                return newId;
                             } else {
                                 proxy.prepareNamedQuery(namedInsertWithIdSQL).setParameters(entity).update();
-
-                                if (entity instanceof DirtyMarker) {
-                                    DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
-                                }
-
-                                return id;
                             }
+
+                            if (entity instanceof DirtyMarker) {
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
+                            }
+
+                            return id;
+                        };
+                    } else if (methodName.equals("insert") && paramLen == 2) {
+                        call = (proxy, args) -> {
+                            final String namedInsertSQL = (String) args[0];
+                            final Object entity = args[1];
+
+                            final Object id = proxy.prepareNamedQuery(namedInsertSQL, true)
+                                    .setParameters(entity)
+                                    .insert(keyExtractor)
+                                    .ifPresent(ret -> idSetter.accept(ret, entity))
+                                    .orElse(N.defaultValueOf(returnType));
+
+                            if (entity instanceof DirtyMarker) {
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
+                            }
+
+                            return id;
                         };
                     } else if (methodName.equals("batchInsert") && paramLen == 2 && int.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
