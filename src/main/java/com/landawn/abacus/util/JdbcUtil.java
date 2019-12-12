@@ -17344,7 +17344,7 @@ public final class JdbcUtil {
             }
         }
 
-        final Map<Method, Try.BiFunction<Dao, Object[], ?, Exception>> methodInvokerMap = new HashMap<>();
+        final Map<Method, Try.BiFunction<Dao, Object[], ?, Throwable>> methodInvokerMap = new HashMap<>();
 
         final List<Method> sqlMethods = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface))
                 .append(daoInterface)
@@ -17487,20 +17487,12 @@ public final class JdbcUtil {
             final Class<?> returnType = m.getReturnType();
             final int paramLen = paramTypes.length;
 
-            Try.BiFunction<Dao, Object[], ?, Exception> call = null;
+            Try.BiFunction<Dao, Object[], ?, Throwable> call = null;
 
             if (!Modifier.isAbstract(m.getModifiers())) {
                 final MethodHandle methodHandle = createMethodHandle(m);
 
-                call = (proxy, args) -> {
-                    try {
-                        return methodHandle.bindTo(proxy).invokeWithArguments(args);
-                    } catch (RuntimeException | SQLException e) {
-                        throw e;
-                    } catch (Throwable e) {
-                        throw new Exception(e);
-                    }
-                };
+                call = (proxy, args) -> methodHandle.bindTo(proxy).invokeWithArguments(args);
             } else if (m.getName().equals("targetEntityClass") && Class.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> entityClass;
             } else {
@@ -18945,18 +18937,15 @@ public final class JdbcUtil {
                         // Getting ClassCastException. Not sure why query result is being casted Dao. It seems there is a bug in JDk compiler.
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
 
-                        call = new Try.BiFunction<Dao, Object[], Object, Exception>() {
-                            @Override
-                            public Object apply(Dao proxy, Object[] args) throws Exception {
-                                Object result = queryFunc.apply(JdbcUtil.prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, queryTimeout,
-                                        returnGeneratedKeys, args, finalParametersSetter), args);
+                        call = (proxy, args) -> {
+                            Object result = queryFunc.apply(JdbcUtil.prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, queryTimeout,
+                                    returnGeneratedKeys, args, finalParametersSetter), args);
 
-                                if (idDirtyMarker) {
-                                    ((DirtyMarker) result).markDirty(false);
-                                }
-
-                                return result;
+                            if (idDirtyMarker) {
+                                ((DirtyMarker) result).markDirty(false);
                             }
+
+                            return result;
                         };
                     } else if (sqlAnno.annotationType().equals(Dao.Insert.class) || sqlAnno.annotationType().equals(Dao.NamedInsert.class)) {
                         final boolean idDirtyMarker = paramTypes.length == 1 && ClassUtil.isEntity(paramTypes[0])
@@ -19088,7 +19077,7 @@ public final class JdbcUtil {
             methodInvokerMap.put(m, call);
         }
 
-        final Try.TriFunction<Dao, Method, Object[], ?, Exception> proxyInvoker = (proxy, method, args) -> methodInvokerMap.get(method).apply(proxy, args);
+        final Try.TriFunction<Dao, Method, Object[], ?, Throwable> proxyInvoker = (proxy, method, args) -> methodInvokerMap.get(method).apply(proxy, args);
         final Class<T>[] interfaceClasses = N.asArray(daoInterface);
 
         final InvocationHandler h = (proxy, method, args) -> {

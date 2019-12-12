@@ -34,6 +34,7 @@ import com.landawn.abacus.util.stream.Stream;
 
 public class DaoTest {
 
+    @SuppressWarnings("deprecation")
     @Test
     public void test_readOnlyDao() throws SQLException {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
