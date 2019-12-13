@@ -13130,6 +13130,8 @@ public final class JdbcUtil {
     static final RowMapper<Object> SINGLE_GENERATED_KEY_EXTRACTOR = new RowMapper<Object>() {
         @Override
         public Object apply(final ResultSet rs) throws SQLException {
+            // N.println(JdbcUtil.getColumnLabelList(rs));
+
             return getColumnValue(rs, 1);
         }
     };
@@ -13139,6 +13141,8 @@ public final class JdbcUtil {
         @SuppressWarnings("deprecation")
         @Override
         public Object apply(final ResultSet rs) throws SQLException {
+            // N.println(JdbcUtil.getColumnLabelList(rs));
+
             final List<String> columnLabelList = getColumnLabelList(rs);
 
             if (columnLabelList.size() == 1) {
@@ -15162,6 +15166,15 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param entityToSave
+         * @param propNamesToSave
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void save(final T entityToSave, final Collection<String> propNamesToSave) throws SQLException;
+
+        /**
+         *
          * @param namedInsertSQL
          * @param entityToSave
          * @return
@@ -16413,6 +16426,15 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param entityToSave
+         * @param propNamesToSave
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        ID insert(final T entityToSave, final Collection<String> propNamesToSave) throws SQLException;
+
+        /**
+         *
          * @param namedInsertSQL
          * @param entityToSave
          * @return
@@ -16900,6 +16922,21 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param entityToSave
+         * @param propNamesToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void save(final T entityToSave, final Collection<String> propNamesToSave) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
          * @param namedInsertSQL
          * @param entityToSave
          * @return
@@ -17244,6 +17281,21 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param entityToSave
+         * @param propNamesToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default ID insert(final T entityToSave, final Collection<String> propNamesToSave) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
          * @param namedInsertSQL
          * @param entityToSave
          * @return
@@ -17433,6 +17485,14 @@ public final class JdbcUtil {
                         : (selectPropNames, cond) -> (N.isNullOrEmpty(selectPropNames) ? NLC.selectFrom(entityClass).where(cond)
                                 : NLC.select(selectPropNames).from(entityClass).where(cond)));
 
+        final Function<Collection<String>, SQLBuilder> namedInsertSQLBuilderFunc = sbc.equals(PSC.class)
+                ? (propNamesToInsert -> N.isNullOrEmpty(propNamesToInsert) ? NSC.insertInto(entityClass) : NSC.insert(propNamesToInsert).into(entityClass))
+                : (sbc.equals(PAC.class)
+                        ? (propNamesToInsert -> N.isNullOrEmpty(propNamesToInsert) ? NAC.insertInto(entityClass)
+                                : NAC.insert(propNamesToInsert).into(entityClass))
+                        : (propNamesToInsert -> N.isNullOrEmpty(propNamesToInsert) ? NLC.insertInto(entityClass)
+                                : NLC.insert(propNamesToInsert).into(entityClass)));
+
         final Function<Class<?>, SQLBuilder> parameterizedUpdateFunc = sbc.equals(PSC.class) ? clazz -> PSC.update(clazz)
                 : (sbc.equals(PAC.class) ? clazz -> PAC.update(clazz) : clazz -> PLC.update(clazz));
 
@@ -17576,7 +17636,31 @@ public final class JdbcUtil {
 
                             return null;
                         };
-                    } else if (methodName.equals("save") && paramLen == 2) {
+                    } else if (methodName.equals("save") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[1])) {
+                        call = (proxy, args) -> {
+                            final Object entity = args[0];
+                            final Collection<String> propNamesToSave = (Collection<String>) args[1];
+
+                            N.checkArgNotNullOrEmpty(propNamesToSave, "propNamesToSave");
+
+                            final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToSave).sql();
+
+                            if (isFakeId || N.isNullOrEmpty(oneIdPropName)) {
+                                proxy.prepareNamedQuery(namedInsertSQL).setParameters(entity).update();
+                            } else {
+                                proxy.prepareNamedQuery(namedInsertSQL, true)
+                                        .setParameters(entity)
+                                        .insert(keyExtractor)
+                                        .ifPresent(ret -> idSetter.accept(ret, entity));
+                            }
+
+                            if (entity instanceof DirtyMarker) {
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
+                            }
+
+                            return null;
+                        };
+                    } else if (methodName.equals("save") && paramLen == 2 && String.class.equals(paramTypes[0])) {
                         call = (proxy, args) -> {
                             final String namedInsertSQL = (String) args[0];
                             final Object entity = args[1];
@@ -18361,7 +18445,28 @@ public final class JdbcUtil {
 
                             return id;
                         };
-                    } else if (methodName.equals("insert") && paramLen == 2) {
+                    } else if (methodName.equals("insert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[1])) {
+                        call = (proxy, args) -> {
+                            final Object entity = args[0];
+                            final Collection<String> propNamesToSave = (Collection<String>) args[1];
+
+                            N.checkArgNotNullOrEmpty(propNamesToSave, "propNamesToSave");
+
+                            final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToSave).sql();
+
+                            final Object id = proxy.prepareNamedQuery(namedInsertSQL, true)
+                                    .setParameters(entity)
+                                    .insert(keyExtractor)
+                                    .ifPresent(ret -> idSetter.accept(ret, entity))
+                                    .orElse(N.defaultValueOf(returnType));
+
+                            if (entity instanceof DirtyMarker) {
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
+                            }
+
+                            return id;
+                        };
+                    } else if (methodName.equals("insert") && paramLen == 2 && String.class.equals(paramTypes[0])) {
                         call = (proxy, args) -> {
                             final String namedInsertSQL = (String) args[0];
                             final Object entity = args[1];

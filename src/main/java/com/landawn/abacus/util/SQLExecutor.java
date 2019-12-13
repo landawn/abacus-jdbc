@@ -95,6 +95,7 @@ import com.landawn.abacus.util.function.Supplier;
 import com.landawn.abacus.util.stream.Collector;
 import com.landawn.abacus.util.stream.ObjIteratorEx;
 import com.landawn.abacus.util.stream.Stream;
+import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -5931,15 +5932,19 @@ public class SQLExecutor {
             this.namingPolicy = namingPolicy;
 
             @SuppressWarnings("deprecation")
-            final List<String> idPropNames = ClassUtil.getIdFieldNames(entityClass, false);
+            final List<String> idPropNames = ClassUtil.getIdFieldNames(entityClass, true);
+            @SuppressWarnings("deprecation")
+            final boolean isFakeId = ClassUtil.isFakeId(idPropNames);
 
-            N.checkArgNotNullOrEmpty(idPropNames, "Target class: " + ClassUtil.getCanonicalClassName(entityClass)
-                    + " must have at least one id property annotated by @Id or @ReadOnlyId on field or class");
+            if (isFakeId) {
+                N.checkArgNotNullOrEmpty(idPropNames, "Target class: " + ClassUtil.getCanonicalClassName(entityClass)
+                        + " must have at least one id property annotated by @Id or @ReadOnlyId on field or class");
+            }
 
             //    N.checkArgument(idPropNames.size() == 1, "Only one id is supported at present. But Entity class {} has {} ids: {}", targetClass, idPropNames.size(),
             //            idPropNames);
 
-            if (N.isNullOrEmpty(idPropNames)) {
+            if (isFakeId) {
                 if (!idClass.equals(Void.class)) {
                     throw new IllegalArgumentException("Id class only can be Void or EntityId class for entity with no id property");
                 }
@@ -5960,22 +5965,7 @@ public class SQLExecutor {
             this.idPropNameList = ImmutableList.copyOf(idPropNames);
             this.idPropNameSet = ImmutableSet.copyOf(idPropNames);
             this.defaultSelectPropNameList = ImmutableList.copyOf(SQLBuilder.getSelectPropNamesByClass(entityClass, false, null));
-
-            Condition cond = null;
-
-            if (idPropNameList.size() == 1) {
-                cond = CF.eq(idPropName);
-            } else {
-                final And and = CF.and();
-
-                for (String idName : idPropNameList) {
-                    and.add(CF.eq(idName));
-                }
-
-                cond = and;
-            }
-
-            this.idCond = cond;
+            this.idCond = idPropNames.size() == 1 ? CF.eq(idPropName) : CF.and(StreamEx.of(idPropNames).map(CF::eq).toList());
 
             this.sql_exists_by_id = this.prepareQuery(SQLBuilder._1_list, idCond).sql;
             this.sql_get_by_id = this.prepareQuery(defaultSelectPropNameList, idCond).sql;

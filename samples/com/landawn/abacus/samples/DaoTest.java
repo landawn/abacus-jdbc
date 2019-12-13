@@ -9,6 +9,8 @@ import static com.landawn.abacus.samples.Jdbc.sqlExecutor;
 import static com.landawn.abacus.samples.Jdbc.userDao;
 import static com.landawn.abacus.samples.Jdbc.userMapper;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -33,6 +35,25 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.stream.Stream;
 
 public class DaoTest {
+
+    @Test
+    public void test_save_insert() throws SQLException {
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
+
+        User userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+        assertNotNull(userFromDB);
+        userDao.deleteById(100L);
+
+        long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
+        userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+        assertNotNull(userFromDB);
+        userDao.deleteById(id);
+
+        assertFalse(userDao.exists(id));
+    }
 
     @SuppressWarnings("deprecation")
     @Test
