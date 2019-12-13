@@ -8235,8 +8235,10 @@ public final class JdbcUtil {
                 final List<ID> result = new ArrayList<>();
 
                 try (ResultSet rs = stmt.getGeneratedKeys()) {
+                    final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
+
                     while (rs.next()) {
-                        result.add((ID) SINGLE_GENERATED_KEY_EXTRACTOR.apply(rs));
+                        result.add((ID) SINGLE_BI_GENERATED_KEY_EXTRACTOR.apply(rs, columnLabels));
                     }
 
                     return result;
@@ -13119,82 +13121,50 @@ public final class JdbcUtil {
     }
 
     /** The Constant NO_GENERATED_KEY_EXTRACTOR. */
-    static final RowMapper<Object> NO_GENERATED_KEY_EXTRACTOR = new RowMapper<Object>() {
-        @Override
-        public Object apply(final ResultSet rs) throws SQLException {
-            return null;
-        }
-    };
+    static final RowMapper<Object> NO_GENERATED_KEY_EXTRACTOR = rs -> null;
 
     /** The Constant SINGLE_GENERATED_KEY_EXTRACTOR. */
-    static final RowMapper<Object> SINGLE_GENERATED_KEY_EXTRACTOR = new RowMapper<Object>() {
-        @Override
-        public Object apply(final ResultSet rs) throws SQLException {
-            // N.println(JdbcUtil.getColumnLabelList(rs));
-
-            return getColumnValue(rs, 1);
-        }
-    };
+    static final RowMapper<Object> SINGLE_GENERATED_KEY_EXTRACTOR = rs -> getColumnValue(rs, 1);
 
     /** The Constant MULTI_GENERATED_KEY_EXTRACTOR. */
-    static final RowMapper<Object> MULTI_GENERATED_KEY_EXTRACTOR = new RowMapper<Object>() {
-        @SuppressWarnings("deprecation")
-        @Override
-        public Object apply(final ResultSet rs) throws SQLException {
-            // N.println(JdbcUtil.getColumnLabelList(rs));
+    @SuppressWarnings("deprecation")
+    static final RowMapper<Object> MULTI_GENERATED_KEY_EXTRACTOR = rs -> {
+        final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
-            final List<String> columnLabelList = getColumnLabelList(rs);
+        if (columnLabels.size() == 1) {
+            return getColumnValue(rs, 1);
+        } else {
+            final int columnCount = columnLabels.size();
+            final Seid id = Seid.of(N.EMPTY_STRING);
 
-            if (columnLabelList.size() == 1) {
-                return getColumnValue(rs, 1);
-            } else {
-                final int columnCount = columnLabelList.size();
-                final Seid id = Seid.of(N.EMPTY_STRING);
-
-                for (int i = 1; i <= columnCount; i++) {
-                    id.set(columnLabelList.get(i - 1), getColumnValue(rs, i));
-                }
-
-                return id;
+            for (int i = 1; i <= columnCount; i++) {
+                id.set(columnLabels.get(i - 1), getColumnValue(rs, i));
             }
+
+            return id;
         }
     };
 
     /** The Constant NO_BI_GENERATED_KEY_EXTRACTOR. */
-    static final BiRowMapper<Object> NO_BI_GENERATED_KEY_EXTRACTOR = new BiRowMapper<Object>() {
-        @Override
-        public Object apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-            return null;
-        }
-    };
+    static final BiRowMapper<Object> NO_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> null;
 
     /** The Constant SINGLE_BI_GENERATED_KEY_EXTRACTOR. */
-    static final BiRowMapper<Object> SINGLE_BI_GENERATED_KEY_EXTRACTOR = new BiRowMapper<Object>() {
-        @Override
-        public Object apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-            return getColumnValue(rs, 1);
-        }
-    };
+    static final BiRowMapper<Object> SINGLE_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> getColumnValue(rs, 1);
 
     /** The Constant MULTI_BI_GENERATED_KEY_EXTRACTOR. */
-    static final BiRowMapper<Object> MULTI_BI_GENERATED_KEY_EXTRACTOR = new BiRowMapper<Object>() {
-        @SuppressWarnings("deprecation")
-        @Override
-        public Object apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-            final List<String> columnLabelList = getColumnLabelList(rs);
+    @SuppressWarnings("deprecation")
+    static final BiRowMapper<Object> MULTI_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> {
+        if (columnLabels.size() == 1) {
+            return getColumnValue(rs, 1);
+        } else {
+            final int columnCount = columnLabels.size();
+            final Seid id = Seid.of(N.EMPTY_STRING);
 
-            if (columnLabelList.size() == 1) {
-                return getColumnValue(rs, 1);
-            } else {
-                final int columnCount = columnLabelList.size();
-                final Seid id = Seid.of(N.EMPTY_STRING);
-
-                for (int i = 1; i <= columnCount; i++) {
-                    id.set(columnLabelList.get(i - 1), getColumnValue(rs, i));
-                }
-
-                return id;
+            for (int i = 1; i <= columnCount; i++) {
+                id.set(columnLabels.get(i - 1), getColumnValue(rs, i));
             }
+
+            return id;
         }
     };
 
@@ -17553,7 +17523,7 @@ public final class JdbcUtil {
         final NamedSQL namedUpdateByIdSQL = N.isNullOrEmpty(sql_updateById) ? null : NamedSQL.parse(sql_updateById);
         final NamedSQL namedDeleteByIdSQL = N.isNullOrEmpty(sql_deleteById) ? null : NamedSQL.parse(sql_deleteById);
 
-        final RowMapper<Object> keyExtractor = isOneId ? JdbcUtil.SINGLE_GENERATED_KEY_EXTRACTOR : JdbcUtil.MULTI_GENERATED_KEY_EXTRACTOR;
+        final BiRowMapper<Object> keyExtractor = isOneId ? JdbcUtil.SINGLE_BI_GENERATED_KEY_EXTRACTOR : JdbcUtil.MULTI_BI_GENERATED_KEY_EXTRACTOR;
 
         final Function<Object, Object> idGetter = isOneId ? entity -> idPropInfo.getPropValue(entity) : entity -> {
             final Seid seid = Seid.of(ClassUtil.getSimpleClassName(entity.getClass()));
