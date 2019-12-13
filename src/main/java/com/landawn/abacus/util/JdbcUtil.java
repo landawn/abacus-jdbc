@@ -17621,10 +17621,7 @@ public final class JdbcUtil {
                                 final boolean isDefaultIdPropValue = isDefaultIdTester.test(id);
 
                                 if (isDefaultIdPropValue) {
-                                    proxy.prepareNamedQuery(namedInsertWithoutIdSQL, true)
-                                            .setParameters(entity)
-                                            .insert(keyExtractor)
-                                            .ifPresent(ret -> idSetter.accept(ret, entity));
+                                    proxy.prepareNamedQuery(namedInsertWithoutIdSQL).setParameters(entity).update();
                                 } else {
                                     proxy.prepareNamedQuery(namedInsertWithIdSQL).setParameters(entity).update();
                                 }
@@ -17645,17 +17642,10 @@ public final class JdbcUtil {
 
                             final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToSave).sql();
 
-                            if (isFakeId || N.isNullOrEmpty(oneIdPropName)) {
-                                proxy.prepareNamedQuery(namedInsertSQL).setParameters(entity).update();
-                            } else {
-                                proxy.prepareNamedQuery(namedInsertSQL, true)
-                                        .setParameters(entity)
-                                        .insert(keyExtractor)
-                                        .ifPresent(ret -> idSetter.accept(ret, entity));
-                            }
+                            proxy.prepareNamedQuery(namedInsertSQL).setParameters(entity).update();
 
                             if (entity instanceof DirtyMarker) {
-                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propNamesToSave, false);
                             }
 
                             return null;
@@ -17665,14 +17655,7 @@ public final class JdbcUtil {
                             final String namedInsertSQL = (String) args[0];
                             final Object entity = args[1];
 
-                            if (isFakeId || N.isNullOrEmpty(oneIdPropName)) {
-                                proxy.prepareNamedQuery(namedInsertSQL).setParameters(entity).update();
-                            } else {
-                                proxy.prepareNamedQuery(namedInsertSQL, true)
-                                        .setParameters(entity)
-                                        .insert(keyExtractor)
-                                        .ifPresent(ret -> idSetter.accept(ret, entity));
-                            }
+                            proxy.prepareNamedQuery(namedInsertSQL).setParameters(entity).update();
 
                             if (entity instanceof DirtyMarker) {
                                 DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
@@ -17690,8 +17673,6 @@ public final class JdbcUtil {
                                 return 0;
                             }
 
-                            List<Object> ids = null;
-
                             if (entities.size() <= batchSize) {
                                 if (isFakeId || N.isNullOrEmpty(oneIdPropName)) {
                                     proxy.prepareNamedQuery(namedInsertWithoutIdSQL).addBatchParameters(entities).batchUpdate();
@@ -17700,7 +17681,7 @@ public final class JdbcUtil {
                                     final boolean isDefaultIdPropValue = isDefaultIdTester.test(idPropValue);
 
                                     if (isDefaultIdPropValue) {
-                                        ids = proxy.prepareNamedQuery(namedInsertWithoutIdSQL, true).addBatchParameters(entities).batchInsert(keyExtractor);
+                                        proxy.prepareNamedQuery(namedInsertWithoutIdSQL).addBatchParameters(entities).batchUpdate();
                                     } else {
                                         proxy.prepareNamedQuery(namedInsertWithIdSQL).addBatchParameters(entities).batchUpdate();
                                     }
@@ -17720,11 +17701,10 @@ public final class JdbcUtil {
                                         final boolean isDefaultIdPropValue = isDefaultIdTester.test(idPropValue);
 
                                         if (isDefaultIdPropValue) {
-                                            try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertWithoutIdSQL, true).closeAfterExecution(false)) {
-                                                ids = ExceptionalStream.of(entities)
-                                                        .splitToList(batchSize)
-                                                        .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor))
-                                                        .toList();
+                                            try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertWithoutIdSQL).closeAfterExecution(false)) {
+                                                ExceptionalStream.of(entities)
+                                                        .splitToList(batchSize) //
+                                                        .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
                                             }
                                         } else {
                                             try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertWithIdSQL).closeAfterExecution(false)) {
@@ -17741,24 +17721,9 @@ public final class JdbcUtil {
                                 }
                             }
 
-                            if (N.notNullOrEmpty(ids) && N.notNullOrEmpty(entities) && ids.size() == N.size(entities)) {
-                                int idx = 0;
-
-                                for (Object e : entities) {
-                                    idSetter.accept(ids.get(idx++), e);
-                                }
-                            }
-
                             if (N.firstOrNullIfEmpty(entities) instanceof DirtyMarker) {
                                 for (Object e : entities) {
                                     DirtyMarkerUtil.markDirty((DirtyMarker) e, false);
-                                }
-                            }
-
-                            if (N.notNullOrEmpty(ids) && ids.size() != entities.size()) {
-                                if (logger.isWarnEnabled()) {
-                                    logger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
-                                            entities.size());
                                 }
                             }
 
@@ -17775,31 +17740,16 @@ public final class JdbcUtil {
                                 return 0;
                             }
 
-                            List<Object> ids = null;
-
                             if (entities.size() <= batchSize) {
-                                if (isFakeId || N.isNullOrEmpty(oneIdPropName)) {
-                                    proxy.prepareNamedQuery(namedInsertSQL).addBatchParameters(entities).batchUpdate();
-                                } else {
-                                    ids = proxy.prepareNamedQuery(namedInsertSQL, true).addBatchParameters(entities).batchInsert(keyExtractor);
-                                }
+                                proxy.prepareNamedQuery(namedInsertSQL).addBatchParameters(entities).batchUpdate();
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    if (isFakeId || N.isNullOrEmpty(oneIdPropName)) {
-                                        try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
-                                            ExceptionalStream.of(entities)
-                                                    .splitToList(batchSize) //
-                                                    .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
-                                        }
-                                    } else {
-                                        try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, true).closeAfterExecution(false)) {
-                                            ids = ExceptionalStream.of(entities)
-                                                    .splitToList(batchSize)
-                                                    .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor))
-                                                    .toList();
-                                        }
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
+                                        ExceptionalStream.of(entities)
+                                                .splitToList(batchSize) //
+                                                .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
                                     }
 
                                     tran.commit();
@@ -17808,24 +17758,9 @@ public final class JdbcUtil {
                                 }
                             }
 
-                            if (N.notNullOrEmpty(ids) && N.notNullOrEmpty(entities) && ids.size() == N.size(entities)) {
-                                int idx = 0;
-
-                                for (Object e : entities) {
-                                    idSetter.accept(ids.get(idx++), e);
-                                }
-                            }
-
                             if (N.firstOrNullIfEmpty(entities) instanceof DirtyMarker) {
                                 for (Object e : entities) {
                                     DirtyMarkerUtil.markDirty((DirtyMarker) e, false);
-                                }
-                            }
-
-                            if (N.notNullOrEmpty(ids) && ids.size() != entities.size()) {
-                                if (logger.isWarnEnabled()) {
-                                    logger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
-                                            entities.size());
                                 }
                             }
 
@@ -18461,7 +18396,7 @@ public final class JdbcUtil {
                                     .orElse(N.defaultValueOf(returnType));
 
                             if (entity instanceof DirtyMarker) {
-                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propNamesToSave, false);
                             }
 
                             return id;

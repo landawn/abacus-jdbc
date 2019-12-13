@@ -47,7 +47,7 @@ public class DaoTest {
         userDao.deleteById(100L);
 
         long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
-        userFromDB = userDao.gett(100L);
+        userFromDB = userDao.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
         userDao.deleteById(id);
