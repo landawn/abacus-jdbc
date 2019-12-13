@@ -110,6 +110,7 @@ import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
 import com.landawn.abacus.util.ExceptionalStream.StreamE;
+import com.landawn.abacus.util.Fn.BiConsumers;
 import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.SQLBuilder.NAC;
@@ -17473,15 +17474,14 @@ public final class JdbcUtil {
                 : (sbc.equals(PAC.class) ? clazz -> NAC.update(clazz) : clazz -> NLC.update(clazz));
 
         final List<String> idPropNameList = entityClass == null ? N.emptyList() : ClassUtil.getIdFieldNames(entityClass);
-        final Set<String> idPropNameSet = entityClass == null ? N.emptySet() : N.newHashSet(idPropNameList);
-        final String oneIdPropName = (entityClass == null || N.isNullOrEmpty(idPropNameList)) ? null : idPropNameList.get(0);
+        final boolean isNoId = entityClass == null || N.isNullOrEmpty(idPropNameList) || ClassUtil.isFakeId(idPropNameList);
+        final Set<String> idPropNameSet = N.newHashSet(idPropNameList);
+        final String oneIdPropName = isNoId ? null : idPropNameList.get(0);
         final EntityInfo entityInfo = entityClass == null ? null : ParserUtil.getEntityInfo(entityClass);
-        final List<PropInfo> idPropInfoList = entityClass == null ? null : Stream.of(idPropNameList).map(entityInfo::getPropInfo).toList();
-        final PropInfo idPropInfo = entityClass == null || N.isNullOrEmpty(oneIdPropName) ? null : entityInfo.getPropInfo(oneIdPropName);
-        final boolean isOneId = entityClass == null ? false : idPropNameList.size() == 1;
-        final boolean isFakeId = entityClass == null || N.isNullOrEmpty(idPropNameList) ? true : ClassUtil.isFakeId(idPropNameList);
-        final Condition idCond = entityClass == null || N.isNullOrEmpty(oneIdPropName) ? null
-                : isOneId ? CF.eq(oneIdPropName) : CF.and(StreamEx.of(idPropNameList).map(CF::eq).toList());
+        final List<PropInfo> idPropInfoList = isNoId ? null : Stream.of(idPropNameList).map(entityInfo::getPropInfo).toList();
+        final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
+        final boolean isOneId = isNoId ? false : idPropNameList.size() == 1;
+        final Condition idCond = isNoId ? null : isOneId ? CF.eq(oneIdPropName) : CF.and(StreamEx.of(idPropNameList).map(CF::eq).toList());
 
         String sql_getById = null;
         String sql_existsById = null;
@@ -17491,29 +17491,29 @@ public final class JdbcUtil {
         String sql_deleteById = null;
 
         if (sbc.equals(PSC.class)) {
-            sql_getById = entityClass == null || idCond == null ? null : NSC.selectFrom(entityClass).where(idCond).sql();
-            sql_existsById = entityClass == null || idCond == null ? null : NSC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
+            sql_getById = isNoId ? null : NSC.selectFrom(entityClass).where(idCond).sql();
+            sql_existsById = isNoId ? null : NSC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
             sql_insertWithId = entityClass == null ? null : NSC.insertInto(entityClass).sql();
             sql_insertWithoutId = entityClass == null ? null
                     : (idPropNameSet.containsAll(ClassUtil.getPropNameList(entityClass)) ? sql_insertWithId : NSC.insertInto(entityClass, idPropNameSet).sql());
-            sql_updateById = entityClass == null || idCond == null ? null : NSC.update(entityClass, idPropNameSet).where(idCond).sql();
-            sql_deleteById = entityClass == null || idCond == null ? null : NSC.deleteFrom(entityClass).where(idCond).sql();
+            sql_updateById = isNoId ? null : NSC.update(entityClass, idPropNameSet).where(idCond).sql();
+            sql_deleteById = isNoId ? null : NSC.deleteFrom(entityClass).where(idCond).sql();
         } else if (sbc.equals(PAC.class)) {
-            sql_getById = entityClass == null || idCond == null ? null : NAC.selectFrom(entityClass).where(idCond).sql();
-            sql_existsById = entityClass == null || idCond == null ? null : NAC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
-            sql_updateById = entityClass == null || idCond == null ? null : NAC.update(entityClass, idPropNameSet).where(idCond).sql();
+            sql_getById = isNoId ? null : NAC.selectFrom(entityClass).where(idCond).sql();
+            sql_existsById = isNoId ? null : NAC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
+            sql_updateById = isNoId ? null : NAC.update(entityClass, idPropNameSet).where(idCond).sql();
             sql_insertWithId = entityClass == null ? null : NAC.insertInto(entityClass).sql();
             sql_insertWithoutId = entityClass == null ? null
                     : (idPropNameSet.containsAll(ClassUtil.getPropNameList(entityClass)) ? sql_insertWithId : NAC.insertInto(entityClass, idPropNameSet).sql());
-            sql_deleteById = entityClass == null || idCond == null ? null : NAC.deleteFrom(entityClass).where(idCond).sql();
+            sql_deleteById = isNoId ? null : NAC.deleteFrom(entityClass).where(idCond).sql();
         } else {
-            sql_getById = entityClass == null || idCond == null ? null : NLC.selectFrom(entityClass).where(idCond).sql();
-            sql_existsById = entityClass == null || idCond == null ? null : NLC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
+            sql_getById = isNoId ? null : NLC.selectFrom(entityClass).where(idCond).sql();
+            sql_existsById = isNoId ? null : NLC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
             sql_insertWithId = entityClass == null ? null : NLC.insertInto(entityClass).sql();
             sql_insertWithoutId = entityClass == null ? null
                     : (idPropNameSet.containsAll(ClassUtil.getPropNameList(entityClass)) ? sql_insertWithId : NLC.insertInto(entityClass, idPropNameSet).sql());
-            sql_updateById = entityClass == null || idCond == null ? null : NLC.update(entityClass, idPropNameSet).where(idCond).sql();
-            sql_deleteById = entityClass == null || idCond == null ? null : NLC.deleteFrom(entityClass).where(idCond).sql();
+            sql_updateById = isNoId ? null : NLC.update(entityClass, idPropNameSet).where(idCond).sql();
+            sql_deleteById = isNoId ? null : NLC.deleteFrom(entityClass).where(idCond).sql();
         }
 
         final NamedSQL namedGetByIdSQL = N.isNullOrEmpty(sql_getById) ? null : NamedSQL.parse(sql_getById);
@@ -17523,9 +17523,10 @@ public final class JdbcUtil {
         final NamedSQL namedUpdateByIdSQL = N.isNullOrEmpty(sql_updateById) ? null : NamedSQL.parse(sql_updateById);
         final NamedSQL namedDeleteByIdSQL = N.isNullOrEmpty(sql_deleteById) ? null : NamedSQL.parse(sql_deleteById);
 
-        final BiRowMapper<Object> keyExtractor = isOneId ? JdbcUtil.SINGLE_BI_GENERATED_KEY_EXTRACTOR : JdbcUtil.MULTI_BI_GENERATED_KEY_EXTRACTOR;
+        final BiRowMapper<Object> keyExtractor = isNoId ? JdbcUtil.NO_BI_GENERATED_KEY_EXTRACTOR
+                : (isOneId ? JdbcUtil.SINGLE_BI_GENERATED_KEY_EXTRACTOR : JdbcUtil.MULTI_BI_GENERATED_KEY_EXTRACTOR);
 
-        final Function<Object, Object> idGetter = isOneId ? entity -> idPropInfo.getPropValue(entity) : entity -> {
+        final Function<Object, Object> idGetter = isNoId ? entity -> null : (isOneId ? entity -> idPropInfo.getPropValue(entity) : entity -> {
             final Seid seid = Seid.of(ClassUtil.getSimpleClassName(entity.getClass()));
 
             for (PropInfo propInfo : idPropInfoList) {
@@ -17533,18 +17534,20 @@ public final class JdbcUtil {
             }
 
             return seid;
-        };
+        });
 
-        final BiConsumer<Object, Object> idSetter = isOneId ? (id, entity) -> idPropInfo.setPropValue(entity, id) : (id, entity) -> {
-            final EntityId entityId = (EntityId) id;
+        final BiConsumer<Object, Object> idSetter = isNoId ? BiConsumers.doNothing()
+                : (isOneId ? (id, entity) -> idPropInfo.setPropValue(entity, id) : (id, entity) -> {
+                    final EntityId entityId = (EntityId) id;
 
-            for (String idName : entityId.keySet()) {
-                entityInfo.getPropInfo(idName).setPropValue(entity, entityId.get(idName));
-            }
-        };
+                    for (String idName : entityId.keySet()) {
+                        entityInfo.getPropInfo(idName).setPropValue(entity, entityId.get(idName));
+                    }
+                });
 
-        final Predicate<Object> isDefaultIdTester = isOneId ? id -> JdbcUtil.isDefaultIdPropValue(id)
-                : id -> Stream.of(((EntityId) id).entrySet()).allMatch(e -> JdbcUtil.isDefaultIdPropValue(e.getValue()));
+        final Predicate<Object> isDefaultIdTester = isNoId ? id -> true
+                : (isOneId ? id -> JdbcUtil.isDefaultIdPropValue(id)
+                        : id -> Stream.of(((EntityId) id).entrySet()).allMatch(e -> JdbcUtil.isDefaultIdPropValue(e.getValue())));
 
         final BiParametersSetter<NamedQuery, Object> idParamSetter = isOneId ? (pq, id) -> pq.setObject(oneIdPropName, id) : (pq, id) -> {
             final EntityId entityId = (EntityId) id;
@@ -17584,7 +17587,7 @@ public final class JdbcUtil {
                         call = (proxy, args) -> {
                             final Object entity = args[0];
 
-                            if (isFakeId || N.isNullOrEmpty(oneIdPropName)) {
+                            if (isNoId) {
                                 proxy.prepareNamedQuery(namedInsertWithoutIdSQL).setParameters(entity).update();
                             } else {
                                 final Object id = idGetter.apply(entity);
@@ -17644,7 +17647,7 @@ public final class JdbcUtil {
                             }
 
                             if (entities.size() <= batchSize) {
-                                if (isFakeId || N.isNullOrEmpty(oneIdPropName)) {
+                                if (isNoId) {
                                     proxy.prepareNamedQuery(namedInsertWithoutIdSQL).addBatchParameters(entities).batchUpdate();
                                 } else {
                                     final Object idPropValue = idGetter.apply(N.firstOrNullIfEmpty(entities));
@@ -17660,7 +17663,7 @@ public final class JdbcUtil {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    if (isFakeId || N.isNullOrEmpty(oneIdPropName)) {
+                                    if (isNoId) {
                                         try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertWithoutIdSQL).closeAfterExecution(false)) {
                                             ExceptionalStream.of(entities)
                                                     .splitToList(batchSize) //
