@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -45,10 +44,8 @@ import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.EntityId;
 import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.condition.And;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
-import com.landawn.abacus.condition.Equal;
 import com.landawn.abacus.core.DirtyMarkerUtil;
 import com.landawn.abacus.core.Seid;
 import com.landawn.abacus.dataSource.SQLDataSource;
@@ -91,6 +88,7 @@ import com.landawn.abacus.util.function.BiConsumer;
 import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Consumer;
 import com.landawn.abacus.util.function.Function;
+import com.landawn.abacus.util.function.Predicate;
 import com.landawn.abacus.util.function.Supplier;
 import com.landawn.abacus.util.stream.Collector;
 import com.landawn.abacus.util.stream.ObjIteratorEx;
@@ -5866,21 +5864,18 @@ public class SQLExecutor {
         /** The target class. */
         private final Class<T> targetClass;
 
-        /** The target type. */
-        private final Type<T> targetType;
-
         private final EntityInfo entityInfo;
 
         private final Class<ID> idClass;
 
         private final boolean isEntityId;
-        private final boolean isVoidId;
+        private final boolean isNoId;
 
         /** The default select prop name list. */
         private final ImmutableList<String> defaultSelectPropNameList;
 
         /** The id prop name. */
-        private final String idPropName;
+        private final String oneIdPropName;
 
         /** The id prop name list. */
         private final ImmutableList<String> idPropNameList;
@@ -5917,6 +5912,11 @@ public class SQLExecutor {
 
         private final Class<? extends SQLBuilder> sbc;
 
+        private final BiRowMapper<Object> biKeyExtractor;
+        private final Function<Object, ID> idGetter;
+        private final Function<Map<String, Object>, ID> idGetter2;
+        private final Predicate<ID> isDefaultIdTester;
+
         // TODO cache more sqls to improve performance.
 
         /**
@@ -5927,13 +5927,12 @@ public class SQLExecutor {
          * @param sqlExecutor
          * @param namingPolicy
          */
+        @SuppressWarnings("deprecation")
         Mapper(final Class<T> entityClass, final Class<ID> idClass, final SQLExecutor sqlExecutor, final NamingPolicy namingPolicy) {
             this.sqlExecutor = sqlExecutor;
             this.namingPolicy = namingPolicy;
 
-            @SuppressWarnings("deprecation")
             final List<String> idPropNames = ClassUtil.getIdFieldNames(entityClass, true);
-            @SuppressWarnings("deprecation")
             final boolean isFakeId = ClassUtil.isFakeId(idPropNames);
 
             if (isFakeId) {
@@ -5948,6 +5947,10 @@ public class SQLExecutor {
                 if (!idClass.equals(Void.class)) {
                     throw new IllegalArgumentException("Id class only can be Void or EntityId class for entity with no id property");
                 }
+            } else if (idPropNames.size() == 1) {
+                if (idClass.equals(EntityId.class)) {
+                    throw new IllegalArgumentException("Single id type must not be EntityId");
+                }
             } else if (idPropNames.size() > 1) {
                 if (!idClass.equals(EntityId.class)) {
                     throw new IllegalArgumentException("Id class only can be EntityId class for entity with two or more id properties");
@@ -5955,17 +5958,16 @@ public class SQLExecutor {
             }
 
             this.targetClass = entityClass;
-            this.targetType = N.typeOf(targetClass);
             this.entityInfo = ParserUtil.getEntityInfo(targetClass);
             this.idClass = idClass;
-            this.isEntityId = idClass.equals(EntityId.class);
-            this.isVoidId = idClass.equals(Void.class);
+            this.isEntityId = EntityId.class.isAssignableFrom(idClass);
+            this.isNoId = idClass.equals(Void.class);
 
-            this.idPropName = idPropNames.get(0);
+            this.oneIdPropName = idPropNames.get(0);
             this.idPropNameList = ImmutableList.copyOf(idPropNames);
             this.idPropNameSet = ImmutableSet.copyOf(idPropNames);
             this.defaultSelectPropNameList = ImmutableList.copyOf(SQLBuilder.getSelectPropNamesByClass(entityClass, false, null));
-            this.idCond = idPropNames.size() == 1 ? CF.eq(idPropName) : CF.and(StreamEx.of(idPropNames).map(CF::eq).toList());
+            this.idCond = idPropNames.size() == 1 ? CF.eq(oneIdPropName) : CF.and(StreamEx.of(idPropNames).map(CF::eq).toList());
 
             this.sql_exists_by_id = this.prepareQuery(SQLBuilder._1_list, idCond).sql;
             this.sql_get_by_id = this.prepareQuery(defaultSelectPropNameList, idCond).sql;
@@ -5976,40 +5978,37 @@ public class SQLExecutor {
 
             this.sbc = namingPolicy.equals(NamingPolicy.LOWER_CASE_WITH_UNDERSCORE) ? PSC.class
                     : (namingPolicy.equals(NamingPolicy.UPPER_CASE_WITH_UNDERSCORE) ? PAC.class : PLC.class);
-        }
 
-        /**
-         *
-         * @return
-         */
-        Class<T> targetClass() {
-            return targetClass;
-        }
+            final List<PropInfo> idPropInfoList = isFakeId ? null : Stream.of(idPropNameList).map(entityInfo::getPropInfo).toList();
+            final PropInfo idPropInfo = isFakeId || N.isNullOrEmpty(oneIdPropName) ? null : entityInfo.getPropInfo(oneIdPropName);
+            final boolean isOneId = isFakeId == false && idPropNameList.size() == 1;
 
-        /**
-         *
-         * @return
-         */
-        Type<T> targetType() {
-            return targetType;
-        }
+            this.biKeyExtractor = isFakeId ? JdbcUtil.NO_BI_GENERATED_KEY_EXTRACTOR
+                    : (isOneId ? JdbcUtil.SINGLE_BI_GENERATED_KEY_EXTRACTOR : JdbcUtil.MULTI_BI_GENERATED_KEY_EXTRACTOR);
 
-        /**
-         * Id prop name list.
-         *
-         * @return
-         */
-        List<String> idPropNameList() {
-            return idPropNameList;
-        }
+            this.idGetter = isFakeId ? entity -> null : (isOneId ? entity -> idPropInfo.getPropValue(entity) : entity -> {
+                final Seid seid = Seid.of(ClassUtil.getSimpleClassName(targetClass));
 
-        /**
-         * Id prop name set.
-         *
-         * @return
-         */
-        Set<String> idPropNameSet() {
-            return idPropNameSet;
+                for (PropInfo propInfo : idPropInfoList) {
+                    seid.set(propInfo.name, propInfo.getPropValue(entity));
+                }
+
+                return (ID) seid;
+            });
+
+            this.idGetter2 = isFakeId ? props -> null : (isOneId ? props -> N.convert(props.get(oneIdPropName), idClass) : props -> {
+                final Seid seid = Seid.of(ClassUtil.getSimpleClassName(targetClass));
+
+                for (PropInfo propInfo : idPropInfoList) {
+                    seid.set(propInfo.name, N.convert(props.get(propInfo.name), propInfo.clazz));
+                }
+
+                return (ID) seid;
+            });
+
+            this.isDefaultIdTester = isFakeId ? id -> true
+                    : (isOneId ? id -> JdbcUtil.isDefaultIdPropValue(id)
+                            : id -> Stream.of(((EntityId) id).entrySet()).allMatch(e -> JdbcUtil.isDefaultIdPropValue(e.getValue())));
         }
 
         /**
@@ -6049,7 +6048,7 @@ public class SQLExecutor {
         public boolean exists(final Connection conn, final Condition whereCause) {
             final SP sp = prepareQuery(EXISTS_SELECT_PROP_NAMES, whereCause, 1);
 
-            return sqlExecutor.exists(conn, sp.sql, sp.parameters.toArray());
+            return sqlExecutor.exists(conn, sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -6070,7 +6069,7 @@ public class SQLExecutor {
         public int count(final Connection conn, final Condition whereCause) {
             final SP sp = prepareQuery(COUNT_SELECT_PROP_NAMES, whereCause);
 
-            return sqlExecutor.count(conn, sp.sql, sp.parameters.toArray());
+            return sqlExecutor.queryForSingleResult(int.class, conn, sp.sql, JdbcUtil.getParameterArray(sp)).orElse(0);
         }
 
         /**
@@ -6363,7 +6362,7 @@ public class SQLExecutor {
                 final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.findFirst(targetClass, conn, sp.sql, StatementSetter.DEFAULT, jdbcSettings, sp.parameters.toArray());
+            return sqlExecutor.findFirst(targetClass, conn, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -6420,7 +6419,7 @@ public class SQLExecutor {
                 final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.findFirst(conn, sp.sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, sp.parameters.toArray());
+            return sqlExecutor.findFirst(conn, sp.sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -6490,7 +6489,7 @@ public class SQLExecutor {
                 }
             };
 
-            return Optional.ofNullable(sqlExecutor.query(conn, sp.sql, StatementSetter.DEFAULT, resultExtractor, jdbcSettings, sp.parameters.toArray()));
+            return Optional.ofNullable(sqlExecutor.query(conn, sp.sql, StatementSetter.DEFAULT, resultExtractor, jdbcSettings, JdbcUtil.getParameterArray(sp)));
         }
 
         /**
@@ -6555,7 +6554,7 @@ public class SQLExecutor {
         public List<T> list(final Connection conn, final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.list(targetClass, conn, sp.sql, StatementSetter.DEFAULT, jdbcSettings, sp.parameters.toArray());
+            return sqlExecutor.list(targetClass, conn, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -6717,12 +6716,7 @@ public class SQLExecutor {
                 final Condition whereCause, final JdbcSettings jdbcSettings) {
             N.checkArgNotNull(rowMapper);
 
-            final JdbcUtil.BiRowMapper<R> biRowMapper = new JdbcUtil.BiRowMapper<R>() {
-                @Override
-                public R apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                    return rowMapper.apply(rs);
-                }
-            };
+            final JdbcUtil.BiRowMapper<R> biRowMapper = JdbcUtil.toBiRowMapper(rowMapper);
 
             return list(conn, selectPropNames, biRowMapper, whereCause, jdbcSettings);
         }
@@ -6781,7 +6775,7 @@ public class SQLExecutor {
                 final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.list(conn, sp.sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, sp.parameters.toArray());
+            return sqlExecutor.list(conn, sp.sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -6843,7 +6837,7 @@ public class SQLExecutor {
         public List<T> listAll(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.listAll(targetClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, sp.parameters.toArray());
+            return sqlExecutor.listAll(targetClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -6861,12 +6855,7 @@ public class SQLExecutor {
                 final JdbcSettings jdbcSettings) {
             N.checkArgNotNull(rowMapper);
 
-            final JdbcUtil.BiRowMapper<R> biRowMapper = new JdbcUtil.BiRowMapper<R>() {
-                @Override
-                public R apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                    return rowMapper.apply(rs);
-                }
-            };
+            final JdbcUtil.BiRowMapper<R> biRowMapper = JdbcUtil.toBiRowMapper(rowMapper);
 
             return listAll(selectPropNames, biRowMapper, whereCause, jdbcSettings);
         }
@@ -6886,7 +6875,7 @@ public class SQLExecutor {
                 final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.listAll(sp.sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, sp.parameters.toArray());
+            return sqlExecutor.listAll(sp.sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -6921,7 +6910,7 @@ public class SQLExecutor {
         public Stream<T> stream(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.stream(targetClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, sp.parameters.toArray());
+            return sqlExecutor.stream(targetClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7005,12 +6994,7 @@ public class SQLExecutor {
                 final JdbcSettings jdbcSettings) {
             N.checkArgNotNull(rowMapper);
 
-            final JdbcUtil.BiRowMapper<R> biRowMapper = new JdbcUtil.BiRowMapper<R>() {
-                @Override
-                public R apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                    return rowMapper.apply(rs);
-                }
-            };
+            final JdbcUtil.BiRowMapper<R> biRowMapper = JdbcUtil.toBiRowMapper(rowMapper);
 
             return stream(selectPropNames, biRowMapper, whereCause, jdbcSettings);
         }
@@ -7042,7 +7026,7 @@ public class SQLExecutor {
                 final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.stream(sp.sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, sp.parameters.toArray());
+            return sqlExecutor.stream(sp.sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7104,7 +7088,7 @@ public class SQLExecutor {
         public Stream<T> streamAll(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.streamAll(targetClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, sp.parameters.toArray());
+            return sqlExecutor.streamAll(targetClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7122,12 +7106,7 @@ public class SQLExecutor {
                 final JdbcSettings jdbcSettings) {
             N.checkArgNotNull(rowMapper);
 
-            final JdbcUtil.BiRowMapper<R> biRowMapper = new JdbcUtil.BiRowMapper<R>() {
-                @Override
-                public R apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                    return rowMapper.apply(rs);
-                }
-            };
+            final JdbcUtil.BiRowMapper<R> biRowMapper = JdbcUtil.toBiRowMapper(rowMapper);
 
             return streamAll(selectPropNames, biRowMapper, whereCause, jdbcSettings);
         }
@@ -7148,7 +7127,7 @@ public class SQLExecutor {
                 final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.streamAll(sp.sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, sp.parameters.toArray());
+            return sqlExecutor.streamAll(sp.sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7213,7 +7192,7 @@ public class SQLExecutor {
         public DataSet query(final Connection conn, final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.query(conn, sp.sql, StatementSetter.DEFAULT, null, jdbcSettings, sp.parameters.toArray());
+            return sqlExecutor.query(conn, sp.sql, StatementSetter.DEFAULT, null, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7242,7 +7221,7 @@ public class SQLExecutor {
         public DataSet queryAll(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.queryAll(sp.sql, StatementSetter.DEFAULT, jdbcSettings, sp.parameters.toArray());
+            return sqlExecutor.queryAll(sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7256,7 +7235,7 @@ public class SQLExecutor {
         public OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition whereCause) {
             final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
-            return sqlExecutor.queryForBoolean(sp.sql, sp.parameters.toArray());
+            return sqlExecutor.queryForBoolean(sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7270,7 +7249,7 @@ public class SQLExecutor {
         public OptionalChar queryForChar(final String singleSelectPropName, final Condition whereCause) {
             final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
-            return sqlExecutor.queryForChar(sp.sql, sp.parameters.toArray());
+            return sqlExecutor.queryForChar(sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7284,7 +7263,7 @@ public class SQLExecutor {
         public OptionalByte queryForByte(final String singleSelectPropName, final Condition whereCause) {
             final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
-            return sqlExecutor.queryForByte(sp.sql, sp.parameters.toArray());
+            return sqlExecutor.queryForByte(sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7298,7 +7277,7 @@ public class SQLExecutor {
         public OptionalShort queryForShort(final String singleSelectPropName, final Condition whereCause) {
             final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
-            return sqlExecutor.queryForShort(sp.sql, sp.parameters.toArray());
+            return sqlExecutor.queryForShort(sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7312,7 +7291,7 @@ public class SQLExecutor {
         public OptionalInt queryForInt(final String singleSelectPropName, final Condition whereCause) {
             final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
-            return sqlExecutor.queryForInt(sp.sql, sp.parameters.toArray());
+            return sqlExecutor.queryForInt(sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7326,7 +7305,7 @@ public class SQLExecutor {
         public OptionalLong queryForLong(final String singleSelectPropName, final Condition whereCause) {
             final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
-            return sqlExecutor.queryForLong(sp.sql, sp.parameters.toArray());
+            return sqlExecutor.queryForLong(sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7340,7 +7319,7 @@ public class SQLExecutor {
         public OptionalFloat queryForFloat(final String singleSelectPropName, final Condition whereCause) {
             final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
-            return sqlExecutor.queryForFloat(sp.sql, sp.parameters.toArray());
+            return sqlExecutor.queryForFloat(sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7354,7 +7333,7 @@ public class SQLExecutor {
         public OptionalDouble queryForDouble(final String singleSelectPropName, final Condition whereCause) {
             final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
-            return sqlExecutor.queryForDouble(sp.sql, sp.parameters.toArray());
+            return sqlExecutor.queryForDouble(sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7368,7 +7347,7 @@ public class SQLExecutor {
         public Nullable<BigDecimal> queryForBigDecimal(final String singleSelectPropName, final Condition whereCause) {
             final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
-            return sqlExecutor.queryForBigDecimal(sp.sql, sp.parameters.toArray());
+            return sqlExecutor.queryForBigDecimal(sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7382,7 +7361,7 @@ public class SQLExecutor {
         public Nullable<String> queryForString(final String singleSelectPropName, final Condition whereCause) {
             final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
-            return sqlExecutor.queryForString(sp.sql, sp.parameters.toArray());
+            return sqlExecutor.queryForString(sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7396,7 +7375,7 @@ public class SQLExecutor {
         public Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition whereCause) {
             final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
-            return sqlExecutor.queryForDate(sp.sql, sp.parameters.toArray());
+            return sqlExecutor.queryForDate(sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7410,7 +7389,7 @@ public class SQLExecutor {
         public Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition whereCause) {
             final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
-            return sqlExecutor.queryForTime(sp.sql, sp.parameters.toArray());
+            return sqlExecutor.queryForTime(sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7424,7 +7403,7 @@ public class SQLExecutor {
         public Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition whereCause) {
             final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
-            return sqlExecutor.queryForTimestamp(sp.sql, sp.parameters.toArray());
+            return sqlExecutor.queryForTimestamp(sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7438,7 +7417,7 @@ public class SQLExecutor {
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
         public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final ID id) {
-            return queryForSingleResult(targetValueClass, singleSelectPropName, id2Cond(id, false));
+            return queryForSingleResult(targetValueClass, singleSelectPropName, id2Cond(id));
         }
 
         /**
@@ -7483,7 +7462,7 @@ public class SQLExecutor {
          * @see Mapper#queryForSingleResult(Class, Connection, String, Condition, JdbcSettings)
          */
         public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final Connection conn, final String singleSelectPropName, final ID id) {
-            return queryForSingleResult(targetValueClass, conn, singleSelectPropName, id2Cond(id, false));
+            return queryForSingleResult(targetValueClass, conn, singleSelectPropName, id2Cond(id));
         }
 
         /**
@@ -7518,7 +7497,7 @@ public class SQLExecutor {
                 final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
-            return sqlExecutor.queryForSingleResult(targetValueClass, conn, sp.sql, StatementSetter.DEFAULT, jdbcSettings, sp.parameters.toArray());
+            return sqlExecutor.queryForSingleResult(targetValueClass, conn, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7533,7 +7512,7 @@ public class SQLExecutor {
          */
         public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final ID id)
                 throws DuplicatedResultException {
-            return queryForUniqueResult(targetValueClass, singleSelectPropName, id2Cond(id, false));
+            return queryForUniqueResult(targetValueClass, singleSelectPropName, id2Cond(id));
         }
 
         /**
@@ -7580,7 +7559,7 @@ public class SQLExecutor {
          */
         public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final Connection conn, final String singleSelectPropName, final ID id)
                 throws DuplicatedResultException {
-            return queryForUniqueResult(targetValueClass, conn, singleSelectPropName, id2Cond(id, false));
+            return queryForUniqueResult(targetValueClass, conn, singleSelectPropName, id2Cond(id));
         }
 
         /**
@@ -7615,7 +7594,7 @@ public class SQLExecutor {
                 final Condition whereCause, final JdbcSettings jdbcSettings) throws DuplicatedResultException {
             final SP sp = prepareQuery(Arrays.asList(singleSelectPropName), whereCause, 1);
 
-            return sqlExecutor.queryForUniqueResult(targetValueClass, conn, sp.sql, StatementSetter.DEFAULT, jdbcSettings, sp.parameters.toArray());
+            return sqlExecutor.queryForUniqueResult(targetValueClass, conn, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7741,65 +7720,14 @@ public class SQLExecutor {
 
             final String sql = prepareInsertSql(entity, propNamesToInsert);
 
-            return convertId(sqlExecutor.insert(conn, sql, entity), entity);
-        }
+            if (isNoId) {
+                sqlExecutor.update(conn, sql, entity);
 
-        @SuppressWarnings("deprecation")
-        private ID convertId(final Object id, final Object entity) {
-            if (isVoidId) {
                 return null;
-            }
-
-            if (id == null) {
-                if (isEntityId) {
-                    final Seid entityId = Seid.of(ClassUtil.getSimpleClassName(targetClass));
-                    final EntityInfo entityInfo = ParserUtil.getEntityInfo(entity.getClass());
-
-                    for (String propName : idPropNameSet) {
-                        entityId.set(propName, entityInfo.getPropValue(entity, propName));
-                    }
-
-                    return (ID) entityId;
-                } else {
-                    return N.convert(ClassUtil.getPropValue(entity, idPropName), idClass);
-                }
-            } else if (idClass.isAssignableFrom(id.getClass())) {
-                return (ID) id;
-            } else if (isEntityId) {
-                return (ID) EntityId.of(ClassUtil.getSimpleClassName(targetClass), idPropName, id);
-            } else if (id instanceof EntityId) {
-                return ((EntityId) id).get(idClass, idPropName);
             } else {
-                return N.convert(id, idClass);
-            }
-        }
+                final Object id = sqlExecutor.insert(conn, sql, entity);
 
-        @SuppressWarnings("deprecation")
-        private ID convertId(final Object id, final Map<String, Object> props) {
-            if (isVoidId) {
-                return null;
-            }
-
-            if (id == null) {
-                if (isEntityId) {
-                    final Seid entityId = Seid.of(ClassUtil.getSimpleClassName(targetClass));
-
-                    for (String propName : idPropNameSet) {
-                        entityId.set(propName, props.get(propName));
-                    }
-
-                    return (ID) entityId;
-                } else {
-                    return N.convert(props.get(idPropName), idClass);
-                }
-            } else if (idClass.isAssignableFrom(id.getClass())) {
-                return (ID) id;
-            } else if (isEntityId) {
-                return (ID) EntityId.of(ClassUtil.getSimpleClassName(targetClass), idPropName, id);
-            } else if (id instanceof EntityId) {
-                return ((EntityId) id).get(idClass, idPropName);
-            } else {
-                return N.convert(id, idClass);
+                return id == null ? idGetter.apply(entity) : N.convert(id, idClass);
             }
         }
 
@@ -7814,7 +7742,15 @@ public class SQLExecutor {
 
             final String sql = prepareInsertSql(props);
 
-            return convertId(sqlExecutor.insert(conn, sql, props), props);
+            if (isNoId) {
+                sqlExecutor.update(conn, sql, props);
+
+                return null;
+            } else {
+                final Object id = sqlExecutor.insert(conn, sql, props);
+
+                return id == null ? idGetter2.apply(props) : N.convert(id, idClass);
+            }
         }
 
         /**
@@ -7904,7 +7840,6 @@ public class SQLExecutor {
          * @param isolationLevel
          * @return
          */
-        @SuppressWarnings("deprecation")
         private List<ID> batchInsert(final Connection conn, final Collection<? extends T> entities, final Collection<String> propNamesToInsert,
                 final int batchSize, final IsolationLevel isolationLevel) {
             N.checkArgPositive(batchSize, "batchSize");
@@ -7914,38 +7849,17 @@ public class SQLExecutor {
             }
 
             final T entity = N.firstOrNullIfEmpty(entities);
-            Collection<String> insertingPropNames = null;
-
-            if (N.isNullOrEmpty(propNamesToInsert) && N.isDirtyMarker(entity.getClass())) {
-                insertingPropNames = N.newHashSet();
-
-                for (T e : entities) {
-                    insertingPropNames.addAll(DirtyMarkerUtil.signedPropNames((DirtyMarker) e));
-                }
-            } else {
-                final boolean isDefaultIdPropValue = JdbcUtil.isDefaultIdPropValue(ClassUtil.getPropValue(entity, idPropName));
-
-                for (String idPropName : idPropNameList) {
-                    for (T e : entities) {
-                        if (isDefaultIdPropValue != JdbcUtil.isDefaultIdPropValue(ClassUtil.getPropValue(e, idPropName))) {
-                            throw new IllegalArgumentException(
-                                    "Inconsistent id properties initialiaztion. Id properties are set in some entities, but not in others");
-                        }
-                    }
-                }
-
-                insertingPropNames = propNamesToInsert;
-            }
-
-            final String sql = prepareInsertSql(entity, insertingPropNames);
+            final String sql = prepareInsertSql(entity, propNamesToInsert);
             final JdbcSettings jdbcSettings = JdbcSettings.create().setBatchSize(batchSize).setIsolationLevel(isolationLevel);
-            final List<?> parametersList = entities instanceof List ? (List<?>) entities : new ArrayList<>(entities);
+            final List<?> entityList = entities instanceof List ? (List<?>) entities : new ArrayList<>(entities);
 
-            final List<Object> ids = sqlExecutor.batchInsert(conn, sql, StatementSetter.DEFAULT, jdbcSettings, parametersList);
+            final List<Object> ids = sqlExecutor.batchInsert(conn, sql, StatementSetter.DEFAULT, biKeyExtractor, jdbcSettings, entityList);
 
-            final MutableInt index = MutableInt.of(0);
-
-            return Stream.of(entities).map(e -> convertId(ids.get(index.getAndIncrement()), e)).toList();
+            if (N.isNullOrEmpty(ids)) {
+                return Stream.of(entities).map(idGetter).toList();
+            } else {
+                return Stream.of(ids).map(id -> N.convert(id, idClass)).toList();
+            }
         }
 
         /**
@@ -7955,31 +7869,12 @@ public class SQLExecutor {
          * @param propNamesToInsert
          * @return
          */
-        @SuppressWarnings("deprecation")
         private String prepareInsertSql(final T entity, final Collection<String> propNamesToInsert) {
-            checkEntity(entity);
-
-            final boolean isDirtyMarkerEntity = DirtyMarkerUtil.isDirtyMarker(entity.getClass());
-            Collection<String> insertingPropNames = propNamesToInsert;
-
             if (N.isNullOrEmpty(propNamesToInsert)) {
-                if (isDirtyMarkerEntity) {
-                    insertingPropNames = DirtyMarkerUtil.signedPropNames((DirtyMarker) entity);
-                } else {
-                    boolean isDefaultIdPropValue = true;
-
-                    for (String idPropName : idPropNameList) {
-                        if (!JdbcUtil.isDefaultIdPropValue(ClassUtil.getPropValue(entity, idPropName))) {
-                            isDefaultIdPropValue = false;
-                            break;
-                        }
-                    }
-
-                    return isDefaultIdPropValue ? sql_insert_without_id : sql_insert_with_id;
-                }
+                return isDefaultIdTester.test(idGetter.apply(entity)) ? sql_insert_without_id : sql_insert_with_id;
+            } else {
+                return prepareInsertSql(propNamesToInsert);
             }
-
-            return prepareInsertSql(insertingPropNames);
         }
 
         /**
@@ -8025,7 +7920,9 @@ public class SQLExecutor {
          * @return
          */
         public T upsert(final T entity) {
-            final T dbEntity = idPropNameList.size() == 1 ? gett((ID) ClassUtil.getPropValue(entity, idPropName)) : gett((ID) entity);
+            checkIdRequired();
+
+            final T dbEntity = gett(idGetter.apply(entity));
 
             if (dbEntity == null) {
                 insert(entity);
@@ -8079,12 +7976,13 @@ public class SQLExecutor {
          * @return {@code false} if no record found by the ids in the specified {@code entity}.
          */
         public boolean refresh(final T entity, Collection<String> propNamesToRefresh) {
+            checkIdRequired();
+
             if (N.isNullOrEmpty(propNamesToRefresh)) {
-                return idPropNameList.size() == 1 ? exists((ID) ClassUtil.getPropValue(entity, idPropName)) : exists((ID) entity);
+                return exists(idGetter.apply(entity));
             }
 
-            final T dbEntity = idPropNameList.size() == 1 ? gett((ID) ClassUtil.getPropValue(entity, idPropName), propNamesToRefresh)
-                    : gett((ID) entity, propNamesToRefresh);
+            final T dbEntity = gett(idGetter.apply(entity));
 
             if (dbEntity == null) {
                 return false;
@@ -8181,7 +8079,7 @@ public class SQLExecutor {
         public int update(final Connection conn, final Map<String, Object> props, final ID id) {
             N.checkArgNotNull(id);
 
-            return update(conn, props, id2Cond(id, false));
+            return update(conn, props, id2Cond(id));
         }
 
         /**
@@ -8201,7 +8099,7 @@ public class SQLExecutor {
 
             final SP sp = prepareUpdate(props, whereCause);
 
-            return sqlExecutor.update(conn, sp.sql, sp.parameters.toArray());
+            return sqlExecutor.update(conn, sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -8368,20 +8266,18 @@ public class SQLExecutor {
          * @return
          */
         private String prepareUpdateSql(final T entity, final Collection<String> propNamesToUpdate) {
-            checkEntity(entity);
-
             final boolean isDirtyMarkerEntity = DirtyMarkerUtil.isDirtyMarker(entity.getClass());
-            Collection<String> updatingpropNames = propNamesToUpdate;
+            Collection<String> updatingPropNames = propNamesToUpdate;
 
             if (N.isNullOrEmpty(propNamesToUpdate)) {
                 if (isDirtyMarkerEntity) {
-                    updatingpropNames = DirtyMarkerUtil.dirtyPropNames((DirtyMarker) entity);
+                    updatingPropNames = DirtyMarkerUtil.dirtyPropNames((DirtyMarker) entity);
                 } else {
                     return sql_update_by_id;
                 }
             }
 
-            return prepareUpdateSql(updatingpropNames);
+            return prepareUpdateSql(updatingPropNames);
         }
 
         /**
@@ -8417,29 +8313,15 @@ public class SQLExecutor {
         private String prepareUpdateSql(final Collection<String> propNamesToUpdate) {
             N.checkArgument(N.notNullOrEmpty(propNamesToUpdate), "propNamesToUpdate");
 
-            Condition cond = null;
-
-            if (idPropNameList.size() == 1) {
-                cond = CF.eq(idPropName);
-            } else {
-                And and = new And();
-
-                for (String idPropName : idPropNameList) {
-                    and.add(CF.eq(idPropName));
-                }
-
-                cond = and;
-            }
-
             switch (namingPolicy) {
                 case LOWER_CASE_WITH_UNDERSCORE:
-                    return NSC.update(targetClass).set(propNamesToUpdate).where(cond).sql();
+                    return NSC.update(targetClass).set(propNamesToUpdate).where(idCond).sql();
 
                 case UPPER_CASE_WITH_UNDERSCORE:
-                    return NAC.update(targetClass).set(propNamesToUpdate).where(cond).sql();
+                    return NAC.update(targetClass).set(propNamesToUpdate).where(idCond).sql();
 
                 case LOWER_CAMEL_CASE:
-                    return NLC.update(targetClass).set(propNamesToUpdate).where(cond).sql();
+                    return NLC.update(targetClass).set(propNamesToUpdate).where(idCond).sql();
 
                 default:
                     throw new RuntimeException("Unsupported naming policy: " + namingPolicy);
@@ -8475,14 +8357,9 @@ public class SQLExecutor {
         public int delete(final Connection conn, final Condition whereCause) {
             N.checkArgNotNull(whereCause);
 
-            if (idPropNameList.size() == 1 && whereCause instanceof Equal && ((Equal) whereCause).getPropName().equals(idPropName)) {
-                final ID id = ((Equal) whereCause).getPropValue();
-                return sqlExecutor.update(conn, sql_delete_by_id, id);
-            }
-
             final SP sp = prepareDelete(whereCause);
 
-            return sqlExecutor.update(conn, sp.sql, sp.parameters.toArray());
+            return sqlExecutor.update(conn, sp.sql, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -8502,7 +8379,6 @@ public class SQLExecutor {
          */
         public int delete(final Connection conn, final T entity) {
             N.checkArgNotNull(entity);
-            checkEntity(entity);
 
             return sqlExecutor.update(conn, sql_delete_by_id, entity);
         }
@@ -8513,7 +8389,7 @@ public class SQLExecutor {
          * @param entities
          * @return
          */
-        public int batchDelete(final Collection<T> entities) {
+        public int batchDelete(final Collection<? extends T> entities) {
             return batchDelete(entities, JdbcSettings.DEFAULT_BATCH_SIZE);
         }
 
@@ -8524,7 +8400,7 @@ public class SQLExecutor {
          * @param batchSize Default value is 200.
          * @return
          */
-        public int batchDelete(final Collection<T> entities, final int batchSize) {
+        public int batchDelete(final Collection<? extends T> entities, final int batchSize) {
             return batchDelete(entities, batchSize, IsolationLevel.DEFAULT);
         }
 
@@ -8536,7 +8412,7 @@ public class SQLExecutor {
          * @param isolationLevel
          * @return
          */
-        public int batchDelete(final Collection<T> entities, final int batchSize, final IsolationLevel isolationLevel) {
+        public int batchDelete(final Collection<? extends T> entities, final int batchSize, final IsolationLevel isolationLevel) {
             return batchDelete(null, entities, batchSize, isolationLevel);
         }
 
@@ -8547,7 +8423,7 @@ public class SQLExecutor {
          * @param entities
          * @return
          */
-        public int batchDelete(final Connection conn, final Collection<T> entities) {
+        public int batchDelete(final Connection conn, final Collection<? extends T> entities) {
             return batchDelete(conn, entities, JdbcSettings.DEFAULT_BATCH_SIZE);
         }
 
@@ -8559,7 +8435,7 @@ public class SQLExecutor {
          * @param batchSize
          * @return
          */
-        public int batchDelete(final Connection conn, final Collection<T> entities, final int batchSize) {
+        public int batchDelete(final Connection conn, final Collection<? extends T> entities, final int batchSize) {
             return batchDelete(conn, entities, batchSize, IsolationLevel.DEFAULT);
         }
 
@@ -8571,17 +8447,17 @@ public class SQLExecutor {
          * @param isolationLevel
          * @return
          */
-        private int batchDelete(final Connection conn, final Collection<T> entities, final int batchSize, final IsolationLevel isolationLevel) {
+        private int batchDelete(final Connection conn, final Collection<? extends T> entities, final int batchSize, final IsolationLevel isolationLevel) {
             N.checkArgPositive(batchSize, "batchSize");
 
             if (N.isNullOrEmpty(entities)) {
                 return 0;
             }
 
-            final List<T> ids = entities instanceof List ? ((List<T>) entities) : N.newArrayList(entities);
+            final List<T> entityList = entities instanceof List ? ((List<T>) entities) : N.newArrayList(entities);
             final JdbcSettings jdbcSettings = JdbcSettings.create().setBatchSize(batchSize).setIsolationLevel(isolationLevel);
 
-            return sqlExecutor.batchUpdate(conn, sql_delete_by_id, jdbcSettings, ids);
+            return sqlExecutor.batchUpdate(conn, sql_delete_by_id, jdbcSettings, entityList);
         }
 
         /**
@@ -8710,41 +8586,32 @@ public class SQLExecutor {
                 return 0;
             }
 
-            final List<ID> listOfIds = ids instanceof List ? ((List<ID>) ids) : N.newArrayList(ids);
+            final List<ID> idList = ids instanceof List ? ((List<ID>) ids) : N.newArrayList(ids);
 
             final JdbcSettings jdbcSettings = JdbcSettings.create().setBatchSize(batchSize).setIsolationLevel(isolationLevel);
 
-            return sqlExecutor.batchUpdate(conn, sql_delete_by_id, jdbcSettings, listOfIds);
+            return sqlExecutor.batchUpdate(conn, sql_delete_by_id, jdbcSettings, idList);
         }
 
         /**
          * Id 2 cond.
          *
          * @param id
-         * @param isIdOrEntity
          * @return
          */
-        private Condition id2Cond(final Object id, boolean isIdOrEntity) {
-            if (isVoidId) {
-                throw new UnsupportedOperationException("Id is not defined for operations with ID parameter");
-            }
+        private Condition id2Cond(final Object id) {
+            checkIdRequired();
 
             if (isEntityId) {
                 return CF.id2Cond((EntityId) id);
             } else {
-                return CF.eq(idPropName, id);
+                return CF.eq(oneIdPropName, id);
             }
         }
 
-        /**
-         *
-         * @param entity
-         */
-        private void checkEntity(final Object entity) {
-            final Class<?> cls = entity.getClass();
-
-            if (ClassUtil.isEntity(cls)) {
-                N.checkArgument(targetClass.isAssignableFrom(cls), "Delete wrong type: " + ClassUtil.getCanonicalClassName(cls) + " in " + toString());
+        private void checkIdRequired() {
+            if (isNoId) {
+                throw new UnsupportedOperationException("Id is not defined for operations with ID parameter");
             }
         }
 
@@ -8777,7 +8644,7 @@ public class SQLExecutor {
          * @param entities
          * @param joinEntityClass
          */
-        public void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) {
+        public void loadJoinEntities(final Collection<? extends T> entities, final Class<?> joinEntityClass) {
             loadJoinEntities(entities, joinEntityClass, null);
         }
 
@@ -8787,7 +8654,7 @@ public class SQLExecutor {
          * @param joinEntityClass
          * @param selectPropNames
          */
-        public void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) {
+        public void loadJoinEntities(final Collection<? extends T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) {
             if (N.isNullOrEmpty(entities)) {
                 return;
             }
@@ -8850,7 +8717,7 @@ public class SQLExecutor {
          * @param entities
          * @param joinEntityPropName
          */
-        public void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName) {
+        public void loadJoinEntities(final Collection<? extends T> entities, final String joinEntityPropName) {
             loadJoinEntities(entities, joinEntityPropName, null);
         }
 
@@ -8860,7 +8727,7 @@ public class SQLExecutor {
          * @param joinEntityPropName
          * @param selectPropNames
          */
-        public void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) {
+        public void loadJoinEntities(final Collection<? extends T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) {
             if (N.isNullOrEmpty(entities)) {
                 return;
             } else if (entities.size() == 1) {
@@ -8929,7 +8796,7 @@ public class SQLExecutor {
          * @param entities
          * @param joinEntityPropName
          */
-        public void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) {
+        public void loadJoinEntities(final Collection<? extends T> entities, final Collection<String> joinEntityPropNames) {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
                 return;
             }
@@ -8945,7 +8812,7 @@ public class SQLExecutor {
          * @param joinEntityPropName
          * @param inParallel
          */
-        public void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) {
+        public void loadJoinEntities(final Collection<? extends T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) {
             if (inParallel) {
                 loadJoinEntities(entities, joinEntityPropNames, sqlExecutor._asyncExecutor.getExecutor());
             } else {
@@ -8959,7 +8826,7 @@ public class SQLExecutor {
          * @param joinEntityPropName
          * @param executor
          */
-        public void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) {
+        public void loadJoinEntities(final Collection<? extends T> entities, final Collection<String> joinEntityPropNames, final Executor executor) {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
                 return;
             }
@@ -9005,7 +8872,7 @@ public class SQLExecutor {
          *
          * @param entities
          */
-        public void loadAllJoinEntities(final Collection<T> entities) {
+        public void loadAllJoinEntities(final Collection<? extends T> entities) {
             if (N.isNullOrEmpty(entities)) {
                 return;
             }
@@ -9018,7 +8885,7 @@ public class SQLExecutor {
          * @param entities
          * @param inParallel
          */
-        public void loadAllJoinEntities(final Collection<T> entities, final boolean inParallel) {
+        public void loadAllJoinEntities(final Collection<? extends T> entities, final boolean inParallel) {
             if (inParallel) {
                 loadAllJoinEntities(entities, sqlExecutor._asyncExecutor.getExecutor());
             } else {
@@ -9031,7 +8898,7 @@ public class SQLExecutor {
          * @param entities
          * @param executor
          */
-        public void loadAllJoinEntities(final Collection<T> entities, final Executor executor) {
+        public void loadAllJoinEntities(final Collection<? extends T> entities, final Executor executor) {
             if (N.isNullOrEmpty(entities)) {
                 return;
             }
@@ -9068,7 +8935,7 @@ public class SQLExecutor {
          * @param entities
          * @param joinEntityClass
          */
-        public void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass) {
+        public void loadJoinEntitiesIfNull(final Collection<? extends T> entities, final Class<?> joinEntityClass) {
             loadJoinEntitiesIfNull(entities, joinEntityClass, null);
         }
 
@@ -9078,7 +8945,7 @@ public class SQLExecutor {
          * @param joinEntityClass
          * @param selectPropNames
          */
-        public void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) {
+        public void loadJoinEntitiesIfNull(final Collection<? extends T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) {
             if (N.isNullOrEmpty(entities)) {
                 return;
             }
@@ -9122,7 +8989,7 @@ public class SQLExecutor {
          * @param entities
          * @param joinEntityPropName
          */
-        public void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName) {
+        public void loadJoinEntitiesIfNull(final Collection<? extends T> entities, final String joinEntityPropName) {
             loadJoinEntitiesIfNull(entities, joinEntityPropName, null);
         }
 
@@ -9132,7 +8999,7 @@ public class SQLExecutor {
          * @param joinEntityPropName
          * @param selectPropNames
          */
-        public void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) {
+        public void loadJoinEntitiesIfNull(final Collection<? extends T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) {
             if (N.isNullOrEmpty(entities)) {
                 return;
             }
@@ -9196,7 +9063,7 @@ public class SQLExecutor {
          * @param entities
          * @param joinEntityPropName
          */
-        public void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames) {
+        public void loadJoinEntitiesIfNull(final Collection<? extends T> entities, final Collection<String> joinEntityPropNames) {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
                 return;
             }
@@ -9212,7 +9079,7 @@ public class SQLExecutor {
          * @param joinEntityPropName
          * @param inParallel
          */
-        public void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) {
+        public void loadJoinEntitiesIfNull(final Collection<? extends T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) {
             if (inParallel) {
                 loadJoinEntitiesIfNull(entities, joinEntityPropNames, sqlExecutor._asyncExecutor.getExecutor());
             } else {
@@ -9226,7 +9093,7 @@ public class SQLExecutor {
          * @param joinEntityPropName
          * @param executor
          */
-        public void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) {
+        public void loadJoinEntitiesIfNull(final Collection<? extends T> entities, final Collection<String> joinEntityPropNames, final Executor executor) {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
                 return;
             }
@@ -9272,7 +9139,7 @@ public class SQLExecutor {
          *
          * @param entities
          */
-        public void loadJoinEntitiesIfNull(final Collection<T> entities) {
+        public void loadJoinEntitiesIfNull(final Collection<? extends T> entities) {
             if (N.isNullOrEmpty(entities)) {
                 return;
             }
@@ -9285,7 +9152,7 @@ public class SQLExecutor {
          * @param entities
          * @param inParallel
          */
-        public void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) {
+        public void loadJoinEntitiesIfNull(final Collection<? extends T> entities, final boolean inParallel) {
             if (inParallel) {
                 loadJoinEntitiesIfNull(entities, sqlExecutor._asyncExecutor.getExecutor());
             } else {
@@ -9298,7 +9165,7 @@ public class SQLExecutor {
          * @param entities
          * @param executor
          */
-        public void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) {
+        public void loadJoinEntitiesIfNull(final Collection<? extends T> entities, final Executor executor) {
             if (N.isNullOrEmpty(entities)) {
                 return;
             }

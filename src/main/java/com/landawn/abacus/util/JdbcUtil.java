@@ -19546,4 +19546,12 @@ public final class JdbcUtil {
             return false;
         }
     }
+
+    static Object[] getParameterArray(final SP sp) {
+        return N.isNullOrEmpty(sp.parameters) ? N.EMPTY_OBJECT_ARRAY : sp.parameters.toArray();
+    }
+
+    static <R> BiRowMapper<R> toBiRowMapper(final RowMapper<R> rowMapper) {
+        return (rs, columnLabels) -> rowMapper.apply(rs);
+    }
 }
