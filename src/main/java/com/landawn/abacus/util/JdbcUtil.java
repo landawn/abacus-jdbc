@@ -17254,10 +17254,6 @@ public final class JdbcUtil {
         }
     }
 
-    /** The Constant daoPool. */
-    @SuppressWarnings("rawtypes")
-    private static final Map<String, JdbcUtil.Dao> daoPool = new ConcurrentHashMap<>();
-
     private static final Consumer<? super Exception, SQLException> throwSQLExceptionAction = e -> {
         if (e instanceof SQLException) {
             throw (SQLException) e;
@@ -17273,6 +17269,10 @@ public final class JdbcUtil {
             f.gett().ifFailure(throwSQLExceptionAction);
         }
     }
+
+    /** The Constant daoPool. */
+    @SuppressWarnings("rawtypes")
+    private static final Map<String, JdbcUtil.Dao> daoPool = new ConcurrentHashMap<>();
 
     @SuppressWarnings({ "rawtypes", "deprecation" })
     static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
