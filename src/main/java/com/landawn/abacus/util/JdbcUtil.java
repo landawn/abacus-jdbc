@@ -715,12 +715,7 @@ public final class JdbcUtil {
      * @return
      */
     static Runnable createCloseHandler(final Connection conn, final javax.sql.DataSource ds) {
-        return new Runnable() {
-            @Override
-            public void run() {
-                releaseConnection(conn, ds);
-            }
-        };
+        return () -> releaseConnection(conn, ds);
     }
 
     /**
@@ -4946,25 +4941,16 @@ public final class JdbcUtil {
      */
     static abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends AbstractPreparedQuery<S, Q>> implements AutoCloseable {
 
-        /** The stmt. */
         final S stmt;
 
-        /** The conn. */
-        Connection conn;
-
-        /** The is fetch direction set. */
         boolean isFetchDirectionSet = false;
 
-        /** The is batch. */
         boolean isBatch = false;
 
-        /** The close after execution. */
         boolean isCloseAfterExecution = true;
 
-        /** The is closed. */
         boolean isClosed = false;
 
-        /** The close handler. */
         Runnable closeHandler;
 
         /**
@@ -5023,14 +5009,11 @@ public final class JdbcUtil {
             } else {
                 final Runnable tmp = this.closeHandler;
 
-                this.closeHandler = new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            tmp.run();
-                        } finally {
-                            closeHandler.run();
-                        }
+                this.closeHandler = () -> {
+                    try {
+                        tmp.run();
+                    } finally {
+                        closeHandler.run();
                     }
                 };
             }
@@ -8594,12 +8577,12 @@ public final class JdbcUtil {
                 logger.error("Failed to clear the parameters set in Statements", e);
             } finally {
                 if (closeHandler == null) {
-                    JdbcUtil.closeQuietly(stmt, conn);
+                    JdbcUtil.closeQuietly(stmt);
                 } else {
                     try {
-                        closeHandler.run();
+                        JdbcUtil.closeQuietly(stmt);
                     } finally {
-                        JdbcUtil.closeQuietly(stmt, conn);
+                        closeHandler.run();
                     }
                 }
             }
@@ -14125,7 +14108,7 @@ public final class JdbcUtil {
                                 this.rsColumnGetters = rsColumnGetters;
 
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
-                                propInfos = new PropInfo[rsColumnCount];
+                                final PropInfo[] propInfos = new PropInfo[rsColumnCount];
 
                                 final Map<String, String> column2FieldNameMap = InternalJdbcUtil.getColumn2FieldNameMap(targetClass);
 

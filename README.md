@@ -27,7 +27,7 @@ A general persistent library built on JDBC. It's easy to learn and simple to use
 * Gradle:
 ```gradle
 // JDK 1.8 or above:
-compile 'com.landawn:abacus-jdbc:1.9.22'
+compile 'com.landawn:abacus-jdbc:1.9.23'
 ```
 
 ## User Guide:

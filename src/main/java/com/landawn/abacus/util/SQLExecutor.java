@@ -5777,10 +5777,11 @@ public class SQLExecutor {
             final List<String> idPropNames = ClassUtil.getIdFieldNames(entityClass, true);
             final boolean isFakeId = ClassUtil.isFakeId(idPropNames);
 
-            //    if (isFakeId) {
-            //        N.checkArgNotNullOrEmpty(idPropNames, "Target class: " + ClassUtil.getCanonicalClassName(entityClass)
-            //                + " must have at least one id property annotated by @Id or @ReadOnlyId on field or class");
-            //    }
+            // Not a good idea to define Mapper<SomeEntity, Void>.
+            if (isFakeId) {
+                N.checkArgNotNullOrEmpty(idPropNames, "Target class: " + ClassUtil.getCanonicalClassName(entityClass)
+                        + " must have at least one id property annotated by @Id or @ReadOnlyId on field or class");
+            }
 
             //    N.checkArgument(idPropNames.size() == 1, "Only one id is supported at present. But Entity class {} has {} ids: {}", targetClass, idPropNames.size(),
             //            idPropNames);
@@ -9191,6 +9192,14 @@ public class SQLExecutor {
 
         static <T> ResultExtractor<T> create(Try.Function<ResultSet, T, SQLException> resultExtractor) {
             return (rs, jdbcSettings) -> resultExtractor.apply(rs);
+        }
+
+        static <T> ResultExtractor<T> create(Try.BiFunction<ResultSet, List<String>, T, SQLException> resultExtractor) {
+            return (rs, jdbcSettings) -> resultExtractor.apply(rs, JdbcUtil.getColumnLabelList(rs));
+        }
+
+        static <T> ResultExtractor<T> create(Try.TriFunction<ResultSet, List<String>, JdbcSettings, T, SQLException> resultExtractor) {
+            return (rs, jdbcSettings) -> resultExtractor.apply(rs, JdbcUtil.getColumnLabelList(rs), jdbcSettings);
         }
 
         /**
