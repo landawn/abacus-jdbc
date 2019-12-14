@@ -5785,16 +5785,18 @@ public class SQLExecutor {
             //    N.checkArgument(idPropNames.size() == 1, "Only one id is supported at present. But Entity class {} has {} ids: {}", targetClass, idPropNames.size(),
             //            idPropNames);
 
+            final Class<?> idReturnType = isFakeId == false && idPropNames.size() == 1
+                    ? ClassUtil.getPropGetMethod(entityClass, idPropNames.get(0)).getReturnType()
+                    : Object.class;
+
             if (isFakeId) {
                 if (!idClass.equals(Void.class)) {
                     throw new IllegalArgumentException("'ID' type only can be Void for entity with no id property");
                 }
             } else if (idPropNames.size() == 1) {
-                if (!(Primitives.wrap(idClass)
-                        .isAssignableFrom(Primitives.wrap(ClassUtil.getPropGetMethod(entityClass, idPropNames.get(0)).getReturnType())))) {
-                    throw new IllegalArgumentException(
-                            "The 'ID' type declared in Dao type parameters: " + idClass + " is not assignable from the id property type in the entity class: "
-                                    + ClassUtil.getPropGetMethod(entityClass, idPropNames.get(0)).getReturnType());
+                if (!(Primitives.wrap(idClass).isAssignableFrom(Primitives.wrap(idReturnType)))) {
+                    throw new IllegalArgumentException("The 'ID' type declared in Dao type parameters: " + idClass
+                            + " is not assignable from the id property type in the entity class: " + idReturnType);
                 }
             } else if (idPropNames.size() > 1) {
                 if (!idClass.equals(EntityId.class)) {
@@ -5805,7 +5807,7 @@ public class SQLExecutor {
             this.targetClass = entityClass;
             this.isDirtyMarker = ClassUtil.isDirtyMarker(targetClass);
             this.entityInfo = ParserUtil.getEntityInfo(targetClass);
-            this.idClass = idClass;
+            this.idClass = Primitives.wrap(idClass).isAssignableFrom(Primitives.wrap(idReturnType)) ? (Class<ID>) idReturnType : idClass;
             this.isEntityId = EntityId.class.isAssignableFrom(idClass);
             this.isNoId = isFakeId;
 
@@ -5840,7 +5842,7 @@ public class SQLExecutor {
 
             this.idGetter = tp3._2;
 
-            this.idGetter2 = isNoId ? props -> null : (isOneId ? props -> N.convert(props.get(oneIdPropName), idClass) : props -> {
+            this.idGetter2 = isNoId ? props -> null : (isOneId ? props -> N.convert(props.get(oneIdPropName), this.idClass) : props -> {
                 final Seid entityId = Seid.of(ClassUtil.getSimpleClassName(entityClass));
 
                 for (String idName : idPropNameList) {
