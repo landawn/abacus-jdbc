@@ -23,7 +23,6 @@ import com.landawn.abacus.samples.entity.Device;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.JdbcUtil;
-import com.landawn.abacus.util.JdbcUtil.Dao;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
@@ -41,10 +40,10 @@ public class Jdbc {
     static final Mapper<Device, Long> deviceMapper = sqlExecutor.mapper(Device.class, long.class);
     static final Mapper<Address, Long> addressMapper = sqlExecutor.mapper(Address.class, long.class);
 
-    static final UserDao userDao = Dao.newInstance(UserDao.class, dataSource);
-    static final NoUpdateUserDao noUpdateUserDao = Dao.newInstance(NoUpdateUserDao.class, dataSource);
-    static final ReadOnlyUserDao readOnlyUserDao = Dao.newInstance(ReadOnlyUserDao.class, dataSource);
-    static final EmployeeDeptRelationshipDao employeeDeptRelationshipDao = Dao.newInstance(EmployeeDeptRelationshipDao.class, dataSource);
+    static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
+    static final NoUpdateUserDao noUpdateUserDao = JdbcUtil.createDao(NoUpdateUserDao.class, dataSource);
+    static final ReadOnlyUserDao readOnlyUserDao = JdbcUtil.createDao(ReadOnlyUserDao.class, dataSource);
+    static final EmployeeDeptRelationshipDao employeeDeptRelationshipDao = JdbcUtil.createDao(EmployeeDeptRelationshipDao.class, dataSource);
 
     // initialize DB schema.
     static {
