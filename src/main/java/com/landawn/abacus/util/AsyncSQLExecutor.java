@@ -778,7 +778,7 @@ public final class AsyncSQLExecutor {
      */
     @Deprecated
     @SafeVarargs
-    public final ContinuableFuture<Integer> count(final String sql, final Object... parameters) {
+    final ContinuableFuture<Integer> count(final String sql, final Object... parameters) {
         return asyncExecutor.execute(new Callable<Integer>() {
             @Override
             public Integer call() throws Exception {
@@ -797,7 +797,7 @@ public final class AsyncSQLExecutor {
      */
     @Deprecated
     @SafeVarargs
-    public final ContinuableFuture<Integer> count(final Connection conn, final String sql, final Object... parameters) {
+    final ContinuableFuture<Integer> count(final Connection conn, final String sql, final Object... parameters) {
         return asyncExecutor.execute(new Callable<Integer>() {
             @Override
             public Integer call() throws Exception {

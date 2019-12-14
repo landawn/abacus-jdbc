@@ -60,6 +60,7 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.Fn.Fnn;
+import com.landawn.abacus.util.Fn.IntFunctions;
 import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
@@ -1536,6 +1537,10 @@ public class SQLExecutor {
             }
         }
 
+        if (Stream.of(resultIdList).allMatch(Fn.isNull())) {
+            return new ArrayList<>();
+        }
+
         return resultIdList;
     }
 
@@ -2112,7 +2117,7 @@ public class SQLExecutor {
      */
     @Deprecated
     @SafeVarargs
-    public final int count(final String sql, final Object... parameters) {
+    final int count(final String sql, final Object... parameters) {
         return count(null, sql, parameters);
     }
 
@@ -2127,7 +2132,7 @@ public class SQLExecutor {
      */
     @Deprecated
     @SafeVarargs
-    public final int count(final Connection conn, final String sql, final Object... parameters) {
+    final int count(final Connection conn, final String sql, final Object... parameters) {
         return query(conn, sql, StatementSetter.DEFAULT, COUNT_RESULT_SET_EXTRACTOR, null, parameters);
     }
 
@@ -5916,6 +5921,7 @@ public class SQLExecutor {
         private final Function<Object, ID> idGetter;
         private final Function<Map<String, Object>, ID> idGetter2;
         private final Predicate<ID> isDefaultIdTester;
+        private final String[] returnColumnNames;
 
         // TODO cache more sqls to improve performance.
 
@@ -5983,8 +5989,11 @@ public class SQLExecutor {
             final PropInfo idPropInfo = isFakeId || N.isNullOrEmpty(oneIdPropName) ? null : entityInfo.getPropInfo(oneIdPropName);
             final boolean isOneId = isFakeId == false && idPropNameList.size() == 1;
 
-            this.biKeyExtractor = isFakeId ? JdbcUtil.NO_BI_GENERATED_KEY_EXTRACTOR
-                    : (isOneId ? JdbcUtil.SINGLE_BI_GENERATED_KEY_EXTRACTOR : JdbcUtil.MULTI_BI_GENERATED_KEY_EXTRACTOR);
+            this.biKeyExtractor = isFakeId ? JdbcUtil.NO_BI_GENERATED_KEY_EXTRACTOR : (isOneId ? (rs, cls) -> {
+                return null; // TODO
+            } : (rs, cls) -> {
+                return null; // TODO
+            });
 
             this.idGetter = isFakeId ? entity -> null : (isOneId ? entity -> idPropInfo.getPropValue(entity) : entity -> {
                 final Seid seid = Seid.of(ClassUtil.getSimpleClassName(targetClass));
@@ -6009,6 +6018,12 @@ public class SQLExecutor {
             this.isDefaultIdTester = isFakeId ? id -> true
                     : (isOneId ? id -> JdbcUtil.isDefaultIdPropValue(id)
                             : id -> Stream.of(((EntityId) id).entrySet()).allMatch(e -> JdbcUtil.isDefaultIdPropValue(e.getValue())));
+
+            final ImmutableMap<String, String> propColumnMap = SQLBuilder.getPropColumnNameMap(entityClass, namingPolicy);
+
+            returnColumnNames = isNoId ? N.EMPTY_STRING_ARRAY
+                    : (isOneId ? Array.of(propColumnMap.get(oneIdPropName))
+                            : Stream.of(idPropNameList).map(idName -> propColumnMap.get(idName)).toArray(IntFunctions.ofStringArray()));
         }
 
         /**
