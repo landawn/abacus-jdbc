@@ -5777,25 +5777,26 @@ public class SQLExecutor {
             final List<String> idPropNames = ClassUtil.getIdFieldNames(entityClass, true);
             final boolean isFakeId = ClassUtil.isFakeId(idPropNames);
 
-            if (isFakeId) {
-                N.checkArgNotNullOrEmpty(idPropNames, "Target class: " + ClassUtil.getCanonicalClassName(entityClass)
-                        + " must have at least one id property annotated by @Id or @ReadOnlyId on field or class");
-            }
+            //    if (isFakeId) {
+            //        N.checkArgNotNullOrEmpty(idPropNames, "Target class: " + ClassUtil.getCanonicalClassName(entityClass)
+            //                + " must have at least one id property annotated by @Id or @ReadOnlyId on field or class");
+            //    }
 
             //    N.checkArgument(idPropNames.size() == 1, "Only one id is supported at present. But Entity class {} has {} ids: {}", targetClass, idPropNames.size(),
             //            idPropNames);
 
             if (isFakeId) {
                 if (!idClass.equals(Void.class)) {
-                    throw new IllegalArgumentException("Id class only can be Void or EntityId class for entity with no id property");
+                    throw new IllegalArgumentException("'ID' type only can be Void for entity with no id property");
                 }
             } else if (idPropNames.size() == 1) {
-                if (idClass.equals(EntityId.class)) {
-                    throw new IllegalArgumentException("Single id type must not be EntityId");
+                if (!(Primitives.wrap(idClass)
+                        .isAssignableFrom(Primitives.wrap(ClassUtil.getPropGetMethod(entityClass, idPropNames.get(0)).getReturnType())))) {
+                    throw new IllegalArgumentException("'ID' type should not be EntityId for entity with single id property");
                 }
             } else if (idPropNames.size() > 1) {
                 if (!idClass.equals(EntityId.class)) {
-                    throw new IllegalArgumentException("Id class only can be EntityId class for entity with two or more id properties");
+                    throw new IllegalArgumentException("'ID' type only can be EntityId for entity with two or more id properties");
                 }
             }
 
@@ -5804,7 +5805,7 @@ public class SQLExecutor {
             this.entityInfo = ParserUtil.getEntityInfo(targetClass);
             this.idClass = idClass;
             this.isEntityId = EntityId.class.isAssignableFrom(idClass);
-            this.isNoId = idClass.equals(Void.class);
+            this.isNoId = isFakeId;
 
             this.oneIdPropName = idPropNames.get(0);
             this.idPropNameList = ImmutableList.copyOf(idPropNames);
@@ -5823,7 +5824,7 @@ public class SQLExecutor {
             this.sbc = namingPolicy.equals(NamingPolicy.LOWER_CASE_WITH_UNDERSCORE) ? PSC.class
                     : (namingPolicy.equals(NamingPolicy.UPPER_CASE_WITH_UNDERSCORE) ? PAC.class : PLC.class);
 
-            final boolean isOneId = isFakeId == false && idPropNameList.size() == 1;
+            final boolean isOneId = isNoId == false && idPropNameList.size() == 1;
 
             final ImmutableMap<String, String> propColumnNameMap = SQLBuilder.getPropColumnNameMap(entityClass, namingPolicy);
 
