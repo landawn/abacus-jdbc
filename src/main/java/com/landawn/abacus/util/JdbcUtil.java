@@ -14783,6 +14783,12 @@ public final class JdbcUtil {
          *
          * @return
          */
+        Class<T> targetEntityClass();
+
+        /**
+         *
+         * @return
+         */
         javax.sql.DataSource dataSource();
 
         // SQLExecutor sqlExecutor();
@@ -15034,12 +15040,6 @@ public final class JdbcUtil {
                 throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedSQL, stmtCreator);
         }
-
-        /**
-         *
-         * @return
-         */
-        Class<T> targetEntityClass();
 
         /**
          *

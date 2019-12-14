@@ -114,7 +114,7 @@ public class DaoTest {
         assertEquals(0, employeeDeptRelationshipDao.batchDelete(edrs));
 
         List<EntityId> ids2 = employeeDeptRelationshipDao.batchInsert(edrs);
-        assertTrue(N.isNullOrEmpty(ids2));
+        assertTrue(N.notNullOrEmpty(ids2));
         assertEquals(edrs.size(), employeeDeptRelationshipDao.batchDelete(edrs));
     }
 
