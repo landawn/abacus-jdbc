@@ -14218,6 +14218,9 @@ public final class JdbcUtil {
      */
     public interface RowConsumer extends Try.Consumer<ResultSet, SQLException> {
 
+        static final RowConsumer DO_NOTHING = rs -> {
+        };
+
         /**
          *
          * @param rs
@@ -14231,6 +14234,9 @@ public final class JdbcUtil {
      * The Interface BiRowConsumer.
      */
     public interface BiRowConsumer extends Try.BiConsumer<ResultSet, List<String>, SQLException> {
+
+        static final BiRowConsumer DO_NOTHING = (rs, cls) -> {
+        };
 
         /**
          *
