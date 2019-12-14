@@ -64,6 +64,7 @@ import com.landawn.abacus.util.Fn.IntFunctions;
 import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
+import com.landawn.abacus.util.JdbcUtil.NamedQuery;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.SQLBuilder.NAC;
 import com.landawn.abacus.util.SQLBuilder.NLC;
@@ -9148,6 +9149,14 @@ public class SQLExecutor {
          * @throws SQLException the SQL exception
          */
         void setParameters(final NamedSQL namedSQL, final PreparedStatement stmt, final Object... parameters) throws SQLException;
+
+        static StatementSetter create(Try.Consumer<PreparedStatement, SQLException> stmtSetter) {
+            return (namedSQL, stmt, parameters) -> stmtSetter.accept(stmt);
+        }
+
+        static StatementSetter create(Try.BiConsumer<NamedQuery, Object[], SQLException> stmtSetter) {
+            return (namedSQL, stmt, parameters) -> stmtSetter.accept(new NamedQuery(stmt, namedSQL), parameters);
+        }
     }
 
     /**
@@ -9174,6 +9183,10 @@ public class SQLExecutor {
          * @throws SQLException the SQL exception
          */
         T extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException;
+
+        static <T> ResultExtractor<T> create(Try.Function<ResultSet, T, SQLException> resultExtractor) {
+            return (rs, jdbcSettings) -> resultExtractor.apply(rs);
+        }
 
         /**
          *

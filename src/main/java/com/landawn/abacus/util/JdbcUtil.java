@@ -5785,6 +5785,12 @@ public final class JdbcUtil {
             return (Q) this;
         }
 
+        public Q setObject(int parameterIndex, Object x, Type<Object> type) throws SQLException {
+            type.set(stmt, parameterIndex, x);
+
+            return (Q) this;
+        }
+
         /**
          * Sets the parameters.
          *
@@ -12410,6 +12416,61 @@ public final class JdbcUtil {
         }
 
         /**
+         * Sets the object.
+         *
+         * @param parameterName
+         * @param x
+         * @param type
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        public NamedQuery setObject(final String parameterName, final Object x, final Type<Object> type) throws SQLException {
+            if (parameterCount < 5) {
+                int cnt = 0;
+
+                for (int i = 0; i < parameterCount; i++) {
+                    if (parameterNames.get(i).equals(parameterName)) {
+                        type.set(stmt, i + 1, x);
+                        cnt++;
+                    }
+                }
+
+                if (cnt == 0) {
+                    close();
+                    throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                }
+            } else {
+                if (paramNameIndexMap == null) {
+                    initParamNameIndexMap();
+                }
+
+                final IntList indexes = paramNameIndexMap.get(parameterName);
+
+                if (indexes == null) {
+                    close();
+                    throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                } else {
+                    if (indexes.size() == 1) {
+                        type.set(stmt, indexes.get(0), x);
+                    } else if (indexes.size() == 2) {
+                        type.set(stmt, indexes.get(0), x);
+                        type.set(stmt, indexes.get(1), x);
+                    } else if (indexes.size() == 3) {
+                        type.set(stmt, indexes.get(0), x);
+                        type.set(stmt, indexes.get(1), x);
+                        type.set(stmt, indexes.get(2), x);
+                    } else {
+                        for (int i = 0, size = indexes.size(); i < size; i++) {
+                            type.set(stmt, indexes.get(i), x);
+                        }
+                    }
+                }
+            }
+
+            return this;
+        }
+
+        /**
          * Sets the parameters.
          *
          * @param parameters
@@ -13805,6 +13866,21 @@ public final class JdbcUtil {
                 }
 
                 return result;
+            }
+        };
+
+        BiRowMapper<EntityId> TO_ENTITY_ID = new BiRowMapper<EntityId>() {
+            @SuppressWarnings("deprecation")
+            @Override
+            public EntityId apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                final int columnCount = columnLabels.size();
+                final Seid entityId = Seid.of(N.EMPTY_STRING);
+
+                for (int i = 1; i <= columnCount; i++) {
+                    entityId.set(columnLabels.get(i - 1), JdbcUtil.getColumnValue(rs, i));
+                }
+
+                return entityId;
             }
         };
 
@@ -17459,16 +17535,23 @@ public final class JdbcUtil {
                 : (isOneId ? id -> JdbcUtil.isDefaultIdPropValue(id)
                         : id -> Stream.of(((EntityId) id).entrySet()).allMatch(e -> JdbcUtil.isDefaultIdPropValue(e.getValue())));
 
-        final BiParametersSetter<NamedQuery, Object> idParamSetter = isOneId ? (pq, id) -> pq.setObject(oneIdPropName, id) : (pq, id) -> {
+        final BiParametersSetter<NamedQuery, Object> idParamSetter = isOneId ? (pq, id) -> pq.setObject(oneIdPropName, id, idPropInfo.dbType) : (pq, id) -> {
             final EntityId entityId = (EntityId) id;
+            PropInfo propInfo = null;
 
             for (String idName : entityId.keySet()) {
-                pq.setObject(idName, entityId.get(idName));
+                propInfo = entityInfo.getPropInfo(idName);
+
+                if (propInfo == null) {
+                    pq.setObject(idName, entityId.get(idName));
+                } else {
+                    pq.setObject(idName, entityId.get(idName), propInfo.dbType);
+                }
             }
         };
 
         final BiParametersSetter<NamedQuery, Object> idParamSetterByEntity = isOneId
-                ? (pq, entity) -> pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity))
+                ? (pq, entity) -> pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity), idPropInfo.dbType)
                 : (pq, entity) -> pq.setParameters(entity);
 
         for (Method m : sqlMethods) {
@@ -19106,7 +19189,7 @@ public final class JdbcUtil {
                                     for (String propName : entityId.keySet()) {
                                         propInfo = entityInfo.getPropInfo(propName);
 
-                                        if (propInfo != null) {
+                                        if ((propInfo = entityInfo.getPropInfo(propName)) != null) {
                                             propInfo.setPropValue(entity, entityId.get(propName));
                                         }
                                     }
@@ -19127,18 +19210,26 @@ public final class JdbcUtil {
                         .toImmutableMap();
 
                 final BiRowMapper<Object> keyExtractor = isNoId ? noIdGeneratorGetterSetter._1 //
-                        : (isOneId ? JdbcUtil.SINGLE_BI_GENERATED_KEY_EXTRACTOR //
+                        : (isOneId ? (rs, columnLabels) -> idPropInfo.dbType.get(rs, 1) //
                                 : (rs, columnLabels) -> {
                                     if (columnLabels.size() == 1) {
-                                        return getColumnValue(rs, 1);
+                                        return idPropInfo.dbType.get(rs, 1);
                                     } else {
                                         final int columnCount = columnLabels.size();
                                         final Seid id = Seid.of(ClassUtil.getSimpleClassName(entityClass));
                                         String columnName = null;
+                                        String propName = null;
+                                        PropInfo propInfo = null;
 
                                         for (int i = 1; i <= columnCount; i++) {
                                             columnName = columnLabels.get(i - 1);
-                                            id.set(columnPropNameMap.getOrDefault(columnName, columnName), getColumnValue(rs, i));
+
+                                            if ((propName = columnPropNameMap.get(columnName)) == null
+                                                    || (propInfo = entityInfo.getPropInfo(propName)) == null) {
+                                                id.set(columnName, getColumnValue(rs, i));
+                                            } else {
+                                                id.set(propInfo.name, propInfo.dbType.get(rs, i));
+                                            }
                                         }
 
                                         return id;
