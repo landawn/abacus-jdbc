@@ -17402,7 +17402,7 @@ public final class JdbcUtil {
                             + " must have at least one field annotated with @Id");
                 } else if (idFieldNames.size() == 1) {
                     if (!(Primitives.wrap((Class) typeArguments[1]))
-                            .equals(Primitives.wrap(ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType()))) {
+                            .isAssignableFrom(Primitives.wrap(ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType()))) {
                         throw new IllegalArgumentException("The 'ID' type declared in Dao type parameters: " + typeArguments[1]
                                 + " is not assignable from the id property type in the entity class: "
                                 + ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType());
