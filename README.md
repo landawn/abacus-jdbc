@@ -8,16 +8,16 @@ A general persistent library built on JDBC. It's easy to learn and simple to use
 
 ## Features:
 
-[DataSet](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/DataSet_view.html), 
 [PreparedQuery](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/PreparedQuery_view.html), 
-[JdbcUtil](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/JdbcUtil_view.html), 
 [Dao/CrudDao](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/Dao_view.html), 
 [SQLExecutor](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/SQLExecutor_view.html), 
 [Mapper](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/Mapper_view.html), 
+[JdbcUtil](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/JdbcUtil_view.html), 
+[DataSet](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/DataSet_view.html), 
+[ConditionFactory(CF)](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/ConditionFactory_view.html), 
 [SQLBuilder](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/SQLBuilder_view.html), 
 [DynamicSQLBuilder](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/DynamicSQLBuilder_view.html),
-[SQLMapper](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/SQLMapper_view.html),
-[ConditionFactory(CF)](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/ConditionFactory_view.html)...
+[SQLMapper](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/SQLMapper_view.html),...
 
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
@@ -33,6 +33,7 @@ compile 'com.landawn:abacus-jdbc:1.9.23'
 ## User Guide:
 * [Introduction to JDBC](https://www.javacodegeeks.com/2015/02/jdbc-tutorial.html)
 * [Programming in JDBC/DB with JdbcUtil/PreparedQuery/SQLExecutor/Dao/Mapper](https://github.com/landawn/abacus-jdbc/wiki/Programming-in-RDBMS-with-Jdbc,-Dao,-PreparedQuery-and-SQLExecutor-Mapper).
+* [More samples](https://github.com/landawn/abacus-jdbc/tree/master/samples/com/landawn/abacus/samples)
 
 ## Also See: [abacus-util](https://github.com/landawn/abacus-util), [abacus-entity-manager](https://github.com/landawn/abacus-entity-manager), [abacus-da](https://github.com/landawn/abacus-da).
 
