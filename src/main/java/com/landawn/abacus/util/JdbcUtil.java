@@ -85,7 +85,6 @@ import com.landawn.abacus.DataSourceManager;
 import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.EntityId;
 import com.landawn.abacus.IsolationLevel;
-import com.landawn.abacus.annotation.AccessFieldByMethod;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.condition.Condition;
@@ -156,6 +155,8 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * The Class JdbcUtil.
  *
  * @author Haiyang Li
+ * @see {@link com.landawn.abacus.condition.ConditionFactory}
+ * @see {@link com.landawn.abacus.condition.ConditionFactory.CF}
  * @see {@link com.landawn.abacus.annotation.ReadOnly}
  * @see {@link com.landawn.abacus.annotation.ReadOnlyId}
  * @see {@link com.landawn.abacus.annotation.NonUpdatable}
@@ -14478,13 +14479,17 @@ public final class JdbcUtil {
      * @param <T>
      * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
      * @param <TD>
+     * @see {@link com.landawn.abacus.condition.ConditionFactory}
+     * @see {@link com.landawn.abacus.condition.ConditionFactory.CF}
      * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
      * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
      * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
      * @see Dao
      * @See CrudDao
      * @see SQLExecutor.Mapper
-     * @see AccessFieldByMethod
+     * @see com.landawn.abacus.annotation.AccessFieldByMethod
+     * @see com.landawn.abacus.condition.ConditionFactory
+     * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
         /**
@@ -16361,8 +16366,9 @@ public final class JdbcUtil {
      * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
      * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
      * @see Dao
-     * @see Dao
      * @see SQLExecutor.Mapper
+     * @see com.landawn.abacus.condition.ConditionFactory
+     * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
 

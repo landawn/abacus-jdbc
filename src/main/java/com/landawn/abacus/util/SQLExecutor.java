@@ -184,12 +184,14 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *
  * @author Haiyang Li
  * @see <a href="./JdbcUtil.html">JdbcUtil</a>
- * @see {@link com.landawn.abacus.annotation.ReadOnly}
- * @see {@link com.landawn.abacus.annotation.ReadOnlyId}
- * @see {@link com.landawn.abacus.annotation.NonUpdatable}
- * @see {@link com.landawn.abacus.annotation.Transient}
- * @see {@link com.landawn.abacus.annotation.Table}
- * @see {@link com.landawn.abacus.annotation.Column}
+ * @see com.landawn.abacus.annotation.ReadOnly
+ * @see com.landawn.abacus.annotation.ReadOnlyId
+ * @see com.landawn.abacus.annotation.NonUpdatable
+ * @see com.landawn.abacus.annotation.Transient
+ * @see com.landawn.abacus.annotation.Table
+ * @see com.landawn.abacus.annotation.Column
+ * @see com.landawn.abacus.condition.ConditionFactory
+ * @see com.landawn.abacus.condition.ConditionFactory.CF
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html</a>
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html</a>
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
@@ -5676,14 +5678,16 @@ public class SQLExecutor {
      *
      * @param <T>
      * @param <ID>
-     * @see {@link com.landawn.abacus.annotation.ReadOnly}
-     * @see {@link com.landawn.abacus.annotation.ReadOnlyId}
-     * @see {@link com.landawn.abacus.annotation.NonUpdatable}
-     * @see {@link com.landawn.abacus.annotation.Transient}
-     * @see {@link com.landawn.abacus.annotation.Table}
-     * @see {@link com.landawn.abacus.annotation.Column}
-     * @see {@link com.landawn.abacus.annotation.AccessFieldByMethod}
-     * @see {@link com.landawn.abacus.annotation.JoinedBy}
+     * @see com.landawn.abacus.annotation.ReadOnly
+     * @see com.landawn.abacus.annotation.ReadOnlyId
+     * @see com.landawn.abacus.annotation.NonUpdatable
+     * @see com.landawn.abacus.annotation.Transient
+     * @see com.landawn.abacus.annotation.Table
+     * @see com.landawn.abacus.annotation.Column
+     * @see com.landawn.abacus.annotation.AccessFieldByMethod
+     * @see com.landawn.abacus.annotation.JoinedBy
+     * @see com.landawn.abacus.condition.ConditionFactory
+     * @see com.landawn.abacus.condition.ConditionFactory.CF
      * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html</a>
      * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html</a>
      * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
