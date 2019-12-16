@@ -17494,6 +17494,7 @@ public final class JdbcUtil {
                 .toList();
 
         final Class<T> entityClass = N.isNullOrEmpty(typeArguments) ? null : (Class) typeArguments[0];
+        final Class<?> idClass = CrudDao.class.isAssignableFrom(daoInterface) ? (Class) typeArguments[1] : null;
 
         final boolean isDirtyMarker = entityClass == null ? false : ClassUtil.isDirtyMarker(entityClass);
 
@@ -18942,12 +18943,12 @@ public final class JdbcUtil {
                     if (isBatch) {
                         if (!((paramLen == 1 && Collection.class.isAssignableFrom(paramTypes[0]))
                                 || (paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0]) && int.class.equals(paramTypes[1])))) {
-                            throw new UnsupportedOperationException(
-                                    "For batch operations, the first parameter must be Collection. The second parameter is optional, it only can be int if it's set");
+                            throw new UnsupportedOperationException("For batch operations(" + m.getName()
+                                    + "), the first parameter must be Collection. The second parameter is optional, it only can be int if it's set");
                         }
 
                         if (isNamedQuery == false) {
-                            throw new UnsupportedOperationException("Only named query/sql is supported for batch operations at present");
+                            throw new UnsupportedOperationException("Only named query/sql is supported for batch operations(" + m.getName() + ") at present");
                         }
                     }
 
@@ -19059,12 +19060,18 @@ public final class JdbcUtil {
                     } else if (sqlAnno.annotationType().equals(Dao.Insert.class) || sqlAnno.annotationType().equals(Dao.NamedInsert.class)) {
                         if (isNoId) {
                             if (!returnType.isAssignableFrom(void.class)) {
-                                throw new UnsupportedOperationException(
-                                        "The return type of insert operations for no id entities only can be: void. It can't be: " + returnType);
+                                throw new UnsupportedOperationException("The return type of insert operations(" + m.getName()
+                                        + ") for no id entities only can be: void. It can't be: " + returnType);
                             }
                         }
 
                         if (isBatch == false) {
+                            if (!(returnType.isAssignableFrom(void.class) || idClass == null
+                                    || Primitives.wrap(idClass).isAssignableFrom(Primitives.wrap(returnType)))) {
+                                throw new UnsupportedOperationException(
+                                        "The return type of insert operations(" + m.getName() + ") only can be: void or 'ID' type. It can't be: " + returnType);
+                            }
+
                             call = (proxy, args) -> {
                                 final boolean isEntity = paramLen == 1 && args[0] != null && ClassUtil.isEntity(args[0].getClass());
                                 final Object entity = isEntity ? args[0] : null;
@@ -19088,8 +19095,8 @@ public final class JdbcUtil {
                             };
                         } else {
                             if (!(returnType.equals(void.class) || returnType.isAssignableFrom(List.class))) {
-                                throw new UnsupportedOperationException(
-                                        "The return type of batch insert operations only can be: void/List<ID>/Collection<ID>. It can't be: " + returnType);
+                                throw new UnsupportedOperationException("The return type of batch insert operations(" + m.getName()
+                                        + ")  only can be: void/List<ID>/Collection<ID>. It can't be: " + returnType);
                             }
 
                             call = (proxy, args) -> {
@@ -19176,9 +19183,8 @@ public final class JdbcUtil {
                             || sqlAnno.annotationType().equals(Dao.NamedUpdate.class) || sqlAnno.annotationType().equals(Dao.NamedDelete.class)) {
                         if (!(returnType.equals(int.class) || returnType.equals(Integer.class) || returnType.equals(long.class) || returnType.equals(Long.class)
                                 || returnType.equals(boolean.class) || returnType.equals(Boolean.class) || returnType.equals(void.class))) {
-                            throw new UnsupportedOperationException(
-                                    "The return type of update/delete operations only can be: int/Integer/long/Long/boolean/Boolean/void. It can't be: "
-                                            + returnType);
+                            throw new UnsupportedOperationException("The return type of update/delete operations(" + m.getName()
+                                    + ") only can be: int/Integer/long/Long/boolean/Boolean/void. It can't be: " + returnType);
                         }
 
                         final LongFunction<?> updateResultConvertor = void.class.equals(returnType) ? updatedRecordCount -> null
