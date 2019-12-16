@@ -19067,7 +19067,7 @@ public final class JdbcUtil {
 
                         if (isBatch == false) {
                             if (!(returnType.isAssignableFrom(void.class) || idClass == null
-                                    || Primitives.wrap(idClass).isAssignableFrom(Primitives.wrap(returnType)))) {
+                                    || Primitives.wrap(idClass).isAssignableFrom(Primitives.wrap(returnType)) || returnType.isAssignableFrom(Optional.class))) {
                                 throw new UnsupportedOperationException(
                                         "The return type of insert operations(" + m.getName() + ") only can be: void or 'ID' type. It can't be: " + returnType);
                             }
