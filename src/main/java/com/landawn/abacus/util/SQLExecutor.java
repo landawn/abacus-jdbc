@@ -1335,7 +1335,7 @@ public class SQLExecutor {
             close(localConn, conn, ds);
         }
 
-        if (Stream.of(ids).allMatch(Fn.isNull())) {
+        if (N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(Fn.isNull())) {
             ids = new ArrayList<>();
         }
 

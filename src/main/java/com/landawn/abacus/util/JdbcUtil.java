@@ -142,6 +142,7 @@ import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.BiConsumer;
 import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Function;
+import com.landawn.abacus.util.function.LongFunction;
 import com.landawn.abacus.util.function.Predicate;
 import com.landawn.abacus.util.function.Supplier;
 import com.landawn.abacus.util.stream.Collector;
@@ -12652,6 +12653,9 @@ public final class JdbcUtil {
      * @param <QS>
      */
     public interface ParametersSetter<QS> extends Try.Consumer<QS, SQLException> {
+        @SuppressWarnings("rawtypes")
+        public static final ParametersSetter DO_NOTHING = qs -> {
+        };
 
         /**
          *
@@ -12669,6 +12673,9 @@ public final class JdbcUtil {
      * @param <T>
      */
     public interface BiParametersSetter<QS, T> extends Try.BiConsumer<QS, T, SQLException> {
+        @SuppressWarnings("rawtypes")
+        public static final BiParametersSetter DO_NOTHING = (qs, t) -> {
+        };
 
         /**
          *
@@ -12687,6 +12694,9 @@ public final class JdbcUtil {
      * @param <T>
      */
     public interface TriParametersSetter<QS, T> extends Try.TriConsumer<NamedSQL, QS, T, SQLException> {
+        @SuppressWarnings("rawtypes")
+        public static final TriParametersSetter DO_NOTHING = (namedSQL, qs, t) -> {
+        };
 
         /**
          *
@@ -14555,6 +14565,18 @@ public final class JdbcUtil {
             String sql() default "";
 
             /**
+             *
+             * @return
+             */
+            boolean isBatch() default false;
+
+            /**
+             *
+             * @return
+             */
+            int batchSize() default 0;
+
+            /**
              * Unit is seconds.
              *
              * @return
@@ -14586,6 +14608,18 @@ public final class JdbcUtil {
             String sql() default "";
 
             /**
+             *
+             * @return
+             */
+            boolean isBatch() default false;
+
+            /**
+             *
+             * @return
+             */
+            int batchSize() default 0;
+
+            /**
              * Unit is seconds.
              *
              * @return
@@ -14615,6 +14649,18 @@ public final class JdbcUtil {
              * @return
              */
             String sql() default "";
+
+            /**
+             *
+             * @return
+             */
+            boolean isBatch() default false;
+
+            /**
+             *
+             * @return
+             */
+            int batchSize() default 0;
 
             /**
              * Unit is seconds.
@@ -14687,6 +14733,18 @@ public final class JdbcUtil {
             String sql() default "";
 
             /**
+             *
+             * @return
+             */
+            boolean isBatch() default false;
+
+            /**
+             *
+             * @return
+             */
+            int batchSize() default 0;
+
+            /**
              * Unit is seconds.
              *
              * @return
@@ -14718,6 +14776,18 @@ public final class JdbcUtil {
             String sql() default "";
 
             /**
+             *
+             * @return
+             */
+            boolean isBatch() default false;
+
+            /**
+             *
+             * @return
+             */
+            int batchSize() default 0;
+
+            /**
              * Unit is seconds.
              *
              * @return
@@ -14747,6 +14817,18 @@ public final class JdbcUtil {
              * @return
              */
             String sql() default "";
+
+            /**
+             *
+             * @return
+             */
+            boolean isBatch() default false;
+
+            /**
+             *
+             * @return
+             */
+            int batchSize() default 0;
 
             /**
              * Unit is seconds.
@@ -18404,7 +18486,7 @@ public final class JdbcUtil {
                                 }
                             }
 
-                            if (Stream.of(ids).allMatch(Fn.isNull())) {
+                            if (N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(Fn.isNull())) {
                                 ids = new ArrayList<>();
                             }
 
@@ -18731,7 +18813,7 @@ public final class JdbcUtil {
                                 : idParamSetterByEntity;
 
                         call = (proxy, args) -> {
-                            final Collection<?> batchParameters = (Collection<?>) args[0];
+                            final Collection<Object> batchParameters = (Collection) args[0];
                             final int batchSize = (Integer) args[1];
                             N.checkArgPositive(batchSize, "batchSize");
 
@@ -18770,6 +18852,9 @@ public final class JdbcUtil {
                     final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
                     final String query = N.checkArgNotNullOrEmpty(JdbcUtil.sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno),
                             "sql can't be null or empty");
+
+                    final boolean returnGeneratedKeys = isNoId == false
+                            && (sqlAnno.annotationType().equals(Dao.Insert.class) || sqlAnno.annotationType().equals(Dao.NamedInsert.class));
 
                     final boolean isNamedQuery = sqlAnno.annotationType().getSimpleName().startsWith("Named");
                     final NamedSQL namedSQL = isNamedQuery ? NamedSQL.parse(query) : null;
@@ -18819,45 +18904,67 @@ public final class JdbcUtil {
                                 "Using named query: @NamedSelect/NamedUpdate/NamedInsert/NamedDelete when parameter type is Entity/Map/EntityId");
                     }
 
+                    Tuple4<Integer, Integer, Boolean, Integer> tp = null;
+
+                    if (sqlAnno instanceof Dao.Select) {
+                        final Dao.Select tmp = (Dao.Select) sqlAnno;
+                        tp = Tuple.of(tmp.queryTimeout(), tmp.fetchSize(), false, -1);
+                    } else if (sqlAnno instanceof Dao.NamedSelect) {
+                        final Dao.NamedSelect tmp = (Dao.NamedSelect) sqlAnno;
+                        tp = Tuple.of(tmp.queryTimeout(), tmp.fetchSize(), false, -1);
+                    } else if (sqlAnno instanceof Dao.Insert) {
+                        final Dao.Insert tmp = (Dao.Insert) sqlAnno;
+                        tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
+                    } else if (sqlAnno instanceof Dao.NamedInsert) {
+                        final Dao.NamedInsert tmp = (Dao.NamedInsert) sqlAnno;
+                        tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
+                    } else if (sqlAnno instanceof Dao.Update) {
+                        final Dao.Update tmp = (Dao.Update) sqlAnno;
+                        tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
+                    } else if (sqlAnno instanceof Dao.NamedUpdate) {
+                        final Dao.NamedUpdate tmp = (Dao.NamedUpdate) sqlAnno;
+                        tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
+                    } else if (sqlAnno instanceof Dao.Delete) {
+                        final Dao.Delete tmp = (Dao.Delete) sqlAnno;
+                        tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
+                    } else if (sqlAnno instanceof Dao.NamedDelete) {
+                        final Dao.NamedDelete tmp = (Dao.NamedDelete) sqlAnno;
+                        tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
+                    } else {
+                        tp = Tuple.of(-1, -1, false, -1);
+                    }
+
+                    final int queryTimeout = tp._1;
+                    final int fetchSize = tp._2;
+                    final boolean isBatch = tp._3;
+                    final int tmpBatchSize = tp._4;
+
+                    if (isBatch) {
+                        if (!((paramLen == 1 && Collection.class.isAssignableFrom(paramTypes[0]))
+                                || (paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0]) && int.class.equals(paramTypes[1])))) {
+                            throw new UnsupportedOperationException(
+                                    "For batch operations, the first parameter must be Collection. The second parameter is optional, it only can be int if it's set");
+                        }
+
+                        if (isNamedQuery == false) {
+                            throw new UnsupportedOperationException("Only named query/sql is supported for batch operations at present");
+                        }
+                    }
+
                     BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter = null;
 
                     if (paramLen == 0) {
                         parametersSetter = null;
                     } else if (JdbcUtil.ParametersSetter.class.isAssignableFrom(paramTypes[0])) {
-                        parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
-                            @Override
-                            public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                preparedQuery.settParameters((JdbcUtil.ParametersSetter) args[0]);
-                            }
-                        };
+                        parametersSetter = (preparedQuery, args) -> preparedQuery.settParameters((JdbcUtil.ParametersSetter) args[0]);
                     } else if (paramLen > 1 && JdbcUtil.BiParametersSetter.class.isAssignableFrom(paramTypes[1])) {
-                        parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
-                            @Override
-                            public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                preparedQuery.settParameters(args[0], (JdbcUtil.BiParametersSetter) args[1]);
-                            }
-                        };
+                        parametersSetter = (preparedQuery, args) -> preparedQuery.settParameters(args[0], (JdbcUtil.BiParametersSetter) args[1]);
                     } else if (paramLen > 1 && JdbcUtil.TriParametersSetter.class.isAssignableFrom(paramTypes[1])) {
-                        parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
-                            @Override
-                            public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                ((NamedQuery) preparedQuery).setParameters(args[0], (JdbcUtil.TriParametersSetter) args[1]);
-                            }
-                        };
+                        parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters(args[0], args[1]);
                     } else if (paramLen == 1 && Collection.class.isAssignableFrom(paramTypes[0])) {
-                        parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
-                            @Override
-                            public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                preparedQuery.setParameters((Collection) args[0]);
-                            }
-                        };
+                        parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Collection) args[0]);
                     } else if (paramLen == 1 && Object[].class.isAssignableFrom(paramTypes[0])) {
-                        parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
-                            @Override
-                            public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                preparedQuery.setParameters((Object[]) args[0]);
-                            }
-                        };
+                        parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Object[]) args[0]);
                     } else {
                         final int stmtParamLen = hasRowFilter ? (paramLen - 2) : (hasRowMapperOrExtractor ? paramLen - 1 : paramLen);
 
@@ -18873,33 +18980,13 @@ public final class JdbcUtil {
                                         .orNull();
 
                                 if (binder != null) {
-                                    parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
-                                        @Override
-                                        public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                            ((NamedQuery) preparedQuery).setObject(binder.value(), args[0]);
-                                        }
-                                    };
+                                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setObject(binder.value(), args[0]);
                                 } else if (ClassUtil.isEntity(paramTypes[0])) {
-                                    parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
-                                        @Override
-                                        public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                            ((NamedQuery) preparedQuery).setParameters(args[0]);
-                                        }
-                                    };
+                                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[0]);
                                 } else if (Map.class.isAssignableFrom(paramTypes[0])) {
-                                    parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
-                                        @Override
-                                        public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                            ((NamedQuery) preparedQuery).setParameters((Map<String, ?>) args[0]);
-                                        }
-                                    };
+                                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters((Map<String, ?>) args[0]);
                                 } else if (EntityId.class.isAssignableFrom(paramTypes[0])) {
-                                    parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
-                                        @Override
-                                        public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                            ((NamedQuery) preparedQuery).setParameters(args[0]);
-                                        }
-                                    };
+                                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[0]);
                                 } else {
                                     throw new UnsupportedOperationException("In method: " + ClassUtil.getSimpleClassName(daoInterface) + "." + m.getName()
                                             + ", parameters for named query have to be binded with names through annotation @Bind, or Map/Entity with getter/setter methods. Can not be: "
@@ -18907,26 +18994,11 @@ public final class JdbcUtil {
                                 }
                             } else {
                                 if (Collection.class.isAssignableFrom(paramTypes[0])) {
-                                    parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
-                                        @Override
-                                        public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                            preparedQuery.setParameters((Collection) args[0]);
-                                        }
-                                    };
+                                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Collection) args[0]);
                                 } else if (Object[].class.isAssignableFrom(paramTypes[0])) {
-                                    parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
-                                        @Override
-                                        public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                            preparedQuery.setParameters((Object[]) args[0]);
-                                        }
-                                    };
+                                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Object[]) args[0]);
                                 } else {
-                                    parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
-                                        @Override
-                                        public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                            preparedQuery.setObject(1, args[0]);
-                                        }
-                                    };
+                                    parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[0]);
                                 }
                             }
                         } else {
@@ -18942,65 +19014,25 @@ public final class JdbcUtil {
                                         .map(b -> b.value())
                                         .toArray(len -> new String[len]);
 
-                                parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
-                                    @Override
-                                    public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                        final NamedQuery namedQuery = ((NamedQuery) preparedQuery);
+                                parametersSetter = (preparedQuery, args) -> {
+                                    final NamedQuery namedQuery = ((NamedQuery) preparedQuery);
 
-                                        for (int i = 0, count = paramNames.length; i < count; i++) {
-                                            namedQuery.setObject(paramNames[i], args[i]);
-                                        }
+                                    for (int i = 0, count = paramNames.length; i < count; i++) {
+                                        namedQuery.setObject(paramNames[i], args[i]);
                                     }
                                 };
                             } else {
                                 if (stmtParamLen == paramLen) {
-                                    parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
-                                        @Override
-                                        public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                            preparedQuery.setParameters(args);
-                                        }
-                                    };
+                                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters(args);
                                 } else {
-                                    parametersSetter = new BiParametersSetter<AbstractPreparedQuery, Object[]>() {
-                                        @Override
-                                        public void accept(AbstractPreparedQuery preparedQuery, Object[] args) throws SQLException {
-                                            preparedQuery.setParameters(N.copyOfRange(args, 0, stmtParamLen));
-                                        }
-                                    };
+                                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters(N.copyOfRange(args, 0, stmtParamLen));
                                 }
                             }
                         }
                     }
 
-                    final BiParametersSetter<AbstractPreparedQuery, Object[]> finalParametersSetter = parametersSetter;
-
-                    Tuple2<Integer, Integer> tp = null;
-
-                    if (sqlAnno instanceof Dao.Select) {
-                        tp = Tuple.of(((Dao.Select) sqlAnno).queryTimeout(), ((Dao.Select) sqlAnno).fetchSize());
-                    } else if (sqlAnno instanceof Dao.NamedSelect) {
-                        tp = Tuple.of(((Dao.NamedSelect) sqlAnno).queryTimeout(), ((Dao.NamedSelect) sqlAnno).fetchSize());
-                    } else if (sqlAnno instanceof Dao.Insert) {
-                        tp = Tuple.of(((Dao.Insert) sqlAnno).queryTimeout(), -1);
-                    } else if (sqlAnno instanceof Dao.NamedInsert) {
-                        tp = Tuple.of(((Dao.NamedInsert) sqlAnno).queryTimeout(), -1);
-                    } else if (sqlAnno instanceof Dao.Update) {
-                        tp = Tuple.of(((Dao.Update) sqlAnno).queryTimeout(), -1);
-                    } else if (sqlAnno instanceof Dao.NamedUpdate) {
-                        tp = Tuple.of(((Dao.NamedUpdate) sqlAnno).queryTimeout(), -1);
-                    } else if (sqlAnno instanceof Dao.Delete) {
-                        tp = Tuple.of(((Dao.Delete) sqlAnno).queryTimeout(), -1);
-                    } else if (sqlAnno instanceof Dao.NamedDelete) {
-                        tp = Tuple.of(((Dao.NamedDelete) sqlAnno).queryTimeout(), -1);
-                    } else {
-                        tp = Tuple.of(-1, -1);
-                    }
-
-                    final int queryTimeout = tp._1;
-                    final int fetchSize = tp._2;
-
-                    final boolean returnGeneratedKeys = isNoId == false
-                            && (sqlAnno.annotationType().equals(Dao.Insert.class) || sqlAnno.annotationType().equals(Dao.NamedInsert.class));
+                    final BiParametersSetter<AbstractPreparedQuery, Object[]> finalParametersSetter = parametersSetter == null ? BiParametersSetter.DO_NOTHING
+                            : parametersSetter;
 
                     if (sqlAnno.annotationType().equals(Dao.Select.class) || sqlAnno.annotationType().equals(Dao.NamedSelect.class)) {
                         final boolean idDirtyMarker = ClassUtil.isEntity(returnType) && DirtyMarker.class.isAssignableFrom(returnType);
@@ -19012,8 +19044,11 @@ public final class JdbcUtil {
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
 
                         call = (proxy, args) -> {
-                            Object result = queryFunc.apply(JdbcUtil.prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, queryTimeout,
-                                    returnGeneratedKeys, returnColumnNames, args, finalParametersSetter), args);
+                            Object result = queryFunc
+                                    .apply(JdbcUtil
+                                            .prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, -1, queryTimeout, returnGeneratedKeys,
+                                                    returnColumnNames)
+                                            .settParameters(args, finalParametersSetter), args);
 
                             if (idDirtyMarker) {
                                 ((DirtyMarker) result).markDirty(false);
@@ -19022,43 +19057,141 @@ public final class JdbcUtil {
                             return result;
                         };
                     } else if (sqlAnno.annotationType().equals(Dao.Insert.class) || sqlAnno.annotationType().equals(Dao.NamedInsert.class)) {
-                        call = (proxy, args) -> {
-                            final boolean isEntity = paramLen == 1 && args[0] != null && ClassUtil.isEntity(args[0].getClass());
-                            final Object entity = isEntity ? args[0] : null;
+                        if (isBatch == false) {
+                            call = (proxy, args) -> {
+                                final boolean isEntity = paramLen == 1 && args[0] != null && ClassUtil.isEntity(args[0].getClass());
+                                final Object entity = isEntity ? args[0] : null;
 
-                            final Optional<Object> id = JdbcUtil
-                                    .prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, args,
-                                            finalParametersSetter)
-                                    .insert(keyExtractor);
+                                final Optional<Object> id = JdbcUtil
+                                        .prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, -1, queryTimeout, returnGeneratedKeys,
+                                                returnColumnNames)
+                                        .settParameters(args, finalParametersSetter)
+                                        .insert(keyExtractor);
 
-                            if (isEntity && id.isPresent()) {
-                                id.ifPresent(ret -> idSetter.accept(ret, entity));
+                                if (isEntity && id.isPresent()) {
+                                    id.ifPresent(ret -> idSetter.accept(ret, entity));
+                                }
+
+                                if (isEntity && entity instanceof DirtyMarker) {
+                                    DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
+                                }
+
+                                return void.class.equals(returnType) ? null
+                                        : Optional.class.equals(returnType) ? id : id.orElse(isEntity ? idGetter.apply(entity) : N.defaultValueOf(returnType));
+                            };
+                        } else {
+                            if (!(returnType.equals(void.class) || returnType.isAssignableFrom(List.class))) {
+                                throw new UnsupportedOperationException(
+                                        "The return type of batch insert operations only can be: void/List<ID>/Collection<ID>. It can't be: " + returnType);
                             }
 
-                            if (isEntity && entity instanceof DirtyMarker) {
-                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
-                            }
+                            call = (proxy, args) -> {
+                                final Collection<Object> batchParameters = (Collection) args[0];
+                                int batchSize = tmpBatchSize;
 
-                            return void.class.equals(returnType) ? null : Optional.class.equals(returnType) ? id : id.orElse(N.defaultValueOf(returnType));
-                        };
+                                if (paramLen == 2) {
+                                    batchSize = (Integer) args[1];
+                                }
+
+                                if (batchSize == 0) {
+                                    batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+                                }
+
+                                N.checkArgPositive(batchSize, "batchSize");
+
+                                List<Object> ids = null;
+
+                                if (N.isNullOrEmpty(batchParameters)) {
+                                    ids = new ArrayList<>(0);
+                                } else if (batchParameters.size() < batchSize) {
+                                    ids = ((NamedQuery) JdbcUtil.prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, -1, queryTimeout,
+                                            returnGeneratedKeys, returnColumnNames)).addBatchParameters(batchParameters).batchInsert();
+                                } else {
+                                    final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+
+                                    try {
+                                        try (NamedQuery nameQuery = (NamedQuery) JdbcUtil
+                                                .prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, batchSize, queryTimeout,
+                                                        returnGeneratedKeys, returnColumnNames)
+                                                .closeAfterExecution(false)) {
+
+                                            ids = ExceptionalStream.of(batchParameters)
+                                                    .splitToList(batchSize) //
+                                                    .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert())
+                                                    .toList();
+                                        }
+
+                                        tran.commit();
+                                    } finally {
+                                        tran.rollbackIfNotCommitted();
+                                    }
+                                }
+
+                                final boolean isEntity = ClassUtil.isEntity(N.firstOrNullIfEmpty(batchParameters).getClass());
+
+                                if (N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(Fn.isNull())) {
+                                    ids = new ArrayList<>();
+                                }
+
+                                if (isEntity) {
+                                    final Collection<Object> entities = batchParameters;
+
+                                    if (N.notNullOrEmpty(ids) && N.notNullOrEmpty(entities) && ids.size() == N.size(entities)) {
+                                        int idx = 0;
+
+                                        for (Object e : entities) {
+                                            idSetter.accept(ids.get(idx++), e);
+                                        }
+                                    }
+
+                                    if (N.firstOrNullIfEmpty(entities) instanceof DirtyMarker) {
+                                        for (Object e : entities) {
+                                            DirtyMarkerUtil.markDirty((DirtyMarker) e, false);
+                                        }
+                                    }
+
+                                    if (N.isNullOrEmpty(ids)) {
+                                        ids = Stream.of(entities).map(idGetter).toList();
+                                    }
+                                }
+
+                                if (N.notNullOrEmpty(ids) && ids.size() != batchParameters.size()) {
+                                    if (logger.isWarnEnabled()) {
+                                        logger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
+                                                batchParameters.size());
+                                    }
+                                }
+
+                                return void.class.equals(returnType) ? null : ids;
+                            };
+                        }
                     } else if (sqlAnno.annotationType().equals(Dao.Update.class) || sqlAnno.annotationType().equals(Dao.Delete.class)
                             || sqlAnno.annotationType().equals(Dao.NamedUpdate.class) || sqlAnno.annotationType().equals(Dao.NamedDelete.class)) {
                         if (!(returnType.equals(int.class) || returnType.equals(Integer.class) || returnType.equals(long.class) || returnType.equals(Long.class)
                                 || returnType.equals(boolean.class) || returnType.equals(Boolean.class) || returnType.equals(void.class))) {
                             throw new UnsupportedOperationException(
-                                    "The return type of update/delete operations can only be: int/Integer/long/Long/boolean/Boolean/void, can't be: "
+                                    "The return type of update/delete operations only can be: int/Integer/long/Long/boolean/Boolean/void. It can't be: "
                                             + returnType);
                         }
 
-                        final boolean idDirtyMarker = paramTypes.length == 1 && ClassUtil.isEntity(paramTypes[0])
-                                && DirtyMarker.class.isAssignableFrom(paramTypes[0]);
+                        final LongFunction<?> updateResultConvertor = void.class.equals(returnType) ? updatedRecordCount -> null
+                                : (Boolean.class.equals(Primitives.wrap(returnType)) ? updatedRecordCount -> updatedRecordCount > 0
+                                        : (Integer.class.equals(Primitives.wrap(returnType)) ? updatedRecordCount -> N.toIntExact(updatedRecordCount)
+                                                : LongFunction.identity()));
 
-                        if (returnType.equals(int.class) || returnType.equals(Integer.class)) {
+                        final boolean isLargeUpdate = returnType.equals(long.class) || returnType.equals(Long.class);
+
+                        if (isBatch == false) {
+                            final boolean idDirtyMarker = paramTypes.length == 1 && ClassUtil.isEntity(paramTypes[0])
+                                    && DirtyMarker.class.isAssignableFrom(paramTypes[0]);
+
                             call = (proxy, args) -> {
-                                final Object result = JdbcUtil
-                                        .prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, queryTimeout, returnGeneratedKeys, returnColumnNames,
-                                                args, finalParametersSetter)
-                                        .update();
+                                final AbstractPreparedQuery preparedQuery = JdbcUtil
+                                        .prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, -1, queryTimeout, returnGeneratedKeys,
+                                                returnColumnNames)
+                                        .settParameters(args, finalParametersSetter);
+
+                                final long updatedRecordCount = isLargeUpdate ? preparedQuery.largeUpate() : preparedQuery.update();
 
                                 if (idDirtyMarker) {
                                     if (isNamedQuery
@@ -19069,49 +19202,74 @@ public final class JdbcUtil {
                                     }
                                 }
 
-                                return result;
+                                return updateResultConvertor.apply(updatedRecordCount);
                             };
-                        } else if (returnType.equals(boolean.class) || returnType.equals(Boolean.class)) {
-                            call = (proxy, args) -> {
-                                final Object result = JdbcUtil
-                                        .prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, queryTimeout, returnGeneratedKeys, returnColumnNames,
-                                                args, finalParametersSetter)
-                                        .update() > 0;
 
-                                if (idDirtyMarker) {
-                                    if (isNamedQuery
-                                            && (sqlAnno.annotationType().equals(Dao.Update.class) || sqlAnno.annotationType().equals(Dao.NamedUpdate.class))) {
-                                        ((DirtyMarker) args[0]).markDirty(namedSQL.getNamedParameters(), false);
-                                    } else {
-                                        ((DirtyMarker) args[0]).markDirty(false);
-                                    }
-                                }
-
-                                return result;
-                            };
-                        } else if (returnType.equals(long.class) || returnType.equals(Long.class)) {
-                            call = (proxy, args) -> {
-                                final Object result = JdbcUtil
-                                        .prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, queryTimeout, returnGeneratedKeys, returnColumnNames,
-                                                args, finalParametersSetter)
-                                        .largeUpate();
-
-                                if (idDirtyMarker) {
-                                    ((DirtyMarker) args[0]).markDirty(false);
-                                }
-
-                                return result;
-                            };
                         } else {
                             call = (proxy, args) -> {
-                                prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, args,
-                                        finalParametersSetter).update();
+                                final Collection<Object> batchParameters = (Collection) args[0];
+                                int batchSize = tmpBatchSize;
 
-                                if (idDirtyMarker) {
-                                    ((DirtyMarker) args[0]).markDirty(false);
+                                if (paramLen == 2) {
+                                    batchSize = (Integer) args[1];
                                 }
 
-                                return null;
+                                if (batchSize == 0) {
+                                    batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+                                }
+
+                                N.checkArgPositive(batchSize, "batchSize");
+
+                                long updatedRecordCount = 0;
+
+                                if (N.isNullOrEmpty(batchParameters)) {
+                                    updatedRecordCount = 0;
+                                } else if (batchParameters.size() < batchSize) {
+                                    final NamedQuery preparedQuery = ((NamedQuery) JdbcUtil.prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize,
+                                            isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames)).addBatchParameters(batchParameters);
+
+                                    if (isLargeUpdate) {
+                                        updatedRecordCount = N.sum(preparedQuery.largeBatchUpdate());
+                                    } else {
+                                        updatedRecordCount = N.sum(preparedQuery.batchUpdate());
+                                    }
+                                } else {
+                                    final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+
+                                    try {
+                                        try (NamedQuery nameQuery = (NamedQuery) JdbcUtil
+                                                .prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, batchSize, queryTimeout,
+                                                        returnGeneratedKeys, returnColumnNames)
+                                                .closeAfterExecution(false)) {
+
+                                            updatedRecordCount = ExceptionalStream.of(batchParameters)
+                                                    .splitToList(batchSize) //
+                                                    .sumLong(bp -> isLargeUpdate ? N.sum(nameQuery.addBatchParameters(bp).largeBatchUpdate())
+                                                            : N.sum(nameQuery.addBatchParameters(bp).batchUpdate()))
+                                                    .orZero();
+                                        }
+
+                                        tran.commit();
+                                    } finally {
+                                        tran.rollbackIfNotCommitted();
+                                    }
+                                }
+
+                                if (N.firstOrNullIfEmpty(batchParameters) instanceof DirtyMarker) {
+                                    if (isNamedQuery
+                                            && (sqlAnno.annotationType().equals(Dao.Update.class) || sqlAnno.annotationType().equals(Dao.NamedUpdate.class))) {
+
+                                        for (Object e : batchParameters) {
+                                            ((DirtyMarker) e).markDirty(namedSQL.getNamedParameters(), false);
+                                        }
+                                    } else {
+                                        for (Object e : batchParameters) {
+                                            ((DirtyMarker) e).markDirty(false);
+                                        }
+                                    }
+                                }
+
+                                return updateResultConvertor.apply(updatedRecordCount);
                             };
                         }
                     } else {
@@ -19514,8 +19672,8 @@ public final class JdbcUtil {
 
     @SuppressWarnings("rawtypes")
     static AbstractPreparedQuery prepareQuery(final Dao proxy, final String query, final boolean isNamedQuery, NamedSQL namedSQL, final int fetchSize,
-            final int queryTimeout, final boolean returnGeneratedKeys, String[] returnColumnNames, final Object[] args,
-            final BiParametersSetter<? super AbstractPreparedQuery, Object[]> paramSetter) throws SQLException, Exception {
+            boolean isBatch, int batchSize, final int queryTimeout, final boolean returnGeneratedKeys, String[] returnColumnNames)
+            throws SQLException, Exception {
 
         final AbstractPreparedQuery preparedQuery = isNamedQuery
                 ? (returnGeneratedKeys ? proxy.prepareNamedQuery(namedSQL, returnColumnNames) : proxy.prepareNamedQuery(namedSQL))
@@ -19527,10 +19685,6 @@ public final class JdbcUtil {
 
         if (queryTimeout >= 0) {
             preparedQuery.setQueryTimeout(queryTimeout);
-        }
-
-        if (paramSetter != null) {
-            preparedQuery.settParameters(args, paramSetter);
         }
 
         return preparedQuery;

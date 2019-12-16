@@ -32,9 +32,34 @@ import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.Stream;
 
 public class DaoTest {
+
+    @Test
+    public void test_batch() throws SQLException {
+
+        List<User> users = IntStream.range(1, 1000)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).email("123@email.com" + i).build())
+                .toList();
+
+        List<Long> ids = userDao.batchInsertWithId(users);
+        assertEquals(users.size(), ids.size());
+
+        assertEquals(users.size(), userDao.batchUpdate(users));
+
+        assertEquals(users.size(), userDao.batchDelete(users));
+
+        ids = userDao.batchInsertWithoutId(users);
+        assertEquals(users.size(), ids.size());
+
+        users.forEach(user -> user.setFirstName("updated-" + user.getFirstName()));
+
+        assertEquals(users.size(), userDao.batchUpdate(users));
+
+        assertEquals(users.size(), userDao.batchDeleteByIds(ids));
+    }
 
     @Test
     public void test_save_insert() throws SQLException {
