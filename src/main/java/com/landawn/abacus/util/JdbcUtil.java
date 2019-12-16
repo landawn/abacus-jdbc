@@ -19057,6 +19057,13 @@ public final class JdbcUtil {
                             return result;
                         };
                     } else if (sqlAnno.annotationType().equals(Dao.Insert.class) || sqlAnno.annotationType().equals(Dao.NamedInsert.class)) {
+                        if (isNoId) {
+                            if (!returnType.isAssignableFrom(void.class)) {
+                                throw new UnsupportedOperationException(
+                                        "The return type of insert operations for no id entities only can be: void. It can't be: " + returnType);
+                            }
+                        }
+
                         if (isBatch == false) {
                             call = (proxy, args) -> {
                                 final boolean isEntity = paramLen == 1 && args[0] != null && ClassUtil.isEntity(args[0].getClass());
