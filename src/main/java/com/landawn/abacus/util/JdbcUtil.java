@@ -508,6 +508,8 @@ public final class JdbcUtil {
      */
     public static DataSource createDataSource(final Class<? extends Driver> driverClass, final String url, final String user, final String password)
             throws UncheckedSQLException {
+        N.checkArgNotNullOrEmpty(url, "url");
+
         final Map<String, Object> props = new HashMap<>();
 
         props.put(DRIVER, driverClass.getCanonicalName());
@@ -576,6 +578,8 @@ public final class JdbcUtil {
      * @return
      */
     private static Class<? extends Driver> getDriverClasssByUrl(final String url) {
+        N.checkArgNotNullOrEmpty(url, "url");
+
         Class<? extends Driver> driverClass = null;
         // jdbc:mysql://localhost:3306/abacustest
         if (url.indexOf("mysql") > 0 || StringUtil.indexOfIgnoreCase(url, "mysql") > 0) {
@@ -16688,7 +16692,7 @@ public final class JdbcUtil {
             final T dbEntity = findFirst(whereCause).orNull();
 
             if (dbEntity == null) {
-                save(entity);
+                insert(entity);
                 return entity;
             } else {
                 @SuppressWarnings("deprecation")
