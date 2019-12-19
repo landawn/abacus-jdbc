@@ -14569,18 +14569,6 @@ public final class JdbcUtil {
             String sql() default "";
 
             /**
-             *
-             * @return
-             */
-            boolean isBatch() default false;
-
-            /**
-             *
-             * @return
-             */
-            int batchSize() default 0;
-
-            /**
              * Unit is seconds.
              *
              * @return
@@ -14612,18 +14600,6 @@ public final class JdbcUtil {
             String sql() default "";
 
             /**
-             *
-             * @return
-             */
-            boolean isBatch() default false;
-
-            /**
-             *
-             * @return
-             */
-            int batchSize() default 0;
-
-            /**
              * Unit is seconds.
              *
              * @return
@@ -14653,18 +14629,6 @@ public final class JdbcUtil {
              * @return
              */
             String sql() default "";
-
-            /**
-             *
-             * @return
-             */
-            boolean isBatch() default false;
-
-            /**
-             *
-             * @return
-             */
-            int batchSize() default 0;
 
             /**
              * Unit is seconds.
@@ -18919,19 +18883,19 @@ public final class JdbcUtil {
                         tp = Tuple.of(tmp.queryTimeout(), tmp.fetchSize(), false, -1);
                     } else if (sqlAnno instanceof Dao.Insert) {
                         final Dao.Insert tmp = (Dao.Insert) sqlAnno;
-                        tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
+                        tp = Tuple.of(tmp.queryTimeout(), -1, false, -1);
                     } else if (sqlAnno instanceof Dao.NamedInsert) {
                         final Dao.NamedInsert tmp = (Dao.NamedInsert) sqlAnno;
                         tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
                     } else if (sqlAnno instanceof Dao.Update) {
                         final Dao.Update tmp = (Dao.Update) sqlAnno;
-                        tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
+                        tp = Tuple.of(tmp.queryTimeout(), -1, false, -1);
                     } else if (sqlAnno instanceof Dao.NamedUpdate) {
                         final Dao.NamedUpdate tmp = (Dao.NamedUpdate) sqlAnno;
                         tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
                     } else if (sqlAnno instanceof Dao.Delete) {
                         final Dao.Delete tmp = (Dao.Delete) sqlAnno;
-                        tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
+                        tp = Tuple.of(tmp.queryTimeout(), -1, false, -1);
                     } else if (sqlAnno instanceof Dao.NamedDelete) {
                         final Dao.NamedDelete tmp = (Dao.NamedDelete) sqlAnno;
                         tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
