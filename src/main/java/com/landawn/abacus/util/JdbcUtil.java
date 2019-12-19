@@ -12658,7 +12658,11 @@ public final class JdbcUtil {
      */
     public interface ParametersSetter<QS> extends Try.Consumer<QS, SQLException> {
         @SuppressWarnings("rawtypes")
-        public static final ParametersSetter DO_NOTHING = qs -> {
+        public static final ParametersSetter DO_NOTHING = new ParametersSetter<Object>() {
+            @Override
+            public void accept(Object preparedQuery) throws SQLException {
+                // Do nothing.
+            }
         };
 
         /**
@@ -12678,17 +12682,21 @@ public final class JdbcUtil {
      */
     public interface BiParametersSetter<QS, T> extends Try.BiConsumer<QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
-        public static final BiParametersSetter DO_NOTHING = (qs, t) -> {
+        public static final BiParametersSetter DO_NOTHING = new BiParametersSetter<Object, Object>() {
+            @Override
+            public void accept(Object preparedQuery, Object param) throws SQLException {
+                // Do nothing.
+            }
         };
 
         /**
          *
          * @param preparedQuery
-         * @param t
+         * @param param
          * @throws SQLException the SQL exception
          */
         @Override
-        void accept(QS preparedQuery, T t) throws SQLException;
+        void accept(QS preparedQuery, T param) throws SQLException;
     }
 
     /**
@@ -12699,18 +12707,22 @@ public final class JdbcUtil {
      */
     public interface TriParametersSetter<QS, T> extends Try.TriConsumer<NamedSQL, QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
-        public static final TriParametersSetter DO_NOTHING = (namedSQL, qs, t) -> {
+        public static final TriParametersSetter DO_NOTHING = new TriParametersSetter<Object, Object>() {
+            @Override
+            public void accept(NamedSQL namedSQL, Object preparedQuery, Object param) throws SQLException {
+                // Do nothing.
+            }
         };
 
         /**
          *
          * @param namedSQL
          * @param preparedQuery
-         * @param t
+         * @param param
          * @throws SQLException the SQL exception
          */
         @Override
-        void accept(NamedSQL namedSQL, QS preparedQuery, T t) throws SQLException;
+        void accept(NamedSQL namedSQL, QS preparedQuery, T param) throws SQLException;
     }
 
     /**

@@ -1,3 +1,9 @@
+### 1.10
+
+* Supports `batchInsert/Update/Delete` by annotated SQL in `Dao` interface.
+* Improvements and bug fix.
+
+
 ### 1.9.23
 
 * Improvements and bug fix.
