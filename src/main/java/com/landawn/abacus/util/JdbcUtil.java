@@ -15175,6 +15175,28 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param query
+         * @return
+         * @throws SQLException
+         */
+        default PreparedCallableQuery prepareCallableQuery(final String query) throws SQLException {
+            return JdbcUtil.prepareCallableQuery(dataSource(), query);
+        }
+
+        /**
+         *
+         * @param sql
+         * @param stmtCreator
+         * @return
+         * @throws SQLException
+         */
+        default PreparedCallableQuery prepareCallableQuery(final String sql,
+                final Try.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
+            return JdbcUtil.prepareCallableQuery(dataSource(), sql, stmtCreator);
+        }
+
+        /**
+         *
          * @param entityToSave
          * @return
          * @throws SQLException the SQL exception

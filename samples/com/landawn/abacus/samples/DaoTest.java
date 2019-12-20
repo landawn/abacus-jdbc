@@ -59,6 +59,8 @@ public class DaoTest {
         assertEquals(users.size(), userDao.batchUpdate(users));
 
         assertEquals(users.size(), userDao.batchDeleteByIds(ids));
+
+        assertEquals(0, N.sum(userDao.batchDeleteByIds2(ids)));
     }
 
     @Test
@@ -69,6 +71,7 @@ public class DaoTest {
         User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
+
         userDao.deleteById(100L);
 
         long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));

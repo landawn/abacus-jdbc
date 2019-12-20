@@ -34,6 +34,10 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     int batchDelete(List<User> users) throws SQLException;
 
     @NamedDelete(sql = "DELETE FROM user where id = :id", isBatch = true, batchSize = 10000)
-    int batchDeleteByIds(List<Long> users) throws SQLException;
+    int batchDeleteByIds(List<Long> userIds) throws SQLException;
+
+    default int[] batchDeleteByIds2(List<Long> userIds) throws SQLException {
+        return prepareNamedQuery("DELETE FROM user where id = :id").addBatchParameters(userIds).batchUpdate();
+    }
 
 }
