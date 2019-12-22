@@ -323,17 +323,16 @@ public class DaoTest {
         }
 
         userDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null,
-                RowMapper.builder().defauLt((i, rs) -> rs.getObject(i)).column(1, (i, rs) -> rs.getString(i)).toList()).forEach(Fn.println());
+                RowMapper.builder().defauLt((i, rs) -> rs.getObject(i)).get(1, (i, rs) -> rs.getString(i)).toList()).forEach(Fn.println());
 
         userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
-                BiRowMapper.builder().defauLt((i, rs) -> rs.getObject(i)).column("firstName", (i, rs) -> rs.getString(i)).to(List.class)).forEach(Fn.println());
+                BiRowMapper.builder().defauLt((i, rs) -> rs.getObject(i)).get("firstName", (i, rs) -> rs.getString(i)).to(List.class)).forEach(Fn.println());
 
         userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
-                BiRowMapper.builder().defauLt((i, rs) -> rs.getObject(i)).column("firstName", (i, rs) -> rs.getString(i)).to(LinkedHashMap.class))
-                .forEach(Fn.println());
+                BiRowMapper.builder().defauLt((i, rs) -> rs.getObject(i)).getString("firstName").to(LinkedHashMap.class)).forEach(Fn.println());
 
         userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
-                BiRowMapper.builder().defauLt((i, rs) -> rs.getObject(i)).column("firstName", (i, rs) -> rs.getString(i)).to(User.class)).forEach(Fn.println());
+                BiRowMapper.builder().defauLt((i, rs) -> rs.getObject(i)).get("firstName", (i, rs) -> rs.getString(i)).to(User.class)).forEach(Fn.println());
 
         userMapper.get(100L).ifPresent(Fn.println());
 

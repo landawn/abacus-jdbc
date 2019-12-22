@@ -793,14 +793,6 @@ public final class JdbcUtil {
     public static void close(final Statement stmt) throws UncheckedSQLException {
         if (stmt != null) {
             try {
-                if (stmt instanceof PreparedStatement) {
-                    try {
-                        ((PreparedStatement) stmt).clearParameters();
-                    } catch (SQLException e) {
-                        logger.error("Failed to clear parameters", e);
-                    }
-                }
-
                 stmt.close();
             } catch (SQLException e) {
                 throw new UncheckedSQLException(e);
@@ -839,13 +831,6 @@ public final class JdbcUtil {
         } finally {
             try {
                 if (stmt != null) {
-                    if (stmt instanceof PreparedStatement) {
-                        try {
-                            ((PreparedStatement) stmt).clearParameters();
-                        } catch (SQLException e) {
-                            logger.error("Failed to clear parameters", e);
-                        }
-                    }
                     stmt.close();
                 }
             } catch (SQLException e) {
@@ -863,13 +848,6 @@ public final class JdbcUtil {
     public static void close(final Statement stmt, final Connection conn) throws UncheckedSQLException {
         try {
             if (stmt != null) {
-                if (stmt instanceof PreparedStatement) {
-                    try {
-                        ((PreparedStatement) stmt).clearParameters();
-                    } catch (SQLException e) {
-                        logger.error("Failed to clear parameters", e);
-                    }
-                }
                 stmt.close();
             }
         } catch (SQLException e) {
@@ -902,13 +880,6 @@ public final class JdbcUtil {
         } finally {
             try {
                 if (stmt != null) {
-                    if (stmt instanceof PreparedStatement) {
-                        try {
-                            ((PreparedStatement) stmt).clearParameters();
-                        } catch (SQLException e) {
-                            logger.error("Failed to clear parameters", e);
-                        }
-                    }
                     stmt.close();
                 }
             } catch (SQLException e) {
@@ -1051,14 +1022,6 @@ public final class JdbcUtil {
         }
 
         if (stmt != null) {
-            if (stmt instanceof PreparedStatement) {
-                try {
-                    ((PreparedStatement) stmt).clearParameters();
-                } catch (Exception e) {
-                    logger.error("Failed to clear parameters", e);
-                }
-            }
-
             try {
                 stmt.close();
             } catch (Exception e) {
@@ -1124,7 +1087,7 @@ public final class JdbcUtil {
 
         try {
             stmt = prepareStatement(conn, query);
-            rs = stmt.executeQuery();
+            rs = executeQuery(stmt);
 
             final ResultSetMetaData metaData = rs.getMetaData();
             final int columnCount = metaData.getColumnCount();
@@ -2774,7 +2737,7 @@ public final class JdbcUtil {
 
             stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
-            rs = stmt.executeQuery();
+            rs = executeQuery(stmt);
 
             return extractData(rs);
         } finally {
@@ -2782,23 +2745,23 @@ public final class JdbcUtil {
         }
     }
 
-    /**
-     *
-     * @param stmt
-     * @return
-     * @throws SQLException the SQL exception
-     */
-    public static DataSet executeQuery(final PreparedStatement stmt) throws SQLException {
-        ResultSet rs = null;
-
-        try {
-            rs = stmt.executeQuery();
-
-            return extractData(rs);
-        } finally {
-            closeQuietly(rs);
-        }
-    }
+    //    /**
+    //     *
+    //     * @param stmt
+    //     * @return
+    //     * @throws SQLException the SQL exception
+    //     */
+    //    public static DataSet executeQuery(final PreparedStatement stmt) throws SQLException {
+    //        ResultSet rs = null;
+    //
+    //        try {
+    //            rs = executeQuerry(stmt);
+    //
+    //            return extractData(rs);
+    //        } finally {
+    //            closeQuietly(rs);
+    //        }
+    //    }
 
     /**
      *
@@ -2846,7 +2809,7 @@ public final class JdbcUtil {
         try {
             stmt = prepareStmt(conn, sql, parameters);
 
-            return stmt.executeUpdate();
+            return executeUpdate(stmt);
         } finally {
             closeQuietly(stmt);
         }
@@ -2957,14 +2920,12 @@ public final class JdbcUtil {
                 stmt.addBatch();
 
                 if (++idx % batchSize == 0) {
-                    res += N.sum(stmt.executeBatch());
-                    stmt.clearBatch();
+                    res += N.sum(executeBatch(stmt));
                 }
             }
 
             if (idx % batchSize != 0) {
-                res += N.sum(stmt.executeBatch());
-                stmt.clearBatch();
+                res += N.sum(executeBatch(stmt));
             }
 
             noException = true;
@@ -2992,13 +2953,151 @@ public final class JdbcUtil {
     }
 
     /**
-    *
-    * @param ds
-    * @param sql
-    * @param parameters
-    * @return
-    * @throws SQLException the SQL exception
-    */
+     *
+     * @param ds
+     * @param sql
+     * @param listOfParameters
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public static long executeLargeBatchUpdate(final DataSource ds, final String sql, final List<?> listOfParameters) throws SQLException {
+        return executeLargeBatchUpdate(ds, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    /**
+     *
+     * @param ds
+     * @param sql
+     * @param listOfParameters
+     * @param batchSize
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public static long executeLargeBatchUpdate(final DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize) throws SQLException {
+        N.checkArgNotNull(ds, "ds");
+        N.checkArgNotNull(sql, "sql");
+        N.checkArgPositive(batchSize, "batchSize");
+
+        final SQLTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+
+        if (tran != null) {
+            return executeLargeBatchUpdate(tran.connection(), sql, listOfParameters, batchSize);
+        } else if (listOfParameters.size() <= batchSize) {
+            final Connection conn = getConnection(ds);
+
+            try {
+                return executeLargeBatchUpdate(conn, sql, listOfParameters, batchSize);
+            } finally {
+                JdbcUtil.closeQuietly(conn);
+            }
+        } else {
+            final SQLTransaction tran2 = JdbcUtil.beginTransaction(ds);
+            long ret = 0;
+
+            try {
+                ret = executeLargeBatchUpdate(tran2.connection(), sql, listOfParameters, batchSize);
+                tran2.commit();
+            } finally {
+                tran2.rollbackIfNotCommitted();
+            }
+
+            return ret;
+        }
+    }
+
+    /**
+     * Execute batch update.
+     *
+     * @param conn
+     * @param sql
+     * @param listOfParameters
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public static long executeLargeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters) throws SQLException {
+        return executeLargeBatchUpdate(conn, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    /**
+     * Execute batch update.
+     *
+     * @param conn
+     * @param sql
+     * @param listOfParameters
+     * @param batchSize
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public static long executeLargeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters, final int batchSize)
+            throws SQLException {
+        N.checkArgNotNull(conn);
+        N.checkArgNotNull(sql);
+        N.checkArgPositive(batchSize, "batchSize");
+
+        if (N.isNullOrEmpty(listOfParameters)) {
+            return 0;
+        }
+
+        final NamedSQL namedSQL = NamedSQL.parse(sql);
+        final boolean originalAutoCommit = conn.getAutoCommit();
+        PreparedStatement stmt = null;
+        boolean noException = false;
+
+        try {
+            if (originalAutoCommit && listOfParameters.size() > batchSize) {
+                conn.setAutoCommit(false);
+            }
+
+            stmt = prepareStatement(conn, namedSQL);
+
+            long res = 0;
+            int idx = 0;
+
+            for (Object parameters : listOfParameters) {
+                StatementSetter.DEFAULT.setParameters(namedSQL, stmt, parameters);
+                stmt.addBatch();
+
+                if (++idx % batchSize == 0) {
+                    res += N.sum(executeLargeBatch(stmt));
+                }
+            }
+
+            if (idx % batchSize != 0) {
+                res += N.sum(executeLargeBatch(stmt));
+            }
+
+            noException = true;
+
+            return res;
+        } finally {
+            if (originalAutoCommit && listOfParameters.size() > batchSize) {
+                try {
+                    if (noException) {
+                        conn.commit();
+                    } else {
+                        conn.rollback();
+                    }
+                } finally {
+                    try {
+                        conn.setAutoCommit(true);
+                    } finally {
+                        JdbcUtil.closeQuietly(stmt);
+                    }
+                }
+            } else {
+                JdbcUtil.closeQuietly(stmt);
+            }
+        }
+    }
+
+    /**
+     *
+     * @param ds
+     * @param sql
+     * @param parameters
+     * @return
+     * @throws SQLException the SQL exception
+     */
     @SafeVarargs
     public static boolean execute(final DataSource ds, final String sql, final Object... parameters) throws SQLException {
         N.checkArgNotNull(ds, "ds");
@@ -3037,9 +3136,169 @@ public final class JdbcUtil {
         try {
             stmt = prepareStmt(conn, sql, parameters);
 
-            return stmt.execute();
+            return JdbcUtil.execute(stmt);
         } finally {
             closeQuietly(stmt);
+        }
+    }
+
+    static ResultSet executeQuery(PreparedStatement stmt) throws SQLException {
+        if (JdbcUtil.atLeastSQLExecutionTimeInMillisForPerfLog >= 0 && logger.isInfoEnabled()) {
+            final long startTime = System.currentTimeMillis();
+
+            try {
+                return stmt.executeQuery();
+            } finally {
+                final long elapsedTime = System.currentTimeMillis() - startTime;
+
+                if (elapsedTime >= atLeastSQLExecutionTimeInMillisForPerfLog) {
+                    logger.info("[SQL-PERF]: " + elapsedTime + ". [Statement.executeQuery]: " + stmt.toString());
+                }
+
+                try {
+                    stmt.clearParameters();
+                } catch (SQLException e) {
+                    logger.error("Failed to clear parameters after executeQuery", e);
+                }
+            }
+        } else {
+            try {
+                return stmt.executeQuery();
+            } finally {
+                try {
+                    stmt.clearParameters();
+                } catch (SQLException e) {
+                    logger.error("Failed to clear parameters after executeQuery", e);
+                }
+            }
+        }
+    }
+
+    static int executeUpdate(PreparedStatement stmt) throws SQLException {
+        if (JdbcUtil.atLeastSQLExecutionTimeInMillisForPerfLog >= 0 && logger.isInfoEnabled()) {
+            final long startTime = System.currentTimeMillis();
+
+            try {
+                return stmt.executeUpdate();
+            } finally {
+                final long elapsedTime = System.currentTimeMillis() - startTime;
+
+                if (elapsedTime >= atLeastSQLExecutionTimeInMillisForPerfLog) {
+                    logger.info("[SQL-PERF]: " + elapsedTime + ". [Statement.executeUpdate]: " + stmt.toString());
+                }
+
+                try {
+                    stmt.clearParameters();
+                } catch (SQLException e) {
+                    logger.error("Failed to clear parameters after executeUpdate", e);
+                }
+            }
+        } else {
+            try {
+                return stmt.executeUpdate();
+            } finally {
+                try {
+                    stmt.clearParameters();
+                } catch (SQLException e) {
+                    logger.error("Failed to clear parameters after executeUpdate", e);
+                }
+            }
+        }
+    }
+
+    static int[] executeBatch(Statement stmt) throws SQLException {
+        if (JdbcUtil.atLeastSQLExecutionTimeInMillisForPerfLog >= 0 && logger.isInfoEnabled()) {
+            final long startTime = System.currentTimeMillis();
+
+            try {
+                return stmt.executeBatch();
+            } finally {
+                final long elapsedTime = System.currentTimeMillis() - startTime;
+
+                if (elapsedTime >= atLeastSQLExecutionTimeInMillisForPerfLog) {
+                    logger.info("[SQL-PERF]: " + elapsedTime + ". [Statement.executeBatch]: " + stmt.toString());
+                }
+
+                try {
+                    stmt.clearBatch();
+                } catch (SQLException e) {
+                    logger.error("Failed to clear batch parameters after executeBatch", e);
+                }
+            }
+        } else {
+            try {
+                return stmt.executeBatch();
+            } finally {
+                try {
+                    stmt.clearBatch();
+                } catch (SQLException e) {
+                    logger.error("Failed to clear batch parameters after executeBatch", e);
+                }
+            }
+        }
+    }
+
+    static long[] executeLargeBatch(Statement stmt) throws SQLException {
+        if (JdbcUtil.atLeastSQLExecutionTimeInMillisForPerfLog >= 0 && logger.isInfoEnabled()) {
+            final long startTime = System.currentTimeMillis();
+
+            try {
+                return stmt.executeLargeBatch();
+            } finally {
+                final long elapsedTime = System.currentTimeMillis() - startTime;
+
+                if (elapsedTime >= atLeastSQLExecutionTimeInMillisForPerfLog) {
+                    logger.info("[SQL-PERF]: " + elapsedTime + ". [Statement.executeLargeBatch]: " + stmt.toString());
+                }
+
+                try {
+                    stmt.clearBatch();
+                } catch (SQLException e) {
+                    logger.error("Failed to clear batch parameters after executeLargeBatch", e);
+                }
+            }
+        } else {
+            try {
+                return stmt.executeLargeBatch();
+            } finally {
+                try {
+                    stmt.clearBatch();
+                } catch (SQLException e) {
+                    logger.error("Failed to clear batch parameters after executeLargeBatch", e);
+                }
+            }
+        }
+    }
+
+    static boolean execute(PreparedStatement stmt) throws SQLException {
+        if (JdbcUtil.atLeastSQLExecutionTimeInMillisForPerfLog >= 0 && logger.isInfoEnabled()) {
+            final long startTime = System.currentTimeMillis();
+
+            try {
+                return stmt.execute();
+            } finally {
+                final long elapsedTime = System.currentTimeMillis() - startTime;
+
+                if (elapsedTime >= atLeastSQLExecutionTimeInMillisForPerfLog) {
+                    logger.info("[SQL-PERF]: " + elapsedTime + ". [Statement.execute]: " + stmt.toString());
+                }
+
+                try {
+                    stmt.clearParameters();
+                } catch (SQLException e) {
+                    logger.error("Failed to clear parameters after execute", e);
+                }
+            }
+        } else {
+            try {
+                return stmt.execute();
+            } finally {
+                try {
+                    stmt.clearParameters();
+                } catch (SQLException e) {
+                    logger.error("Failed to clear parameters after execute", e);
+                }
+            }
         }
     }
 
@@ -3759,8 +4018,7 @@ public final class JdbcUtil {
                 stmt.addBatch();
 
                 if ((++result % batchSize) == 0) {
-                    stmt.executeBatch();
-                    stmt.clearBatch();
+                    executeBatch(stmt);
 
                     if (batchInterval > 0) {
                         N.sleep(batchInterval);
@@ -3769,8 +4027,7 @@ public final class JdbcUtil {
             }
 
             if ((result % batchSize) > 0) {
-                stmt.executeBatch();
-                stmt.clearBatch();
+                executeBatch(stmt);
             }
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
@@ -3870,8 +4127,7 @@ public final class JdbcUtil {
                 stmt.addBatch();
 
                 if ((++result % batchSize) == 0) {
-                    stmt.executeBatch();
-                    stmt.clearBatch();
+                    executeBatch(stmt);
 
                     if (batchInterval > 0) {
                         N.sleep(batchInterval);
@@ -3880,8 +4136,7 @@ public final class JdbcUtil {
             }
 
             if ((result % batchSize) > 0) {
-                stmt.executeBatch();
-                stmt.clearBatch();
+                executeBatch(stmt);
             }
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
@@ -4169,8 +4424,7 @@ public final class JdbcUtil {
                 stmt.addBatch();
 
                 if ((++result % batchSize) == 0) {
-                    stmt.executeBatch();
-                    stmt.clearBatch();
+                    executeBatch(stmt);
 
                     if (batchInterval > 0) {
                         N.sleep(batchInterval);
@@ -4179,8 +4433,7 @@ public final class JdbcUtil {
             }
 
             if ((result % batchSize) > 0) {
-                stmt.executeBatch();
-                stmt.clearBatch();
+                executeBatch(stmt);
             }
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
@@ -4302,8 +4555,7 @@ public final class JdbcUtil {
                 stmt.addBatch();
 
                 if ((++result % batchSize) == 0) {
-                    stmt.executeBatch();
-                    stmt.clearBatch();
+                    executeBatch(stmt);
 
                     if (batchInterval > 0) {
                         N.sleep(batchInterval);
@@ -4312,8 +4564,7 @@ public final class JdbcUtil {
             }
 
             if ((result % batchSize) > 0) {
-                stmt.executeBatch();
-                stmt.clearBatch();
+                executeBatch(stmt);
             }
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
@@ -4459,8 +4710,7 @@ public final class JdbcUtil {
                 stmt.addBatch();
 
                 if ((++result % batchSize) == 0) {
-                    stmt.executeBatch();
-                    stmt.clearBatch();
+                    executeBatch(stmt);
 
                     if (batchInterval > 0) {
                         N.sleep(batchInterval);
@@ -4469,8 +4719,7 @@ public final class JdbcUtil {
             }
 
             if ((result % batchSize) > 0) {
-                stmt.executeBatch();
-                stmt.clearBatch();
+                executeBatch(stmt);
             }
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
@@ -4698,7 +4947,7 @@ public final class JdbcUtil {
         ResultSet rs = null;
 
         try {
-            rs = stmt.executeQuery();
+            rs = executeQuery(stmt);
 
             parse(rs, offset, count, processThreadNum, queueSize, rowParser, onComplete);
         } catch (SQLException e) {
@@ -4950,8 +5199,7 @@ public final class JdbcUtil {
                     result.incrementAndGet();
 
                     if ((result.longValue() % batchSize) == 0) {
-                        insertStmt.executeBatch();
-                        insertStmt.clearBatch();
+                        executeBatch(insertStmt);
 
                         if (batchInterval > 0) {
                             N.sleep(batchInterval);
@@ -4968,8 +5216,7 @@ public final class JdbcUtil {
             public void run() {
                 if ((result.longValue() % batchSize) > 0) {
                     try {
-                        insertStmt.executeBatch();
-                        insertStmt.clearBatch();
+                        executeBatch(insertStmt);
                     } catch (SQLException e) {
                         throw new UncheckedSQLException(e);
                     }
@@ -5014,17 +5261,52 @@ public final class JdbcUtil {
 
     static boolean isLogSQL = false;
 
-    public static void setLogSQL(boolean b) {
+    /**
+     *
+     * @param isLogSQL
+     * @return previous value
+     */
+    public static boolean setLogSQL(boolean isLogSQL) {
         synchronized (logger) {
-            if (isLogSQL != b && logger.isInfoEnabled()) {
-                if (b) {
+            final boolean prev = JdbcUtil.isLogSQL;
+
+            if (JdbcUtil.isLogSQL != isLogSQL && logger.isInfoEnabled()) {
+                if (isLogSQL) {
                     logger.info("Turn on [SQL] log in JdbcUtil");
                 } else {
                     logger.info("Turn off [SQL] log in JdbcUtil");
                 }
             }
 
-            isLogSQL = b;
+            JdbcUtil.isLogSQL = isLogSQL;
+
+            return prev;
+        }
+    }
+
+    static long atLeastSQLExecutionTimeInMillisForPerfLog = -1;
+
+    /**
+     * Log SQL executions which take >= {@code atLeastSQLExecutionTimeInMillisForPerfLog} to finish.
+     *
+     * @param atLeastSQLExecutionTimeInMillisForPerfLog
+     * @return
+     */
+    public static long logSQLPerfAt(long atLeastSQLExecutionTimeInMillisForPerfLog) {
+        synchronized (logger) {
+            final long prev = JdbcUtil.atLeastSQLExecutionTimeInMillisForPerfLog;
+
+            if (logger.isInfoEnabled()) {
+                if (atLeastSQLExecutionTimeInMillisForPerfLog < 0) {
+                    logger.info("Turn off SQL perfermance log");
+                } else {
+                    logger.info("Turn on SQL perfermance log for statement execution time >=: " + atLeastSQLExecutionTimeInMillisForPerfLog);
+                }
+            }
+
+            JdbcUtil.atLeastSQLExecutionTimeInMillisForPerfLog = atLeastSQLExecutionTimeInMillisForPerfLog;
+
+            return prev;
         }
     }
 
@@ -8476,7 +8758,7 @@ public final class JdbcUtil {
                 stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
             }
 
-            return stmt.executeQuery();
+            return JdbcUtil.executeQuery(stmt);
         }
 
         /**
@@ -8501,7 +8783,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             try {
-                stmt.executeUpdate();
+                JdbcUtil.executeUpdate(stmt);
 
                 try (ResultSet rs = stmt.getGeneratedKeys()) {
                     return rs.next() ? Optional.ofNullable(autoGeneratedKeyExtractor.apply(rs)) : Optional.<ID> empty();
@@ -8522,7 +8804,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             try {
-                stmt.executeUpdate();
+                JdbcUtil.executeUpdate(stmt);
 
                 try (ResultSet rs = stmt.getGeneratedKeys()) {
                     if (rs.next()) {
@@ -8560,7 +8842,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             try {
-                stmt.executeBatch();
+                executeBatch(stmt);
 
                 List<ID> ids = new ArrayList<>();
 
@@ -8574,8 +8856,6 @@ public final class JdbcUtil {
                     }
 
                     return ids;
-                } finally {
-                    stmt.clearBatch();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -8593,7 +8873,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             try {
-                stmt.executeBatch();
+                executeBatch(stmt);
 
                 List<ID> ids = new ArrayList<>();
 
@@ -8609,8 +8889,6 @@ public final class JdbcUtil {
                     }
 
                     return ids;
-                } finally {
-                    stmt.clearBatch();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -8626,7 +8904,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             try {
-                return stmt.executeUpdate();
+                return JdbcUtil.executeUpdate(stmt);
             } finally {
                 closeAfterExecutionIfAllowed();
             }
@@ -8641,13 +8919,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             try {
-                try {
-                    int[] result = stmt.executeBatch();
-
-                    return result;
-                } finally {
-                    stmt.clearBatch();
-                }
+                return executeBatch(stmt);
             } finally {
                 closeAfterExecutionIfAllowed();
             }
@@ -8678,11 +8950,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             try {
-                try {
-                    return stmt.executeLargeBatch();
-                } finally {
-                    stmt.clearBatch();
-                }
+                return executeLargeBatch(stmt);
             } finally {
                 closeAfterExecutionIfAllowed();
             }
@@ -8697,7 +8965,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             try {
-                return stmt.execute();
+                return JdbcUtil.execute(stmt);
             } finally {
                 closeAfterExecutionIfAllowed();
             }
@@ -8716,7 +8984,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             try {
-                stmt.execute();
+                JdbcUtil.execute(stmt);
 
                 return getter.apply(stmt);
             } finally {
@@ -8737,7 +9005,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             try {
-                final boolean isFirstResultSet = stmt.execute();
+                final boolean isFirstResultSet = JdbcUtil.execute(stmt);
 
                 return getter.apply(isFirstResultSet, stmt);
             } finally {
@@ -8756,7 +9024,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             try {
-                stmt.execute();
+                JdbcUtil.execute(stmt);
 
                 consumer.accept(stmt);
             } finally {
@@ -8775,7 +9043,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             try {
-                final boolean isFirstResultSet = stmt.execute();
+                final boolean isFirstResultSet = JdbcUtil.execute(stmt);
 
                 consumer.accept(isFirstResultSet, stmt);
             } finally {
@@ -8903,23 +9171,13 @@ public final class JdbcUtil {
 
             isClosed = true;
 
-            try {
-                if (isBatch) {
-                    stmt.clearBatch();
-                } else {
-                    stmt.clearParameters();
-                }
-            } catch (SQLException e) {
-                logger.error("Failed to clear the parameters set in Statements", e);
-            } finally {
-                if (closeHandler == null) {
+            if (closeHandler == null) {
+                JdbcUtil.closeQuietly(stmt);
+            } else {
+                try {
                     JdbcUtil.closeQuietly(stmt);
-                } else {
-                    try {
-                        JdbcUtil.closeQuietly(stmt);
-                    } finally {
-                        closeHandler.run();
-                    }
+                } finally {
+                    closeHandler.run();
                 }
             }
         }
@@ -10003,7 +10261,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             try {
-                if (stmt.execute()) {
+                if (JdbcUtil.execute(stmt)) {
                     if (stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
                             return Optional.of(checkNotResultSet(resultExtrator1.apply(rs)));
@@ -10036,7 +10294,7 @@ public final class JdbcUtil {
             Optional<R2> result2 = Optional.empty();
 
             try {
-                if (stmt.execute()) {
+                if (JdbcUtil.execute(stmt)) {
                     if (stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
                             result1 = Optional.of(checkNotResultSet(resultExtrator1.apply(rs)));
@@ -10079,7 +10337,7 @@ public final class JdbcUtil {
             Optional<R3> result3 = Optional.empty();
 
             try {
-                if (stmt.execute()) {
+                if (JdbcUtil.execute(stmt)) {
                     if (stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
                             result1 = Optional.of(checkNotResultSet(resultExtrator1.apply(rs)));
@@ -10133,7 +10391,7 @@ public final class JdbcUtil {
             Optional<R4> result4 = Optional.empty();
 
             try {
-                if (stmt.execute()) {
+                if (JdbcUtil.execute(stmt)) {
                     if (stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
                             result1 = Optional.of(checkNotResultSet(resultExtrator1.apply(rs)));
@@ -10197,7 +10455,7 @@ public final class JdbcUtil {
             Optional<R5> result5 = Optional.empty();
 
             try {
-                if (stmt.execute()) {
+                if (JdbcUtil.execute(stmt)) {
                     if (stmt.getUpdateCount() == -1) {
                         try (ResultSet rs = stmt.getResultSet()) {
                             result1 = Optional.of(checkNotResultSet(resultExtrator1.apply(rs)));
@@ -13235,6 +13493,49 @@ public final class JdbcUtil {
          * @param keyExtractor
          * @param valueExtractor
          * @return
+         */
+        static <K, V> ResultExtractor<ListMultimap<K, V>> toMultimap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor) {
+            return toMultimap(keyExtractor, valueExtractor, Suppliers.<K, V> ofListMultimap());
+        }
+
+        /**
+         *
+         * @param <K> the key type
+         * @param <V> the value type
+         * @param <C>
+         * @param <M>
+         * @param keyExtractor
+         * @param valueExtractor
+         * @param multimapSupplier
+         * @return
+         */
+        static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> ResultExtractor<M> toMultimap(final RowMapper<K> keyExtractor,
+                final RowMapper<V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
+            N.checkArgNotNull(keyExtractor, "keyExtractor");
+            N.checkArgNotNull(valueExtractor, "valueExtractor");
+            N.checkArgNotNull(multimapSupplier, "multimapSupplier");
+
+            return new ResultExtractor<M>() {
+                @Override
+                public M apply(final ResultSet rs) throws SQLException {
+                    final M result = multimapSupplier.get();
+
+                    while (rs.next()) {
+                        result.put(keyExtractor.apply(rs), valueExtractor.apply(rs));
+                    }
+
+                    return result;
+                }
+            };
+        }
+
+        /**
+         *
+         * @param <K> the key type
+         * @param <V> the value type
+         * @param keyExtractor
+         * @param valueExtractor
+         * @return
          * @throws SQLException the SQL exception
          */
         static <K, V> ResultExtractor<Map<K, List<V>>> groupTo(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor) throws SQLException {
@@ -13442,6 +13743,49 @@ public final class JdbcUtil {
 
                     for (Map.Entry<K, D> entry : result.entrySet()) {
                         entry.setValue(downstreamFinisher.apply((A) entry.getValue()));
+                    }
+
+                    return result;
+                }
+            };
+        }
+
+        /**
+         *
+         * @param <K> the key type
+         * @param <V> the value type
+         * @param keyExtractor
+         * @param valueExtractor
+         * @return
+         */
+        static <K, V> BiResultExtractor<ListMultimap<K, V>> toMultimap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor) {
+            return toMultimap(keyExtractor, valueExtractor, Suppliers.<K, V> ofListMultimap());
+        }
+
+        /**
+         *
+         * @param <K> the key type
+         * @param <V> the value type
+         * @param <C>
+         * @param <M>
+         * @param keyExtractor
+         * @param valueExtractor
+         * @param multimapSupplier
+         * @return
+         */
+        static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> BiResultExtractor<M> toMultimap(final BiRowMapper<K> keyExtractor,
+                final BiRowMapper<V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
+            N.checkArgNotNull(keyExtractor, "keyExtractor");
+            N.checkArgNotNull(valueExtractor, "valueExtractor");
+            N.checkArgNotNull(multimapSupplier, "multimapSupplier");
+
+            return new BiResultExtractor<M>() {
+                @Override
+                public M apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                    final M result = multimapSupplier.get();
+
+                    while (rs.next()) {
+                        result.put(keyExtractor.apply(rs, columnLabels), valueExtractor.apply(rs, columnLabels));
                     }
 
                     return result;

@@ -3472,12 +3472,11 @@ public final class AsyncSQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final ContinuableFuture<Void> execute(final String sql, final Object... parameters) {
-        return asyncExecutor.execute(new Callable<Void>() {
+    public final ContinuableFuture<Boolean> execute(final String sql, final Object... parameters) {
+        return asyncExecutor.execute(new Callable<Boolean>() {
             @Override
-            public Void call() throws Exception {
-                sqlExecutor.execute(sql, parameters);
-                return null;
+            public Boolean call() throws Exception {
+                return sqlExecutor.execute(sql, parameters);
             }
         });
     }
@@ -3490,12 +3489,11 @@ public final class AsyncSQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final ContinuableFuture<Void> execute(final Connection conn, final String sql, final Object... parameters) {
-        return asyncExecutor.execute(new Callable<Void>() {
+    public final ContinuableFuture<Boolean> execute(final Connection conn, final String sql, final Object... parameters) {
+        return asyncExecutor.execute(new Callable<Boolean>() {
             @Override
-            public Void call() throws Exception {
-                sqlExecutor.execute(conn, sql, parameters);
-                return null;
+            public Boolean call() throws Exception {
+                return sqlExecutor.execute(conn, sql, parameters);
             }
         });
     }

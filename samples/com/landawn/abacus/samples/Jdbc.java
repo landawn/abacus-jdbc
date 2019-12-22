@@ -47,6 +47,9 @@ public class Jdbc {
 
     // initialize DB schema.
     static {
+        JdbcUtil.setLogSQL(true);
+        JdbcUtil.logSQLPerfAt(10);
+
         final String sql_user_drop_table = "DROP TABLE IF EXISTS user";
         final String sql_user_creat_table = "CREATE TABLE IF NOT EXISTS user (" //
                 + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
