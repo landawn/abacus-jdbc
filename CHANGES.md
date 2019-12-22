@@ -1,3 +1,11 @@
+### 1.10.1
+
+* Add `JdbcUtil.setLogSQL(boolean)`.
+* Add `PreparedQuery.listToMap/listToMultimap`.
+* Add `CrudDao.get(id, includeAllJoinEntities)./delete(entity, deleteAllJoinEntities)`.
+* Improvements and bug fix.
+
+
 ### 1.10
 
 * Supports `batchInsert/Update/Delete` by annotated SQL in `Dao` interface.

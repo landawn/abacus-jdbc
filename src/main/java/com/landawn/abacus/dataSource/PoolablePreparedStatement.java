@@ -43,6 +43,7 @@ import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.pool.AbstractPoolable;
 import com.landawn.abacus.util.ExceptionUtil;
+import com.landawn.abacus.util.N;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -71,21 +72,18 @@ class PoolablePreparedStatement extends AbstractPoolable implements PreparedStat
     /** The poolable conn. */
     private final PoolableConnection poolableConn;
 
+    private final String sql;
+
     /** The is closed. */
     private boolean isClosed = false;
 
-    /**
-     * Instantiates a new poolable prepared statement.
-     *
-     * @param stmt
-     * @param conn
-     * @param id
-     */
-    public PoolablePreparedStatement(java.sql.PreparedStatement stmt, PoolableConnection conn, CachedStatmentKey id) {
+    public PoolablePreparedStatement(final String sql, final java.sql.PreparedStatement stmt, final PoolableConnection conn, final CachedStatmentKey id) {
         super(DEFAULT_LIVE_TIME, DEFAULT_MAX_IDLE_TIME);
         internalStmt = stmt;
         poolableConn = conn;
         this.id = id;
+        this.sql = sql;
+
     }
 
     /**
@@ -1421,16 +1419,16 @@ class PoolablePreparedStatement extends AbstractPoolable implements PreparedStat
     }
 
     /**
-     * 
+     *
      * @return String
      */
     @Override
     public String toString() {
-        return internalStmt.toString();
+        return N.isNullOrEmpty(sql) ? internalStmt.toString() : sql;
     }
 
     /**
-     * 
+     *
      * @return int
      */
     @Override
