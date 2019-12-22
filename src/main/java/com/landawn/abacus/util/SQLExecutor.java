@@ -59,7 +59,6 @@ import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
-import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.Fn.IntFunctions;
 import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
@@ -89,6 +88,7 @@ import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.BiConsumer;
 import com.landawn.abacus.util.function.BiFunction;
+import com.landawn.abacus.util.function.BinaryOperator;
 import com.landawn.abacus.util.function.Consumer;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.function.Predicate;
@@ -5401,11 +5401,15 @@ public class SQLExecutor {
     }
 
     protected void logSQL(NamedSQL namedSQL, final JdbcSettings jdbcSettings, final Object... parameters) {
-        if ((jdbcSettings != null) && (jdbcSettings.isLogSQL() || jdbcSettings.isLogSQLWithParameters()) && logger.isInfoEnabled()) {
-            if (jdbcSettings.isLogSQLWithParameters()) {
-                logger.info(namedSQL.getNamedSQL() + " {" + StringUtil.join(parameters, ", ") + "}");
-            } else {
-                logger.info(namedSQL.getNamedSQL());
+        if (logger.isInfoEnabled()) {
+            if ((jdbcSettings != null) && (jdbcSettings.isLogSQL() || jdbcSettings.isLogSQLWithParameters())) {
+                if (jdbcSettings.isLogSQLWithParameters()) {
+                    logger.info("[SQL]: " + namedSQL.getNamedSQL() + " {" + StringUtil.join(parameters, ", ") + "}");
+                } else {
+                    logger.info("[SQL]: " + namedSQL.getNamedSQL());
+                }
+            } else if (JdbcUtil.isLogSQL) {
+                logger.info("[SQL]: " + namedSQL.getNamedSQL());
             }
         }
     }
@@ -9224,7 +9228,7 @@ public class SQLExecutor {
          */
         static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
                 final Supplier<? extends M> supplier) {
-            return toMap(keyExtractor, valueExtractor, Fnn.throwingMerger(), supplier);
+            return toMap(keyExtractor, valueExtractor, Fn.<V> throwingMerger(), supplier);
         }
 
         /**
@@ -9235,12 +9239,12 @@ public class SQLExecutor {
          * @param valueExtractor
          * @param mergeFunction
          * @return
-         * @see {@link Fn.EE#throwingMerger()}
-         * @see {@link Fn.EE#replacingMerger()}
-         * @see {@link Fn.EE#ignoringMerger()}
+         * @see {@link Fn.throwingMerger()}
+         * @see {@link Fn.replacingMerger()}
+         * @see {@link Fn.ignoringMerger()}
          */
         static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
-                final Try.BinaryOperator<V, SQLException> mergeFunction) {
+                final BinaryOperator<V> mergeFunction) {
             return toMap(keyExtractor, valueExtractor, mergeFunction, Suppliers.<K, V> ofMap());
         }
 
@@ -9254,12 +9258,12 @@ public class SQLExecutor {
          * @param mergeFunction
          * @param supplier
          * @return
-         * @see {@link Fn.EE#throwingMerger()}
-         * @see {@link Fn.EE#replacingMerger()}
-         * @see {@link Fn.EE#ignoringMerger()}
+         * @see {@link Fn.throwingMerger()}
+         * @see {@link Fn.replacingMerger()}
+         * @see {@link Fn.ignoringMerger()}
          */
         static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
-                final Try.BinaryOperator<V, SQLException> mergeFunction, final Supplier<? extends M> supplier) {
+                final BinaryOperator<V> mergeFunction, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(mergeFunction, "mergeFunction");
@@ -9382,7 +9386,7 @@ public class SQLExecutor {
          */
         static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
                 final Supplier<? extends M> supplier) {
-            return toMap(keyExtractor, valueExtractor, Fnn.throwingMerger(), supplier);
+            return toMap(keyExtractor, valueExtractor, Fn.<V> throwingMerger(), supplier);
         }
 
         /**
@@ -9393,12 +9397,12 @@ public class SQLExecutor {
          * @param valueExtractor
          * @param mergeFunction
          * @return
-         * @see {@link Fn.EE#throwingMerger()}
-         * @see {@link Fn.EE#replacingMerger()}
-         * @see {@link Fn.EE#ignoringMerger()}
+         * @see {@link Fn.throwingMerger()}
+         * @see {@link Fn.replacingMerger()}
+         * @see {@link Fn.ignoringMerger()}
          */
         static <K, V> ResultExtractor<Map<K, V>> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
-                final Try.BinaryOperator<V, SQLException> mergeFunction) {
+                final BinaryOperator<V> mergeFunction) {
             return toMap(keyExtractor, valueExtractor, mergeFunction, Suppliers.<K, V> ofMap());
         }
 
@@ -9412,12 +9416,12 @@ public class SQLExecutor {
          * @param mergeFunction
          * @param supplier
          * @return
-         * @see {@link Fn.EE#throwingMerger()}
-         * @see {@link Fn.EE#replacingMerger()}
-         * @see {@link Fn.EE#ignoringMerger()}
+         * @see {@link Fn.throwingMerger()}
+         * @see {@link Fn.replacingMerger()}
+         * @see {@link Fn.ignoringMerger()}
          */
         static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
-                final Try.BinaryOperator<V, SQLException> mergeFunction, final Supplier<? extends M> supplier) {
+                final BinaryOperator<V> mergeFunction, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(mergeFunction, "mergeFunction");

@@ -1,7 +1,7 @@
 ### 1.10.1
 
 * Add `JdbcUtil.setLogSQL(boolean)`.
-* Add `PreparedQuery.listToMap/listToMultimap`.
+* Add `PreparedQuery.listToMap`.
 * Add `CrudDao.get(id, includeAllJoinEntities)./delete(entity, deleteAllJoinEntities)`.
 * Improvements and bug fix.
 

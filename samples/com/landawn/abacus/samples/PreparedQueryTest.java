@@ -55,16 +55,6 @@ public class PreparedQueryTest {
                 .listToMap(rs -> rs.getString("lastName"), rs -> rs.getLong(1), Fn.replacingMerger())
                 .forEach(Fn.println("="));
 
-        JdbcUtil.prepareQuery(dataSource, sql) //
-                .setLong(1, minId)
-                .listToMultimap(rs -> rs.getLong(1), rs -> rs.getString(2))
-                .forEach(Fn.println("="));
-
-        JdbcUtil.prepareQuery(dataSource, sql) //
-                .setLong(1, minId)
-                .listToMultimap(rs -> rs.getString("lastName"), rs -> rs.getLong(1))
-                .forEach(Fn.println("="));
-
         sql = PSC.deleteFrom(User.class).where("id >= ?").sql();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, minId)
