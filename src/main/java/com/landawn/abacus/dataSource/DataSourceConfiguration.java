@@ -19,7 +19,6 @@ import java.util.Map;
 
 import org.w3c.dom.Element;
 
-import com.landawn.abacus.exception.AbacusException;
 import com.landawn.abacus.util.Configuration;
 
 // TODO: Auto-generated Javadoc
@@ -268,11 +267,11 @@ public final class DataSourceConfiguration extends Configuration {
         super(element, properties);
 
         if (this.getAttribute(NAME) == null) {
-            throw new AbacusException("must set the 'name' attribute in 'dataSourceManager' element. for example: <dataSource name=\"codes\"> evn=\"dev\">");
+            throw new RuntimeException("must set the 'name' attribute in 'dataSourceManager' element. for example: <dataSource name=\"codes\"> evn=\"dev\">");
         }
 
         if (this.getAttribute(ENV) == null) {
-            throw new AbacusException("must set the 'env' attribute in 'dataSourceManager' element. for example: <dataSource name=\"codes\"> evn=\"dev\">");
+            throw new RuntimeException("must set the 'env' attribute in 'dataSourceManager' element. for example: <dataSource name=\"codes\"> evn=\"dev\">");
         }
     }
 
@@ -310,7 +309,7 @@ public final class DataSourceConfiguration extends Configuration {
             readOnlyConnectionProps = Collections.unmodifiableMap(new Configuration(element, this.props) {
             }.getAttributes());
         } else {
-            throw new AbacusException("Unknown element: " + eleName);
+            throw new RuntimeException("Unknown element: " + eleName);
         }
     }
 }

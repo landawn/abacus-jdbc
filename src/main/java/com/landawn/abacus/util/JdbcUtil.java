@@ -96,7 +96,6 @@ import com.landawn.abacus.dataSource.DataSourceConfiguration;
 import com.landawn.abacus.dataSource.DataSourceManagerConfiguration;
 import com.landawn.abacus.dataSource.SQLDataSource;
 import com.landawn.abacus.dataSource.SQLDataSourceManager;
-import com.landawn.abacus.exception.AbacusException;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.ParseException;
 import com.landawn.abacus.exception.UncheckedIOException;
@@ -381,7 +380,7 @@ public final class JdbcUtil {
                 DataSourceConfiguration config = new DataSourceConfiguration(rootElement, props);
                 return new SimpleDataSourceManager(new SQLDataSource(config));
             } else {
-                throw new AbacusException("Unknown xml format with root element: " + nodeName);
+                throw new RuntimeException("Unknown xml format with root element: " + nodeName);
             }
         } catch (SAXException e) {
             throw new ParseException(e);
@@ -3990,7 +3989,7 @@ public final class JdbcUtil {
             if (columnNameSet.size() != columnTypeMap.size()) {
                 final List<String> keys = new ArrayList<>(columnTypeMap.keySet());
                 keys.removeAll(columnNameSet);
-                throw new AbacusException(keys + " are not included in titles: " + N.toString(columnNameList));
+                throw new RuntimeException(keys + " are not included in titles: " + N.toString(columnNameList));
             }
 
             final Object[] row = filter == null ? null : new Object[columnCount];

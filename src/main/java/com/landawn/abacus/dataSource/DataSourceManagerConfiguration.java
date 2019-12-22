@@ -20,7 +20,6 @@ import java.util.Map;
 
 import org.w3c.dom.Element;
 
-import com.landawn.abacus.exception.AbacusException;
 import com.landawn.abacus.util.Configuration;
 import com.landawn.abacus.util.N;
 
@@ -65,7 +64,7 @@ public final class DataSourceManagerConfiguration extends Configuration {
         liveEnv = this.getAttribute(LIVE_ENV);
 
         if (N.isNullOrEmpty(liveEnv)) {
-            throw new AbacusException("must set the 'liveEnv' attribute in 'dataSourceManager' element. for example: <dataSourceManager liveEnv=\"dev\"> ");
+            throw new RuntimeException("must set the 'liveEnv' attribute in 'dataSourceManager' element. for example: <dataSourceManager liveEnv=\"dev\"> ");
         }
     }
 
@@ -107,7 +106,7 @@ public final class DataSourceManagerConfiguration extends Configuration {
         if (DataSourceConfiguration.DATA_SOURCE.equals(eleName)) {
             dataSourceConfigurationList.add(new DataSourceConfiguration(element, this.props));
         } else {
-            throw new AbacusException("Unknown element: " + eleName);
+            throw new RuntimeException("Unknown element: " + eleName);
         }
     }
 }

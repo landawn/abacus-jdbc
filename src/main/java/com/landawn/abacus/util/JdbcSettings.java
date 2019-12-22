@@ -8,7 +8,6 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import com.landawn.abacus.IsolationLevel;
-import com.landawn.abacus.exception.AbacusException;
 
 /**
  * The Class JdbcSettings.
@@ -645,7 +644,7 @@ public final class JdbcSettings {
      */
     void assertNotFrozen() {
         if (fozen) {
-            throw new AbacusException("It's finalized. No change is allowed");
+            throw new RuntimeException("It's finalized. No change is allowed");
         }
     }
 

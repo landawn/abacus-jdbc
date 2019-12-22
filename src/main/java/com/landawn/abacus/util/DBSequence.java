@@ -17,7 +17,6 @@ package com.landawn.abacus.util;
 import java.sql.Timestamp;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.landawn.abacus.exception.AbacusException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 
@@ -106,7 +105,7 @@ public final class DBSequence {
             }
 
             if (!sqlExecutor.doesTableExist(tableName)) {
-                throw new AbacusException("Failed to create table: " + tableName);
+                throw new RuntimeException("Failed to create table: " + tableName);
             }
         }
 
@@ -126,7 +125,7 @@ public final class DBSequence {
         sqlExecutor.update("UPDATE " + tableName + " SET next_val = ?, update_time = ? WHERE seq_name = ? AND next_val < ?", startVal, now, seqName, startVal);
 
         if (sqlExecutor.queryForLong("SELECT next_val FROM " + tableName + " WHERE seq_name = ?", seqName).orElse(0) < startVal) {
-            throw new AbacusException("Failed to initialize sequence: " + seqName + " within table: " + tableName);
+            throw new RuntimeException("Failed to initialize sequence: " + seqName + " within table: " + tableName);
         }
     }
 

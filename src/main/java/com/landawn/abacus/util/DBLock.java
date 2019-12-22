@@ -23,7 +23,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import com.landawn.abacus.exception.AbacusException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 
@@ -111,7 +110,7 @@ public final class DBLock {
         sqlExecutor.createTableIfNotExists(tableName, schema);
 
         if (!sqlExecutor.doesTableExist(tableName)) {
-            throw new AbacusException("Failed to create table: " + tableName);
+            throw new RuntimeException("Failed to create table: " + tableName);
         }
 
         String removeDeadLockSQL = "DELETE FROM " + tableName + " WHERE host_name = ? and create_time < ?";
@@ -255,7 +254,7 @@ public final class DBLock {
      */
     protected void assertNotClosed() {
         if (isClosed) {
-            throw new AbacusException("This object pool has been closed");
+            throw new RuntimeException("This object pool has been closed");
         }
     }
 }
