@@ -6494,6 +6494,55 @@ public final class JdbcUtil {
         }
 
         /**
+         * @param <T>
+         * @param batchParameters
+         * @param parametersSetter
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        @Beta
+        public <T> Q addBatchParameters2(final Collection<T> batchParameters, BiParametersSetter<? super S, ? super T> parametersSetter) throws SQLException {
+            checkArgNotNull(batchParameters, "batchParameters");
+            checkArgNotNull(parametersSetter, "parametersSetter");
+
+            return addBatchParameters2(batchParameters.iterator(), parametersSetter);
+        }
+
+        /**
+         *
+         * @param <T>
+         * @param batchParameters
+         * @param parametersSetter
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        @Beta
+        public <T> Q addBatchParameters2(final Iterator<T> batchParameters, BiParametersSetter<? super S, ? super T> parametersSetter) throws SQLException {
+            checkArgNotNull(batchParameters, "batchParameters");
+            checkArgNotNull(parametersSetter, "parametersSetter");
+
+            boolean noException = false;
+
+            try {
+                final Iterator<T> iter = batchParameters;
+
+                while (iter.hasNext()) {
+                    parametersSetter.accept(stmt, iter.next());
+                    stmt.addBatch();
+                    isBatch = true;
+                }
+
+                noException = true;
+            } finally {
+                if (noException == false) {
+                    close();
+                }
+            }
+
+            return (Q) this;
+        }
+
+        /**
          * Adds the batch.
          *
          * @return
@@ -16536,6 +16585,23 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param id
+         * @param includeAllJoinEntities
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws SQLException {
+            final Optional<T> result = get(id);
+
+            if (includeAllJoinEntities && result.isPresent()) {
+                loadAllJoinEntities(result.get());
+            }
+
+            return result;
+        }
+
+        /**
+         *
          * @param selectPropNames
          * @param id
          * @return
@@ -16552,6 +16618,17 @@ public final class JdbcUtil {
          */
         default T gett(final ID id) throws SQLException {
             return get(id).orNull();
+        }
+
+        /**
+         *
+         * @param id
+         * @param includeAllJoinEntities
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default T gett(final ID id, final boolean includeAllJoinEntities) throws SQLException {
+            return get(id, includeAllJoinEntities).orNull();
         }
 
         /**
@@ -16802,6 +16879,15 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param entity
+         * @param deleteAllJoinEntities
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        int delete(final T entity, final boolean deleteAllJoinEntities) throws SQLException;
+
+        /**
+         *
          * @param entities
          * @return
          * @throws SQLException the SQL exception
@@ -16818,6 +16904,27 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         int batchDelete(final Collection<? extends T> entities, final int batchSize) throws SQLException;
+
+        /**
+         *
+         * @param entities
+         * @param deleteAllJoinEntities
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default int batchDelete(final Collection<? extends T> entities, final boolean deleteAllJoinEntities) throws SQLException {
+            return batchDelete(entities, deleteAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param deleteAllJoinEntities
+         * @param batchSize
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        int batchDelete(final Collection<? extends T> entities, final boolean deleteAllJoinEntities, final int batchSize) throws SQLException;
 
         /**
          *
@@ -16875,63 +16982,6 @@ public final class JdbcUtil {
         @Deprecated
         @Override
         default int delete(final Condition cond) throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param func
-         * @return
-         * @throws UnsupportedOperationException
-         * @deprecated unsupported Operation
-         */
-        @Deprecated
-        @Override
-        default <R> ContinuableFuture<R> asyncApply(final Try.Function<TD, R, SQLException> func) throws UnsupportedOperationException {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         *
-         * @param <R>
-         * @param func
-         * @param executor
-         * @return
-         * @throws UnsupportedOperationException
-         * @deprecated unsupported Operation
-         */
-        @Deprecated
-        @Override
-        default <R> ContinuableFuture<R> asyncApply(final Try.Function<TD, R, SQLException> func, final Executor executor)
-                throws UnsupportedOperationException {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         *
-         * @param action
-         * @return
-         * @throws UnsupportedOperationException
-         * @deprecated unsupported Operation
-         */
-        @Deprecated
-        @Override
-        default ContinuableFuture<Void> asyncAccept(final Try.Consumer<TD, SQLException> action) throws UnsupportedOperationException {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         *
-         * @param action
-         * @param executor
-         * @return
-         * @throws UnsupportedOperationException
-         * @deprecated unsupported Operation
-         */
-        @Deprecated
-        @Override
-        default ContinuableFuture<Void> asyncAccept(final Try.Consumer<TD, SQLException> action, final Executor executor) throws UnsupportedOperationException {
             throw new UnsupportedOperationException();
         }
     }
@@ -17236,6 +17286,21 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param entity
+         * @param deleteAllJoinEntities
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int delete(final T entity, final boolean deleteAllJoinEntities) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
          * @param entities
          * @return
          * @throws UnsupportedOperationException
@@ -17260,6 +17325,39 @@ public final class JdbcUtil {
         @Deprecated
         @Override
         default int batchDelete(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param deleteAllJoinEntities
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchDelete(final Collection<? extends T> entities, final boolean deleteAllJoinEntities)
+                throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param deleteAllJoinEntities
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchDelete(final Collection<? extends T> entities, final boolean deleteAllJoinEntities, final int batchSize)
+                throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -18309,7 +18407,7 @@ public final class JdbcUtil {
                             final Collection<String> selectPropNames = (Collection<String>) args[2];
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(entityClass, joinEntityPropName);
                             final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
-                                    .getSQLBuilderSetterForSingleEntity(sbc);
+                                    .getSelectSQLBuilderAndParamSetter(sbc);
 
                             final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
 
@@ -18346,7 +18444,7 @@ public final class JdbcUtil {
                             } else if (entities.size() == 1) {
                                 final Object entity = N.firstOrNullIfEmpty(entities);
                                 final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
-                                        .getSQLBuilderSetterForSingleEntity(sbc);
+                                        .getSelectSQLBuilderAndParamSetter(sbc);
 
                                 final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
 
@@ -18369,7 +18467,7 @@ public final class JdbcUtil {
                                 }
                             } else {
                                 final Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
-                                        .getSQLBuilderSetterForEntities(sbc);
+                                        .getSelectSQLBuilderAndParamSetterForBatch(sbc);
 
                                 final List<?> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
                                         .setParameters(entities, tp._2)
@@ -18809,6 +18907,43 @@ public final class JdbcUtil {
                         call = (proxy, args) -> proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(args[0], idParamSetter).update();
                     } else if (methodName.equals("delete") && paramLen == 1 && !Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(args[0], idParamSetterByEntity).update();
+                    } else if (methodName.equals("delete") && paramLen == 2 && !Condition.class.isAssignableFrom(paramTypes[0])
+                            && boolean.class.equals(paramTypes[1])) {
+                        call = (proxy, args) -> {
+                            final Object entity = (args[0]);
+                            final boolean deleteAllJoinEntities = (Boolean) args[1];
+
+                            if (deleteAllJoinEntities == false) {
+                                return proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
+                            }
+
+                            final Map<String, JoinInfo> entityJoinInfo = JoinInfo.getEntityJoinInfo(entityClass);
+
+                            if (N.isNullOrEmpty(entityJoinInfo)) {
+                                return proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
+                            } else {
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                long result = 0;
+
+                                try {
+                                    Tuple2<String, BiParametersSetter<PreparedStatement, Object>> tp = null;
+
+                                    for (JoinInfo propJoinInfo : entityJoinInfo.values()) {
+                                        tp = propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+
+                                        result += proxy.prepareQuery(tp._1).setParameters(entity, tp._2).update();
+                                    }
+
+                                    result += proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
+
+                                    tran.commit();
+                                } finally {
+                                    tran.rollbackIfNotCommitted();
+                                }
+
+                                return N.toIntExact(result);
+                            }
+                        };
                     } else if ((methodName.equals("batchDelete") || methodName.equals("batchDeleteByIds")) && paramLen == 2
                             && int.class.equals(paramTypes[1])) {
 
@@ -18816,23 +18951,23 @@ public final class JdbcUtil {
                                 : idParamSetterByEntity;
 
                         call = (proxy, args) -> {
-                            final Collection<Object> batchParameters = (Collection) args[0];
+                            final Collection<Object> idsOrEntities = (Collection) args[0];
                             final int batchSize = (Integer) args[1];
                             N.checkArgPositive(batchSize, "batchSize");
 
-                            if (N.isNullOrEmpty(batchParameters)) {
+                            if (N.isNullOrEmpty(idsOrEntities)) {
                                 return 0;
                             }
 
-                            if (batchParameters.size() <= batchSize) {
-                                return N.sum(proxy.prepareNamedQuery(namedDeleteByIdSQL).addBatchParameters(batchParameters, paramSetter).batchUpdate());
+                            if (idsOrEntities.size() <= batchSize) {
+                                return N.sum(proxy.prepareNamedQuery(namedDeleteByIdSQL).addBatchParameters(idsOrEntities, paramSetter).batchUpdate());
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                                 long result = 0;
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedDeleteByIdSQL).closeAfterExecution(false)) {
-                                        result = ExceptionalStream.of(batchParameters)
+                                        result = ExceptionalStream.of(idsOrEntities)
                                                 .splitToList(batchSize)
                                                 .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp, paramSetter).batchUpdate()))
                                                 .orZero();
@@ -18845,6 +18980,59 @@ public final class JdbcUtil {
 
                                 return N.toIntExact(result);
                             }
+                        };
+                    } else if (methodName.equals("batchDelete") && paramLen == 3 && boolean.class.equals(paramTypes[1]) && int.class.equals(paramTypes[2])) {
+                        final BiParametersSetter<NamedQuery, Object> paramSetter = idParamSetterByEntity;
+
+                        call = (proxy, args) -> {
+                            final Collection<Object> entities = (Collection) args[0];
+                            final boolean deleteAllJoinEntities = (Boolean) args[1];
+                            final int batchSize = (Integer) args[2];
+                            N.checkArgPositive(batchSize, "batchSize");
+
+                            if (N.isNullOrEmpty(entities)) {
+                                return 0;
+                            } else if (deleteAllJoinEntities == false) {
+                                return ((CrudDao) proxy).batchDelete(entities, batchSize);
+                            }
+
+                            final Map<String, JoinInfo> entityJoinInfo = JoinInfo.getEntityJoinInfo(entityClass);
+
+                            if (N.isNullOrEmpty(entityJoinInfo)) {
+                                return ((CrudDao) proxy).batchDelete(entities, batchSize);
+                            }
+
+                            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                            long result = 0;
+
+                            try {
+                                try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedDeleteByIdSQL).closeAfterExecution(false)) {
+                                    result = ExceptionalStream.of(entities) //
+                                            .splitToList(batchSize) //
+                                            .sumLong(bp -> {
+                                                long tmpResult = 0;
+
+                                                Tuple2<String, BiParametersSetter<PreparedStatement, Object>> tp = null;
+
+                                                for (JoinInfo propJoinInfo : entityJoinInfo.values()) {
+                                                    tp = propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+
+                                                    tmpResult += N.sum(proxy.prepareQuery(tp._1).addBatchParameters2(bp, tp._2).batchUpdate());
+                                                }
+
+                                                tmpResult += N.sum(nameQuery.addBatchParameters(bp, paramSetter).batchUpdate());
+
+                                                return tmpResult;
+                                            })
+                                            .orZero();
+                                }
+
+                                tran.commit();
+                            } finally {
+                                tran.rollbackIfNotCommitted();
+                            }
+
+                            return N.toIntExact(result);
                         };
                     } else {
                         call = (proxy, args) -> {

@@ -8559,7 +8559,7 @@ public class SQLExecutor {
         public void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) {
             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(targetClass, joinEntityPropName);
             final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
-                    .getSQLBuilderSetterForSingleEntity(sbc);
+                    .getSelectSQLBuilderAndParamSetter(sbc);
 
             final String sql = tp._1.apply(selectPropNames);
             final StatementSetter statementSetter = (namedSQL, stmt, parameters) -> tp._2.accept(stmt, entity);
@@ -8609,7 +8609,7 @@ public class SQLExecutor {
             } else {
                 final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(targetClass, joinEntityPropName);
                 final Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
-                        .getSQLBuilderSetterForEntities(sbc);
+                        .getSelectSQLBuilderAndParamSetterForBatch(sbc);
 
                 final String sql = tp._1.apply(selectPropNames, entities.size());
                 final StatementSetter statementSetter = (namedSQL, stmt, parameters) -> tp._2.accept(stmt, entities);

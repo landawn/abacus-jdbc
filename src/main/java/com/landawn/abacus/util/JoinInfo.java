@@ -40,9 +40,11 @@ final class JoinInfo {
     final Function<Object, Object> srcEntityKeyExtractor;
     final Function<Object, Object> referencedEntityKeyExtractor;
 
-    private final Map<Class<? extends SQLBuilder>, Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>> sqlBuilderSetterForSingleEntityMap = new HashMap<>();
+    private final Map<Class<? extends SQLBuilder>, Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>> selectSQLBuilderAndParamSetterPool = new HashMap<>();
 
-    private final Map<Class<? extends SQLBuilder>, Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>>> sqlBuilderSetterForEntitiesMap = new HashMap<>();
+    private final Map<Class<? extends SQLBuilder>, Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>>> selectSQLBuilderAndParamSetterForBatchPool = new HashMap<>();
+
+    private final Map<Class<? extends SQLBuilder>, Tuple2<String, BiParametersSetter<PreparedStatement, Object>>> deleteSqlAndParamSetterPool = new HashMap<>();
 
     JoinInfo(final Class<?> entityClass, final String joinEntityPropName) {
         this.entityClass = entityClass;
@@ -134,17 +136,17 @@ final class JoinInfo {
         };
 
         {
-            final String sql = PSC.selectFrom(referencedEntityClass).where(cond).sql();
+            final String selectSql = PSC.selectFrom(referencedEntityClass).where(cond).sql();
 
             final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
                 if (N.isNullOrEmpty(selectPropNames)) {
-                    return sql;
+                    return selectSql;
                 } else {
                     return PSC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
                 }
             };
 
-            sqlBuilderSetterForSingleEntityMap.put(PSC.class, Tuple.of(sqlBuilder, paramSetter));
+            selectSQLBuilderAndParamSetterPool.put(PSC.class, Tuple.of(sqlBuilder, paramSetter));
 
             final BiFunction<Collection<String>, Integer, String> sqlBuilder2 = (selectPropNames, size) -> {
                 if (size == 1) {
@@ -158,21 +160,25 @@ final class JoinInfo {
                 }
             };
 
-            sqlBuilderSetterForEntitiesMap.put(PSC.class, Tuple.of(sqlBuilder2, paramSetter2));
+            selectSQLBuilderAndParamSetterForBatchPool.put(PSC.class, Tuple.of(sqlBuilder2, paramSetter2));
+
+            final String deleteSql = PSC.deleteFrom(referencedEntityClass).where(cond).sql();
+
+            deleteSqlAndParamSetterPool.put(PSC.class, Tuple.of(deleteSql, paramSetter));
         }
 
         {
-            final String sql = PAC.selectFrom(referencedEntityClass).where(cond).sql();
+            final String selectSql = PAC.selectFrom(referencedEntityClass).where(cond).sql();
 
             final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
                 if (N.isNullOrEmpty(selectPropNames)) {
-                    return sql;
+                    return selectSql;
                 } else {
                     return PAC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
                 }
             };
 
-            sqlBuilderSetterForSingleEntityMap.put(PAC.class, Tuple.of(sqlBuilder, paramSetter));
+            selectSQLBuilderAndParamSetterPool.put(PAC.class, Tuple.of(sqlBuilder, paramSetter));
 
             final BiFunction<Collection<String>, Integer, String> sqlBuilder2 = (selectPropNames, size) -> {
                 if (size == 1) {
@@ -186,21 +192,25 @@ final class JoinInfo {
                 }
             };
 
-            sqlBuilderSetterForEntitiesMap.put(PAC.class, Tuple.of(sqlBuilder2, paramSetter2));
+            selectSQLBuilderAndParamSetterForBatchPool.put(PAC.class, Tuple.of(sqlBuilder2, paramSetter2));
+
+            final String deleteSql = PAC.deleteFrom(referencedEntityClass).where(cond).sql();
+
+            deleteSqlAndParamSetterPool.put(PAC.class, Tuple.of(deleteSql, paramSetter));
         }
 
         {
-            final String sql = PLC.selectFrom(referencedEntityClass).where(cond).sql();
+            final String selectSql = PLC.selectFrom(referencedEntityClass).where(cond).sql();
 
             final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
                 if (N.isNullOrEmpty(selectPropNames)) {
-                    return sql;
+                    return selectSql;
                 } else {
                     return PLC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
                 }
             };
 
-            sqlBuilderSetterForSingleEntityMap.put(PLC.class, Tuple.of(sqlBuilder, paramSetter));
+            selectSQLBuilderAndParamSetterPool.put(PLC.class, Tuple.of(sqlBuilder, paramSetter));
 
             final BiFunction<Collection<String>, Integer, String> sqlBuilder2 = (selectPropNames, size) -> {
                 if (size == 1) {
@@ -214,7 +224,11 @@ final class JoinInfo {
                 }
             };
 
-            sqlBuilderSetterForEntitiesMap.put(PLC.class, Tuple.of(sqlBuilder2, paramSetter2));
+            selectSQLBuilderAndParamSetterForBatchPool.put(PLC.class, Tuple.of(sqlBuilder2, paramSetter2));
+
+            final String deleteSql = PLC.deleteFrom(referencedEntityClass).where(cond).sql();
+
+            deleteSqlAndParamSetterPool.put(PLC.class, Tuple.of(deleteSql, paramSetter));
         }
 
         Function<Object, Object> srcEntityKeyExtractorTmp = null;
@@ -273,9 +287,10 @@ final class JoinInfo {
         referencedEntityKeyExtractor = referencedEntityKeyExtractorTmp;
     }
 
-    public Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> getSQLBuilderSetterForSingleEntity(
+    public Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> getSelectSQLBuilderAndParamSetter(
             final Class<? extends SQLBuilder> sbc) {
-        final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = sqlBuilderSetterForSingleEntityMap.get(sbc);
+        final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = selectSQLBuilderAndParamSetterPool
+                .get(sbc);
 
         if (tp == null) {
             throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
@@ -284,10 +299,20 @@ final class JoinInfo {
         return tp;
     }
 
-    public Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> getSQLBuilderSetterForEntities(
+    public Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> getSelectSQLBuilderAndParamSetterForBatch(
             final Class<? extends SQLBuilder> sbc) {
-        final Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = sqlBuilderSetterForEntitiesMap
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = selectSQLBuilderAndParamSetterForBatchPool
                 .get(sbc);
+
+        if (tp == null) {
+            throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
+        }
+
+        return tp;
+    }
+
+    public Tuple2<String, BiParametersSetter<PreparedStatement, Object>> getDeleteSqlAndParamSetter(final Class<? extends SQLBuilder> sbc) {
+        final Tuple2<String, BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(sbc);
 
         if (tp == null) {
             throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
