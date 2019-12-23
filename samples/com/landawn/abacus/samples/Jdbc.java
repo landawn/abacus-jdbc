@@ -90,17 +90,6 @@ public class Jdbc {
 
         sqlExecutor.execute(sql_employee_dept_relationship_drop_table);
         sqlExecutor.execute(sql_employee_dept_relationship_creat_table);
-
-        final String sql_procedure_drop_list_user = "DROP ALIAS IF EXISTS listUser";
-        final String sql_procedure_create_list_user = "CREATE ALIAS listUser() \r\n" + "                       begin \r\n"
-                + "                      select * from user; \r\n" + "                      end //";
-
-        try {
-            JdbcUtil.execute(dataSource, sql_procedure_drop_list_user);
-            JdbcUtil.execute(dataSource, sql_procedure_create_list_user);
-        } catch (SQLException e) {
-            N.toRuntimeException(e);
-        }
     }
 
     @Test
