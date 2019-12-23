@@ -1,3 +1,9 @@
+### 1.10.1
+
+* Supports `@Sql`.
+* Improvements and bug fix.
+
+
 ### 1.10.0
 
 * Add `JdbcUtil.setLogSQL/logSQLPerfAt`.

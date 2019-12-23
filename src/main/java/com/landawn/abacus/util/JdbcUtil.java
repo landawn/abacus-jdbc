@@ -15761,6 +15761,14 @@ public final class JdbcUtil {
         }
 
         /**
+         * The Interface Sql.
+         */
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(ElementType.PARAMETER)
+        public static @interface Sql {
+        }
+
+        /**
          *
          * @return
          */
@@ -18542,9 +18550,44 @@ public final class JdbcUtil {
             Try.BiFunction<Dao, Object[], ?, Throwable> call = null;
 
             if (!Modifier.isAbstract(m.getModifiers())) {
+                final boolean hasSqlParam = paramLen > 0 && StreamEx.of(m.getParameterAnnotations()[paramLen - 1]).select(Dao.Sql.class).first().isPresent();
+                final Annotation sqlAnno = StreamEx.of(m.getAnnotations())
+                        .filter(anno -> JdbcUtil.sqlAnnoMap.containsKey(anno.annotationType()))
+                        .first()
+                        .orNull();
+
+                if (hasSqlParam) {
+                    if (sqlAnno == null) {
+                        throw new UnsupportedOperationException("To support sql binding by @Sql, one of sql annotation must be specified by: "
+                                + JdbcUtil.sqlAnnoMap.keySet() + " on method: " + m.getName());
+                    }
+
+                    if (!paramTypes[paramLen - 1].equals(String.class)) {
+                        throw new UnsupportedOperationException(
+                                "To support sql binding by @Sql, the type of first parameter (annotated by @Sql) must be String. It can't be : " + paramTypes[0]
+                                        + " on method: " + m.getName());
+                    }
+                }
+
                 final MethodHandle methodHandle = createMethodHandle(m);
 
-                call = (proxy, args) -> methodHandle.bindTo(proxy).invokeWithArguments(args);
+                if (hasSqlParam) {
+                    final String sql = JdbcUtil.sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno);
+
+                    call = (proxy, args) -> {
+                        if (args[paramLen - 1] != null) {
+                            throw new IllegalArgumentException(
+                                    "The parameter annotated by @Sql must be null, don't specify it. It will auto-filled by sql from sql annotation on the method: "
+                                            + m.getName());
+                        }
+
+                        args[paramLen - 1] = sql;
+
+                        return methodHandle.bindTo(proxy).invokeWithArguments(args);
+                    };
+                } else {
+                    call = (proxy, args) -> methodHandle.bindTo(proxy).invokeWithArguments(args);
+                }
             } else if (m.getName().equals("targetEntityClass") && Class.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> entityClass;
             } else if (methodName.equals("dataSource") && javax.sql.DataSource.class.isAssignableFrom(returnType) && paramLen == 0) {

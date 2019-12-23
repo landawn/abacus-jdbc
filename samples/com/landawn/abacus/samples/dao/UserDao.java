@@ -3,6 +3,7 @@ package com.landawn.abacus.samples.dao;
 import java.sql.SQLException;
 import java.util.List;
 
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.SQLBuilder;
@@ -38,6 +39,15 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 
     default int[] batchDeleteByIds2(List<Long> userIds) throws SQLException {
         return prepareNamedQuery("DELETE FROM user where id = :id").addBatchParameters(userIds).batchUpdate();
+    }
+
+    @NamedSelect("SELECT * FROM user where id >= :id")
+    default List<User> listUserByAnnoSql(long id, @Sql String sql) {
+        try {
+            return prepareNamedQuery(sql).setLong(1, id).list(User.class);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
     }
 
 }
