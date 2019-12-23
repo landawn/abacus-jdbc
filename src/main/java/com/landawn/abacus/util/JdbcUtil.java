@@ -398,7 +398,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @see DataSource.xsd
      */
-    public static DataSource createDataSource(final String dataSourceFile) throws UncheckedIOException, UncheckedSQLException {
+    public static javax.sql.DataSource createDataSource(final String dataSourceFile) throws UncheckedIOException, UncheckedSQLException {
         InputStream is = null;
         try {
             is = new FileInputStream(Configuration.findFile(dataSourceFile));
@@ -419,7 +419,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @see DataSource.xsd
      */
-    public static DataSource createDataSource(final InputStream dataSourceInputStream) throws UncheckedIOException, UncheckedSQLException {
+    public static javax.sql.DataSource createDataSource(final InputStream dataSourceInputStream) throws UncheckedIOException, UncheckedSQLException {
         return createDataSource(dataSourceInputStream, CURRENT_DIR_PATH);
     }
 
@@ -432,7 +432,7 @@ public final class JdbcUtil {
      * @throws UncheckedIOException the unchecked IO exception
      * @throws UncheckedSQLException the unchecked SQL exception
      */
-    private static DataSource createDataSource(final InputStream dataSourceInputStream, final String dataSourceFile)
+    private static javax.sql.DataSource createDataSource(final InputStream dataSourceInputStream, final String dataSourceFile)
             throws UncheckedIOException, UncheckedSQLException {
         final String dataSourceString = IOUtil.readString(dataSourceInputStream);
 
@@ -475,7 +475,7 @@ public final class JdbcUtil {
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
-    public static DataSource createDataSource(final String url, final String user, final String password) throws UncheckedSQLException {
+    public static javax.sql.DataSource createDataSource(final String url, final String user, final String password) throws UncheckedSQLException {
         return createDataSource(getDriverClasssByUrl(url), url, user, password);
     }
 
@@ -489,7 +489,8 @@ public final class JdbcUtil {
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
-    public static DataSource createDataSource(final String driver, final String url, final String user, final String password) throws UncheckedSQLException {
+    public static javax.sql.DataSource createDataSource(final String driver, final String url, final String user, final String password)
+            throws UncheckedSQLException {
         final Class<? extends Driver> driverClass = ClassUtil.forClass(driver);
 
         return createDataSource(driverClass, url, user, password);
@@ -505,7 +506,7 @@ public final class JdbcUtil {
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
-    public static DataSource createDataSource(final Class<? extends Driver> driverClass, final String url, final String user, final String password)
+    public static javax.sql.DataSource createDataSource(final Class<? extends Driver> driverClass, final String url, final String user, final String password)
             throws UncheckedSQLException {
         N.checkArgNotNullOrEmpty(url, "url");
 
@@ -526,7 +527,7 @@ public final class JdbcUtil {
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
-    public static DataSource createDataSource(final Map<String, ?> props) throws UncheckedSQLException {
+    public static javax.sql.DataSource createDataSource(final Map<String, ?> props) throws UncheckedSQLException {
         final String driver = (String) props.get(DRIVER);
 
         if (N.isNullOrEmpty(driver)) {
@@ -1439,7 +1440,7 @@ public final class JdbcUtil {
             }
         }
 
-        throw new IllegalArgumentException("Unsupported sql operation: " + sql.substring(0, sql.indexOf(' ')));
+        return SQLOperation.UPDATE; // TODO change it to SQLOperation.UNKNOWN in 1.10.1 release
     }
 
     /**
@@ -2696,7 +2697,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     @SafeVarargs
-    public static DataSet executeQuery(final DataSource ds, final String sql, final Object... parameters) throws SQLException {
+    public static DataSet executeQuery(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws SQLException {
         N.checkArgNotNull(ds, "ds");
         N.checkArgNotNull(sql, "sql");
 
@@ -2771,7 +2772,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     @SafeVarargs
-    public static int executeUpdate(final DataSource ds, final String sql, final Object... parameters) throws SQLException {
+    public static int executeUpdate(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws SQLException {
         N.checkArgNotNull(ds, "ds");
         N.checkArgNotNull(sql, "sql");
 
@@ -2822,7 +2823,7 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException the SQL exception
      */
-    public static int executeBatchUpdate(final DataSource ds, final String sql, final List<?> listOfParameters) throws SQLException {
+    public static int executeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters) throws SQLException {
         return executeBatchUpdate(ds, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -2835,7 +2836,8 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException the SQL exception
      */
-    public static int executeBatchUpdate(final DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize) throws SQLException {
+    public static int executeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize)
+            throws SQLException {
         N.checkArgNotNull(ds, "ds");
         N.checkArgNotNull(sql, "sql");
         N.checkArgPositive(batchSize, "batchSize");
@@ -2959,7 +2961,7 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException the SQL exception
      */
-    public static long executeLargeBatchUpdate(final DataSource ds, final String sql, final List<?> listOfParameters) throws SQLException {
+    public static long executeLargeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters) throws SQLException {
         return executeLargeBatchUpdate(ds, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -2972,7 +2974,8 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException the SQL exception
      */
-    public static long executeLargeBatchUpdate(final DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize) throws SQLException {
+    public static long executeLargeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize)
+            throws SQLException {
         N.checkArgNotNull(ds, "ds");
         N.checkArgNotNull(sql, "sql");
         N.checkArgPositive(batchSize, "batchSize");
@@ -3098,7 +3101,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     @SafeVarargs
-    public static boolean execute(final DataSource ds, final String sql, final Object... parameters) throws SQLException {
+    public static boolean execute(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws SQLException {
         N.checkArgNotNull(ds, "ds");
         N.checkArgNotNull(sql, "sql");
 

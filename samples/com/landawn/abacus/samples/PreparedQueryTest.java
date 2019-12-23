@@ -11,6 +11,7 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.JdbcUtil;
@@ -21,6 +22,21 @@ import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.stream.IntStream;
 
 public class PreparedQueryTest {
+
+    @Test
+    public void test_callable() throws SQLException {
+
+        List<User> users = IntStream.range(1, 9)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump").email("123@email.com" + i).build())
+                .toList();
+
+        List<Long> ids = userDao.batchInsertWithId(users);
+        assertEquals(users.size(), ids.size());
+
+        JdbcUtil.prepareCallableQuery(dataSource, "CALL listUser()").list(User.class).forEach(Fn.println());
+
+        assertEquals(users.size(), userDao.delete(CF.ge("id", 0)));
+    }
 
     @Test
     public void test_listToMap() throws SQLException {
