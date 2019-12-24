@@ -51,6 +51,7 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     }
 
     @Sqls({ "update user set first_name = ? where id = -1", "SELECT * FROM user where id >= :id" })
+    @Transactional
     default List<User> listUserByAnnoSql2(String firstName, long id, String... sqls) {
         try {
             prepareQuery(sqls[0]).setString(1, firstName).update();

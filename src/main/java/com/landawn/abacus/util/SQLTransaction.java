@@ -559,6 +559,7 @@ public final class SQLTransaction implements Transaction {
 
         /**
          * SQLExecutor.
+         * @deprecated not used
          */
         SQL_EXECUTOR;
     }

@@ -1428,11 +1428,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static <T, E extends Exception> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Callable<T, E> cmd) throws E {
-        SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
-        if (tran == null) {
-            tran = SQLTransaction.getTransaction(ds, CreatedBy.SQL_EXECUTOR);
-        }
+        final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran == null) {
             return cmd.call();
@@ -1453,11 +1449,7 @@ public final class JdbcUtil {
     @Beta
     public static <T, E extends Exception> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Function<javax.sql.DataSource, T, E> cmd)
             throws E {
-        SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
-        if (tran == null) {
-            tran = SQLTransaction.getTransaction(ds, CreatedBy.SQL_EXECUTOR);
-        }
+        final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran == null) {
             return cmd.apply(ds);
@@ -1476,11 +1468,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static <E extends Exception> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Runnable<E> cmd) throws E {
-        SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
-        if (tran == null) {
-            tran = SQLTransaction.getTransaction(ds, CreatedBy.SQL_EXECUTOR);
-        }
+        final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran == null) {
             cmd.run();
@@ -1500,11 +1488,7 @@ public final class JdbcUtil {
     @Beta
     public static <E extends Exception> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Consumer<javax.sql.DataSource, E> cmd)
             throws E {
-        SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
-        if (tran == null) {
-            tran = SQLTransaction.getTransaction(ds, CreatedBy.SQL_EXECUTOR);
-        }
+        final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran == null) {
             cmd.accept(ds);
@@ -15871,6 +15855,14 @@ public final class JdbcUtil {
         }
 
         /**
+         * The Interface Transactional.
+         */
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(ElementType.METHOD)
+        public static @interface Transactional {
+        }
+
+        /**
          *
          * @return
          */
@@ -18649,11 +18641,33 @@ public final class JdbcUtil {
             final Class<?> returnType = m.getReturnType();
             final int paramLen = paramTypes.length;
 
+            final Dao.Sqls sqlsAnno = StreamEx.of(m.getAnnotations()).select(Dao.Sqls.class).onlyOne().orNull();
+
+            if (sqlsAnno != null) {
+                if (Modifier.isAbstract(m.getModifiers())) {
+                    throw new UnsupportedOperationException(
+                            "Annotation @Sqls is only supported by interface methods with default implmentation: default xxx dbOperationABC(someParameters, String ... sqls), not supported by abstract method: "
+                                    + m.getName());
+                }
+
+                if (paramLen == 0 || !paramTypes[paramLen - 1].equals(String[].class)) {
+                    throw new UnsupportedOperationException(
+                            "To support sqls binding by @Sqls, the type of last parameter must be: String... sqls. It can't be : " + paramTypes[paramLen - 1]
+                                    + " on method: " + m.getName());
+                }
+            }
+
+            final Dao.Transactional transactionalAnno = StreamEx.of(m.getAnnotations()).select(Dao.Transactional.class).onlyOne().orNull();
+
+            if (transactionalAnno != null && Modifier.isAbstract(m.getModifiers())) {
+                throw new UnsupportedOperationException(
+                        "Annotation @Transactional is only supported by interface methods with default implmentation: default xxx dbOperationABC(someParameters, String ... sqls), not supported by abstract method: "
+                                + m.getName());
+            }
+
             Try.BiFunction<Dao, Object[], ?, Throwable> call = null;
 
             if (!Modifier.isAbstract(m.getModifiers())) {
-                final Dao.Sqls sqlsAnno = StreamEx.of(m.getAnnotations()).select(Dao.Sqls.class).onlyOne().orNull();
-
                 if (sqlsAnno != null) {
                     if (paramLen == 0 || !paramTypes[paramLen - 1].equals(String[].class)) {
                         throw new UnsupportedOperationException(
@@ -18664,23 +18678,35 @@ public final class JdbcUtil {
 
                 final MethodHandle methodHandle = createMethodHandle(m);
 
-                if (sqlsAnno != null) {
-                    final String[] sqls = sqlsAnno.value();
-
-                    call = (proxy, args) -> {
+                call = (proxy, args) -> {
+                    if (sqlsAnno != null) {
                         if (N.notNullOrEmpty((String[]) args[paramLen - 1])) {
                             throw new IllegalArgumentException(
                                     "The last parameter(String[]) of method annotated by @Sqls must be null, don't specify it. It will auto-filled by sqls from annotation @Sqls on the method: "
                                             + m.getName());
                         }
 
-                        args[paramLen - 1] = sqls;
+                        args[paramLen - 1] = sqlsAnno.value();
+                    }
 
+                    if (transactionalAnno == null) {
                         return methodHandle.bindTo(proxy).invokeWithArguments(args);
-                    };
-                } else {
-                    call = (proxy, args) -> methodHandle.bindTo(proxy).invokeWithArguments(args);
-                }
+                    } else {
+                        final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                        Object result = null;
+
+                        try {
+                            result = methodHandle.bindTo(proxy).invokeWithArguments(args);
+
+                            tran.commit();
+                        } finally {
+                            tran.rollbackIfNotCommitted();
+                        }
+
+                        return result;
+                    }
+                };
+
             } else if (m.getName().equals("targetEntityClass") && Class.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> entityClass;
             } else if (methodName.equals("dataSource") && javax.sql.DataSource.class.isAssignableFrom(returnType) && paramLen == 0) {
@@ -20028,7 +20054,8 @@ public final class JdbcUtil {
                     if (paramLen > 0 && (ClassUtil.isEntity(paramTypes[0]) || Map.class.isAssignableFrom(paramTypes[0])
                             || EntityId.class.isAssignableFrom(paramTypes[0])) && isNamedQuery == false) {
                         throw new IllegalArgumentException(
-                                "Using named query: @NamedSelect/NamedUpdate/NamedInsert/NamedDelete when parameter type is Entity/Map/EntityId");
+                                "Using named query: @NamedSelect/NamedUpdate/NamedInsert/NamedDelete when parameter type is Entity/Map/EntityId in method: "
+                                        + m.getName());
                     }
 
                     Tuple4<Integer, Integer, Boolean, Integer> tp = null;
@@ -20423,7 +20450,7 @@ public final class JdbcUtil {
                             };
                         }
                     } else {
-                        throw new UnsupportedOperationException("Unsupported sql annotation: " + sqlAnno.annotationType());
+                        throw new UnsupportedOperationException("Unsupported sql annotation: " + sqlAnno.annotationType() + " in method: " + m.getName());
                     }
                 }
             }
@@ -20436,7 +20463,7 @@ public final class JdbcUtil {
 
         final InvocationHandler h = (proxy, method, args) -> {
             if (!JdbcUtil.noLogMethods.contains(method.getName())) {
-                logger.debug("Invoking SQL method: {} with args: {}", method.getName(), args);
+                logger.debug("Invoking Dao method: {} with args: {}", method.getName(), args);
             }
 
             return proxyInvoker.apply((Dao) proxy, method, args);

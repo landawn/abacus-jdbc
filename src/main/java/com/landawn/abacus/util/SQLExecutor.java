@@ -4960,11 +4960,7 @@ public class SQLExecutor {
                 ? getDataSource(N.EMPTY_STRING, N.EMPTY_OBJECT_ARRAY, jdbcSettings)
                 : _ds;
 
-        SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.SQL_EXECUTOR);
-
-        if (tran == null) {
-            tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-        }
+        SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran == null) {
             Connection conn = null;
@@ -4972,7 +4968,7 @@ public class SQLExecutor {
 
             try {
                 conn = getConnection(ds);
-                tran = new SQLTransaction(ds, conn, isolationLevel == IsolationLevel.DEFAULT ? _defaultIsolationLevel : isolationLevel, CreatedBy.SQL_EXECUTOR,
+                tran = new SQLTransaction(ds, conn, isolationLevel == IsolationLevel.DEFAULT ? _defaultIsolationLevel : isolationLevel, CreatedBy.JDBC_UTIL,
                         true);
                 tran.incrementAndGetRef(isolationLevel, forUpdateOnly);
 
@@ -5186,11 +5182,7 @@ public class SQLExecutor {
             return inputConn;
         }
 
-        SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.SQL_EXECUTOR);
-
-        if (tran == null) {
-            tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-        }
+        final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran == null || (tran.isForUpdateOnly() && op == SQLOperation.SELECT)) {
             return getConnection(ds);
@@ -5446,11 +5438,7 @@ public class SQLExecutor {
      */
     protected void close(final Connection localConn, final Connection inputConn, final DataSource ds) {
         if (inputConn == null) {
-            SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.SQL_EXECUTOR);
-
-            if (tran == null) {
-                tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-            }
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             if (tran != null && tran.connection() == localConn) {
                 // ignore.
