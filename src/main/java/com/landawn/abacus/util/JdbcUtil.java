@@ -1334,17 +1334,17 @@ public final class JdbcUtil {
      * @param <T>
      * @param <E>
      * @param ds
-     * @param callable
+     * @param cmd
      * @return
      * @throws E
      */
     @Beta
-    public static <T, E extends Exception> T doInTransaction(final javax.sql.DataSource ds, final Try.Callable<T, E> callable) throws E {
+    public static <T, E extends Exception> T callInTransaction(final javax.sql.DataSource ds, final Try.Callable<T, E> cmd) throws E {
         final SQLTransaction tran = JdbcUtil.beginTransaction(ds);
         T result = null;
 
         try {
-            result = callable.call();
+            result = cmd.call();
             tran.commit();
         } finally {
             tran.rollbackIfNotCommitted();
@@ -1358,17 +1358,17 @@ public final class JdbcUtil {
      * @param <T>
      * @param <E>
      * @param ds
-     * @param func
+     * @param cmd
      * @return
      * @throws E
      */
     @Beta
-    public static <T, E extends Exception> T doInTransaction(final javax.sql.DataSource ds, final Try.Function<javax.sql.DataSource, T, E> func) throws E {
+    public static <T, E extends Exception> T callInTransaction(final javax.sql.DataSource ds, final Try.Function<javax.sql.DataSource, T, E> cmd) throws E {
         final SQLTransaction tran = JdbcUtil.beginTransaction(ds);
         T result = null;
 
         try {
-            result = func.apply(ds);
+            result = cmd.apply(ds);
             tran.commit();
         } finally {
             tran.rollbackIfNotCommitted();
@@ -1381,16 +1381,16 @@ public final class JdbcUtil {
      *
      * @param <E>
      * @param ds
-     * @param runnable
+     * @param cmd
      * @return
      * @throws E
      */
     @Beta
-    public static <E extends Exception> void runInTransaction(final javax.sql.DataSource ds, final Try.Runnable<E> runnable) throws E {
+    public static <E extends Exception> void runInTransaction(final javax.sql.DataSource ds, final Try.Runnable<E> cmd) throws E {
         final SQLTransaction tran = JdbcUtil.beginTransaction(ds);
 
         try {
-            runnable.run();
+            cmd.run();
             tran.commit();
         } finally {
             tran.rollbackIfNotCommitted();
@@ -1401,19 +1401,115 @@ public final class JdbcUtil {
      *
      * @param <E>
      * @param ds
-     * @param action
+     * @param cmd
      * @return
      * @throws E
      */
     @Beta
-    public static <E extends Exception> void runInTransaction(final javax.sql.DataSource ds, final Try.Consumer<javax.sql.DataSource, E> action) throws E {
+    public static <E extends Exception> void runInTransaction(final javax.sql.DataSource ds, final Try.Consumer<javax.sql.DataSource, E> cmd) throws E {
         final SQLTransaction tran = JdbcUtil.beginTransaction(ds);
 
         try {
-            action.accept(ds);
+            cmd.accept(ds);
             tran.commit();
         } finally {
             tran.rollbackIfNotCommitted();
+        }
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param <E>
+     * @param ds
+     * @param cmd
+     * @return
+     * @throws E
+     */
+    @Beta
+    public static <T, E extends Exception> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Callable<T, E> cmd) throws E {
+        SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
+        if (tran == null) {
+            tran = SQLTransaction.getTransaction(ds, CreatedBy.SQL_EXECUTOR);
+        }
+
+        if (tran == null) {
+            return cmd.call();
+        } else {
+            return tran.callNotInMe(cmd);
+        }
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param <E>
+     * @param ds
+     * @param cmd
+     * @return
+     * @throws E
+     */
+    @Beta
+    public static <T, E extends Exception> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Function<javax.sql.DataSource, T, E> cmd)
+            throws E {
+        SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
+        if (tran == null) {
+            tran = SQLTransaction.getTransaction(ds, CreatedBy.SQL_EXECUTOR);
+        }
+
+        if (tran == null) {
+            return cmd.apply(ds);
+        } else {
+            return tran.callNotInMe(() -> cmd.apply(ds));
+        }
+    }
+
+    /**
+     *
+     * @param <E>
+     * @param ds
+     * @param cmd
+     * @return
+     * @throws E
+     */
+    @Beta
+    public static <E extends Exception> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Runnable<E> cmd) throws E {
+        SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
+        if (tran == null) {
+            tran = SQLTransaction.getTransaction(ds, CreatedBy.SQL_EXECUTOR);
+        }
+
+        if (tran == null) {
+            cmd.run();
+        } else {
+            tran.runNotInMe(cmd);
+        }
+    }
+
+    /**
+     *
+     * @param <E>
+     * @param ds
+     * @param cmd
+     * @return
+     * @throws E
+     */
+    @Beta
+    public static <E extends Exception> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Consumer<javax.sql.DataSource, E> cmd)
+            throws E {
+        SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
+        if (tran == null) {
+            tran = SQLTransaction.getTransaction(ds, CreatedBy.SQL_EXECUTOR);
+        }
+
+        if (tran == null) {
+            cmd.accept(ds);
+        } else {
+            tran.runNotInMe(() -> cmd.accept(ds));
         }
     }
 
@@ -15747,6 +15843,20 @@ public final class JdbcUtil {
         }
 
         /**
+         * The Interface Sqls.
+         */
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(ElementType.METHOD)
+        public static @interface Sqls {
+
+            /**
+             *
+             * @return
+             */
+            String[] value() default "";
+        }
+
+        /**
          * The Interface Bind.
          */
         @Retention(RetentionPolicy.RUNTIME)
@@ -15758,14 +15868,6 @@ public final class JdbcUtil {
              * @return
              */
             String value() default "";
-        }
-
-        /**
-         * The Interface Sql.
-         */
-        @Retention(RetentionPolicy.RUNTIME)
-        @Target(ElementType.PARAMETER)
-        public static @interface Sql {
         }
 
         /**
@@ -18550,38 +18652,29 @@ public final class JdbcUtil {
             Try.BiFunction<Dao, Object[], ?, Throwable> call = null;
 
             if (!Modifier.isAbstract(m.getModifiers())) {
-                final boolean hasSqlParam = paramLen > 0 && StreamEx.of(m.getParameterAnnotations()[paramLen - 1]).select(Dao.Sql.class).first().isPresent();
-                final Annotation sqlAnno = StreamEx.of(m.getAnnotations())
-                        .filter(anno -> JdbcUtil.sqlAnnoMap.containsKey(anno.annotationType()))
-                        .first()
-                        .orNull();
+                final Dao.Sqls sqlsAnno = StreamEx.of(m.getAnnotations()).select(Dao.Sqls.class).onlyOne().orNull();
 
-                if (hasSqlParam) {
-                    if (sqlAnno == null) {
-                        throw new UnsupportedOperationException("To support sql binding by @Sql, one of sql annotation must be specified by: "
-                                + JdbcUtil.sqlAnnoMap.keySet() + " on method: " + m.getName());
-                    }
-
-                    if (!paramTypes[paramLen - 1].equals(String.class)) {
+                if (sqlsAnno != null) {
+                    if (paramLen == 0 || !paramTypes[paramLen - 1].equals(String[].class)) {
                         throw new UnsupportedOperationException(
-                                "To support sql binding by @Sql, the type of first parameter (annotated by @Sql) must be String. It can't be : " + paramTypes[0]
-                                        + " on method: " + m.getName());
+                                "To support sqls binding by @Sqls, the type of last parameter must be: String... sqls. It can't be : "
+                                        + paramTypes[paramLen - 1] + " on method: " + m.getName());
                     }
                 }
 
                 final MethodHandle methodHandle = createMethodHandle(m);
 
-                if (hasSqlParam) {
-                    final String sql = JdbcUtil.sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno);
+                if (sqlsAnno != null) {
+                    final String[] sqls = sqlsAnno.value();
 
                     call = (proxy, args) -> {
-                        if (args[paramLen - 1] != null) {
+                        if (N.notNullOrEmpty((String[]) args[paramLen - 1])) {
                             throw new IllegalArgumentException(
-                                    "The parameter annotated by @Sql must be null, don't specify it. It will auto-filled by sql from sql annotation on the method: "
+                                    "The last parameter(String[]) of method annotated by @Sqls must be null, don't specify it. It will auto-filled by sqls from annotation @Sqls on the method: "
                                             + m.getName());
                         }
 
-                        args[paramLen - 1] = sql;
+                        args[paramLen - 1] = sqls;
 
                         return methodHandle.bindTo(proxy).invokeWithArguments(args);
                     };

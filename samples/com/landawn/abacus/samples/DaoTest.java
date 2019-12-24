@@ -290,9 +290,11 @@ public class DaoTest {
             userDao.stream("firstName", CF.alwaysTrue()).forEach(Fn.println());
         }
 
-        userDao.listUserByAnnoSql(0, null).forEach(Fn.println());
+        userDao.listUserByAnnoSql(0).forEach(Fn.println());
 
-        assertEquals(1, userDao.listUserByAnnoSql(0, null).size());
+        assertEquals(1, userDao.listUserByAnnoSql(0).size());
+
+        assertEquals(1, userDao.listUserByAnnoSql2("newFirstName", 0).size());
 
         userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 

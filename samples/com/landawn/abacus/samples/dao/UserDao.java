@@ -41,10 +41,20 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
         return prepareNamedQuery("DELETE FROM user where id = :id").addBatchParameters(userIds).batchUpdate();
     }
 
-    @NamedSelect("SELECT * FROM user where id >= :id")
-    default List<User> listUserByAnnoSql(long id, @Sql String sql) {
+    @Sqls("SELECT * FROM user where id >= :id")
+    default List<User> listUserByAnnoSql(long id, String... sqls) {
         try {
-            return prepareNamedQuery(sql).setLong(1, id).list(User.class);
+            return prepareNamedQuery(sqls[0]).setLong(1, id).list(User.class);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    @Sqls({ "update user set first_name = ? where id = -1", "SELECT * FROM user where id >= :id" })
+    default List<User> listUserByAnnoSql2(String firstName, long id, String... sqls) {
+        try {
+            prepareQuery(sqls[0]).setString(1, firstName).update();
+            return prepareNamedQuery(sqls[1]).setLong(1, id).list(User.class);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         }
