@@ -1,3 +1,9 @@
+### 1.10.2
+
+* Supports `Transactional.Propagation`.
+* Improvements and bug fix.
+
+
 ### 1.10.1
 
 * Supports `@Sql/@Transactional`.

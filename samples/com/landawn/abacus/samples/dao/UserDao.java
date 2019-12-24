@@ -6,6 +6,7 @@ import java.util.List;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.JdbcUtil;
+import com.landawn.abacus.util.Propagation;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.stream.Stream;
 
@@ -56,6 +57,26 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
         try {
             prepareQuery(sqls[0]).setString(1, firstName).update();
             return prepareNamedQuery(sqls[1]).setLong(1, id).list(User.class);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    @Sqls("DELETE from user where id = ?")
+    @Transactional(propagation = Propagation.SUPPORTS)
+    default boolean delete_propagation_SUPPORTS(long id, String... sqls) {
+        try {
+            return prepareQuery(sqls[0]).setLong(1, id).update() > 0;
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    @Sqls("DELETE from user where id = ?")
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    default boolean delete_propagation_REQUIRES_NEW(long id, String... sqls) {
+        try {
+            return prepareQuery(sqls[0]).setLong(1, id).update() > 0;
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         }

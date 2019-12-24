@@ -1,6 +1,7 @@
 package com.landawn.abacus.samples;
 
 import static com.landawn.abacus.samples.Jdbc.addressMapper;
+import static com.landawn.abacus.samples.Jdbc.dataSource;
 import static com.landawn.abacus.samples.Jdbc.deviceMapper;
 import static com.landawn.abacus.samples.Jdbc.employeeDeptRelationshipDao;
 import static com.landawn.abacus.samples.Jdbc.noUpdateUserDao;
@@ -29,13 +30,45 @@ import com.landawn.abacus.samples.entity.EmployeeDeptRelationship;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
+import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.SQLTransaction;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.Stream;
 
 public class DaoTest {
+
+    @Test
+    public void test_propagation() throws SQLException {
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
+
+        User userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+        assertNotNull(userFromDB);
+
+        SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+        try {
+            userDao.delete_propagation_SUPPORTS(userFromDB.getId());
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertTrue(userDao.exists(userFromDB.getId()));
+
+        tran = JdbcUtil.beginTransaction(dataSource);
+
+        try {
+            userDao.delete_propagation_REQUIRES_NEW(userFromDB.getId());
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertFalse(userDao.exists(userFromDB.getId()));
+    }
 
     @Test
     public void test_includingJoinEntities() throws SQLException {
