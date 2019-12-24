@@ -1454,7 +1454,12 @@ public final class JdbcUtil {
         if (tran == null) {
             return cmd.apply(ds);
         } else {
-            return tran.callNotInMe(() -> cmd.apply(ds));
+            return tran.callNotInMe(new Try.Callable<T, E>() {
+                @Override
+                public T call() throws E {
+                    return cmd.apply(ds);
+                }
+            });
         }
     }
 
@@ -15827,7 +15832,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * The Interface Sqls.
+         * It's only for methods with default implementation in {@code Dao} interfaces. Don't use it for the abstract methods.
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
@@ -15855,7 +15860,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * The Interface Transactional.
+         * It's only for methods with default implementation in {@code Dao} interfaces. Don't use it for the abstract methods.
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
@@ -18668,14 +18673,6 @@ public final class JdbcUtil {
             Try.BiFunction<Dao, Object[], ?, Throwable> call = null;
 
             if (!Modifier.isAbstract(m.getModifiers())) {
-                if (sqlsAnno != null) {
-                    if (paramLen == 0 || !paramTypes[paramLen - 1].equals(String[].class)) {
-                        throw new UnsupportedOperationException(
-                                "To support sqls binding by @Sqls, the type of last parameter must be: String... sqls. It can't be : "
-                                        + paramTypes[paramLen - 1] + " on method: " + m.getName());
-                    }
-                }
-
                 final MethodHandle methodHandle = createMethodHandle(m);
 
                 call = (proxy, args) -> {

@@ -1,6 +1,6 @@
 ### 1.10.1
 
-* Supports `@Sql`.
+* Supports `@Sql/@Transactional`.
 * Improvements and bug fix.
 
 
