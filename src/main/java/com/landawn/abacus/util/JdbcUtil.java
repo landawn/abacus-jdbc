@@ -15865,6 +15865,7 @@ public final class JdbcUtil {
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
         public static @interface Transactional {
+            Propagation propagation() default Propagation.REQUIRED;
         }
 
         /**
@@ -18686,9 +18687,9 @@ public final class JdbcUtil {
                         args[paramLen - 1] = sqlsAnno.value();
                     }
 
-                    if (transactionalAnno == null) {
+                    if (transactionalAnno == null || transactionalAnno.propagation() == Propagation.SUPPORTS) {
                         return methodHandle.bindTo(proxy).invokeWithArguments(args);
-                    } else {
+                    } else if (transactionalAnno.propagation() == Propagation.REQUIRED) {
                         final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                         Object result = null;
 
@@ -18701,6 +18702,41 @@ public final class JdbcUtil {
                         }
 
                         return result;
+                    } else if (transactionalAnno.propagation() == Propagation.REQUIRES_NEW) {
+                        final javax.sql.DataSource dataSource = proxy.dataSource();
+
+                        return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
+                            final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+                            Object result = null;
+
+                            try {
+                                result = methodHandle.bindTo(proxy).invokeWithArguments(args);
+
+                                tran.commit();
+                            } catch (Exception e) {
+                                throw e;
+                            } catch (Throwable e) {
+                                throw new Exception(e);
+                            } finally {
+                                tran.rollbackIfNotCommitted();
+                            }
+
+                            return result;
+                        });
+                    } else if (transactionalAnno.propagation() == Propagation.NOT_SUPPORTED) {
+                        final javax.sql.DataSource dataSource = proxy.dataSource();
+
+                        return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
+                            try {
+                                return methodHandle.bindTo(proxy).invokeWithArguments(args);
+                            } catch (Exception e) {
+                                throw e;
+                            } catch (Throwable e) {
+                                throw new Exception(e);
+                            }
+                        });
+                    } else {
+                        return methodHandle.bindTo(proxy).invokeWithArguments(args);
                     }
                 };
 
