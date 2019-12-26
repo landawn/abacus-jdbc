@@ -17493,6 +17493,15 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param selectPropNames
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        Optional<T> get(final Collection<String> selectPropNames, final ID id) throws SQLException;
+
+        /**
+         *
          * @param id
          * @param includeAllJoinEntities
          * @return
@@ -17510,12 +17519,39 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param selectPropNames
          * @param id
+         * @param joinEntitiesToLoad
          * @return
          * @throws SQLException the SQL exception
          */
-        Optional<T> get(final Collection<String> selectPropNames, final ID id) throws SQLException;
+        default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws SQLException {
+            final Optional<T> result = get(id);
+
+            if (result.isPresent()) {
+                loadJoinEntities(result.get(), joinEntitiesToLoad);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param id
+         * @param joinEntitiesToLoad
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default Optional<T> get(final ID id, final Collection<Class<?>> joinEntitiesToLoad) throws SQLException {
+            final Optional<T> result = get(id);
+
+            if (result.isPresent()) {
+                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    loadJoinEntities(result.get(), joinEntityClass);
+                }
+            }
+
+            return result;
+        }
 
         /**
          * Gets the t.
@@ -17526,6 +17562,18 @@ public final class JdbcUtil {
          */
         default T gett(final ID id) throws SQLException {
             return get(id).orNull();
+        }
+
+        /**
+         * Gets the t.
+         *
+         * @param selectPropNames
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default T gett(final Collection<String> selectPropNames, final ID id) throws SQLException {
+            return get(selectPropNames, id).orNull();
         }
 
         /**
@@ -17540,15 +17588,25 @@ public final class JdbcUtil {
         }
 
         /**
-         * Gets the t.
          *
-         * @param selectPropNames
          * @param id
+         * @param joinEntitiesToLoad
          * @return
          * @throws SQLException the SQL exception
          */
-        default T gett(final Collection<String> selectPropNames, final ID id) throws SQLException {
-            return get(selectPropNames, id).orNull();
+        default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws SQLException {
+            return get(id, joinEntitiesToLoad).orNull();
+        }
+
+        /**
+         *
+         * @param id
+         * @param joinEntitiesToLoad
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default T gett(final ID id, final Collection<Class<?>> joinEntitiesToLoad) throws SQLException {
+            return get(id, joinEntitiesToLoad).orNull();
         }
 
         /**
