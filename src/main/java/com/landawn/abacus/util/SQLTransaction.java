@@ -14,6 +14,7 @@
 
 package com.landawn.abacus.util;
 
+import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Map;
@@ -34,7 +35,7 @@ import com.landawn.abacus.logging.LoggerFactory;
  * @author Haiyang Li
  * @since 0.8
  */
-public final class SQLTransaction implements Transaction {
+public final class SQLTransaction implements Transaction, Closeable {
 
     /** The Constant logger. */
     private static final Logger logger = LoggerFactory.getLogger(SQLTransaction.class);
@@ -518,6 +519,16 @@ public final class SQLTransaction implements Transaction {
                 throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.callNotInMe'.");
             }
         }
+    }
+
+    /**
+     * {@code rollbackIfNotCommitted} is called.
+     *
+     * @see #rollbackIfNotCommitted()
+     */
+    @Override
+    public void close() {
+        rollbackIfNotCommitted();
     }
 
     /**

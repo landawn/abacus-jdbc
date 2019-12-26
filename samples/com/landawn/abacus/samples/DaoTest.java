@@ -49,22 +49,14 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
-
-        try {
+        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
             userDao.delete_propagation_SUPPORTS(userFromDB.getId());
-        } finally {
-            tran.rollbackIfNotCommitted();
         }
 
         assertTrue(userDao.exists(userFromDB.getId()));
 
-        tran = JdbcUtil.beginTransaction(dataSource);
-
-        try {
+        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
             userDao.delete_propagation_REQUIRES_NEW(userFromDB.getId());
-        } finally {
-            tran.rollbackIfNotCommitted();
         }
 
         assertFalse(userDao.exists(userFromDB.getId()));

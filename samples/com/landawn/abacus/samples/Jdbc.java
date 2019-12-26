@@ -286,29 +286,21 @@ public class Jdbc {
         User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
 
-        SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT);
-
-        try {
+        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
             userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
             userDao.queryForBoolean("firstName", CF.eq("id", 100)); // throw exception.
             tran.commit();
         } catch (SQLException e) {
             // ignore
-        } finally {
-            tran.rollbackIfNotCommitted();
         }
 
         assertEquals("Forrest", userDao.gett(100L).getFirstName());
 
-        tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT);
-
-        try {
+        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
             userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
             tran.commit();
-        } finally {
-            tran.rollbackIfNotCommitted();
         }
 
         assertEquals("Tom", userDao.gett(100L).getFirstName());
