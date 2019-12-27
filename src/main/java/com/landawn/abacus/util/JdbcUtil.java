@@ -1339,7 +1339,7 @@ public final class JdbcUtil {
      * @throws E
      */
     @Beta
-    public static <T, E extends Exception> T callInTransaction(final javax.sql.DataSource ds, final Try.Callable<T, E> cmd) throws E {
+    public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd) throws E {
         final SQLTransaction tran = JdbcUtil.beginTransaction(ds);
         T result = null;
 
@@ -1363,7 +1363,7 @@ public final class JdbcUtil {
      * @throws E
      */
     @Beta
-    public static <T, E extends Exception> T callInTransaction(final javax.sql.DataSource ds, final Try.Function<javax.sql.DataSource, T, E> cmd) throws E {
+    public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Try.Function<javax.sql.DataSource, T, E> cmd) throws E {
         final SQLTransaction tran = JdbcUtil.beginTransaction(ds);
         T result = null;
 
@@ -1386,7 +1386,7 @@ public final class JdbcUtil {
      * @throws E
      */
     @Beta
-    public static <E extends Exception> void runInTransaction(final javax.sql.DataSource ds, final Try.Runnable<E> cmd) throws E {
+    public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws E {
         final SQLTransaction tran = JdbcUtil.beginTransaction(ds);
 
         try {
@@ -1406,7 +1406,7 @@ public final class JdbcUtil {
      * @throws E
      */
     @Beta
-    public static <E extends Exception> void runInTransaction(final javax.sql.DataSource ds, final Try.Consumer<javax.sql.DataSource, E> cmd) throws E {
+    public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Try.Consumer<javax.sql.DataSource, E> cmd) throws E {
         final SQLTransaction tran = JdbcUtil.beginTransaction(ds);
 
         try {
@@ -1427,7 +1427,7 @@ public final class JdbcUtil {
      * @throws E
      */
     @Beta
-    public static <T, E extends Exception> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Callable<T, E> cmd) throws E {
+    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd) throws E {
         final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran == null) {
@@ -1447,14 +1447,14 @@ public final class JdbcUtil {
      * @throws E
      */
     @Beta
-    public static <T, E extends Exception> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Function<javax.sql.DataSource, T, E> cmd)
+    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Function<javax.sql.DataSource, T, E> cmd)
             throws E {
         final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran == null) {
             return cmd.apply(ds);
         } else {
-            return tran.callNotInMe(new Try.Callable<T, E>() {
+            return tran.callNotInMe(new Throwables.Callable<T, E>() {
                 @Override
                 public T call() throws E {
                     return cmd.apply(ds);
@@ -1472,7 +1472,7 @@ public final class JdbcUtil {
      * @throws E
      */
     @Beta
-    public static <E extends Exception> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Runnable<E> cmd) throws E {
+    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws E {
         final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran == null) {
@@ -1491,7 +1491,7 @@ public final class JdbcUtil {
      * @throws E
      */
     @Beta
-    public static <E extends Exception> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Consumer<javax.sql.DataSource, E> cmd)
+    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Consumer<javax.sql.DataSource, E> cmd)
             throws E {
         final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
@@ -18745,57 +18745,7 @@ public final class JdbcUtil {
                         args[paramLen - 1] = sqlsAnno.value();
                     }
 
-                    if (transactionalAnno == null || transactionalAnno.propagation() == Propagation.SUPPORTS) {
-                        return methodHandle.bindTo(proxy).invokeWithArguments(args);
-                    } else if (transactionalAnno.propagation() == Propagation.REQUIRED) {
-                        final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
-                        Object result = null;
-
-                        try {
-                            result = methodHandle.bindTo(proxy).invokeWithArguments(args);
-
-                            tran.commit();
-                        } finally {
-                            tran.rollbackIfNotCommitted();
-                        }
-
-                        return result;
-                    } else if (transactionalAnno.propagation() == Propagation.REQUIRES_NEW) {
-                        final javax.sql.DataSource dataSource = proxy.dataSource();
-
-                        return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
-                            final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
-                            Object result = null;
-
-                            try {
-                                result = methodHandle.bindTo(proxy).invokeWithArguments(args);
-
-                                tran.commit();
-                            } catch (Exception e) {
-                                throw e;
-                            } catch (Throwable e) {
-                                throw new Exception(e);
-                            } finally {
-                                tran.rollbackIfNotCommitted();
-                            }
-
-                            return result;
-                        });
-                    } else if (transactionalAnno.propagation() == Propagation.NOT_SUPPORTED) {
-                        final javax.sql.DataSource dataSource = proxy.dataSource();
-
-                        return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
-                            try {
-                                return methodHandle.bindTo(proxy).invokeWithArguments(args);
-                            } catch (Exception e) {
-                                throw e;
-                            } catch (Throwable e) {
-                                throw new Exception(e);
-                            }
-                        });
-                    } else {
-                        return methodHandle.bindTo(proxy).invokeWithArguments(args);
-                    }
+                    return methodHandle.bindTo(proxy).invokeWithArguments(args);
                 };
 
             } else if (m.getName().equals("targetEntityClass") && Class.class.isAssignableFrom(returnType) && paramLen == 0) {
@@ -20544,6 +20494,52 @@ public final class JdbcUtil {
                         throw new UnsupportedOperationException("Unsupported sql annotation: " + sqlAnno.annotationType() + " in method: " + m.getName());
                     }
                 }
+            }
+
+            final Try.BiFunction<Dao, Object[], ?, Throwable> tmp = call;
+
+            if (transactionalAnno == null || transactionalAnno.propagation() == Propagation.SUPPORTS) {
+                // Do not need to do anything.
+            } else if (transactionalAnno.propagation() == Propagation.REQUIRED) {
+                call = (proxy, args) -> {
+                    final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                    Object result = null;
+
+                    try {
+                        result = tmp.apply(proxy, args);
+
+                        tran.commit();
+                    } finally {
+                        tran.rollbackIfNotCommitted();
+                    }
+
+                    return result;
+                };
+            } else if (transactionalAnno.propagation() == Propagation.REQUIRES_NEW) {
+                call = (proxy, args) -> {
+                    final javax.sql.DataSource dataSource = proxy.dataSource();
+
+                    return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
+                        final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+                        Object result = null;
+
+                        try {
+                            result = tmp.apply(proxy, args);
+
+                            tran.commit();
+                        } finally {
+                            tran.rollbackIfNotCommitted();
+                        }
+
+                        return result;
+                    });
+                };
+            } else if (transactionalAnno.propagation() == Propagation.NOT_SUPPORTED) {
+                call = (proxy, args) -> {
+                    final javax.sql.DataSource dataSource = proxy.dataSource();
+
+                    return JdbcUtil.callNotInStartedTransaction(dataSource, () -> tmp.apply(proxy, args));
+                };
             }
 
             methodInvokerMap.put(m, call);

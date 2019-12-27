@@ -488,7 +488,7 @@ public final class SQLTransaction implements Transaction, Closeable {
      * @param cmd
      * @throws E
      */
-    public <E extends Exception> void runNotInMe(Try.Runnable<E> cmd) throws E {
+    public <E extends Throwable> void runNotInMe(Throwables.Runnable<E> cmd) throws E {
         threadTransactionMap.remove(id);
 
         try {
@@ -509,7 +509,7 @@ public final class SQLTransaction implements Transaction, Closeable {
      * @return
      * @throws E
      */
-    public <R, E extends Exception> R callNotInMe(Try.Callable<R, E> cmd) throws E {
+    public <R, E extends Throwable> R callNotInMe(Throwables.Callable<R, E> cmd) throws E {
         threadTransactionMap.remove(id);
 
         try {
