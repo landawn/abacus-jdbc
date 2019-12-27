@@ -160,17 +160,17 @@ public class Jdbc {
             JdbcUtil.closeQuietly(stmt, conn);
         }
 
-        // As you can see, here are the problems:
+        // As you see, here are the problems:
         // 1, Manually create/open/close Connection/Statement/ResultSet.
         // 2, Manually set parameters to Statement.
         // 3, Manually read/map records from ResultSet.
         // If you're working on small project, where 20 tables defined with average 20 columns.
         // On average, if 20 (select/insert/update/delete) queries/methods created for each table,
         // On average, each query/method requires 20 lines codes. 20 tables * 20 queries/table * 20 lines/query = 8000 lines.
-        // A lot of efforts will be paid to write the codes and maintain (add/update/delete/rename/... tables/columns).
+        // A lot of efforts will have to be paid to write the codes and maintain (add/update/delete/rename/... tables/columns).
     }
 
-    // A bit(lot?) improvements:
+    // A bit(lot of?) improvements:
     @Test
     public void crud_by_PreparedQuery() throws SQLException {
 
@@ -229,7 +229,35 @@ public class Jdbc {
         // 3, No need to manually set parameters to Statement.
         // 4, Flexible/fluent APIs
         // But how to manage/maintain/reuse the tens/hundreds/thousands of SQL scripts?
-        // see below samples by Dao/Mapper:
+        // see below samples by Mapper:
+    }
+
+    @Test
+    public void crud_by_Mapper() {
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userMapper.insert(user);
+
+        User userFromDB = userMapper.gett(100L);
+        System.out.println(userFromDB);
+
+        // There are so much more can be done by findFirst/list/stream/
+        // userMapper.stream(CF.eq("firstName", "Forrest")).filter(u -> u.getId() > 10).map(e -> e).groupBy(keyMapper);
+
+        userMapper.update(N.asProps("firstName", "Tom", "lastName", "Hanks"), CF.eq("id", 100));
+
+        userMapper.deleteById(100L);
+
+        // Improvements:
+        // 1, No need to manually create/open and close Connection/Statement/ResultSet.
+        // 2, No need to manually read records from ResultSet.
+        // 3, No need to manually set parameters to Statement.
+        // 4, Flexible/fluent APIs
+        // 5, SQL scripts are managed/mapped with static type info, without any implementation required.
+        // But:
+        //   a), Compositing sqls by parameters/conditions has some minor performance impact, although it really doesn't mater most of time.
+        //       It's still kind of waste and you may want to avoid it. After all, if better can be pursued, why not?
+        //   b), Not all the queries can be auto-composited by parameters/conditions and you may want to customized some queries.
+        // Try Dao, see below sample:
     }
 
     @Test
@@ -248,31 +276,6 @@ public class Jdbc {
         userDao.allUsers().map(e -> e.getFirstName() + " " + e.getLastName()).forEach(Fn.println());
 
         userDao.deleteById(100L);
-
-        // Improvements:
-        // 1, No need to manually create/open and close Connection/Statement/ResultSet.
-        // 2, No need to manually read records from ResultSet.
-        // 3, No need to manually set parameters to Statement.
-        // 4, Flexible/fluent APIs
-        // 5, SQL scripts are managed/mapped with static type info, without any implementation required.
-        // But how about if we don't want to write any SQL scripts?
-        // Try Mapper, see below sample:
-    }
-
-    @Test
-    public void crud_by_Mapper() {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-        userMapper.insert(user);
-
-        User userFromDB = userMapper.gett(100L);
-        System.out.println(userFromDB);
-
-        // There are so much more can be done by findFirst/list/stream/
-        // userMapper.stream(CF.eq("firstName", "Forrest")).filter(u -> u.getId() > 10).map(e -> e).groupBy(keyMapper);
-
-        userMapper.update(N.asProps("firstName", "Tom", "lastName", "Hanks"), CF.eq("id", 100));
-
-        userMapper.deleteById(100L);
 
         // How about transaction?
         // See last sample.
