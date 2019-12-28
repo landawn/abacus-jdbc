@@ -5448,13 +5448,17 @@ public final class JdbcUtil {
      */
     public static void disableSpringTransactional(boolean b) {
         // synchronized (isSpringTransactionalDisabled_TL) {
-        if (b) {
-            logger.warn("Disable Spring Transactional");
-        } else {
-            logger.warn("Enable Spring Transactional again");
-        }
+        if (isInSpring) {
+            if (b) {
+                logger.warn("Disable Spring Transactional");
+            } else {
+                logger.warn("Enable Spring Transactional again");
+            }
 
-        isSpringTransactionalDisabled_TL.set(b);
+            isSpringTransactionalDisabled_TL.set(b);
+        } else {
+            logger.warn("Not in Spring or not able to retrieve Spring Transactional");
+        }
         // }
     }
 
