@@ -47,7 +47,7 @@ public class Jdbc {
 
     // initialize DB schema.
     static {
-        JdbcUtil.setLogSQL(true);
+        JdbcUtil.enableSQLLog(true);
         JdbcUtil.logSQLPerfAt(10);
 
         final String sql_user_drop_table = "DROP TABLE IF EXISTS user";
