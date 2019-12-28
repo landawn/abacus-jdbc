@@ -1430,10 +1430,24 @@ public final class JdbcUtil {
     public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd) throws E {
         final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
-        if (tran == null) {
-            return cmd.call();
+        if (isInSpring && enableSpringTransactional_TL.get()) {
+            JdbcUtil.setSpringTransactional(false);
+
+            try {
+                if (tran == null) {
+                    return cmd.call();
+                } else {
+                    return tran.callNotInMe(cmd);
+                }
+            } finally {
+                JdbcUtil.setSpringTransactional(true);
+            }
         } else {
-            return tran.callNotInMe(cmd);
+            if (tran == null) {
+                return cmd.call();
+            } else {
+                return tran.callNotInMe(cmd);
+            }
         }
     }
 
@@ -1451,15 +1465,24 @@ public final class JdbcUtil {
             final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws E {
         final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
-        if (tran == null) {
-            return cmd.apply(ds);
-        } else {
-            return tran.callNotInMe(new Throwables.Callable<T, E>() {
-                @Override
-                public T call() throws E {
+        if (isInSpring && enableSpringTransactional_TL.get()) {
+            JdbcUtil.setSpringTransactional(false);
+
+            try {
+                if (tran == null) {
                     return cmd.apply(ds);
+                } else {
+                    return tran.callNotInMe(() -> cmd.apply(ds));
                 }
-            });
+            } finally {
+                JdbcUtil.setSpringTransactional(true);
+            }
+        } else {
+            if (tran == null) {
+                return cmd.apply(ds);
+            } else {
+                return tran.callNotInMe(() -> cmd.apply(ds));
+            }
         }
     }
 
@@ -1475,10 +1498,24 @@ public final class JdbcUtil {
     public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws E {
         final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
-        if (tran == null) {
-            cmd.run();
+        if (isInSpring && enableSpringTransactional_TL.get()) {
+            JdbcUtil.setSpringTransactional(false);
+
+            try {
+                if (tran == null) {
+                    cmd.run();
+                } else {
+                    tran.runNotInMe(cmd);
+                }
+            } finally {
+                JdbcUtil.setSpringTransactional(true);
+            }
         } else {
-            tran.runNotInMe(cmd);
+            if (tran == null) {
+                cmd.run();
+            } else {
+                tran.runNotInMe(cmd);
+            }
         }
     }
 
@@ -1495,10 +1532,24 @@ public final class JdbcUtil {
             throws E {
         final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
-        if (tran == null) {
-            cmd.accept(ds);
+        if (isInSpring && enableSpringTransactional_TL.get()) {
+            JdbcUtil.setSpringTransactional(false);
+
+            try {
+                if (tran == null) {
+                    cmd.accept(ds);
+                } else {
+                    tran.runNotInMe(() -> cmd.accept(ds));
+                }
+            } finally {
+                JdbcUtil.setSpringTransactional(true);
+            }
         } else {
-            tran.runNotInMe(() -> cmd.accept(ds));
+            if (tran == null) {
+                cmd.accept(ds);
+            } else {
+                tran.runNotInMe(() -> cmd.accept(ds));
+            }
         }
     }
 
