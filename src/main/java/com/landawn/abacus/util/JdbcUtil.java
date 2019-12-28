@@ -1499,7 +1499,7 @@ public final class JdbcUtil {
         final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
-            JdbcUtil.disableSpringTransactional(false);
+            JdbcUtil.disableSpringTransactional(true);
 
             try {
                 if (tran == null) {
@@ -1508,7 +1508,7 @@ public final class JdbcUtil {
                     tran.runNotInMe(cmd);
                 }
             } finally {
-                JdbcUtil.disableSpringTransactional(true);
+                JdbcUtil.disableSpringTransactional(false);
             }
         } else {
             if (tran == null) {
@@ -1542,7 +1542,7 @@ public final class JdbcUtil {
                     tran.runNotInMe(() -> cmd.accept(ds));
                 }
             } finally {
-                JdbcUtil.disableSpringTransactional(true);
+                JdbcUtil.disableSpringTransactional(false);
             }
         } else {
             if (tran == null) {
@@ -5448,12 +5448,10 @@ public final class JdbcUtil {
      */
     public static void disableSpringTransactional(boolean b) {
         // synchronized (isSpringTransactionalDisabled_TL) {
-        if (logger.isInfoEnabled()) {
-            if (b) {
-                logger.info("Disable Spring Transactional");
-            } else {
-                logger.info("Enable Spring Transactional again");
-            }
+        if (b) {
+            logger.warn("Disable Spring Transactional");
+        } else {
+            logger.warn("Enable Spring Transactional again");
         }
 
         isSpringTransactionalDisabled_TL.set(b);
