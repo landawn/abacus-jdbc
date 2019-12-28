@@ -4842,7 +4842,7 @@ public final class JdbcUtil {
      * @throws E2 the e2
      */
     public static <E extends Exception, E2 extends Exception> void parse(final Connection conn, final String sql,
-            final Throwables.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
+            final Throwables.Consumer<Object[], E> rowParser, final Throwables.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
         parse(conn, sql, 0, Long.MAX_VALUE, rowParser, onComplete);
     }
 
@@ -4877,7 +4877,7 @@ public final class JdbcUtil {
      * @throws E2 the e2
      */
     public static <E extends Exception, E2 extends Exception> void parse(final Connection conn, final String sql, final long offset, final long count,
-            final Throwables.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
+            final Throwables.Consumer<Object[], E> rowParser, final Throwables.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
         parse(conn, sql, offset, count, 0, 0, rowParser, onComplete);
     }
 
@@ -4917,7 +4917,7 @@ public final class JdbcUtil {
      * @throws E2 the e2
      */
     public static <E extends Exception, E2 extends Exception> void parse(final Connection conn, final String sql, final long offset, final long count,
-            final int processThreadNum, final int queueSize, final Throwables.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete)
+            final int processThreadNum, final int queueSize, final Throwables.Consumer<Object[], E> rowParser, final Throwables.Runnable<E2> onComplete)
             throws UncheckedSQLException, E, E2 {
         PreparedStatement stmt = null;
         try {
@@ -4960,7 +4960,7 @@ public final class JdbcUtil {
      * @throws E2 the e2
      */
     public static <E extends Exception, E2 extends Exception> void parse(final PreparedStatement stmt, final Throwables.Consumer<Object[], E> rowParser,
-            final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
+            final Throwables.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
         parse(stmt, 0, Long.MAX_VALUE, rowParser, onComplete);
     }
 
@@ -4992,7 +4992,7 @@ public final class JdbcUtil {
      * @throws E2 the e2
      */
     public static <E extends Exception, E2 extends Exception> void parse(final PreparedStatement stmt, final long offset, final long count,
-            final Throwables.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
+            final Throwables.Consumer<Object[], E> rowParser, final Throwables.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
         parse(stmt, offset, count, 0, 0, rowParser, onComplete);
     }
 
@@ -5030,7 +5030,7 @@ public final class JdbcUtil {
      * @throws E2 the e2
      */
     public static <E extends Exception, E2 extends Exception> void parse(final PreparedStatement stmt, final long offset, final long count,
-            final int processThreadNum, final int queueSize, final Throwables.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete)
+            final int processThreadNum, final int queueSize, final Throwables.Consumer<Object[], E> rowParser, final Throwables.Runnable<E2> onComplete)
             throws UncheckedSQLException, E, E2 {
         ResultSet rs = null;
 
@@ -5069,7 +5069,7 @@ public final class JdbcUtil {
      * @throws E2 the e2
      */
     public static <E extends Exception, E2 extends Exception> void parse(final ResultSet rs, final Throwables.Consumer<Object[], E> rowParser,
-            final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
+            final Throwables.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
         parse(rs, 0, Long.MAX_VALUE, rowParser, onComplete);
     }
 
@@ -5102,7 +5102,7 @@ public final class JdbcUtil {
      * @throws E2 the e2
      */
     public static <E extends Exception, E2 extends Exception> void parse(final ResultSet rs, long offset, long count,
-            final Throwables.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
+            final Throwables.Consumer<Object[], E> rowParser, final Throwables.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
         parse(rs, offset, count, 0, 0, rowParser, onComplete);
     }
 
@@ -5140,7 +5140,8 @@ public final class JdbcUtil {
      * @throws E2 the e2
      */
     public static <E extends Exception, E2 extends Exception> void parse(final ResultSet rs, long offset, long count, final int processThreadNum,
-            final int queueSize, final Throwables.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
+            final int queueSize, final Throwables.Consumer<Object[], E> rowParser, final Throwables.Runnable<E2> onComplete)
+            throws UncheckedSQLException, E, E2 {
 
         final Iterator<Object[]> iter = new ObjIterator<Object[]>() {
             private final JdbcUtil.BiRowMapper<Object[]> biFunc = BiRowMapper.TO_ARRAY;
@@ -5299,7 +5300,7 @@ public final class JdbcUtil {
             }
         };
 
-        final Try.Runnable<RuntimeException> onComplete = new Try.Runnable<RuntimeException>() {
+        final Throwables.Runnable<RuntimeException> onComplete = new Throwables.Runnable<RuntimeException>() {
             @Override
             public void run() {
                 if ((result.longValue() % batchSize) > 0) {
@@ -5417,7 +5418,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException
      */
     @Beta
-    static void run(Try.Runnable<SQLException> sqlCmd) throws UncheckedSQLException {
+    static void run(Throwables.Runnable<SQLException> sqlCmd) throws UncheckedSQLException {
         try {
             sqlCmd.run();
         } catch (SQLException e) {
@@ -5433,7 +5434,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException
      */
     @Beta
-    static <R> R call(Try.Callable<R, SQLException> sqlCmd) throws UncheckedSQLException {
+    static <R> R call(Throwables.Callable<R, SQLException> sqlCmd) throws UncheckedSQLException {
         try {
             return sqlCmd.call();
         } catch (SQLException e) {
@@ -8164,7 +8165,7 @@ public final class JdbcUtil {
                         }
                     });
 
-            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
                 @Override
                 public void run() throws SQLException {
                     lazyIter.close();
@@ -8271,7 +8272,7 @@ public final class JdbcUtil {
                         }
                     });
 
-            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
                 @Override
                 public void run() throws SQLException {
                     lazyIter.close();
@@ -8358,7 +8359,7 @@ public final class JdbcUtil {
                         }
                     });
 
-            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
                 @Override
                 public void run() throws SQLException {
                     lazyIter.close();
@@ -8450,7 +8451,7 @@ public final class JdbcUtil {
                         }
                     });
 
-            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
                 @Override
                 public void run() throws SQLException {
                     lazyIter.close();
@@ -8517,7 +8518,7 @@ public final class JdbcUtil {
          * @param orElseAction
          * @throws SQLException the SQL exception
          */
-        public void ifExistsOrElse(final RowConsumer rowConsumer, Try.Runnable<SQLException> orElseAction) throws SQLException {
+        public void ifExistsOrElse(final RowConsumer rowConsumer, Throwables.Runnable<SQLException> orElseAction) throws SQLException {
             checkArgNotNull(rowConsumer, "rowConsumer");
             checkArgNotNull(orElseAction, "orElseAction");
             assertNotClosed();
@@ -8540,7 +8541,7 @@ public final class JdbcUtil {
          * @param orElseAction
          * @throws SQLException the SQL exception
          */
-        public void ifExistsOrElse(final BiRowConsumer rowConsumer, Try.Runnable<SQLException> orElseAction) throws SQLException {
+        public void ifExistsOrElse(final BiRowConsumer rowConsumer, Throwables.Runnable<SQLException> orElseAction) throws SQLException {
             checkArgNotNull(rowConsumer, "rowConsumer");
             checkArgNotNull(orElseAction, "orElseAction");
             assertNotClosed();
@@ -19123,7 +19124,7 @@ public final class JdbcUtil {
                                         }
                                     });
 
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
                                 @Override
                                 public void run() throws SQLException {
                                     lazyIter.close();
@@ -19152,7 +19153,7 @@ public final class JdbcUtil {
                                         }
                                     });
 
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
                                 @Override
                                 public void run() throws SQLException {
                                     lazyIter.close();
@@ -19181,7 +19182,7 @@ public final class JdbcUtil {
                                         }
                                     });
 
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
                                 @Override
                                 public void run() throws SQLException {
                                     lazyIter.close();
@@ -19210,7 +19211,7 @@ public final class JdbcUtil {
                                         }
                                     });
 
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
                                 @Override
                                 public void run() throws SQLException {
                                     lazyIter.close();
@@ -19239,7 +19240,7 @@ public final class JdbcUtil {
                                         }
                                     });
 
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
                                 @Override
                                 public void run() throws SQLException {
                                     lazyIter.close();
@@ -19265,7 +19266,7 @@ public final class JdbcUtil {
                                         }
                                     });
 
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
                                 @Override
                                 public void run() throws SQLException {
                                     lazyIter.close();
@@ -19294,7 +19295,7 @@ public final class JdbcUtil {
                                         }
                                     });
 
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
                                 @Override
                                 public void run() throws SQLException {
                                     lazyIter.close();
@@ -19323,7 +19324,7 @@ public final class JdbcUtil {
                                         }
                                     });
 
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
                                 @Override
                                 public void run() throws SQLException {
                                     lazyIter.close();
@@ -19352,7 +19353,7 @@ public final class JdbcUtil {
                                         }
                                     });
 
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
                                 @Override
                                 public void run() throws SQLException {
                                     lazyIter.close();
@@ -19381,7 +19382,7 @@ public final class JdbcUtil {
                                         }
                                     });
 
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Try.Runnable<SQLException>() {
+                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
                                 @Override
                                 public void run() throws SQLException {
                                     lazyIter.close();
