@@ -49,7 +49,7 @@ public class DaoTest {
                 if (idx % 2 == 0) {
                     System.out.println("###: enable log for Thread: " + Thread.currentThread());
                     JdbcUtil.enableSQLLog(true);
-                    JdbcUtil.logSQLPerfAt(0);
+                    JdbcUtil.setMinExecutionTimeForSQLPerfLog(0);
                 } else {
                     System.out.println("+++: Not enable log for Thread: " + Thread.currentThread());
                 }
@@ -64,7 +64,7 @@ public class DaoTest {
                 if (idx % 2 == 0) {
                     System.out.println("###: disable log for Thread: " + Thread.currentThread());
                     JdbcUtil.enableSQLLog(false);
-                    JdbcUtil.logSQLPerfAt(-1);
+                    JdbcUtil.setMinExecutionTimeForSQLPerfLog(-1);
                 }
             }
         });

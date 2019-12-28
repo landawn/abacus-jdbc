@@ -1050,8 +1050,7 @@ public class SQLExecutor {
     }
 
     static <ID> Function<Object, ID> getIdGetter(final Object entity) {
-        return (Function<Object, ID>) JdbcUtil.getIdGeneratorGetterSetter(entity == null ? null : entity.getClass(),
-                NamingPolicy.LOWER_CASE_WITH_UNDERSCORE)._2;
+        return (Function<Object, ID>) JdbcUtil.getIdGeneratorGetterSetter(entity == null ? null : entity.getClass(), NamingPolicy.LOWER_CASE_WITH_UNDERSCORE)._2;
     }
 
     static <ID> BiConsumer<ID, Object> getIdSetter(final Object entity) {
@@ -5399,7 +5398,7 @@ public class SQLExecutor {
                 } else {
                     logger.info("[SQL]: " + namedSQL.getNamedSQL());
                 }
-            } else if (JdbcUtil.isLogSQLEnabled_TL.get()) {
+            } else if (JdbcUtil.isSQLLogEnabled_TL.get()) {
                 logger.info("[SQL]: " + namedSQL.getNamedSQL());
             }
         }
