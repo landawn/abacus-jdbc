@@ -9032,7 +9032,7 @@ public class SQLExecutor {
             loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
         }
 
-        private static final Try.Consumer<? super Exception, RuntimeException> throwRuntimeExceptionAction = e -> {
+        private static final Throwables.Consumer<? super Exception, RuntimeException> throwRuntimeExceptionAction = e -> {
             throw N.toRuntimeException(e);
         };
 
@@ -9145,11 +9145,11 @@ public class SQLExecutor {
          */
         void setParameters(final NamedSQL namedSQL, final PreparedStatement stmt, final Object... parameters) throws SQLException;
 
-        static StatementSetter create(Try.Consumer<PreparedStatement, SQLException> stmtSetter) {
+        static StatementSetter create(Throwables.Consumer<PreparedStatement, SQLException> stmtSetter) {
             return (namedSQL, stmt, parameters) -> stmtSetter.accept(stmt);
         }
 
-        static StatementSetter create(Try.BiConsumer<NamedQuery, Object[], SQLException> stmtSetter) {
+        static StatementSetter create(Throwables.BiConsumer<NamedQuery, Object[], SQLException> stmtSetter) {
             return (namedSQL, stmt, parameters) -> stmtSetter.accept(new NamedQuery(stmt, namedSQL), parameters);
         }
     }
@@ -9179,15 +9179,15 @@ public class SQLExecutor {
          */
         T extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException;
 
-        static <T> ResultExtractor<T> create(Try.Function<ResultSet, T, SQLException> resultExtractor) {
+        static <T> ResultExtractor<T> create(Throwables.Function<ResultSet, T, SQLException> resultExtractor) {
             return (rs, jdbcSettings) -> resultExtractor.apply(rs);
         }
 
-        static <T> ResultExtractor<T> create(Try.BiFunction<ResultSet, List<String>, T, SQLException> resultExtractor) {
+        static <T> ResultExtractor<T> create(Throwables.BiFunction<ResultSet, List<String>, T, SQLException> resultExtractor) {
             return (rs, jdbcSettings) -> resultExtractor.apply(rs, JdbcUtil.getColumnLabelList(rs));
         }
 
-        static <T> ResultExtractor<T> create(Try.TriFunction<ResultSet, List<String>, JdbcSettings, T, SQLException> resultExtractor) {
+        static <T> ResultExtractor<T> create(Throwables.TriFunction<ResultSet, List<String>, JdbcSettings, T, SQLException> resultExtractor) {
             return (rs, jdbcSettings) -> resultExtractor.apply(rs, JdbcUtil.getColumnLabelList(rs), jdbcSettings);
         }
 

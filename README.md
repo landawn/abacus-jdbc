@@ -27,7 +27,7 @@ Hope it will provide you the programming experiences: coding with SQL/DB is just
 * Gradle:
 ```gradle
 // JDK 1.8 or above:
-compile 'com.landawn:abacus-jdbc:1.10.1'
+compile 'com.landawn:abacus-jdbc:1.10.2'
 ```
 
 ## User Guide:

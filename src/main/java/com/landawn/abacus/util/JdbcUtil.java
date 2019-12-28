@@ -122,7 +122,6 @@ import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.SQLExecutor.StatementSetter;
 import com.landawn.abacus.util.SQLTransaction.CreatedBy;
 import com.landawn.abacus.util.StringUtil.Strings;
-import com.landawn.abacus.util.Try.Consumer;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.Tuple.Tuple4;
@@ -1363,7 +1362,8 @@ public final class JdbcUtil {
      * @throws E
      */
     @Beta
-    public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Try.Function<javax.sql.DataSource, T, E> cmd) throws E {
+    public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Function<javax.sql.DataSource, T, E> cmd)
+            throws E {
         final SQLTransaction tran = JdbcUtil.beginTransaction(ds);
         T result = null;
 
@@ -1406,7 +1406,7 @@ public final class JdbcUtil {
      * @throws E
      */
     @Beta
-    public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Try.Consumer<javax.sql.DataSource, E> cmd) throws E {
+    public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws E {
         final SQLTransaction tran = JdbcUtil.beginTransaction(ds);
 
         try {
@@ -1447,8 +1447,8 @@ public final class JdbcUtil {
      * @throws E
      */
     @Beta
-    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Function<javax.sql.DataSource, T, E> cmd)
-            throws E {
+    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds,
+            final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws E {
         final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran == null) {
@@ -1491,7 +1491,7 @@ public final class JdbcUtil {
      * @throws E
      */
     @Beta
-    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Try.Consumer<javax.sql.DataSource, E> cmd)
+    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd)
             throws E {
         final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
@@ -1673,7 +1673,7 @@ public final class JdbcUtil {
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql,
-            final Try.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
         final SQLTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
@@ -1797,7 +1797,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql,
-            final Try.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotNull(sql, "sql");
         N.checkArgNotNull(stmtCreator, "stmtCreator");
@@ -1956,7 +1956,7 @@ public final class JdbcUtil {
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql,
-            final Try.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
         final SQLTransaction tran = getTransaction(ds, namedSql, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
@@ -2088,7 +2088,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql,
-            final Try.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotNull(namedSql, "namedSql");
         N.checkArgNotNull(stmtCreator, "stmtCreator");
@@ -2257,7 +2257,7 @@ public final class JdbcUtil {
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final NamedSQL namedSQL,
-            final Try.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
         validateNamedSQL(namedSQL);
 
         final SQLTransaction tran = getTransaction(ds, namedSQL.getParameterizedSQL(), CreatedBy.JDBC_UTIL);
@@ -2387,7 +2387,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final NamedSQL namedSQL,
-            final Try.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotNull(namedSQL, "namedSQL");
         N.checkArgNotNull(stmtCreator, "stmtCreator");
@@ -2445,7 +2445,7 @@ public final class JdbcUtil {
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static PreparedCallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql,
-            final Try.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
         final SQLTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
@@ -2505,7 +2505,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static PreparedCallableQuery prepareCallableQuery(final Connection conn, final String sql,
-            final Try.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotNull(sql, "sql");
         N.checkArgNotNull(stmtCreator, "stmtCreator");
@@ -2555,7 +2555,7 @@ public final class JdbcUtil {
     }
 
     static PreparedStatement prepareStatement(final Connection conn, final String sql,
-            final Try.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
         if (isLogSQL) {
             logger.info("[SQL]: " + sql);
         }
@@ -2605,7 +2605,7 @@ public final class JdbcUtil {
     }
 
     static PreparedStatement prepareStatement(final Connection conn, final NamedSQL namedSQL,
-            final Try.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
         if (isLogSQL) {
             logger.info("[SQL]: " + namedSQL.getNamedSQL());
         }
@@ -2622,7 +2622,7 @@ public final class JdbcUtil {
     }
 
     static CallableStatement prepareCallable(final Connection conn, final String sql,
-            final Try.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
         if (isLogSQL) {
             logger.info("[SQL]: " + sql);
         }
@@ -2639,7 +2639,7 @@ public final class JdbcUtil {
     }
 
     static CallableStatement prepareCallable(final Connection conn, final NamedSQL namedSQL,
-            final Try.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
         if (isLogSQL) {
             logger.info("[SQL]: " + namedSQL.getNamedSQL());
         }
@@ -3665,7 +3665,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> int importData(final DataSet dataset, final Collection<String> selectColumnNames, final int offset, final int count,
-            final Try.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval)
+            final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval)
             throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
@@ -3773,7 +3773,7 @@ public final class JdbcUtil {
      */
     @SuppressWarnings("rawtypes")
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
-            final Try.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
+            final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
             final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
@@ -3877,7 +3877,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
-            final Try.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
+            final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
             final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
@@ -3968,7 +3968,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> int importData(final DataSet dataset, final Collection<String> selectColumnNames, final int offset, final int count,
-            final Try.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval)
+            final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval)
             throws UncheckedSQLException, E {
         final Type<?> objType = N.typeOf(Object.class);
         final Map<String, Type<?>> columnTypeMap = new HashMap<>();
@@ -4049,7 +4049,7 @@ public final class JdbcUtil {
      */
     @SuppressWarnings("rawtypes")
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
-            final Try.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
+            final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
             final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
@@ -4187,7 +4187,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
-            final Try.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
+            final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
             final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
@@ -4244,7 +4244,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> long importData(final File file, final Connection conn, final String insertSQL,
-            final Try.Function<String, Object[], E> func) throws UncheckedSQLException, E {
+            final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
         return importData(file, 0, Long.MAX_VALUE, conn, insertSQL, 200, 0, func);
     }
 
@@ -4264,7 +4264,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> long importData(final File file, final long offset, final long count, final Connection conn, final String insertSQL,
-            final int batchSize, final int batchInterval, final Try.Function<String, Object[], E> func) throws UncheckedSQLException, E {
+            final int batchSize, final int batchInterval, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
@@ -4288,7 +4288,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
-    public static <E extends Exception> long importData(final File file, final PreparedStatement stmt, final Try.Function<String, Object[], E> func)
+    public static <E extends Exception> long importData(final File file, final PreparedStatement stmt, final Throwables.Function<String, Object[], E> func)
             throws UncheckedSQLException, E {
         return importData(file, 0, Long.MAX_VALUE, stmt, 200, 0, func);
     }
@@ -4309,7 +4309,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> long importData(final File file, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final Try.Function<String, Object[], E> func) throws UncheckedSQLException, E {
+            final int batchInterval, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
         Reader reader = null;
 
         try {
@@ -4335,7 +4335,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> long importData(final InputStream is, final Connection conn, final String insertSQL,
-            final Try.Function<String, Object[], E> func) throws UncheckedSQLException, E {
+            final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
         return importData(is, 0, Long.MAX_VALUE, conn, insertSQL, 200, 0, func);
     }
 
@@ -4355,7 +4355,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> long importData(final InputStream is, final long offset, final long count, final Connection conn,
-            final String insertSQL, final int batchSize, final int batchInterval, final Try.Function<String, Object[], E> func)
+            final String insertSQL, final int batchSize, final int batchInterval, final Throwables.Function<String, Object[], E> func)
             throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
@@ -4379,7 +4379,7 @@ public final class JdbcUtil {
      * @return
      * @throws E the e
      */
-    public static <E extends Exception> long importData(final InputStream is, final PreparedStatement stmt, final Try.Function<String, Object[], E> func)
+    public static <E extends Exception> long importData(final InputStream is, final PreparedStatement stmt, final Throwables.Function<String, Object[], E> func)
             throws E {
         return importData(is, 0, Long.MAX_VALUE, stmt, 200, 0, func);
     }
@@ -4400,7 +4400,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> long importData(final InputStream is, final long offset, final long count, final PreparedStatement stmt,
-            final int batchSize, final int batchInterval, final Try.Function<String, Object[], E> func) throws UncheckedSQLException, E {
+            final int batchSize, final int batchInterval, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
         final Reader reader = new InputStreamReader(is);
 
         return importData(reader, offset, count, stmt, batchSize, batchInterval, func);
@@ -4418,7 +4418,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> long importData(final Reader reader, final Connection conn, final String insertSQL,
-            final Try.Function<String, Object[], E> func) throws UncheckedSQLException, E {
+            final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
         return importData(reader, 0, Long.MAX_VALUE, conn, insertSQL, 200, 0, func);
     }
 
@@ -4438,7 +4438,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> long importData(final Reader reader, final long offset, final long count, final Connection conn, final String insertSQL,
-            final int batchSize, final int batchInterval, final Try.Function<String, Object[], E> func) throws UncheckedSQLException, E {
+            final int batchSize, final int batchInterval, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
@@ -4461,7 +4461,7 @@ public final class JdbcUtil {
      * @return
      * @throws E the e
      */
-    public static <E extends Exception> long importData(final Reader reader, final PreparedStatement stmt, final Try.Function<String, Object[], E> func)
+    public static <E extends Exception> long importData(final Reader reader, final PreparedStatement stmt, final Throwables.Function<String, Object[], E> func)
             throws E {
         return importData(reader, 0, Long.MAX_VALUE, stmt, 200, 0, func);
     }
@@ -4482,7 +4482,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> long importData(final Reader reader, long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final Try.Function<String, Object[], E> func) throws UncheckedSQLException, E {
+            final int batchInterval, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
                 batchInterval);
@@ -4546,7 +4546,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, final Connection conn, final String insertSQL,
-            final Try.Function<? super T, Object[], E> func) throws UncheckedSQLException, E {
+            final Throwables.Function<? super T, Object[], E> func) throws UncheckedSQLException, E {
         return importData(iter, 0, Long.MAX_VALUE, conn, insertSQL, 200, 0, func);
     }
 
@@ -4567,7 +4567,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, final long offset, final long count, final Connection conn,
-            final String insertSQL, final int batchSize, final int batchInterval, final Try.Function<? super T, Object[], E> func)
+            final String insertSQL, final int batchSize, final int batchInterval, final Throwables.Function<? super T, Object[], E> func)
             throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
@@ -4593,7 +4593,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, final PreparedStatement stmt,
-            final Try.Function<? super T, Object[], E> func) throws E {
+            final Throwables.Function<? super T, Object[], E> func) throws E {
         return importData(iter, 0, Long.MAX_VALUE, stmt, 200, 0, func);
     }
 
@@ -4614,7 +4614,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, long offset, final long count, final PreparedStatement stmt,
-            final int batchSize, final int batchInterval, final Try.Function<? super T, Object[], E> func) throws UncheckedSQLException, E {
+            final int batchSize, final int batchInterval, final Throwables.Function<? super T, Object[], E> func) throws UncheckedSQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
                 batchInterval);
@@ -4710,7 +4710,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, final long offset, final long count,
-            final Try.Predicate<? super T, E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
+            final Throwables.Predicate<? super T, E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
             final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
@@ -4772,8 +4772,8 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
-    public static <T, E extends Exception> long importData(final Iterator<T> iter, long offset, final long count, final Try.Predicate<? super T, E> filter,
-            final PreparedStatement stmt, final int batchSize, final int batchInterval,
+    public static <T, E extends Exception> long importData(final Iterator<T> iter, long offset, final long count,
+            final Throwables.Predicate<? super T, E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
             final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) throws UncheckedSQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
@@ -4824,7 +4824,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
-    public static <E extends Exception> void parse(final Connection conn, final String sql, final Try.Consumer<Object[], E> rowParser)
+    public static <E extends Exception> void parse(final Connection conn, final String sql, final Throwables.Consumer<Object[], E> rowParser)
             throws UncheckedSQLException, E {
         parse(conn, sql, rowParser, Fn.emptyAction());
     }
@@ -4841,8 +4841,8 @@ public final class JdbcUtil {
      * @throws E the e
      * @throws E2 the e2
      */
-    public static <E extends Exception, E2 extends Exception> void parse(final Connection conn, final String sql, final Try.Consumer<Object[], E> rowParser,
-            final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
+    public static <E extends Exception, E2 extends Exception> void parse(final Connection conn, final String sql,
+            final Throwables.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
         parse(conn, sql, 0, Long.MAX_VALUE, rowParser, onComplete);
     }
 
@@ -4858,7 +4858,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> void parse(final Connection conn, final String sql, final long offset, final long count,
-            final Try.Consumer<Object[], E> rowParser) throws UncheckedSQLException, E {
+            final Throwables.Consumer<Object[], E> rowParser) throws UncheckedSQLException, E {
         parse(conn, sql, offset, count, rowParser, Fn.emptyAction());
     }
 
@@ -4877,7 +4877,7 @@ public final class JdbcUtil {
      * @throws E2 the e2
      */
     public static <E extends Exception, E2 extends Exception> void parse(final Connection conn, final String sql, final long offset, final long count,
-            final Try.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
+            final Throwables.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
         parse(conn, sql, offset, count, 0, 0, rowParser, onComplete);
     }
 
@@ -4895,7 +4895,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> void parse(final Connection conn, final String sql, final long offset, final long count, final int processThreadNum,
-            final int queueSize, final Try.Consumer<Object[], E> rowParser) throws UncheckedSQLException, E {
+            final int queueSize, final Throwables.Consumer<Object[], E> rowParser) throws UncheckedSQLException, E {
         parse(conn, sql, offset, count, processThreadNum, queueSize, rowParser, Fn.emptyAction());
     }
 
@@ -4917,7 +4917,7 @@ public final class JdbcUtil {
      * @throws E2 the e2
      */
     public static <E extends Exception, E2 extends Exception> void parse(final Connection conn, final String sql, final long offset, final long count,
-            final int processThreadNum, final int queueSize, final Try.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete)
+            final int processThreadNum, final int queueSize, final Throwables.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete)
             throws UncheckedSQLException, E, E2 {
         PreparedStatement stmt = null;
         try {
@@ -4943,7 +4943,8 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
-    public static <E extends Exception> void parse(final PreparedStatement stmt, final Try.Consumer<Object[], E> rowParser) throws UncheckedSQLException, E {
+    public static <E extends Exception> void parse(final PreparedStatement stmt, final Throwables.Consumer<Object[], E> rowParser)
+            throws UncheckedSQLException, E {
         parse(stmt, rowParser, Fn.emptyAction());
     }
 
@@ -4958,7 +4959,7 @@ public final class JdbcUtil {
      * @throws E the e
      * @throws E2 the e2
      */
-    public static <E extends Exception, E2 extends Exception> void parse(final PreparedStatement stmt, final Try.Consumer<Object[], E> rowParser,
+    public static <E extends Exception, E2 extends Exception> void parse(final PreparedStatement stmt, final Throwables.Consumer<Object[], E> rowParser,
             final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
         parse(stmt, 0, Long.MAX_VALUE, rowParser, onComplete);
     }
@@ -4972,8 +4973,8 @@ public final class JdbcUtil {
      * @param rowParser
      * @throws E the e
      */
-    public static <E extends Exception> void parse(final PreparedStatement stmt, final long offset, final long count, final Try.Consumer<Object[], E> rowParser)
-            throws E {
+    public static <E extends Exception> void parse(final PreparedStatement stmt, final long offset, final long count,
+            final Throwables.Consumer<Object[], E> rowParser) throws E {
         parse(stmt, offset, count, rowParser, Fn.emptyAction());
     }
 
@@ -4991,7 +4992,7 @@ public final class JdbcUtil {
      * @throws E2 the e2
      */
     public static <E extends Exception, E2 extends Exception> void parse(final PreparedStatement stmt, final long offset, final long count,
-            final Try.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
+            final Throwables.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
         parse(stmt, offset, count, 0, 0, rowParser, onComplete);
     }
 
@@ -5008,7 +5009,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> void parse(final PreparedStatement stmt, final long offset, final long count, final int processThreadNum,
-            final int queueSize, final Try.Consumer<Object[], E> rowParser) throws UncheckedSQLException, E {
+            final int queueSize, final Throwables.Consumer<Object[], E> rowParser) throws UncheckedSQLException, E {
         parse(stmt, offset, count, processThreadNum, queueSize, rowParser, Fn.emptyAction());
     }
 
@@ -5029,7 +5030,7 @@ public final class JdbcUtil {
      * @throws E2 the e2
      */
     public static <E extends Exception, E2 extends Exception> void parse(final PreparedStatement stmt, final long offset, final long count,
-            final int processThreadNum, final int queueSize, final Try.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete)
+            final int processThreadNum, final int queueSize, final Throwables.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete)
             throws UncheckedSQLException, E, E2 {
         ResultSet rs = null;
 
@@ -5052,7 +5053,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
-    public static <E extends Exception> void parse(final ResultSet rs, final Try.Consumer<Object[], E> rowParser) throws UncheckedSQLException, E {
+    public static <E extends Exception> void parse(final ResultSet rs, final Throwables.Consumer<Object[], E> rowParser) throws UncheckedSQLException, E {
         parse(rs, rowParser, Fn.emptyAction());
     }
 
@@ -5067,7 +5068,7 @@ public final class JdbcUtil {
      * @throws E the e
      * @throws E2 the e2
      */
-    public static <E extends Exception, E2 extends Exception> void parse(final ResultSet rs, final Try.Consumer<Object[], E> rowParser,
+    public static <E extends Exception, E2 extends Exception> void parse(final ResultSet rs, final Throwables.Consumer<Object[], E> rowParser,
             final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
         parse(rs, 0, Long.MAX_VALUE, rowParser, onComplete);
     }
@@ -5082,7 +5083,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
-    public static <E extends Exception> void parse(final ResultSet rs, long offset, long count, final Try.Consumer<Object[], E> rowParser)
+    public static <E extends Exception> void parse(final ResultSet rs, long offset, long count, final Throwables.Consumer<Object[], E> rowParser)
             throws UncheckedSQLException, E {
         parse(rs, offset, count, rowParser, Fn.emptyAction());
     }
@@ -5100,8 +5101,8 @@ public final class JdbcUtil {
      * @throws E the e
      * @throws E2 the e2
      */
-    public static <E extends Exception, E2 extends Exception> void parse(final ResultSet rs, long offset, long count, final Try.Consumer<Object[], E> rowParser,
-            final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
+    public static <E extends Exception, E2 extends Exception> void parse(final ResultSet rs, long offset, long count,
+            final Throwables.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
         parse(rs, offset, count, 0, 0, rowParser, onComplete);
     }
 
@@ -5118,7 +5119,7 @@ public final class JdbcUtil {
      * @throws E the e
      */
     public static <E extends Exception> void parse(final ResultSet rs, long offset, long count, final int processThreadNum, final int queueSize,
-            final Try.Consumer<Object[], E> rowParser) throws UncheckedSQLException, E {
+            final Throwables.Consumer<Object[], E> rowParser) throws UncheckedSQLException, E {
         parse(rs, offset, count, processThreadNum, queueSize, rowParser, Fn.emptyAction());
     }
 
@@ -5139,7 +5140,7 @@ public final class JdbcUtil {
      * @throws E2 the e2
      */
     public static <E extends Exception, E2 extends Exception> void parse(final ResultSet rs, long offset, long count, final int processThreadNum,
-            final int queueSize, final Try.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
+            final int queueSize, final Throwables.Consumer<Object[], E> rowParser, final Try.Runnable<E2> onComplete) throws UncheckedSQLException, E, E2 {
 
         final Iterator<Object[]> iter = new ObjIterator<Object[]>() {
             private final JdbcUtil.BiRowMapper<Object[]> biFunc = BiRowMapper.TO_ARRAY;
@@ -5276,7 +5277,7 @@ public final class JdbcUtil {
                 : stmtSetter);
         final AtomicLong result = new AtomicLong();
 
-        final Try.Consumer<Object[], RuntimeException> rowParser = new Try.Consumer<Object[], RuntimeException>() {
+        final Throwables.Consumer<Object[], RuntimeException> rowParser = new Throwables.Consumer<Object[], RuntimeException>() {
             @Override
             public void accept(Object[] row) {
                 try {
@@ -8082,7 +8083,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
-                    .of(new Try.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
+                    .of(new Throwables.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
                         private ExceptionalIterator<T, SQLException> internalIter;
 
                         @Override
@@ -8184,7 +8185,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
-                    .of(new Try.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
+                    .of(new Throwables.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
                         private ExceptionalIterator<T, SQLException> internalIter;
 
                         @Override
@@ -8293,7 +8294,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
-                    .of(new Try.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
+                    .of(new Throwables.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
                         private ExceptionalIterator<T, SQLException> internalIter;
 
                         @Override
@@ -8380,7 +8381,7 @@ public final class JdbcUtil {
             assertNotClosed();
 
             final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
-                    .of(new Try.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
+                    .of(new Throwables.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
                         private ExceptionalIterator<T, SQLException> internalIter;
 
                         @Override
@@ -9066,7 +9067,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        public <R> R executeThenApply(final Try.Function<? super S, ? extends R, SQLException> getter) throws SQLException {
+        public <R> R executeThenApply(final Throwables.Function<? super S, ? extends R, SQLException> getter) throws SQLException {
             checkArgNotNull(getter, "getter");
             assertNotClosed();
 
@@ -9087,7 +9088,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        public <R> R executeThenApply(final Try.BiFunction<Boolean, ? super S, ? extends R, SQLException> getter) throws SQLException {
+        public <R> R executeThenApply(final Throwables.BiFunction<Boolean, ? super S, ? extends R, SQLException> getter) throws SQLException {
             checkArgNotNull(getter, "getter");
             assertNotClosed();
 
@@ -9106,7 +9107,7 @@ public final class JdbcUtil {
          * @param consumer
          * @throws SQLException the SQL exception
          */
-        public void executeThenAccept(final Try.Consumer<? super S, SQLException> consumer) throws SQLException {
+        public void executeThenAccept(final Throwables.Consumer<? super S, SQLException> consumer) throws SQLException {
             checkArgNotNull(consumer, "consumer");
             assertNotClosed();
 
@@ -9125,7 +9126,7 @@ public final class JdbcUtil {
          * @param consumer
          * @throws SQLException the SQL exception
          */
-        public void executeThenAccept(final Try.BiConsumer<Boolean, ? super S, SQLException> consumer) throws SQLException {
+        public void executeThenAccept(final Throwables.BiConsumer<Boolean, ? super S, SQLException> consumer) throws SQLException {
             checkArgNotNull(consumer, "consumer");
             assertNotClosed();
 
@@ -9145,7 +9146,7 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
-        public <R> ContinuableFuture<R> asyncApply(final Try.Function<Q, R, SQLException> func) {
+        public <R> ContinuableFuture<R> asyncApply(final Throwables.Function<Q, R, SQLException> func) {
             checkArgNotNull(func, "func");
             assertNotClosed();
 
@@ -9162,7 +9163,7 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
-        public <R> ContinuableFuture<R> asyncApply(final Try.Function<Q, R, SQLException> func, final Executor executor) {
+        public <R> ContinuableFuture<R> asyncApply(final Throwables.Function<Q, R, SQLException> func, final Executor executor) {
             checkArgNotNull(func, "func");
             checkArgNotNull(executor, "executor");
             assertNotClosed();
@@ -9178,7 +9179,7 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
-        public ContinuableFuture<Void> asyncAccept(final Try.Consumer<Q, SQLException> action) {
+        public ContinuableFuture<Void> asyncAccept(final Throwables.Consumer<Q, SQLException> action) {
             checkArgNotNull(action, "action");
             assertNotClosed();
 
@@ -9194,7 +9195,7 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
-        public ContinuableFuture<Void> asyncAccept(final Try.Consumer<Q, SQLException> action, final Executor executor) {
+        public ContinuableFuture<Void> asyncAccept(final Throwables.Consumer<Q, SQLException> action, final Executor executor) {
             checkArgNotNull(action, "action");
             checkArgNotNull(executor, "executor");
             assertNotClosed();
@@ -13331,7 +13332,7 @@ public final class JdbcUtil {
      *
      * @param <QS>
      */
-    public interface ParametersSetter<QS> extends Try.Consumer<QS, SQLException> {
+    public interface ParametersSetter<QS> extends Throwables.Consumer<QS, SQLException> {
         @SuppressWarnings("rawtypes")
         public static final ParametersSetter DO_NOTHING = new ParametersSetter<Object>() {
             @Override
@@ -13355,7 +13356,7 @@ public final class JdbcUtil {
      * @param <QS>
      * @param <T>
      */
-    public interface BiParametersSetter<QS, T> extends Try.BiConsumer<QS, T, SQLException> {
+    public interface BiParametersSetter<QS, T> extends Throwables.BiConsumer<QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
         public static final BiParametersSetter DO_NOTHING = new BiParametersSetter<Object, Object>() {
             @Override
@@ -13380,7 +13381,7 @@ public final class JdbcUtil {
      * @param <QS>
      * @param <T>
      */
-    public interface TriParametersSetter<QS, T> extends Try.TriConsumer<NamedSQL, QS, T, SQLException> {
+    public interface TriParametersSetter<QS, T> extends Throwables.TriConsumer<NamedSQL, QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
         public static final TriParametersSetter DO_NOTHING = new TriParametersSetter<Object, Object>() {
             @Override
@@ -13405,7 +13406,7 @@ public final class JdbcUtil {
      *
      * @param <T>
      */
-    public interface ResultExtractor<T> extends Try.Function<ResultSet, T, SQLException> {
+    public interface ResultExtractor<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
         /** The Constant TO_DATA_SET. */
         ResultExtractor<DataSet> TO_DATA_SET = new ResultExtractor<DataSet>() {
@@ -13676,7 +13677,7 @@ public final class JdbcUtil {
      *
      * @param <T>
      */
-    public interface BiResultExtractor<T> extends Try.BiFunction<ResultSet, List<String>, T, SQLException> {
+    public interface BiResultExtractor<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
 
         /**
          *
@@ -13991,7 +13992,7 @@ public final class JdbcUtil {
      *
      * @param <T>
      */
-    public interface RowMapper<T> extends Try.Function<ResultSet, T, SQLException> {
+    public interface RowMapper<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
         /** The Constant GET_BOOLEAN. */
         RowMapper<Boolean> GET_BOOLEAN = new RowMapper<Boolean>() {
@@ -14539,7 +14540,7 @@ public final class JdbcUtil {
      *
      * @param <T>
      */
-    public interface BiRowMapper<T> extends Try.BiFunction<ResultSet, List<String>, T, SQLException> {
+    public interface BiRowMapper<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
 
         /** The Constant GET_BOOLEAN. */
         BiRowMapper<Boolean> GET_BOOLEAN = new BiRowMapper<Boolean>() {
@@ -14743,7 +14744,7 @@ public final class JdbcUtil {
          */
         static <T> BiRowMapper<T> to(Class<? extends T> targetClass, final boolean ignoreNonMatchedColumns) {
             return new BiRowMapper<T>() {
-                private Try.BiFunction<ResultSet, List<String>, T, SQLException> mapper = InternalJdbcUtil.to(targetClass, ignoreNonMatchedColumns);
+                private Throwables.BiFunction<ResultSet, List<String>, T, SQLException> mapper = InternalJdbcUtil.to(targetClass, ignoreNonMatchedColumns);
 
                 @Override
                 public T apply(ResultSet rs, List<String> columnLabelList) throws SQLException {
@@ -15101,7 +15102,7 @@ public final class JdbcUtil {
      * Consider using {@code BiRowConsumer} instead because it's more efficient to consume multiple records when column labels/count are used.
      *
      */
-    public interface RowConsumer extends Try.Consumer<ResultSet, SQLException> {
+    public interface RowConsumer extends Throwables.Consumer<ResultSet, SQLException> {
 
         static final RowConsumer DO_NOTHING = rs -> {
         };
@@ -15118,7 +15119,7 @@ public final class JdbcUtil {
     /**
      * The Interface BiRowConsumer.
      */
-    public interface BiRowConsumer extends Try.BiConsumer<ResultSet, List<String>, SQLException> {
+    public interface BiRowConsumer extends Throwables.BiConsumer<ResultSet, List<String>, SQLException> {
 
         static final BiRowConsumer DO_NOTHING = (rs, cls) -> {
         };
@@ -15139,7 +15140,7 @@ public final class JdbcUtil {
      * Consider using {@code BiRowConsumer} instead because it's more efficient to test multiple records when column labels/count are used.
      *
      */
-    public interface RowFilter extends Try.Predicate<ResultSet, SQLException> {
+    public interface RowFilter extends Throwables.Predicate<ResultSet, SQLException> {
 
         /** The Constant ALWAYS_TRUE. */
         RowFilter ALWAYS_TRUE = new RowFilter() {
@@ -15172,7 +15173,7 @@ public final class JdbcUtil {
      * Only user {@code RowFilter/BiRowFilter} if there is a specific reason or the filter can't be done by SQL scripts in database server side.
      *
      */
-    public interface BiRowFilter extends Try.BiPredicate<ResultSet, List<String>, SQLException> {
+    public interface BiRowFilter extends Throwables.BiPredicate<ResultSet, List<String>, SQLException> {
 
         /** The Constant ALWAYS_TRUE. */
         BiRowFilter ALWAYS_TRUE = new BiRowFilter() {
@@ -16015,7 +16016,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
-        default PreparedQuery prepareQuery(final String sql, final Try.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
+        default PreparedQuery prepareQuery(final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
                 throws SQLException {
             return JdbcUtil.prepareQuery(dataSource(), sql, stmtCreator);
         }
@@ -16070,8 +16071,8 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
-        default NamedQuery prepareNamedQuery(final String namedQuery, final Try.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-                throws SQLException {
+        default NamedQuery prepareNamedQuery(final String namedQuery,
+                final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, stmtCreator);
         }
 
@@ -16125,8 +16126,8 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
-        default NamedQuery prepareNamedQuery(final NamedSQL namedSQL, final Try.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-                throws SQLException {
+        default NamedQuery prepareNamedQuery(final NamedSQL namedSQL,
+                final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedSQL, stmtCreator);
         }
 
@@ -16148,7 +16149,7 @@ public final class JdbcUtil {
          * @throws SQLException
          */
         default PreparedCallableQuery prepareCallableQuery(final String sql,
-                final Try.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
+                final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
             return JdbcUtil.prepareCallableQuery(dataSource(), sql, stmtCreator);
         }
 
@@ -17349,7 +17350,7 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
-        default <R> ContinuableFuture<R> asyncApply(final Try.Function<TD, R, SQLException> func) {
+        default <R> ContinuableFuture<R> asyncApply(final Throwables.Function<TD, R, SQLException> func) {
             return asyncApply(func, executor());
         }
 
@@ -17361,7 +17362,7 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
-        default <R> ContinuableFuture<R> asyncApply(final Try.Function<TD, R, SQLException> func, final Executor executor) {
+        default <R> ContinuableFuture<R> asyncApply(final Throwables.Function<TD, R, SQLException> func, final Executor executor) {
             N.checkArgNotNull(func, "func");
             N.checkArgNotNull(executor, "executor");
 
@@ -17376,7 +17377,7 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
-        default ContinuableFuture<Void> asyncAccept(final Try.Consumer<TD, SQLException> action) {
+        default ContinuableFuture<Void> asyncAccept(final Throwables.Consumer<TD, SQLException> action) {
             return asyncAccept(action, executor());
         }
 
@@ -17387,7 +17388,7 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
-        default ContinuableFuture<Void> asyncAccept(final Try.Consumer<TD, SQLException> action, final Executor executor) {
+        default ContinuableFuture<Void> asyncAccept(final Throwables.Consumer<TD, SQLException> action, final Executor executor) {
             N.checkArgNotNull(action, "action");
             N.checkArgNotNull(executor, "executor");
 
@@ -18475,7 +18476,7 @@ public final class JdbcUtil {
         }
     }
 
-    private static final Consumer<? super Exception, SQLException> throwSQLExceptionAction = e -> {
+    private static final Throwables.Consumer<? super Exception, SQLException> throwSQLExceptionAction = e -> {
         if (e instanceof SQLException) {
             throw (SQLException) e;
         } else if (e.getCause() != null && e.getCause() instanceof SQLException) {
@@ -18550,7 +18551,7 @@ public final class JdbcUtil {
             }
         }
 
-        final Map<Method, Try.BiFunction<Dao, Object[], ?, Throwable>> methodInvokerMap = new HashMap<>();
+        final Map<Method, Throwables.BiFunction<Dao, Object[], ?, Throwable>> methodInvokerMap = new HashMap<>();
 
         final List<Method> sqlMethods = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface))
                 .append(daoInterface)
@@ -18729,7 +18730,7 @@ public final class JdbcUtil {
                                 + m.getName());
             }
 
-            Try.BiFunction<Dao, Object[], ?, Throwable> call = null;
+            Throwables.BiFunction<Dao, Object[], ?, Throwable> call = null;
 
             if (!Modifier.isAbstract(m.getModifiers())) {
                 final MethodHandle methodHandle = createMethodHandle(m);
@@ -19109,7 +19110,7 @@ public final class JdbcUtil {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
                             final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Try.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
+                                    .of(new Throwables.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
                                         private ExceptionalIterator<T, SQLException> internalIter;
 
                                         @Override
@@ -19135,7 +19136,7 @@ public final class JdbcUtil {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
+                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
                                         private ExceptionalIterator<Object, SQLException> internalIter;
 
                                         @Override
@@ -19164,7 +19165,7 @@ public final class JdbcUtil {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
+                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
                                         private ExceptionalIterator<Object, SQLException> internalIter;
 
                                         @Override
@@ -19193,7 +19194,7 @@ public final class JdbcUtil {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
+                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
                                         private ExceptionalIterator<Object, SQLException> internalIter;
 
                                         @Override
@@ -19222,7 +19223,7 @@ public final class JdbcUtil {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
+                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
                                         private ExceptionalIterator<Object, SQLException> internalIter;
 
                                         @Override
@@ -19251,7 +19252,7 @@ public final class JdbcUtil {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
                             final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Try.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
+                                    .of(new Throwables.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
                                         private ExceptionalIterator<T, SQLException> internalIter;
 
                                         @Override
@@ -19277,7 +19278,7 @@ public final class JdbcUtil {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
+                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
                                         private ExceptionalIterator<Object, SQLException> internalIter;
 
                                         @Override
@@ -19306,7 +19307,7 @@ public final class JdbcUtil {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
+                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
                                         private ExceptionalIterator<Object, SQLException> internalIter;
 
                                         @Override
@@ -19335,7 +19336,7 @@ public final class JdbcUtil {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
+                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
                                         private ExceptionalIterator<Object, SQLException> internalIter;
 
                                         @Override
@@ -19364,7 +19365,7 @@ public final class JdbcUtil {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
                             final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Try.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
+                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
                                         private ExceptionalIterator<Object, SQLException> internalIter;
 
                                         @Override
@@ -20242,8 +20243,8 @@ public final class JdbcUtil {
 
                     if (sqlAnno.annotationType().equals(Dao.Select.class) || sqlAnno.annotationType().equals(Dao.NamedSelect.class)
                             || (sqlAnno.annotationType().equals(Dao.Call.class) && !isUpdateReturnType)) {
-                        final Try.BiFunction<AbstractPreparedQuery, Object[], T, Exception> queryFunc = createQueryFunctionByMethod(m, hasRowMapperOrExtractor,
-                                hasRowFilter);
+                        final Throwables.BiFunction<AbstractPreparedQuery, Object[], T, Exception> queryFunc = createQueryFunctionByMethod(m,
+                                hasRowMapperOrExtractor, hasRowFilter);
 
                         // Getting ClassCastException. Not sure why query result is being casted Dao. It seems there is a bug in JDk compiler.
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
@@ -20496,7 +20497,7 @@ public final class JdbcUtil {
                 }
             }
 
-            final Try.BiFunction<Dao, Object[], ?, Throwable> tmp = call;
+            final Throwables.BiFunction<Dao, Object[], ?, Throwable> tmp = call;
 
             if (transactionalAnno == null || transactionalAnno.propagation() == Propagation.SUPPORTS) {
                 // Do not need to do anything.
@@ -20545,7 +20546,8 @@ public final class JdbcUtil {
             methodInvokerMap.put(m, call);
         }
 
-        final Try.TriFunction<Dao, Method, Object[], ?, Throwable> proxyInvoker = (proxy, method, args) -> methodInvokerMap.get(method).apply(proxy, args);
+        final Throwables.TriFunction<Dao, Method, Object[], ?, Throwable> proxyInvoker = (proxy, method, args) -> methodInvokerMap.get(method)
+                .apply(proxy, args);
         final Class<TD>[] interfaceClasses = N.asArray(daoInterface);
 
         final InvocationHandler h = (proxy, method, args) -> {
@@ -20791,7 +20793,7 @@ public final class JdbcUtil {
     }
 
     @SuppressWarnings("rawtypes")
-    static <R> Try.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Method method,
+    static <R> Throwables.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Method method,
             final boolean hasRowMapperOrExtractor, final boolean hasRowFilter) {
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
