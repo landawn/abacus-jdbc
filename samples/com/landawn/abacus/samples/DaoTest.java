@@ -36,9 +36,39 @@ import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLTransaction;
 import com.landawn.abacus.util.stream.IntStream;
+import com.landawn.abacus.util.stream.LongStream;
 import com.landawn.abacus.util.stream.Stream;
 
 public class DaoTest {
+
+    @Test
+    public void test_log() throws SQLException {
+
+        LongStream.range(100, 110).parallel(8).forEach(idx -> {
+            synchronized (JdbcUtil.class) {
+                if (idx % 2 == 0) {
+                    System.out.println("###: enable log for Thread: " + Thread.currentThread());
+                    JdbcUtil.setLogSQL(true);
+                    JdbcUtil.logSQLPerfAt(0);
+                } else {
+                    System.out.println("+++: Not enable log for Thread: " + Thread.currentThread());
+                }
+
+                User user = User.builder().id(idx).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+                userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
+
+                assertNotNull(userDao.gett(idx));
+
+                userDao.deleteById(idx);
+
+                if (idx % 2 == 0) {
+                    System.out.println("###: disable log for Thread: " + Thread.currentThread());
+                    JdbcUtil.setLogSQL(false);
+                    JdbcUtil.logSQLPerfAt(-1);
+                }
+            }
+        });
+    }
 
     @Test
     public void test_propagation() throws SQLException {

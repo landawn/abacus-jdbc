@@ -5399,7 +5399,7 @@ public class SQLExecutor {
                 } else {
                     logger.info("[SQL]: " + namedSQL.getNamedSQL());
                 }
-            } else if (JdbcUtil.isLogSQL) {
+            } else if (JdbcUtil.isLogSQLEnabled_TL.get()) {
                 logger.info("[SQL]: " + namedSQL.getNamedSQL());
             }
         }
