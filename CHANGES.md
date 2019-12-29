@@ -1,3 +1,9 @@
+### 1.10.3
+
+* Supports `@PerfLog`.
+* Improvements and bug fix.
+
+
 ### 1.10.2
 
 * Supports `Transactional.Propagation`.
