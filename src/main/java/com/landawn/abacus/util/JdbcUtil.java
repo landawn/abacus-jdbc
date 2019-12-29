@@ -5387,7 +5387,7 @@ public final class JdbcUtil {
      */
     public static void enableSQLLog(boolean b) {
         // synchronized (isSQLLogEnabled_TL) {
-        if (logger.isInfoEnabled()) {
+        if (logger.isInfoEnabled() && isSQLLogEnabled_TL.get() != b) {
             if (b) {
                 logger.info("Turn on [SQL] log");
             } else {
@@ -5417,9 +5417,9 @@ public final class JdbcUtil {
      */
     public static void setMinExecutionTimeForSQLPerfLog(long minExecutionTimeForSQLPerfLog) {
         // synchronized (minExecutionTimeForSQLPerfLog_TL) {
-        if (logger.isInfoEnabled()) {
+        if (logger.isInfoEnabled() && minExecutionTimeForSQLPerfLog_TL.get() != minExecutionTimeForSQLPerfLog) {
             if (minExecutionTimeForSQLPerfLog >= 0) {
-                logger.info("Turn on SQL perfermance log with minimum execution time >=: " + minExecutionTimeForSQLPerfLog);
+                logger.info("set 'minExecutionTimeForSQLPerfLog' to: " + minExecutionTimeForSQLPerfLog);
             } else {
                 logger.info("Turn off SQL perfermance log");
             }
@@ -5450,10 +5450,12 @@ public final class JdbcUtil {
     public static void disableSpringTransactional(boolean b) {
         // synchronized (isSpringTransactionalDisabled_TL) {
         if (isInSpring) {
-            if (b) {
-                logger.warn("Disable Spring Transactional");
-            } else {
-                logger.warn("Enable Spring Transactional again");
+            if (logger.isWarnEnabled() && isSpringTransactionalDisabled_TL.get() != b) {
+                if (b) {
+                    logger.warn("Disable Spring Transactional");
+                } else {
+                    logger.warn("Enable Spring Transactional again");
+                }
             }
 
             isSpringTransactionalDisabled_TL.set(b);
@@ -15935,12 +15937,32 @@ public final class JdbcUtil {
         }
 
         /**
-         * It's only for methods with default implementation in {@code Dao} interfaces. Don't use it for the abstract methods.
+         *
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
         public static @interface Transactional {
             Propagation propagation() default Propagation.REQUIRED;
+        }
+
+        /**
+         * It's only for methods with default implementation in {@code Dao} interfaces. Don't use it for the abstract methods.
+         */
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(value = { ElementType.METHOD, ElementType.TYPE })
+        public static @interface PerfLog {
+            /**
+             * start to log performance for sql if the execution time >= the specified(or default) execution time in milliseconds.
+             *
+             * @return
+             */
+            long minExecutionTimeForSql() default 1000;
+
+            /**
+             * start to log performance for Dao operation/method if the execution time >= the specified(or default) execution time in milliseconds.
+             * @return
+             */
+            long minExecutionTimeForOperation() default 3000;
         }
 
         /**

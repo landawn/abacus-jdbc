@@ -648,6 +648,13 @@ final class DaoUtil {
                 ? (pq, entity) -> pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity), idPropInfo.dbType)
                 : (pq, entity) -> pq.setParameters(entity);
 
+        final JdbcUtil.Dao.PerfLog daoClassPerfLogAnno = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface))
+                .append(daoInterface)
+                .flatMapp(cls -> cls.getAnnotations())
+                .select(JdbcUtil.Dao.PerfLog.class)
+                .last()
+                .orNull();
+
         for (Method m : sqlMethods) {
             final Class<?> declaringClass = m.getDeclaringClass();
             final String methodName = m.getName();
@@ -660,7 +667,7 @@ final class DaoUtil {
             if (sqlsAnno != null) {
                 if (Modifier.isAbstract(m.getModifiers())) {
                     throw new UnsupportedOperationException(
-                            "Annotation @Sqls is only supported by interface methods with default implmentation: default xxx dbOperationABC(someParameters, String ... sqls), not supported by abstract method: "
+                            "Annotation @Sqls is only supported by interface methods with default implementation: default xxx dbOperationABC(someParameters, String ... sqls), not supported by abstract method: "
                                     + m.getName());
                 }
 
@@ -671,13 +678,15 @@ final class DaoUtil {
                 }
             }
 
-            final JdbcUtil.Dao.Transactional transactionalAnno = StreamEx.of(m.getAnnotations()).select(JdbcUtil.Dao.Transactional.class).onlyOne().orNull();
+            final JdbcUtil.Dao.Transactional transactionalAnno = StreamEx.of(m.getAnnotations()).select(JdbcUtil.Dao.Transactional.class).last().orNull();
 
             //    if (transactionalAnno != null && Modifier.isAbstract(m.getModifiers())) {
             //        throw new UnsupportedOperationException(
-            //                "Annotation @Transactional is only supported by interface methods with default implmentation: default xxx dbOperationABC(someParameters, String ... sqls), not supported by abstract method: "
+            //                "Annotation @Transactional is only supported by interface methods with default implementation: default xxx dbOperationABC(someParameters, String ... sqls), not supported by abstract method: "
             //                        + m.getName());
             //    }
+
+            final JdbcUtil.Dao.PerfLog perfLogAnno = StreamEx.of(m.getAnnotations()).select(JdbcUtil.Dao.PerfLog.class).last().orElse(daoClassPerfLogAnno);
 
             Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> call = null;
 
@@ -2435,20 +2444,69 @@ final class DaoUtil {
             }
 
             final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> tmp = call;
+            final String fullMethodName = daoInterface.getSimpleName() + "." + m.getName();
+            final boolean hasPerfLogAnno = perfLogAnno != null;
 
             if (transactionalAnno == null || transactionalAnno.propagation() == Propagation.SUPPORTS) {
-                // Do not need to do anything.
+                if (hasPerfLogAnno) {
+                    call = (proxy, args) -> {
+                        final long startTime = System.currentTimeMillis();
+                        final long prevMinExecutionTimeForSQLPerfLog = JdbcUtil.getMinExecutionTimeForSQLPerfLog();
+
+                        try {
+                            JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
+
+                            return tmp.apply(proxy, args);
+                        } finally {
+                            JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+
+                            if (perfLogAnno.minExecutionTimeForOperation() >= 0 && logger.isInfoEnabled()) {
+                                final long elapsedTime = System.currentTimeMillis() - startTime;
+
+                                if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
+                                    logger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
+                                }
+                            }
+                        }
+                    };
+
+                } else {
+                    // Do not need to do anything.
+                }
             } else if (transactionalAnno.propagation() == Propagation.REQUIRED) {
                 call = (proxy, args) -> {
+                    final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
+                    final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
+
                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                     Object result = null;
 
                     try {
+                        if (hasPerfLogAnno) {
+                            JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
+                        }
+
                         result = tmp.apply(proxy, args);
 
                         tran.commit();
                     } finally {
-                        tran.rollbackIfNotCommitted();
+                        if (hasPerfLogAnno) {
+                            try {
+                                tran.rollbackIfNotCommitted();
+                            } finally {
+                                JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+
+                                if (perfLogAnno.minExecutionTimeForOperation() >= 0 && logger.isInfoEnabled()) {
+                                    final long elapsedTime = System.currentTimeMillis() - startTime;
+
+                                    if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
+                                        logger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
+                                    }
+                                }
+                            }
+                        } else {
+                            tran.rollbackIfNotCommitted();
+                        }
                     }
 
                     return result;
@@ -2458,15 +2516,38 @@ final class DaoUtil {
                     final javax.sql.DataSource dataSource = proxy.dataSource();
 
                     return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
-                        final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+                        final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
+                        final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
+
+                        final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                         Object result = null;
 
                         try {
+                            if (hasPerfLogAnno) {
+                                JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
+                            }
+
                             result = tmp.apply(proxy, args);
 
                             tran.commit();
                         } finally {
-                            tran.rollbackIfNotCommitted();
+                            if (hasPerfLogAnno) {
+                                try {
+                                    tran.rollbackIfNotCommitted();
+                                } finally {
+                                    JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+
+                                    if (perfLogAnno.minExecutionTimeForOperation() >= 0 && logger.isInfoEnabled()) {
+                                        final long elapsedTime = System.currentTimeMillis() - startTime;
+
+                                        if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
+                                            logger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
+                                        }
+                                    }
+                                }
+                            } else {
+                                tran.rollbackIfNotCommitted();
+                            }
                         }
 
                         return result;
@@ -2476,7 +2557,30 @@ final class DaoUtil {
                 call = (proxy, args) -> {
                     final javax.sql.DataSource dataSource = proxy.dataSource();
 
-                    return JdbcUtil.callNotInStartedTransaction(dataSource, () -> tmp.apply(proxy, args));
+                    if (hasPerfLogAnno) {
+                        return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
+                            final long startTime = System.currentTimeMillis();
+                            final long prevMinExecutionTimeForSQLPerfLog = JdbcUtil.getMinExecutionTimeForSQLPerfLog();
+
+                            try {
+                                JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
+
+                                return tmp.apply(proxy, args);
+                            } finally {
+                                JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+
+                                if (perfLogAnno.minExecutionTimeForOperation() >= 0 && logger.isInfoEnabled()) {
+                                    final long elapsedTime = System.currentTimeMillis() - startTime;
+
+                                    if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
+                                        logger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        return JdbcUtil.callNotInStartedTransaction(dataSource, () -> tmp.apply(proxy, args));
+                    }
                 };
             }
 

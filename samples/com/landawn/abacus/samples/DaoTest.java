@@ -42,7 +42,7 @@ import com.landawn.abacus.util.stream.Stream;
 public class DaoTest {
 
     @Test
-    public void test_log() throws SQLException {
+    public void test_sql_log() throws SQLException {
 
         LongStream.range(100, 110).parallel(8).forEach(idx -> {
             synchronized (JdbcUtil.class) {
@@ -68,6 +68,15 @@ public class DaoTest {
                 }
             }
         });
+    }
+
+    @Test
+    public void test_operation_log() throws SQLException {
+
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
+
+        userDao.delete_propagation_SUPPORTS(100);
     }
 
     @Test
