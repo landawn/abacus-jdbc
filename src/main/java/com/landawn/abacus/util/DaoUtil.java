@@ -434,18 +434,21 @@ final class DaoUtil {
 
     @SuppressWarnings({ "rawtypes" })
     static <T, SB extends SQLBuilder, TD extends JdbcUtil.Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
-            final DataSourceManager dsm, final SQLMapper sqlMapper, final Executor executor) {
+            final DataSourceManager dsm, final DaoSettings daoSettings, final SQLMapper sqlMapper, final Executor executor) {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(ds, "dataSource");
 
         final String key = ClassUtil.getCanonicalClassName(daoInterface) + "_" + System.identityHashCode(ds) + "_"
-                + (sqlMapper == null ? "null" : System.identityHashCode(sqlMapper)) + "_" + (executor == null ? "null" : System.identityHashCode(executor));
+                + (daoSettings == null ? "null" : daoSettings.toString()) + "_" + (sqlMapper == null ? "null" : System.identityHashCode(sqlMapper)) + "_"
+                + (executor == null ? "null" : System.identityHashCode(executor));
 
         TD daoInstance = (TD) daoPool.get(key);
 
         if (daoInstance != null) {
             return daoInstance;
         }
+
+        final DaoSettings _daoSettings = daoSettings == null ? DaoSettings.builder().build() : daoSettings;
 
         final Logger logger = LoggerFactory.getLogger(daoInterface);
 
