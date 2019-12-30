@@ -18709,22 +18709,7 @@ public final class JdbcUtil {
      * @return
      */
     public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds) {
-        return createDao(daoInterface, ds, null, null, asyncExecutor.getExecutor());
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param <SB>
-     * @param <TD>
-     * @param daoInterface
-     * @param ds
-     * @param daoSettings
-     * @return
-     */
-    public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
-            final DaoSettings daoSettings) {
-        return createDao(daoInterface, ds, daoSettings, null, asyncExecutor.getExecutor());
+        return createDao(daoInterface, ds, asyncExecutor.getExecutor());
     }
 
     /**
@@ -18739,7 +18724,7 @@ public final class JdbcUtil {
      */
     public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
             final SQLMapper sqlMapper) {
-        return createDao(daoInterface, ds, null, sqlMapper, asyncExecutor.getExecutor());
+        return createDao(daoInterface, ds, sqlMapper, asyncExecutor.getExecutor());
     }
 
     /**
@@ -18754,7 +18739,7 @@ public final class JdbcUtil {
      */
     public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
             final Executor executor) {
-        return createDao(daoInterface, ds, null, null, executor);
+        return createDao(daoInterface, ds, null, executor);
     }
 
     /**
@@ -18764,13 +18749,12 @@ public final class JdbcUtil {
      * @param <TD>
      * @param daoInterface
      * @param ds
-     * @param daoSettings
      * @param sqlMapper
      * @param executor
      * @return
      */
     public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
-            final DaoSettings daoSettings, final SQLMapper sqlMapper, final Executor executor) {
-        return DaoUtil.createDao(daoInterface, ds, null, daoSettings, sqlMapper, executor);
+            final SQLMapper sqlMapper, final Executor executor) {
+        return DaoUtil.createDao(daoInterface, ds, null, sqlMapper, executor);
     }
 }
