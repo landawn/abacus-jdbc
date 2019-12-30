@@ -3,7 +3,7 @@
 [![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc.svg)](https://maven-badges.herokuapp.com/maven-central/com.landawn/abacus-jdbc/)
 [![Javadocs](https://www.javadoc.io/badge/com.landawn/abacus-jdbc.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc)
 
-Hope it will provide you the programming experiences: coding with SQL/DB is just like coding with Collection.
+Hope it will bring you the programming experiences: coding with SQL/DB is just like coding with Collections.
 
 
 ## Features:
