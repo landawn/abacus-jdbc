@@ -59,6 +59,9 @@ import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.Dao;
+import com.landawn.abacus.util.JdbcUtil.Dao.OutParameter;
+import com.landawn.abacus.util.JdbcUtil.NamedQuery;
+import com.landawn.abacus.util.JdbcUtil.PreparedCallableQuery;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
@@ -382,13 +385,25 @@ final class DaoUtil {
     }
 
     @SuppressWarnings("rawtypes")
-    private static AbstractPreparedQuery prepareQuery(final Dao proxy, final String query, final boolean isNamedQuery, NamedSQL namedSQL, final int fetchSize,
-            boolean isBatch, int batchSize, final int queryTimeout, final boolean returnGeneratedKeys, String[] returnColumnNames, boolean isCall)
-            throws SQLException, Exception {
+    private static AbstractPreparedQuery prepareQuery(final Dao proxy, final String query, final boolean isNamedQuery, final NamedSQL namedSQL,
+            final int fetchSize, final boolean isBatch, final int batchSize, final int queryTimeout, final boolean returnGeneratedKeys,
+            final String[] returnColumnNames, final boolean isCall, final List<OutParameter> outParameterList) throws SQLException, Exception {
 
         final AbstractPreparedQuery preparedQuery = isCall ? proxy.prepareCallableQuery(query)
                 : (isNamedQuery ? (returnGeneratedKeys ? proxy.prepareNamedQuery(namedSQL, returnColumnNames) : proxy.prepareNamedQuery(namedSQL))
                         : (returnGeneratedKeys ? proxy.prepareQuery(query, returnColumnNames) : proxy.prepareQuery(query)));
+
+        if (isCall && N.notNullOrEmpty(outParameterList)) {
+            final PreparedCallableQuery callableQuery = ((PreparedCallableQuery) preparedQuery);
+
+            for (OutParameter op : outParameterList) {
+                if (N.isNullOrEmpty(op.name())) {
+                    callableQuery.registerOutParameter(op.position(), op.sqlType());
+                } else {
+                    callableQuery.registerOutParameter(op.name(), op.sqlType());
+                }
+            }
+        }
 
         if (fetchSize > 0) {
             preparedQuery.setFetchSize(fetchSize);
@@ -628,7 +643,7 @@ final class DaoUtil {
                 : (isOneId ? id -> JdbcUtil.isDefaultIdPropValue(id)
                         : id -> Stream.of(((EntityId) id).entrySet()).allMatch(e -> JdbcUtil.isDefaultIdPropValue(e.getValue())));
 
-        final JdbcUtil.BiParametersSetter<JdbcUtil.NamedQuery, Object> idParamSetter = isOneId ? (pq, id) -> pq.setObject(oneIdPropName, id, idPropInfo.dbType)
+        final JdbcUtil.BiParametersSetter<NamedQuery, Object> idParamSetter = isOneId ? (pq, id) -> pq.setObject(oneIdPropName, id, idPropInfo.dbType)
                 : (pq, id) -> {
                     final EntityId entityId = (EntityId) id;
                     PropInfo propInfo = null;
@@ -644,14 +659,14 @@ final class DaoUtil {
                     }
                 };
 
-        final JdbcUtil.BiParametersSetter<JdbcUtil.NamedQuery, Object> idParamSetterByEntity = isOneId
+        final JdbcUtil.BiParametersSetter<NamedQuery, Object> idParamSetterByEntity = isOneId
                 ? (pq, entity) -> pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity), idPropInfo.dbType)
                 : (pq, entity) -> pq.setParameters(entity);
 
-        final JdbcUtil.Dao.PerfLog daoClassPerfLogAnno = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface))
+        final Dao.PerfLog daoClassPerfLogAnno = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface))
                 .append(daoInterface)
                 .flatMapp(cls -> cls.getAnnotations())
-                .select(JdbcUtil.Dao.PerfLog.class)
+                .select(Dao.PerfLog.class)
                 .last()
                 .orNull();
 
@@ -662,7 +677,7 @@ final class DaoUtil {
             final Class<?> returnType = m.getReturnType();
             final int paramLen = paramTypes.length;
 
-            final JdbcUtil.Dao.Sqls sqlsAnno = StreamEx.of(m.getAnnotations()).select(JdbcUtil.Dao.Sqls.class).onlyOne().orNull();
+            final Dao.Sqls sqlsAnno = StreamEx.of(m.getAnnotations()).select(Dao.Sqls.class).onlyOne().orNull();
 
             if (sqlsAnno != null) {
                 if (Modifier.isAbstract(m.getModifiers())) {
@@ -678,7 +693,7 @@ final class DaoUtil {
                 }
             }
 
-            final JdbcUtil.Dao.Transactional transactionalAnno = StreamEx.of(m.getAnnotations()).select(JdbcUtil.Dao.Transactional.class).last().orNull();
+            final Dao.Transactional transactionalAnno = StreamEx.of(m.getAnnotations()).select(Dao.Transactional.class).last().orNull();
 
             //    if (transactionalAnno != null && Modifier.isAbstract(m.getModifiers())) {
             //        throw new UnsupportedOperationException(
@@ -686,7 +701,7 @@ final class DaoUtil {
             //                        + m.getName());
             //    }
 
-            final JdbcUtil.Dao.PerfLog perfLogAnno = StreamEx.of(m.getAnnotations()).select(JdbcUtil.Dao.PerfLog.class).last().orElse(daoClassPerfLogAnno);
+            final Dao.PerfLog perfLogAnno = StreamEx.of(m.getAnnotations()).select(Dao.PerfLog.class).last().orElse(daoClassPerfLogAnno);
 
             Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> call = null;
 
@@ -720,7 +735,7 @@ final class DaoUtil {
             } else {
                 final Annotation sqlAnno = StreamEx.of(m.getAnnotations()).filter(anno -> sqlAnnoMap.containsKey(anno.annotationType())).first().orNull();
 
-                if (declaringClass.equals(JdbcUtil.Dao.class)) {
+                if (declaringClass.equals(Dao.class)) {
                     if (methodName.equals("save") && paramLen == 1) {
                         call = (proxy, args) -> {
                             final Object entity = args[0];
@@ -794,7 +809,7 @@ final class DaoUtil {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    try (JdbcUtil.NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
                                         ExceptionalStream.of(entities)
                                                 .splitToList(batchSize) //
                                                 .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
@@ -831,7 +846,7 @@ final class DaoUtil {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    try (JdbcUtil.NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
                                         ExceptionalStream.of(entities)
                                                 .splitToList(batchSize) //
                                                 .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
@@ -1533,8 +1548,7 @@ final class DaoUtil {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    try (JdbcUtil.NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
-                                            .closeAfterExecution(false)) {
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
                                         ids = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize)
                                                 .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor))
@@ -1597,8 +1611,7 @@ final class DaoUtil {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    try (JdbcUtil.NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
-                                            .closeAfterExecution(false)) {
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
                                         ids = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize)
                                                 .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor))
@@ -1800,7 +1813,7 @@ final class DaoUtil {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    try (JdbcUtil.NamedQuery nameQuery = proxy.prepareNamedQuery(namedUpdateByIdSQL).closeAfterExecution(false)) {
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedUpdateByIdSQL).closeAfterExecution(false)) {
                                         result = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize) //
                                                 .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp).batchUpdate()))
@@ -1843,7 +1856,7 @@ final class DaoUtil {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    try (JdbcUtil.NamedQuery nameQuery = proxy.prepareNamedQuery(query).closeAfterExecution(false)) {
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(query).closeAfterExecution(false)) {
                                         result = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize) //
                                                 .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp).batchUpdate()))
@@ -1908,7 +1921,7 @@ final class DaoUtil {
                     } else if ((methodName.equals("batchDelete") || methodName.equals("batchDeleteByIds")) && paramLen == 2
                             && int.class.equals(paramTypes[1])) {
 
-                        final JdbcUtil.BiParametersSetter<JdbcUtil.NamedQuery, Object> paramSetter = methodName.equals("batchDeleteByIds") ? idParamSetter
+                        final JdbcUtil.BiParametersSetter<NamedQuery, Object> paramSetter = methodName.equals("batchDeleteByIds") ? idParamSetter
                                 : idParamSetterByEntity;
 
                         call = (proxy, args) -> {
@@ -1927,7 +1940,7 @@ final class DaoUtil {
                                 long result = 0;
 
                                 try {
-                                    try (JdbcUtil.NamedQuery nameQuery = proxy.prepareNamedQuery(namedDeleteByIdSQL).closeAfterExecution(false)) {
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedDeleteByIdSQL).closeAfterExecution(false)) {
                                         result = ExceptionalStream.of(idsOrEntities)
                                                 .splitToList(batchSize)
                                                 .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp, paramSetter).batchUpdate()))
@@ -1943,7 +1956,7 @@ final class DaoUtil {
                             }
                         };
                     } else if (methodName.equals("batchDelete") && paramLen == 3 && boolean.class.equals(paramTypes[1]) && int.class.equals(paramTypes[2])) {
-                        final JdbcUtil.BiParametersSetter<JdbcUtil.NamedQuery, Object> paramSetter = idParamSetterByEntity;
+                        final JdbcUtil.BiParametersSetter<NamedQuery, Object> paramSetter = idParamSetterByEntity;
 
                         call = (proxy, args) -> {
                             final Collection<Object> entities = (Collection) args[0];
@@ -1967,7 +1980,7 @@ final class DaoUtil {
                             long result = 0;
 
                             try {
-                                try (JdbcUtil.NamedQuery nameQuery = proxy.prepareNamedQuery(namedDeleteByIdSQL).closeAfterExecution(false)) {
+                                try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedDeleteByIdSQL).closeAfterExecution(false)) {
                                     result = ExceptionalStream.of(entities) //
                                             .splitToList(batchSize) //
                                             .sumLong(bp -> {
@@ -2005,10 +2018,27 @@ final class DaoUtil {
                     final String query = N.checkArgNotNullOrEmpty(sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno), "sql can't be null or empty");
 
                     final boolean returnGeneratedKeys = isNoId == false
-                            && (sqlAnno.annotationType().equals(JdbcUtil.Dao.Insert.class) || sqlAnno.annotationType().equals(JdbcUtil.Dao.NamedInsert.class));
+                            && (sqlAnno.annotationType().equals(Dao.Insert.class) || sqlAnno.annotationType().equals(Dao.NamedInsert.class));
 
+                    final boolean isCall = sqlAnno.annotationType().getSimpleName().endsWith("Call");
                     final boolean isNamedQuery = sqlAnno.annotationType().getSimpleName().startsWith("Named");
                     final NamedSQL namedSQL = isNamedQuery ? NamedSQL.parse(query) : null;
+                    final List<Dao.OutParameter> outParameterList = StreamEx.of(m.getAnnotations())
+                            .select(Dao.OutParameter.class)
+                            .append(StreamEx.of(m.getAnnotations()).select(Dao.OutParameterList.class).flatMapp(e -> e.value()))
+                            .toList();
+
+                    if (N.notNullOrEmpty(outParameterList)) {
+                        if (!isCall) {
+                            throw new UnsupportedOperationException(
+                                    "@OutParameter annotations are only supported by method annotated by @Call, not supported in method: " + m.getName());
+                        }
+
+                        if (StreamEx.of(outParameterList).anyMatch(op -> N.isNullOrEmpty(op.name()) && op.position() < 0)) {
+                            throw new UnsupportedOperationException(
+                                    "One of the attribute: (name, position) of @OutParameter must be set in method: " + m.getName());
+                        }
+                    }
 
                     final boolean hasParameterSetter = (paramLen > 0 && JdbcUtil.ParametersSetter.class.isAssignableFrom(paramTypes[0]))
                             || (paramLen > 1 && JdbcUtil.BiParametersSetter.class.isAssignableFrom(paramTypes[1]))
@@ -2058,32 +2088,32 @@ final class DaoUtil {
 
                     Tuple4<Integer, Integer, Boolean, Integer> tp = null;
 
-                    if (sqlAnno instanceof JdbcUtil.Dao.Select) {
-                        final JdbcUtil.Dao.Select tmp = (JdbcUtil.Dao.Select) sqlAnno;
+                    if (sqlAnno instanceof Dao.Select) {
+                        final Dao.Select tmp = (Dao.Select) sqlAnno;
                         tp = Tuple.of(tmp.queryTimeout(), tmp.fetchSize(), false, -1);
-                    } else if (sqlAnno instanceof JdbcUtil.Dao.NamedSelect) {
-                        final JdbcUtil.Dao.NamedSelect tmp = (JdbcUtil.Dao.NamedSelect) sqlAnno;
+                    } else if (sqlAnno instanceof Dao.NamedSelect) {
+                        final Dao.NamedSelect tmp = (Dao.NamedSelect) sqlAnno;
                         tp = Tuple.of(tmp.queryTimeout(), tmp.fetchSize(), false, -1);
-                    } else if (sqlAnno instanceof JdbcUtil.Dao.Insert) {
-                        final JdbcUtil.Dao.Insert tmp = (JdbcUtil.Dao.Insert) sqlAnno;
+                    } else if (sqlAnno instanceof Dao.Insert) {
+                        final Dao.Insert tmp = (Dao.Insert) sqlAnno;
                         tp = Tuple.of(tmp.queryTimeout(), -1, false, -1);
-                    } else if (sqlAnno instanceof JdbcUtil.Dao.NamedInsert) {
-                        final JdbcUtil.Dao.NamedInsert tmp = (JdbcUtil.Dao.NamedInsert) sqlAnno;
+                    } else if (sqlAnno instanceof Dao.NamedInsert) {
+                        final Dao.NamedInsert tmp = (Dao.NamedInsert) sqlAnno;
                         tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
-                    } else if (sqlAnno instanceof JdbcUtil.Dao.Update) {
-                        final JdbcUtil.Dao.Update tmp = (JdbcUtil.Dao.Update) sqlAnno;
+                    } else if (sqlAnno instanceof Dao.Update) {
+                        final Dao.Update tmp = (Dao.Update) sqlAnno;
                         tp = Tuple.of(tmp.queryTimeout(), -1, false, -1);
-                    } else if (sqlAnno instanceof JdbcUtil.Dao.NamedUpdate) {
-                        final JdbcUtil.Dao.NamedUpdate tmp = (JdbcUtil.Dao.NamedUpdate) sqlAnno;
+                    } else if (sqlAnno instanceof Dao.NamedUpdate) {
+                        final Dao.NamedUpdate tmp = (Dao.NamedUpdate) sqlAnno;
                         tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
-                    } else if (sqlAnno instanceof JdbcUtil.Dao.Delete) {
-                        final JdbcUtil.Dao.Delete tmp = (JdbcUtil.Dao.Delete) sqlAnno;
+                    } else if (sqlAnno instanceof Dao.Delete) {
+                        final Dao.Delete tmp = (Dao.Delete) sqlAnno;
                         tp = Tuple.of(tmp.queryTimeout(), -1, false, -1);
-                    } else if (sqlAnno instanceof JdbcUtil.Dao.NamedDelete) {
-                        final JdbcUtil.Dao.NamedDelete tmp = (JdbcUtil.Dao.NamedDelete) sqlAnno;
+                    } else if (sqlAnno instanceof Dao.NamedDelete) {
+                        final Dao.NamedDelete tmp = (Dao.NamedDelete) sqlAnno;
                         tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
-                    } else if (sqlAnno instanceof JdbcUtil.Dao.Call) {
-                        final JdbcUtil.Dao.Call tmp = (JdbcUtil.Dao.Call) sqlAnno;
+                    } else if (sqlAnno instanceof Dao.Call) {
+                        final Dao.Call tmp = (Dao.Call) sqlAnno;
                         tp = Tuple.of(tmp.queryTimeout(), -1, false, -1);
                     } else {
                         tp = Tuple.of(-1, -1, false, -1);
@@ -2106,7 +2136,7 @@ final class DaoUtil {
                         }
                     }
 
-                    JdbcUtil.BiParametersSetter<JdbcUtil.AbstractPreparedQuery, Object[]> parametersSetter = null;
+                    JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter = null;
 
                     if (paramLen == 0) {
                         parametersSetter = null;
@@ -2126,22 +2156,46 @@ final class DaoUtil {
                         if (stmtParamLen == 0) {
                             // ignore
                         } else if (stmtParamLen == 1) {
-                            if (isNamedQuery) {
-                                final JdbcUtil.Dao.Bind binder = StreamEx.of(m.getParameterAnnotations())
+                            if (isCall) {
+                                final String paramName = StreamEx.of(m.getParameterAnnotations())
                                         .limit(1)
                                         .flatMapp(e -> e)
-                                        .select(JdbcUtil.Dao.Bind.class)
+                                        .select(Dao.Bind.class)
+                                        .map(b -> b.value())
                                         .first()
                                         .orNull();
 
-                                if (binder != null) {
-                                    parametersSetter = (preparedQuery, args) -> ((JdbcUtil.NamedQuery) preparedQuery).setObject(binder.value(), args[0]);
-                                } else if (ClassUtil.isEntity(paramTypes[0])) {
-                                    parametersSetter = (preparedQuery, args) -> ((JdbcUtil.NamedQuery) preparedQuery).setParameters(args[0]);
+                                if (N.notNullOrEmpty(paramName)) {
+                                    parametersSetter = (preparedQuery, args) -> ((PreparedCallableQuery) preparedQuery).setObject(paramName, args[0]);
                                 } else if (Map.class.isAssignableFrom(paramTypes[0])) {
-                                    parametersSetter = (preparedQuery, args) -> ((JdbcUtil.NamedQuery) preparedQuery).setParameters((Map<String, ?>) args[0]);
+                                    parametersSetter = (preparedQuery, args) -> ((PreparedCallableQuery) preparedQuery).setParameters((Map<String, ?>) args[0]);
+                                } else if (ClassUtil.isEntity(paramTypes[0]) || EntityId.class.isAssignableFrom(paramTypes[0])) {
+                                    throw new UnsupportedOperationException("In method: " + ClassUtil.getSimpleClassName(daoInterface) + "." + m.getName()
+                                            + ", parameters for call(procedure) have to be binded with names through annotation @Bind, or Map. Entity/EntityId type parameter are not supported");
+                                } else if (Collection.class.isAssignableFrom(paramTypes[0])) {
+                                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Collection) args[0]);
+                                } else if (Object[].class.isAssignableFrom(paramTypes[0])) {
+                                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Object[]) args[0]);
+                                } else {
+                                    parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[0]);
+                                }
+                            } else if (isNamedQuery) {
+                                final String paramName = StreamEx.of(m.getParameterAnnotations())
+                                        .limit(1)
+                                        .flatMapp(e -> e)
+                                        .select(Dao.Bind.class)
+                                        .map(b -> b.value())
+                                        .first()
+                                        .orNull();
+
+                                if (N.notNullOrEmpty(paramName)) {
+                                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setObject(paramName, args[0]);
+                                } else if (ClassUtil.isEntity(paramTypes[0])) {
+                                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[0]);
+                                } else if (Map.class.isAssignableFrom(paramTypes[0])) {
+                                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters((Map<String, ?>) args[0]);
                                 } else if (EntityId.class.isAssignableFrom(paramTypes[0])) {
-                                    parametersSetter = (preparedQuery, args) -> ((JdbcUtil.NamedQuery) preparedQuery).setParameters(args[0]);
+                                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[0]);
                                 } else {
                                     throw new UnsupportedOperationException("In method: " + ClassUtil.getSimpleClassName(daoInterface) + "." + m.getName()
                                             + ", parameters for named query have to be binded with names through annotation @Bind, or Map/Entity with getter/setter methods. Can not be: "
@@ -2157,10 +2211,32 @@ final class DaoUtil {
                                 }
                             }
                         } else {
-                            if (isNamedQuery) {
+                            if (isCall) {
+                                final String[] paramNames = IntStreamEx.range(0, stmtParamLen)
+                                        .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).select(Dao.Bind.class).first().orElseThrow(null))
+                                        .skipNull()
+                                        .map(b -> b.value())
+                                        .toArray(len -> new String[len]);
+
+                                if (N.notNullOrEmpty(paramNames)) {
+                                    parametersSetter = (preparedQuery, args) -> {
+                                        final PreparedCallableQuery namedQuery = ((PreparedCallableQuery) preparedQuery);
+
+                                        for (int i = 0, count = paramNames.length; i < count; i++) {
+                                            namedQuery.setObject(paramNames[i], args[i]);
+                                        }
+                                    };
+                                } else {
+                                    if (stmtParamLen == paramLen) {
+                                        parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters(args);
+                                    } else {
+                                        parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters(N.copyOfRange(args, 0, stmtParamLen));
+                                    }
+                                }
+                            } else if (isNamedQuery) {
                                 final String[] paramNames = IntStreamEx.range(0, stmtParamLen)
                                         .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i])
-                                                .select(JdbcUtil.Dao.Bind.class)
+                                                .select(Dao.Bind.class)
                                                 .first()
                                                 .orElseThrow(() -> new UnsupportedOperationException(
                                                         "In method: " + ClassUtil.getSimpleClassName(daoInterface) + "." + m.getName() + ", parameters[" + i
@@ -2170,7 +2246,7 @@ final class DaoUtil {
                                         .toArray(len -> new String[len]);
 
                                 parametersSetter = (preparedQuery, args) -> {
-                                    final JdbcUtil.NamedQuery namedQuery = ((JdbcUtil.NamedQuery) preparedQuery);
+                                    final NamedQuery namedQuery = ((NamedQuery) preparedQuery);
 
                                     for (int i = 0, count = paramNames.length; i < count; i++) {
                                         namedQuery.setObject(paramNames[i], args[i]);
@@ -2186,7 +2262,7 @@ final class DaoUtil {
                         }
                     }
 
-                    final JdbcUtil.BiParametersSetter<JdbcUtil.AbstractPreparedQuery, Object[]> finalParametersSetter = parametersSetter == null
+                    final JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object[]> finalParametersSetter = parametersSetter == null
                             ? JdbcUtil.BiParametersSetter.DO_NOTHING
                             : parametersSetter;
 
@@ -2196,11 +2272,9 @@ final class DaoUtil {
 
                     final boolean idDirtyMarkerReturnType = ClassUtil.isEntity(returnType) && DirtyMarker.class.isAssignableFrom(returnType);
 
-                    final boolean isCall = sqlAnno.annotationType().equals(JdbcUtil.Dao.Call.class);
-
-                    if (sqlAnno.annotationType().equals(JdbcUtil.Dao.Select.class) || sqlAnno.annotationType().equals(JdbcUtil.Dao.NamedSelect.class)
-                            || (sqlAnno.annotationType().equals(JdbcUtil.Dao.Call.class) && !isUpdateReturnType)) {
-                        final Throwables.BiFunction<JdbcUtil.AbstractPreparedQuery, Object[], T, Exception> queryFunc = createQueryFunctionByMethod(m,
+                    if (sqlAnno.annotationType().equals(Dao.Select.class) || sqlAnno.annotationType().equals(Dao.NamedSelect.class)
+                            || (isCall && !isUpdateReturnType)) {
+                        final Throwables.BiFunction<AbstractPreparedQuery, Object[], T, Exception> queryFunc = createQueryFunctionByMethod(m,
                                 hasRowMapperOrExtractor, hasRowFilter);
 
                         // Getting ClassCastException. Not sure why query result is being casted Dao. It seems there is a bug in JDk compiler.
@@ -2208,7 +2282,7 @@ final class DaoUtil {
 
                         call = (proxy, args) -> {
                             Object result = queryFunc.apply(prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, -1, queryTimeout,
-                                    returnGeneratedKeys, returnColumnNames, isCall).settParameters(args, finalParametersSetter), args);
+                                    returnGeneratedKeys, returnColumnNames, isCall, outParameterList).settParameters(args, finalParametersSetter), args);
 
                             if (idDirtyMarkerReturnType) {
                                 ((DirtyMarker) result).markDirty(false);
@@ -2216,7 +2290,7 @@ final class DaoUtil {
 
                             return result;
                         };
-                    } else if (sqlAnno.annotationType().equals(JdbcUtil.Dao.Insert.class) || sqlAnno.annotationType().equals(JdbcUtil.Dao.NamedInsert.class)) {
+                    } else if (sqlAnno.annotationType().equals(Dao.Insert.class) || sqlAnno.annotationType().equals(Dao.NamedInsert.class)) {
                         if (isNoId) {
                             if (!returnType.isAssignableFrom(void.class)) {
                                 throw new UnsupportedOperationException("The return type of insert operations(" + m.getName()
@@ -2236,7 +2310,8 @@ final class DaoUtil {
                                 final Object entity = isEntity ? args[0] : null;
 
                                 final Optional<Object> id = prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, -1, queryTimeout,
-                                        returnGeneratedKeys, returnColumnNames, isCall).settParameters(args, finalParametersSetter).insert(keyExtractor);
+                                        returnGeneratedKeys, returnColumnNames, isCall, outParameterList).settParameters(args, finalParametersSetter)
+                                                .insert(keyExtractor);
 
                                 if (isEntity && id.isPresent()) {
                                     id.ifPresent(ret -> idSetter.accept(ret, entity));
@@ -2274,14 +2349,16 @@ final class DaoUtil {
                                 if (N.isNullOrEmpty(batchParameters)) {
                                     ids = new ArrayList<>(0);
                                 } else if (batchParameters.size() < batchSize) {
-                                    ids = ((JdbcUtil.NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, -1, queryTimeout,
-                                            returnGeneratedKeys, returnColumnNames, isCall)).addBatchParameters(batchParameters).batchInsert();
+                                    ids = ((NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, -1, queryTimeout,
+                                            returnGeneratedKeys, returnColumnNames, isCall, outParameterList)).addBatchParameters(batchParameters)
+                                                    .batchInsert();
                                 } else {
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
-                                        try (JdbcUtil.NamedQuery nameQuery = (JdbcUtil.NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize,
-                                                isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall).closeAfterExecution(false)) {
+                                        try (NamedQuery nameQuery = (NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch,
+                                                batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                                        .closeAfterExecution(false)) {
 
                                             ids = ExceptionalStream.of(batchParameters)
                                                     .splitToList(batchSize) //
@@ -2333,10 +2410,9 @@ final class DaoUtil {
                                 return void.class.equals(returnType) ? null : ids;
                             };
                         }
-                    } else if (sqlAnno.annotationType().equals(JdbcUtil.Dao.Update.class) || sqlAnno.annotationType().equals(JdbcUtil.Dao.Delete.class)
-                            || sqlAnno.annotationType().equals(JdbcUtil.Dao.NamedUpdate.class)
-                            || sqlAnno.annotationType().equals(JdbcUtil.Dao.NamedDelete.class)
-                            || (sqlAnno.annotationType().equals(JdbcUtil.Dao.Call.class) && isUpdateReturnType)) {
+                    } else if (sqlAnno.annotationType().equals(Dao.Update.class) || sqlAnno.annotationType().equals(Dao.Delete.class)
+                            || sqlAnno.annotationType().equals(Dao.NamedUpdate.class) || sqlAnno.annotationType().equals(Dao.NamedDelete.class)
+                            || (sqlAnno.annotationType().equals(Dao.Call.class) && isUpdateReturnType)) {
                         if (!isUpdateReturnType) {
                             throw new UnsupportedOperationException("The return type of update/delete operations(" + m.getName()
                                     + ") only can be: int/Integer/long/Long/boolean/Boolean/void. It can't be: " + returnType);
@@ -2354,14 +2430,15 @@ final class DaoUtil {
                                     && DirtyMarker.class.isAssignableFrom(paramTypes[0]);
 
                             call = (proxy, args) -> {
-                                final JdbcUtil.AbstractPreparedQuery preparedQuery = prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, -1,
-                                        queryTimeout, returnGeneratedKeys, returnColumnNames, isCall).settParameters(args, finalParametersSetter);
+                                final AbstractPreparedQuery preparedQuery = prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, -1,
+                                        queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList).settParameters(args,
+                                                finalParametersSetter);
 
                                 final long updatedRecordCount = isLargeUpdate ? preparedQuery.largeUpate() : preparedQuery.update();
 
                                 if (idDirtyMarker) {
-                                    if (isNamedQuery && (sqlAnno.annotationType().equals(JdbcUtil.Dao.Update.class)
-                                            || sqlAnno.annotationType().equals(JdbcUtil.Dao.NamedUpdate.class))) {
+                                    if (isNamedQuery
+                                            && (sqlAnno.annotationType().equals(Dao.Update.class) || sqlAnno.annotationType().equals(Dao.NamedUpdate.class))) {
                                         ((DirtyMarker) args[0]).markDirty(namedSQL.getNamedParameters(), false);
                                     } else {
                                         ((DirtyMarker) args[0]).markDirty(false);
@@ -2391,8 +2468,8 @@ final class DaoUtil {
                                 if (N.isNullOrEmpty(batchParameters)) {
                                     updatedRecordCount = 0;
                                 } else if (batchParameters.size() < batchSize) {
-                                    final JdbcUtil.NamedQuery preparedQuery = ((JdbcUtil.NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSQL,
-                                            fetchSize, isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall))
+                                    final NamedQuery preparedQuery = ((NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch,
+                                            batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList))
                                                     .addBatchParameters(batchParameters);
 
                                     if (isLargeUpdate) {
@@ -2404,8 +2481,9 @@ final class DaoUtil {
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
-                                        try (JdbcUtil.NamedQuery nameQuery = (JdbcUtil.NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize,
-                                                isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall).closeAfterExecution(false)) {
+                                        try (NamedQuery nameQuery = (NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch,
+                                                batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                                        .closeAfterExecution(false)) {
 
                                             updatedRecordCount = ExceptionalStream.of(batchParameters)
                                                     .splitToList(batchSize) //
@@ -2421,8 +2499,8 @@ final class DaoUtil {
                                 }
 
                                 if (N.firstOrNullIfEmpty(batchParameters) instanceof DirtyMarker) {
-                                    if (isNamedQuery && (sqlAnno.annotationType().equals(JdbcUtil.Dao.Update.class)
-                                            || sqlAnno.annotationType().equals(JdbcUtil.Dao.NamedUpdate.class))) {
+                                    if (isNamedQuery
+                                            && (sqlAnno.annotationType().equals(Dao.Update.class) || sqlAnno.annotationType().equals(Dao.NamedUpdate.class))) {
 
                                         for (Object e : batchParameters) {
                                             ((DirtyMarker) e).markDirty(namedSQL.getNamedParameters(), false);

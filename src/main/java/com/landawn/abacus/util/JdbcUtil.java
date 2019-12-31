@@ -30,6 +30,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -10146,10 +10147,10 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        public PreparedCallableQuery setParameters(Map<String, Object> parameters) throws SQLException {
+        public PreparedCallableQuery setParameters(Map<String, ?> parameters) throws SQLException {
             checkArgNotNull(parameters, "parameters");
 
-            for (Map.Entry<String, Object> entry : parameters.entrySet()) {
+            for (Map.Entry<String, ?> entry : parameters.entrySet()) {
                 setObject(entry.getKey(), entry.getValue());
             }
 
@@ -15878,7 +15879,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * The Interface Update.
+         * The Interface Call.
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
@@ -15887,7 +15888,7 @@ public final class JdbcUtil {
             /**
              *
              * @return
-             * @deprecated using sql="call " for explicit call.
+             * @deprecated using sql="call update_account(?)" for explicit call.
              */
             @Deprecated
             String value()
@@ -15906,6 +15907,23 @@ public final class JdbcUtil {
              * @return
              */
             int queryTimeout() default -1;
+        }
+
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(ElementType.METHOD)
+        @Repeatable(OutParameterList.class)
+        public @interface OutParameter {
+            String name() default "";
+
+            int position() default -1;
+
+            int sqlType();
+        }
+
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(ElementType.METHOD)
+        public @interface OutParameterList {
+            OutParameter[] value();
         }
 
         /**
@@ -15946,7 +15964,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * It's only for methods with default implementation in {@code Dao} interfaces. Don't use it for the abstract methods.
+         *
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.METHOD, ElementType.TYPE })
