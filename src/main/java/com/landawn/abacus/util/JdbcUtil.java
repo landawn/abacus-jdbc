@@ -15913,8 +15913,18 @@ public final class JdbcUtil {
         @Target(ElementType.METHOD)
         @Repeatable(OutParameterList.class)
         public @interface OutParameter {
+            /**
+             * 
+             * @return
+             * @see CallableStatement#registerOutParameter(String, int)
+             */
             String name() default "";
 
+            /**
+             * Starts from 1.
+             * @return
+             * @see CallableStatement#registerOutParameter(int, int)
+             */
             int position() default -1;
 
             int sqlType();
