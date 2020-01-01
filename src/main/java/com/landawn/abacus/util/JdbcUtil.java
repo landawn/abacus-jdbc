@@ -3697,7 +3697,7 @@ public final class JdbcUtil {
      */
     public static <E extends Exception> int importData(final DataSet dataset, final Collection<String> selectColumnNames, final int offset, final int count,
             final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval)
-            throws UncheckedSQLException, E {
+                    throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
@@ -4000,7 +4000,7 @@ public final class JdbcUtil {
      */
     public static <E extends Exception> int importData(final DataSet dataset, final Collection<String> selectColumnNames, final int offset, final int count,
             final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval)
-            throws UncheckedSQLException, E {
+                    throws UncheckedSQLException, E {
         final Type<?> objType = N.typeOf(Object.class);
         final Map<String, Type<?>> columnTypeMap = new HashMap<>();
 
@@ -4387,7 +4387,7 @@ public final class JdbcUtil {
      */
     public static <E extends Exception> long importData(final InputStream is, final long offset, final long count, final Connection conn,
             final String insertSQL, final int batchSize, final int batchInterval, final Throwables.Function<String, Object[], E> func)
-            throws UncheckedSQLException, E {
+                    throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
@@ -4599,7 +4599,7 @@ public final class JdbcUtil {
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, final long offset, final long count, final Connection conn,
             final String insertSQL, final int batchSize, final int batchInterval, final Throwables.Function<? super T, Object[], E> func)
-            throws UncheckedSQLException, E {
+                    throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
@@ -4949,7 +4949,7 @@ public final class JdbcUtil {
      */
     public static <E extends Exception, E2 extends Exception> void parse(final Connection conn, final String sql, final long offset, final long count,
             final int processThreadNum, final int queueSize, final Throwables.Consumer<Object[], E> rowParser, final Throwables.Runnable<E2> onComplete)
-            throws UncheckedSQLException, E, E2 {
+                    throws UncheckedSQLException, E, E2 {
         PreparedStatement stmt = null;
         try {
             stmt = prepareStatement(conn, sql);
@@ -5062,7 +5062,7 @@ public final class JdbcUtil {
      */
     public static <E extends Exception, E2 extends Exception> void parse(final PreparedStatement stmt, final long offset, final long count,
             final int processThreadNum, final int queueSize, final Throwables.Consumer<Object[], E> rowParser, final Throwables.Runnable<E2> onComplete)
-            throws UncheckedSQLException, E, E2 {
+                    throws UncheckedSQLException, E, E2 {
         ResultSet rs = null;
 
         try {
@@ -5172,7 +5172,7 @@ public final class JdbcUtil {
      */
     public static <E extends Exception, E2 extends Exception> void parse(final ResultSet rs, long offset, long count, final int processThreadNum,
             final int queueSize, final Throwables.Consumer<Object[], E> rowParser, final Throwables.Runnable<E2> onComplete)
-            throws UncheckedSQLException, E, E2 {
+                    throws UncheckedSQLException, E, E2 {
 
         final Iterator<Object[]> iter = new ObjIterator<Object[]>() {
             private final JdbcUtil.BiRowMapper<Object[]> biFunc = BiRowMapper.TO_ARRAY;
@@ -5247,7 +5247,7 @@ public final class JdbcUtil {
      */
     public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final long offset, final long count,
             final Connection targetConn, final String insertSql, final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter,
-            final int batchSize, final int batchInterval, final boolean inParallel) throws UncheckedSQLException {
+                    final int batchSize, final int batchInterval, final boolean inParallel) throws UncheckedSQLException {
         PreparedStatement selectStmt = null;
         PreparedStatement insertStmt = null;
 
@@ -5298,14 +5298,14 @@ public final class JdbcUtil {
      */
     public static long copy(final PreparedStatement selectStmt, final long offset, final long count, final PreparedStatement insertStmt,
             final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter, final int batchSize, final int batchInterval,
-            final boolean inParallel) throws UncheckedSQLException {
+                    final boolean inParallel) throws UncheckedSQLException {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
                 batchInterval);
 
         @SuppressWarnings("rawtypes")
         final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super Object[]> setter = (JdbcUtil.BiParametersSetter) (stmtSetter == null
-                ? DEFAULT_STMT_SETTER
+        ? DEFAULT_STMT_SETTER
                 : stmtSetter);
         final AtomicLong result = new AtomicLong();
 
@@ -10543,7 +10543,7 @@ public final class JdbcUtil {
          */
         public <R1, R2, R3, R4> Tuple4<Optional<R1>, Optional<R2>, Optional<R3>, Optional<R4>> call(final ResultExtractor<R1> resultExtrator1,
                 final ResultExtractor<R2> resultExtrator2, final ResultExtractor<R3> resultExtrator3, final ResultExtractor<R4> resultExtrator4)
-                throws SQLException {
+                        throws SQLException {
             checkArgNotNull(resultExtrator1, "resultExtrator1");
             checkArgNotNull(resultExtrator2, "resultExtrator2");
             checkArgNotNull(resultExtrator3, "resultExtrator3");
@@ -15112,7 +15112,7 @@ public final class JdbcUtil {
                                             columnLabels[i] = null;
                                         } else {
                                             throw new IllegalArgumentException("No property in class: " + ClassUtil.getCanonicalClassName(targetClass)
-                                                    + " mapping to column: " + columnLabels[i]);
+                                            + " mapping to column: " + columnLabels[i]);
                                         }
                                     } else {
                                         if (rsColumnGetters[i + 1] == ColumnGetter.GET_OBJECT) {
@@ -15914,7 +15914,7 @@ public final class JdbcUtil {
         @Repeatable(DaoUtil.OutParameterList.class)
         public @interface OutParameter {
             /**
-             * 
+             *
              * @return
              * @see CallableStatement#registerOutParameter(String, int)
              */
@@ -15927,6 +15927,11 @@ public final class JdbcUtil {
              */
             int position() default -1;
 
+            /**
+             *
+             * @return
+             * @see {@code java.sql.Types}
+             */
             int sqlType();
         }
 
@@ -18201,7 +18206,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpdateCrudDao<T, ID, SB, TD>>
-            extends NoUpdateDao<T, SB, TD>, CrudDao<T, ID, SB, TD> {
+    extends NoUpdateDao<T, SB, TD>, CrudDao<T, ID, SB, TD> {
 
         /**
          *
@@ -18486,7 +18491,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOnlyCrudDao<T, ID, SB, TD>>
-            extends ReadOnlyDao<T, SB, TD>, NoUpdateCrudDao<T, ID, SB, TD> {
+    extends ReadOnlyDao<T, SB, TD>, NoUpdateCrudDao<T, ID, SB, TD> {
 
         /**
          *
