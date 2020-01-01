@@ -17,6 +17,10 @@
 package com.landawn.abacus.util;
 
 import java.lang.annotation.Annotation;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -2025,7 +2029,7 @@ final class DaoUtil {
                     final NamedSQL namedSQL = isNamedQuery ? NamedSQL.parse(query) : null;
                     final List<Dao.OutParameter> outParameterList = StreamEx.of(m.getAnnotations())
                             .select(Dao.OutParameter.class)
-                            .append(StreamEx.of(m.getAnnotations()).select(Dao.OutParameterList.class).flatMapp(e -> e.value()))
+                            .append(StreamEx.of(m.getAnnotations()).select(DaoUtil.OutParameterList.class).flatMapp(e -> e.value()))
                             .toList();
 
                     if (N.notNullOrEmpty(outParameterList)) {
@@ -2684,4 +2688,9 @@ final class DaoUtil {
         return daoInstance;
     }
 
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    static @interface OutParameterList {
+        Dao.OutParameter[] value();
+    }
 }

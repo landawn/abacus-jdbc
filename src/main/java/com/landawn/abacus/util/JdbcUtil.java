@@ -15911,7 +15911,7 @@ public final class JdbcUtil {
 
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
-        @Repeatable(OutParameterList.class)
+        @Repeatable(DaoUtil.OutParameterList.class)
         public @interface OutParameter {
             /**
              * 
@@ -15928,12 +15928,6 @@ public final class JdbcUtil {
             int position() default -1;
 
             int sqlType();
-        }
-
-        @Retention(RetentionPolicy.RUNTIME)
-        @Target(ElementType.METHOD)
-        public @interface OutParameterList {
-            OutParameter[] value();
         }
 
         /**

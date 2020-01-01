@@ -1,3 +1,9 @@
+### 1.10.4
+
+* Supports `@OutParameter`.
+* Improvements and bug fix.
+
+
 ### 1.10.3
 
 * Supports `@PerfLog`.

@@ -329,7 +329,7 @@ public class DaoTest {
     }
 
     @Test
-    public void test_list() throws SQLException {
+    public void test_list() throws SQLException { 
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
