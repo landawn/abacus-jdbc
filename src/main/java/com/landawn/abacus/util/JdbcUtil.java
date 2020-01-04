@@ -11256,7 +11256,7 @@ public final class JdbcUtil {
                                         if (ignoreNonMatchedColumns) {
                                             columnLabels[i] = null;
                                         } else {
-                                            throw new IllegalArgumentException("No property in class: " + ClassUtil.getClassName(targetClass)
+                                            throw new IllegalArgumentException("No property in class: " + ClassUtil.getCanonicalClassName(targetClass)
                                                     + " mapping to column: " + columnLabels[i]);
                                         }
                                     } else {
@@ -14830,7 +14830,7 @@ public final class JdbcUtil {
                                         }
                                     }
                                 } else {
-                                    logger.warn("Can't set generated keys by id type: " + ClassUtil.getClassName(id.getClass()));
+                                    logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
                                 }
                             });
 

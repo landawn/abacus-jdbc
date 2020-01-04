@@ -24,7 +24,7 @@ public class HandlerFactory {
     public static void register(final Handler<?> handler) {
         N.checkArgNotNull(handler, "handler");
 
-        register(ClassUtil.getClassName(handler.getClass()), handler);
+        register(ClassUtil.getCanonicalClassName(handler.getClass()), handler);
     }
 
     public static boolean register(final String qualifier, final Handler<?> handler) {
@@ -48,13 +48,13 @@ public class HandlerFactory {
     public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) {
         N.checkArgNotNull(handlerClass, "handlerClass");
 
-        return get(ClassUtil.getClassName(handlerClass));
+        return get(ClassUtil.getCanonicalClassName(handlerClass));
     }
 
     public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) {
         N.checkArgNotNull(handlerClass, "handlerClass");
 
-        Handler<?> result = get(ClassUtil.getClassName(handlerClass));
+        Handler<?> result = get(ClassUtil.getCanonicalClassName(handlerClass));
 
         if (result == null) {
             try {

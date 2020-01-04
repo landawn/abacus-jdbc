@@ -456,7 +456,7 @@ final class DaoUtil {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(ds, "dataSource");
 
-        final String key = ClassUtil.getClassName(daoInterface) + "_" + System.identityHashCode(ds) + "_"
+        final String key = ClassUtil.getCanonicalClassName(daoInterface) + "_" + System.identityHashCode(ds) + "_"
                 + (sqlMapper == null ? "null" : System.identityHashCode(sqlMapper)) + "_" + (executor == null ? "null" : System.identityHashCode(executor));
 
         TD daoInstance = (TD) daoPool.get(key);
