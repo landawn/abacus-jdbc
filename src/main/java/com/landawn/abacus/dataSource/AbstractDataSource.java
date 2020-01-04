@@ -113,7 +113,7 @@ public abstract class AbstractDataSource implements DataSource {
             return (T) this;
         } else {
             throw new IllegalArgumentException(
-                    ClassUtil.getCanonicalClassName(this.getClass()) + " doesn't implemented interface: " + ClassUtil.getCanonicalClassName(iface));
+                    ClassUtil.getClassName(this.getClass()) + " doesn't implemented interface: " + ClassUtil.getClassName(iface));
         }
     }
 

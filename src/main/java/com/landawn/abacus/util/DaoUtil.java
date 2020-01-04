@@ -58,7 +58,6 @@ import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
 import com.landawn.abacus.util.Fn.IntFunctions;
-import com.landawn.abacus.util.JdbcUtil.AbstractPreparedQuery;
 import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
@@ -457,7 +456,7 @@ final class DaoUtil {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(ds, "dataSource");
 
-        final String key = ClassUtil.getCanonicalClassName(daoInterface) + "_" + System.identityHashCode(ds) + "_"
+        final String key = ClassUtil.getClassName(daoInterface) + "_" + System.identityHashCode(ds) + "_"
                 + (sqlMapper == null ? "null" : System.identityHashCode(sqlMapper)) + "_" + (executor == null ? "null" : System.identityHashCode(executor));
 
         TD daoInstance = (TD) daoPool.get(key);
@@ -674,6 +673,14 @@ final class DaoUtil {
                 .last()
                 .orNull();
 
+        final List<Dao.Handler> daoClassHandlerList = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface))
+                .append(daoInterface)
+                .flatMapp(cls -> cls.getAnnotations())
+                .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoUtil.HandlerList.class))
+                .flattMap(
+                        anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno) : N.asList(((DaoUtil.HandlerList) anno).value()))
+                .toList();
+
         for (Method m : sqlMethods) {
             final Class<?> declaringClass = m.getDeclaringClass();
             final String methodName = m.getName();
@@ -696,16 +703,6 @@ final class DaoUtil {
                                     + " on method: " + m.getName());
                 }
             }
-
-            final Dao.Transactional transactionalAnno = StreamEx.of(m.getAnnotations()).select(Dao.Transactional.class).last().orNull();
-
-            //    if (transactionalAnno != null && Modifier.isAbstract(m.getModifiers())) {
-            //        throw new UnsupportedOperationException(
-            //                "Annotation @Transactional is only supported by interface methods with default implementation: default xxx dbOperationABC(someParameters, String ... sqls), not supported by abstract method: "
-            //                        + m.getName());
-            //    }
-
-            final Dao.PerfLog perfLogAnno = StreamEx.of(m.getAnnotations()).select(Dao.PerfLog.class).last().orElse(daoClassPerfLogAnno);
 
             Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> call = null;
 
@@ -2525,9 +2522,32 @@ final class DaoUtil {
                 }
             }
 
+            final List<com.landawn.abacus.util.Handler<?>> handlerList = StreamEx.of(m.getAnnotations())
+                    .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoUtil.HandlerList.class))
+                    .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
+                            : N.asList(((DaoUtil.HandlerList) anno).value()))
+                    .prepend(daoClassHandlerList)
+                    .map(handlerAnno -> N.notNullOrEmpty(handlerAnno.qualifier()) ? HandlerFactory.get(handlerAnno.qualifier())
+                            : HandlerFactory.getOrCreate((Class<? extends Handler<?>>) handlerAnno.value()))
+                    .carry(handler -> N.checkArgNotNull(handler,
+                            "No handler found/registered with qualifier or type in class/method: " + daoInterface + "." + m.getName()))
+                    .reversed()
+                    .toList();
+
+            final Dao.Transactional transactionalAnno = StreamEx.of(m.getAnnotations()).select(Dao.Transactional.class).last().orNull();
+
+            //    if (transactionalAnno != null && Modifier.isAbstract(m.getModifiers())) {
+            //        throw new UnsupportedOperationException(
+            //                "Annotation @Transactional is only supported by interface methods with default implementation: default xxx dbOperationABC(someParameters, String ... sqls), not supported by abstract method: "
+            //                        + m.getName());
+            //    }
+
+            final Dao.PerfLog perfLogAnno = StreamEx.of(m.getAnnotations()).select(Dao.PerfLog.class).last().orElse(daoClassPerfLogAnno);
+
             final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> tmp = call;
             final String fullMethodName = daoInterface.getSimpleName() + "." + m.getName();
             final boolean hasPerfLogAnno = perfLogAnno != null;
+            N.notNullOrEmpty(handlerList);
 
             if (transactionalAnno == null || transactionalAnno.propagation() == Propagation.SUPPORTS) {
                 if (hasPerfLogAnno) {
@@ -2666,6 +2686,41 @@ final class DaoUtil {
                 };
             }
 
+            if (N.notNullOrEmpty(handlerList)) {
+                final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(m, ImmutableList.of(m.getParameterTypes()),
+                        m.getReturnType());
+
+                call = (proxy, args) -> {
+                    for (Handler handler : handlerList) {
+                        handler.beforeInvoke(proxy, args, methodSignature);
+                    }
+
+                    Result<?, Exception> result = null;
+
+                    try {
+                        result = Result.of(temp.apply(proxy, args), null);
+                    } catch (Exception e) {
+                        result = Result.of(null, e);
+                    } finally {
+                        try {
+                            for (Handler handler : handlerList) {
+                                handler.afterInvoke(result, proxy, args, methodSignature);
+                            }
+                        } catch (Exception e) {
+                            if (result.isFailure()) {
+                                result.getExceptionIfPresent().addSuppressed(e);
+                                throw result.getExceptionIfPresent();
+                            } else {
+                                throw e;
+                            }
+                        }
+                    }
+
+                    return result.orElseThrow();
+                };
+            }
+
             methodInvokerMap.put(m, call);
         }
 
@@ -2692,5 +2747,11 @@ final class DaoUtil {
     @Target(ElementType.METHOD)
     static @interface OutParameterList {
         Dao.OutParameter[] value();
+    }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(value = { ElementType.METHOD, ElementType.TYPE })
+    static @interface HandlerList {
+        Dao.Handler[] value();
     }
 }

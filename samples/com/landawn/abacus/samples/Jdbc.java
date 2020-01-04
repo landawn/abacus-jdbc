@@ -22,6 +22,7 @@ import com.landawn.abacus.samples.entity.Address;
 import com.landawn.abacus.samples.entity.Device;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Fn;
+import com.landawn.abacus.util.HandlerFactory;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.NSC;
@@ -34,6 +35,12 @@ import com.landawn.abacus.util.SQLTransaction;
  * CRUD: insert -> read -> update -> delete a record in DB table.
  */
 public class Jdbc {
+    static {
+        HandlerFactory.register("handler1", HandlerFactory.create((obj, args, tp) -> N.println("calling: " + tp._1.getName() + " by Handler1.beforeInvoke")));
+        HandlerFactory.register("handler2",
+                HandlerFactory.create((result, obj, args, tp) -> N.println("calling: " + tp._1.getName() + " by Handler2.afterInvoke")));
+    }
+
     static final DataSource dataSource = JdbcUtil.createDataSource("jdbc:h2:~/test", "sa", "");
     static final SQLExecutor sqlExecutor = new SQLExecutor(dataSource);
     static final Mapper<User, Long> userMapper = sqlExecutor.mapper(User.class, long.class);

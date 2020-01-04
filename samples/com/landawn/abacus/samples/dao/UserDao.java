@@ -4,8 +4,10 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.samples.dao.handler.UserDaoHandlerA;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.JdbcUtil;
+import com.landawn.abacus.util.JdbcUtil.Dao.Handler;
 import com.landawn.abacus.util.JdbcUtil.Dao.PerfLog;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Propagation;
@@ -13,6 +15,8 @@ import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.stream.Stream;
 
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
+@Handler(UserDaoHandlerA.class)
+@Handler(qualifier = "handler1")
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
     @NamedInsert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
     void insertWithId(User user) throws SQLException;
@@ -79,6 +83,7 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 
     @Sqls("DELETE from user where id = ?")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Handler(qualifier = "handler2")
     default boolean delete_propagation_REQUIRES_NEW(long id, String... sqls) {
         try {
             return prepareQuery(sqls[0]).setLong(1, id).update() > 0;

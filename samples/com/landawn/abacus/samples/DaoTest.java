@@ -42,6 +42,28 @@ import com.landawn.abacus.util.stream.Stream;
 public class DaoTest {
 
     @Test
+    public void test_handler() throws SQLException {
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
+
+        User userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+        assertNotNull(userFromDB);
+
+        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+            userDao.delete_propagation_SUPPORTS(userFromDB.getId());
+        }
+
+        assertTrue(userDao.exists(userFromDB.getId()));
+
+        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+            userDao.delete_propagation_REQUIRES_NEW(userFromDB.getId());
+        }
+
+        assertFalse(userDao.exists(userFromDB.getId()));
+    }
+
+    @Test
     public void test_sql_log() throws SQLException {
 
         LongStream.range(100, 110).parallel(8).forEach(idx -> {
@@ -329,7 +351,7 @@ public class DaoTest {
     }
 
     @Test
-    public void test_list() throws SQLException { 
+    public void test_list() throws SQLException {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 

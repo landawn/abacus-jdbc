@@ -5767,7 +5767,7 @@ public class SQLExecutor {
 
             // Not a good idea to define Mapper<SomeEntity, Void>.
             if (isFakeId) {
-                N.checkArgNotNullOrEmpty(idPropNames, "Target class: " + ClassUtil.getCanonicalClassName(entityClass)
+                N.checkArgNotNullOrEmpty(idPropNames, "Target class: " + ClassUtil.getClassName(entityClass)
                         + " must have at least one id property annotated by @Id or @ReadOnlyId on field or class");
             }
 
@@ -9100,7 +9100,7 @@ public class SQLExecutor {
          * @return
          */
         public String toStirng() {
-            return "Mapper[" + ClassUtil.getCanonicalClassName(targetClass) + "]";
+            return "Mapper[" + ClassUtil.getClassName(targetClass) + "]";
         }
     }
 

@@ -53,7 +53,7 @@ final class JoinInfo {
 
         if (joinPropInfo == null) {
             throw new IllegalArgumentException(
-                    "No property found by name: '" + joinEntityPropName + "' in class: " + ClassUtil.getCanonicalClassName(entityClass));
+                    "No property found by name: '" + joinEntityPropName + "' in class: " + ClassUtil.getClassName(entityClass));
         } else if (!joinPropInfo.isAnnotationPresent(JoinedBy.class)) {
             throw new IllegalArgumentException("Property '" + joinPropInfo.name + "' in class: " + entityClass + " is not annotated by @JoinedBy");
         } else if (joinPropInfo.isAnnotationPresent(Column.class)) {
@@ -293,7 +293,7 @@ final class JoinInfo {
                 .get(sbc);
 
         if (tp == null) {
-            throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
+            throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getClassName(sbc));
         }
 
         return tp;
@@ -305,7 +305,7 @@ final class JoinInfo {
                 .get(sbc);
 
         if (tp == null) {
-            throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
+            throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getClassName(sbc));
         }
 
         return tp;
@@ -315,7 +315,7 @@ final class JoinInfo {
         final Tuple2<String, BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(sbc);
 
         if (tp == null) {
-            throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
+            throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getClassName(sbc));
         }
 
         return tp;
@@ -380,7 +380,7 @@ final class JoinInfo {
 
         if (joinInfo == null) {
             throw new IllegalArgumentException(
-                    "No join property found by name '" + joinEntityPropName + "' in class: " + ClassUtil.getCanonicalClassName(entityClass));
+                    "No join property found by name '" + joinEntityPropName + "' in class: " + ClassUtil.getClassName(entityClass));
         }
 
         return joinInfo;
