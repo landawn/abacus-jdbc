@@ -1,6 +1,6 @@
 package com.landawn.abacus.samples;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.util.Profiler;
 

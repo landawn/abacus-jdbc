@@ -6,7 +6,7 @@ import static org.junit.Assert.fail;
 import java.sql.SQLException;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.UncheckedSQLException;

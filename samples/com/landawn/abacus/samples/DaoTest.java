@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.EntityId;
 import com.landawn.abacus.condition.ConditionFactory.CF;

@@ -10,7 +10,7 @@ import java.sql.SQLException;
 
 import javax.sql.DataSource;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.condition.ConditionFactory.CF;

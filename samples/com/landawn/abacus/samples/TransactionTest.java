@@ -2,7 +2,7 @@ package com.landawn.abacus.samples;
 
 import static org.junit.Assert.assertTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.Transaction.Status;
 import com.landawn.abacus.condition.ConditionFactory.CF;

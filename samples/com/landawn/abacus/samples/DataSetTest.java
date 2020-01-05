@@ -2,7 +2,7 @@ package com.landawn.abacus.samples;
 
 import java.util.Random;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.DataSet;
 import com.landawn.abacus.samples.entity.Address;
