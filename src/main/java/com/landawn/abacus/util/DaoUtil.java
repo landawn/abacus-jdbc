@@ -681,6 +681,15 @@ final class DaoUtil {
                         anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno) : N.asList(((DaoUtil.HandlerList) anno).value()))
                 .toList();
 
+        final com.landawn.abacus.util.HandlerFilter daoClassHandlerFilter = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface))
+                .append(daoInterface)
+                .flatMapp(cls -> cls.getAnnotations())
+                .select(Dao.HandlerFilter.class)
+                .map(handlerFilterAnno -> N.notNullOrEmpty(handlerFilterAnno.qualifier()) ? HandlerFilterFactory.get(handlerFilterAnno.qualifier())
+                        : HandlerFilterFactory.getOrCreate(handlerFilterAnno.value()))
+                .last()
+                .orNull();
+
         for (Method m : sqlMethods) {
             final Class<?> declaringClass = m.getDeclaringClass();
             final String methodName = m.getName();
@@ -2526,7 +2535,7 @@ final class DaoUtil {
                     .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoUtil.HandlerList.class))
                     .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
                             : N.asList(((DaoUtil.HandlerList) anno).value()))
-                    .prepend(daoClassHandlerList)
+                    .prepend((daoClassHandlerFilter == null || daoClassHandlerFilter.test(m)) ? daoClassHandlerList : N.EMPTY_LIST)
                     .map(handlerAnno -> N.notNullOrEmpty(handlerAnno.qualifier()) ? HandlerFactory.get(handlerAnno.qualifier())
                             : HandlerFactory.getOrCreate((Class<? extends Handler<?>>) handlerAnno.value()))
                     .carry(handler -> N.checkArgNotNull(handler,

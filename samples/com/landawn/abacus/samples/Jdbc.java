@@ -23,6 +23,7 @@ import com.landawn.abacus.samples.entity.Device;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.HandlerFactory;
+import com.landawn.abacus.util.HandlerFilterFactory;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.NSC;
@@ -39,6 +40,8 @@ public class Jdbc {
         HandlerFactory.register("handler1", HandlerFactory.create((obj, args, tp) -> N.println("calling: " + tp._1.getName() + " by Handler1.beforeInvoke")));
         HandlerFactory.register("handler2",
                 HandlerFactory.create((result, obj, args, tp) -> N.println("calling: " + tp._1.getName() + " by Handler2.afterInvoke")));
+
+        HandlerFilterFactory.register("notForDataSource", m -> !m.getName().startsWith("dataSource"));
     }
 
     static final DataSource dataSource = JdbcUtil.createDataSource("jdbc:h2:~/test", "sa", "");

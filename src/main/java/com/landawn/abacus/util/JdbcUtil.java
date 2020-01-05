@@ -11571,7 +11571,7 @@ public final class JdbcUtil {
 
             return (ColumnGetter<T>) columnGetter;
         }
-    } 
+    }
 
     /**
      * This interface is designed to share/manager SQL queries by Java APIs/methods with static parameter types and return type, while hiding the SQL scripts.
@@ -12145,6 +12145,14 @@ public final class JdbcUtil {
 
             @SuppressWarnings("rawtypes")
             Class<? extends com.landawn.abacus.util.Handler> value() default com.landawn.abacus.util.Handler.class;
+        }
+
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(value = { ElementType.TYPE })
+        public static @interface HandlerFilter {
+            String qualifier() default "";
+
+            Class<? extends com.landawn.abacus.util.HandlerFilter> value() default com.landawn.abacus.util.HandlerFilter.class;
         }
 
         /**
