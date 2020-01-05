@@ -1,3 +1,9 @@
+### 1.10.5
+
+* Supports `@Handler`.
+* Improvements and bug fix.
+
+
 ### 1.10.4
 
 * Supports `@OutParameter`.

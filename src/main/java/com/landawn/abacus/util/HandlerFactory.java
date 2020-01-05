@@ -4,12 +4,13 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.landawn.abacus.util.JdbcUtil.Handler;
 import com.landawn.abacus.util.Tuple.Tuple3;
 
 public class HandlerFactory {
 
     @SuppressWarnings("rawtypes")
-    private static final Handler EMPTY = new Handler() {
+      static final Handler EMPTY = new Handler() {
         // Do nothing.
     };
 

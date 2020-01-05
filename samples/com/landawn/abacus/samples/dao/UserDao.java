@@ -84,7 +84,7 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 
     @Sqls("DELETE from user where id = ?")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    @Handler(qualifier = "handler2")
+    @Handler(qualifier = "handler2", filter = @Filter(qualifier = "notForDataSource"))
     default boolean delete_propagation_REQUIRES_NEW(long id, String... sqls) {
         try {
             return prepareQuery(sqls[0]).setLong(1, id).update() > 0;

@@ -3,6 +3,8 @@ package com.landawn.abacus.util;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.landawn.abacus.util.JdbcUtil.Handler;
+
 public class HandlerFilterFactory {
 
     private static final Handler.Filter ALWAYS_TRUE = m -> true;

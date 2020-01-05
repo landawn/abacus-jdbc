@@ -34,6 +34,7 @@ import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.CallableStatement;
@@ -119,6 +120,7 @@ import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.BiConsumer;
 import com.landawn.abacus.util.function.BinaryOperator;
 import com.landawn.abacus.util.function.Function;
+import com.landawn.abacus.util.function.Predicate;
 import com.landawn.abacus.util.function.Supplier;
 import com.landawn.abacus.util.stream.Collector;
 import com.landawn.abacus.util.stream.EntryStream;
@@ -11573,6 +11575,42 @@ public final class JdbcUtil {
         }
     }
 
+    public static interface Handler<T> {
+        /**
+         *
+         * @param targetObject
+         * @param args
+         * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
+         */
+        default void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            // empty action.
+        }
+
+        /**
+         *
+         * @param <R>
+         * @param result
+         * @param targetObject
+         * @param args
+         * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
+         */
+        default void afterInvoke(final Result<?, Exception> result, final T targetObject, final Object[] args,
+                Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            // empty action.
+        }
+
+        public static interface Filter extends Predicate<Method> {
+
+            @Override
+            boolean test(Method method);
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    static final class DaoHandler implements JdbcUtil.Handler<Dao> {
+
+    };
+
     /**
      * This interface is designed to share/manager SQL queries by Java APIs/methods with static parameter types and return type, while hiding the SQL scripts.
      * It's a gift from nature and created by thoughts.
@@ -12144,16 +12182,16 @@ public final class JdbcUtil {
             String qualifier() default "";
 
             @SuppressWarnings("rawtypes")
-            Class<? extends com.landawn.abacus.util.Handler> type() default com.landawn.abacus.util.Handler.class;
+            Class<? extends JdbcUtil.Handler<? extends Dao>> type() default DaoHandler.class;
 
-            Filter filter() default @Filter(type = com.landawn.abacus.util.Handler.Filter.class);
+            Filter filter() default @Filter(type = JdbcUtil.Handler.Filter.class);
 
             @Retention(RetentionPolicy.RUNTIME)
             @Target(value = { ElementType.TYPE })
             public static @interface Filter {
                 String qualifier() default "";
 
-                Class<? extends com.landawn.abacus.util.Handler.Filter> type() default com.landawn.abacus.util.Handler.Filter.class;
+                Class<? extends JdbcUtil.Handler.Filter> type() default JdbcUtil.Handler.Filter.class;
             }
         }
 

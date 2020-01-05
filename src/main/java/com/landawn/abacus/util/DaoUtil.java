@@ -2522,7 +2522,7 @@ final class DaoUtil {
                 }
             }
 
-            final List<com.landawn.abacus.util.Handler<?>> handlerList = StreamEx.of(m.getAnnotations())
+            final List<JdbcUtil.Handler<?>> handlerList = StreamEx.of(m.getAnnotations())
                     .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoUtil.HandlerList.class))
                     .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
                             : N.asList(((DaoUtil.HandlerList) anno).value()))
@@ -2539,7 +2539,7 @@ final class DaoUtil {
                         }
                     })
                     .map(handlerAnno -> N.notNullOrEmpty(handlerAnno.qualifier()) ? HandlerFactory.get(handlerAnno.qualifier())
-                            : HandlerFactory.getOrCreate((Class<? extends Handler<?>>) handlerAnno.type()))
+                            : HandlerFactory.getOrCreate((Class<? extends JdbcUtil.Handler<?>>) handlerAnno.type()))
                     .carry(handler -> N.checkArgNotNull(handler,
                             "No handler found/registered with qualifier or type in class/method: " + daoInterface + "." + m.getName()))
                     .reversed()
@@ -2703,7 +2703,7 @@ final class DaoUtil {
                         m.getReturnType());
 
                 call = (proxy, args) -> {
-                    for (Handler handler : handlerList) {
+                    for (JdbcUtil.Handler handler : handlerList) {
                         handler.beforeInvoke(proxy, args, methodSignature);
                     }
 
@@ -2715,7 +2715,7 @@ final class DaoUtil {
                         result = Result.of(null, e);
                     } finally {
                         try {
-                            for (Handler handler : handlerList) {
+                            for (JdbcUtil.Handler handler : handlerList) {
                                 handler.afterInvoke(result, proxy, args, methodSignature);
                             }
                         } catch (Exception e) {
