@@ -14,16 +14,16 @@ public class HandlerFilterFactory {
         handlerFilterPool.put(ClassUtil.getClassName(ALWAYS_TRUE.getClass()), ALWAYS_TRUE);
     }
 
-    public static void register(final Class<? extends Handler.Filter> handlerFilterClass) {
+    public static boolean register(final Class<? extends Handler.Filter> handlerFilterClass) {
         N.checkArgNotNull(handlerFilterClass, "handlerFilterClass");
 
-        register(N.newInstance(handlerFilterClass));
+        return register(N.newInstance(handlerFilterClass));
     }
 
-    public static void register(final Handler.Filter handlerFilter) {
+    public static boolean register(final Handler.Filter handlerFilter) {
         N.checkArgNotNull(handlerFilter, "handlerFilter");
 
-        register(ClassUtil.getCanonicalClassName(handlerFilter.getClass()), handlerFilter);
+        return register(ClassUtil.getCanonicalClassName(handlerFilter.getClass()), handlerFilter);
     }
 
     public static boolean register(final String qualifier, final Handler.Filter handlerFilter) {
@@ -35,6 +35,7 @@ public class HandlerFilterFactory {
         }
 
         handlerFilterPool.put(qualifier, handlerFilter);
+
         return true;
     }
 

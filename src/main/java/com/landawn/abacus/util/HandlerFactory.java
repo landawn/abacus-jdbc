@@ -20,16 +20,16 @@ public class HandlerFactory {
         handlerPool.put(ClassUtil.getClassName(EMPTY.getClass()), EMPTY);
     }
 
-    public static void register(final Class<? extends Handler<?>> handlerClass) {
+    public static boolean register(final Class<? extends Handler<?>> handlerClass) {
         N.checkArgNotNull(handlerClass, "handlerClass");
 
-        register(N.newInstance(handlerClass));
+        return register(N.newInstance(handlerClass));
     }
 
-    public static void register(final Handler<?> handler) {
+    public static boolean register(final Handler<?> handler) {
         N.checkArgNotNull(handler, "handler");
 
-        register(ClassUtil.getCanonicalClassName(handler.getClass()), handler);
+        return register(ClassUtil.getCanonicalClassName(handler.getClass()), handler);
     }
 
     public static boolean register(final String qualifier, final Handler<?> handler) {
@@ -41,6 +41,7 @@ public class HandlerFactory {
         }
 
         handlerPool.put(qualifier, handler);
+
         return true;
     }
 
