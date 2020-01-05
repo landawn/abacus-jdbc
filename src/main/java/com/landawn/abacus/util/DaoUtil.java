@@ -2539,7 +2539,7 @@ final class DaoUtil {
                         }
                     })
                     .map(handlerAnno -> N.notNullOrEmpty(handlerAnno.qualifier()) ? HandlerFactory.get(handlerAnno.qualifier())
-                            : HandlerFactory.getOrCreate((Class<? extends JdbcUtil.Handler<?>>) handlerAnno.type()))
+                            : HandlerFactory.getOrCreate(handlerAnno.type()))
                     .carry(handler -> N.checkArgNotNull(handler,
                             "No handler found/registered with qualifier or type in class/method: " + daoInterface + "." + m.getName()))
                     .reversed()
@@ -2708,21 +2708,24 @@ final class DaoUtil {
                     }
 
                     Result<?, Exception> result = null;
+                    Exception ex = null;
 
                     try {
                         result = Result.of(temp.apply(proxy, args), null);
                     } catch (Exception e) {
                         result = Result.of(null, e);
+                        ex = e;
                     } finally {
                         try {
                             for (JdbcUtil.Handler handler : handlerList) {
                                 handler.afterInvoke(result, proxy, args, methodSignature);
                             }
                         } catch (Exception e) {
-                            if (result.isFailure()) {
-                                result.getExceptionIfPresent().addSuppressed(e);
+                            if (ex != null) {
+                                ex.addSuppressed(e);
                             } else {
                                 result = Result.of(null, e);
+                                ex = e;
                             }
                         }
                     }

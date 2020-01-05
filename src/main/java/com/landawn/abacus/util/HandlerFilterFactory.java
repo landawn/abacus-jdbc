@@ -10,10 +10,21 @@ public class HandlerFilterFactory {
     private static final Handler.Filter ALWAYS_TRUE = m -> true;
 
     private static final Map<String, Handler.Filter> handlerFilterPool = new ConcurrentHashMap<>();
+    private static final SpringApplicationContext spingAppContext;
 
     static {
         handlerFilterPool.put(ClassUtil.getCanonicalClassName(Handler.Filter.class), ALWAYS_TRUE);
         handlerFilterPool.put(ClassUtil.getClassName(ALWAYS_TRUE.getClass()), ALWAYS_TRUE);
+
+        SpringApplicationContext tmp = null;
+
+        try {
+            tmp = new SpringApplicationContext();
+        } catch (Throwable e) {
+            // ignore.
+        }
+
+        spingAppContext = tmp;
     }
 
     public static boolean register(final Class<? extends Handler.Filter> handlerFilterClass) {
@@ -44,19 +55,51 @@ public class HandlerFilterFactory {
     public static Handler.Filter get(final String qualifier) {
         N.checkArgNotNullOrEmpty(qualifier, "qualifier");
 
-        return handlerFilterPool.get(qualifier);
+        Handler.Filter result = handlerFilterPool.get(qualifier);
+
+        if (result == null && spingAppContext != null) {
+            Object bean = spingAppContext.getBean(qualifier);
+
+            if (bean != null && bean instanceof Handler.Filter) {
+                result = (Handler.Filter) bean;
+
+                handlerFilterPool.put(qualifier, result);
+            }
+        }
+
+        return result;
     }
 
     public static Handler.Filter get(final Class<? extends Handler.Filter> handlerFilterClass) {
         N.checkArgNotNull(handlerFilterClass, "handlerFilterClass");
 
-        return get(ClassUtil.getCanonicalClassName(handlerFilterClass));
+        final String qualifier = ClassUtil.getCanonicalClassName(handlerFilterClass);
+
+        Handler.Filter result = handlerFilterPool.get(qualifier);
+
+        if (result == null && spingAppContext != null) {
+            result = spingAppContext.getBean(handlerFilterClass);
+
+            if (result == null) {
+                Object bean = spingAppContext.getBean(qualifier);
+
+                if (bean != null && bean instanceof Handler.Filter) {
+                    result = (Handler.Filter) bean;
+                }
+            }
+
+            if (result != null) {
+                handlerFilterPool.put(qualifier, result);
+            }
+        }
+
+        return result;
     }
 
     public static Handler.Filter getOrCreate(final Class<? extends Handler.Filter> handlerFilterClass) {
         N.checkArgNotNull(handlerFilterClass, "handlerFilterClass");
 
-        Handler.Filter result = get(ClassUtil.getCanonicalClassName(handlerFilterClass));
+        Handler.Filter result = get(handlerFilterClass);
 
         if (result == null) {
             result = N.newInstance(handlerFilterClass);
