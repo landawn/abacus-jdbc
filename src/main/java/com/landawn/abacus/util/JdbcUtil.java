@@ -12144,15 +12144,17 @@ public final class JdbcUtil {
             String qualifier() default "";
 
             @SuppressWarnings("rawtypes")
-            Class<? extends com.landawn.abacus.util.Handler> value() default com.landawn.abacus.util.Handler.class;
-        }
+            Class<? extends com.landawn.abacus.util.Handler> type() default com.landawn.abacus.util.Handler.class;
 
-        @Retention(RetentionPolicy.RUNTIME)
-        @Target(value = { ElementType.TYPE })
-        public static @interface HandlerFilter {
-            String qualifier() default "";
+            Filter filter() default @Filter(type = com.landawn.abacus.util.Handler.Filter.class);
 
-            Class<? extends com.landawn.abacus.util.HandlerFilter> value() default com.landawn.abacus.util.HandlerFilter.class;
+            @Retention(RetentionPolicy.RUNTIME)
+            @Target(value = { ElementType.TYPE })
+            public static @interface Filter {
+                String qualifier() default "";
+
+                Class<? extends com.landawn.abacus.util.Handler.Filter> type() default com.landawn.abacus.util.Handler.Filter.class;
+            }
         }
 
         /**

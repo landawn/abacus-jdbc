@@ -5,63 +5,61 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class HandlerFilterFactory {
 
-    private static final Map<String, HandlerFilter> HandlerFilterPool = new ConcurrentHashMap<>();
+    private static final Handler.Filter ALWAYS_TRUE = m -> true;
+
+    private static final Map<String, Handler.Filter> handlerFilterPool = new ConcurrentHashMap<>();
 
     static {
-        HandlerFilterPool.put(ClassUtil.getClassName(HandlerFilter.class), HandlerFilter.ALWAYS_TRUE);
-        HandlerFilterPool.put(ClassUtil.getClassName(HandlerFilter.ALWAYS_TRUE.getClass()), HandlerFilter.ALWAYS_TRUE);
+        handlerFilterPool.put(ClassUtil.getCanonicalClassName(Handler.Filter.class), ALWAYS_TRUE);
+        handlerFilterPool.put(ClassUtil.getClassName(ALWAYS_TRUE.getClass()), ALWAYS_TRUE);
     }
 
-    public static void register(final Class<? extends HandlerFilter> HandlerFilterClass) {
-        N.checkArgNotNull(HandlerFilterClass, "HandlerFilterClass");
+    public static void register(final Class<? extends Handler.Filter> handlerFilterClass) {
+        N.checkArgNotNull(handlerFilterClass, "handlerFilterClass");
 
-        register(N.newInstance(HandlerFilterClass));
+        register(N.newInstance(handlerFilterClass));
     }
 
-    public static void register(final HandlerFilter HandlerFilter) {
-        N.checkArgNotNull(HandlerFilter, "HandlerFilter");
+    public static void register(final Handler.Filter handlerFilter) {
+        N.checkArgNotNull(handlerFilter, "handlerFilter");
 
-        register(ClassUtil.getCanonicalClassName(HandlerFilter.getClass()), HandlerFilter);
+        register(ClassUtil.getCanonicalClassName(handlerFilter.getClass()), handlerFilter);
     }
 
-    public static boolean register(final String qualifier, final HandlerFilter HandlerFilter) {
+    public static boolean register(final String qualifier, final Handler.Filter handlerFilter) {
         N.checkArgNotNullOrEmpty(qualifier, "qualifier");
-        N.checkArgNotNull(HandlerFilter, "HandlerFilter");
+        N.checkArgNotNull(handlerFilter, "handlerFilter");
 
-        if (HandlerFilterPool.containsKey(qualifier)) {
+        if (handlerFilterPool.containsKey(qualifier)) {
             return false;
         }
 
-        HandlerFilterPool.put(qualifier, HandlerFilter);
+        handlerFilterPool.put(qualifier, handlerFilter);
         return true;
     }
 
-    public static HandlerFilter get(final String qualifier) {
+    public static Handler.Filter get(final String qualifier) {
         N.checkArgNotNullOrEmpty(qualifier, "qualifier");
 
-        return HandlerFilterPool.get(qualifier);
+        return handlerFilterPool.get(qualifier);
     }
 
-    public static HandlerFilter get(final Class<? extends HandlerFilter> HandlerFilterClass) {
-        N.checkArgNotNull(HandlerFilterClass, "HandlerFilterClass");
+    public static Handler.Filter get(final Class<? extends Handler.Filter> handlerFilterClass) {
+        N.checkArgNotNull(handlerFilterClass, "handlerFilterClass");
 
-        return get(ClassUtil.getCanonicalClassName(HandlerFilterClass));
+        return get(ClassUtil.getCanonicalClassName(handlerFilterClass));
     }
 
-    public static HandlerFilter getOrCreate(final Class<? extends HandlerFilter> HandlerFilterClass) {
-        N.checkArgNotNull(HandlerFilterClass, "HandlerFilterClass");
+    public static Handler.Filter getOrCreate(final Class<? extends Handler.Filter> handlerFilterClass) {
+        N.checkArgNotNull(handlerFilterClass, "handlerFilterClass");
 
-        HandlerFilter result = get(ClassUtil.getCanonicalClassName(HandlerFilterClass));
+        Handler.Filter result = get(ClassUtil.getCanonicalClassName(handlerFilterClass));
 
         if (result == null) {
-            try {
-                result = N.newInstance(HandlerFilterClass);
+            result = N.newInstance(handlerFilterClass);
 
-                if (result != null) {
-                    register(result);
-                }
-            } catch (Throwable e) {
-                // ignore
+            if (result != null) {
+                register(result);
             }
         }
 

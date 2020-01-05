@@ -8,11 +8,16 @@ import com.landawn.abacus.util.Tuple.Tuple3;
 
 public class HandlerFactory {
 
+    @SuppressWarnings("rawtypes")
+    private static final Handler EMPTY = new Handler() {
+        // Do nothing.
+    };
+
     private static final Map<String, Handler<?>> handlerPool = new ConcurrentHashMap<>();
 
     static {
-        handlerPool.put(ClassUtil.getClassName(Handler.class), Handler.EMPTY);
-        handlerPool.put(ClassUtil.getClassName(Handler.EMPTY.getClass()), Handler.EMPTY);
+        handlerPool.put(ClassUtil.getCanonicalClassName(Handler.class), EMPTY);
+        handlerPool.put(ClassUtil.getClassName(EMPTY.getClass()), EMPTY);
     }
 
     public static void register(final Class<? extends Handler<?>> handlerClass) {

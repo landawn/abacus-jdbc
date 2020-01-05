@@ -3,13 +3,9 @@ package com.landawn.abacus.util;
 import java.lang.reflect.Method;
 
 import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.function.Predicate;
 
 public interface Handler<T> {
-
-    @SuppressWarnings("rawtypes")
-    static final Handler EMPTY = new Handler() {
-        // Do nothing.
-    };
 
     /**
      *
@@ -32,6 +28,12 @@ public interface Handler<T> {
     default void afterInvoke(final Result<?, Exception> result, final T targetObject, final Object[] args,
             Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
         // empty action.
+    }
+
+    public static interface Filter extends Predicate<Method> {
+
+        @Override
+        boolean test(Method method);
     }
 
 }
