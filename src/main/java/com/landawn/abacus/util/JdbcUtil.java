@@ -9497,61 +9497,6 @@ public final class JdbcUtil {
     }
 
     /**
-     * The Enum FetchDirection.
-     */
-    public enum FetchDirection {
-
-        /** The forward. */
-        FORWARD(ResultSet.FETCH_FORWARD),
-        /** The reverse. */
-        REVERSE(ResultSet.FETCH_REVERSE),
-        /** The unknown. */
-        UNKNOWN(ResultSet.FETCH_UNKNOWN);
-
-        /** The int value. */
-        final int intValue;
-
-        /**
-         * Instantiates a new fetch direction.
-         *
-         * @param intValue
-         */
-        FetchDirection(int intValue) {
-            this.intValue = intValue;
-        }
-
-        /**
-         *
-         * @param intValue
-         * @return
-         */
-        public static FetchDirection valueOf(int intValue) {
-            switch (intValue) {
-                case ResultSet.FETCH_FORWARD:
-                    return FORWARD;
-
-                case ResultSet.FETCH_REVERSE:
-                    return REVERSE;
-
-                case ResultSet.FETCH_UNKNOWN:
-                    return UNKNOWN;
-
-                default:
-                    throw new IllegalArgumentException("No FetchDirection mapping to int value: " + intValue);
-
-            }
-        }
-
-        /**
-         *
-         * @return
-         */
-        public int intValue() {
-            return intValue;
-        }
-    }
-
-    /**
      * The Interface ParametersSetter.
      *
      * @param <QS>
