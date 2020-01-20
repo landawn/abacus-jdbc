@@ -14122,6 +14122,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
+        @Beta
         int delete(final T entity, final OnDeleteAction onDeleteAction) throws SQLException;
 
         /**
@@ -14150,6 +14151,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
+        @Beta
         default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction) throws SQLException {
             return batchDelete(entities, onDeleteAction, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
@@ -14162,6 +14164,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
+        @Beta
         int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction, final int batchSize) throws SQLException;
 
         /**

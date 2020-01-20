@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 HaiYang Li
+ * Copyright (C) 2020 HaiYang Li
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -14,6 +14,9 @@
 
 package com.landawn.abacus.util;
 
+import com.landawn.abacus.annotation.Beta;
+
+@Beta
 public enum OnDeleteAction {
     /**
      * Field NO_ACTION.
