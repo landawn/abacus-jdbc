@@ -44,6 +44,8 @@ final class JoinInfo {
 
     private final Map<Class<? extends SQLBuilder>, Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>>> selectSQLBuilderAndParamSetterForBatchPool = new HashMap<>();
 
+    private final Map<Class<? extends SQLBuilder>, Tuple2<String, BiParametersSetter<PreparedStatement, Object>>> setNullSqlAndParamSetterPool = new HashMap<>();
+
     private final Map<Class<? extends SQLBuilder>, Tuple2<String, BiParametersSetter<PreparedStatement, Object>>> deleteSqlAndParamSetterPool = new HashMap<>();
 
     JoinInfo(final Class<?> entityClass, final String joinEntityPropName) {
@@ -107,6 +109,7 @@ final class JoinInfo {
         }
 
         final Condition cond = joinColumnPairs.length == 1 ? conds.get(0) : CF.and(conds);
+        final List<String> referencedPropNames = Stream.of(referencedPropInfos).map(p -> p.name).toList();
 
         final BiParametersSetter<PreparedStatement, Object> paramSetter = srcPropInfos.length == 1
                 ? (stmt, entityParam) -> srcPropInfos[0].dbType.set(stmt, 1, srcPropInfos[0].getPropValue(entityParam))
@@ -118,6 +121,24 @@ final class JoinInfo {
                         srcPropInfos[i].dbType.set(stmt, i + 1, srcPropInfos[i].getPropValue(entityParam));
                     }
                 });
+
+        final BiParametersSetter<PreparedStatement, Object> setNullParamSetter = srcPropInfos.length == 1 ? (stmt, entityParam) -> {
+            srcPropInfos[0].dbType.set(stmt, 1, srcPropInfos[0].dbType.defaultValue());
+            srcPropInfos[0].dbType.set(stmt, 2, srcPropInfos[0].getPropValue(entityParam));
+        } : (srcPropInfos.length == 2 ? (stmt, entityParam) -> {
+            srcPropInfos[0].dbType.set(stmt, 1, srcPropInfos[0].dbType.defaultValue());
+            srcPropInfos[1].dbType.set(stmt, 2, srcPropInfos[1].dbType.defaultValue());
+            srcPropInfos[0].dbType.set(stmt, 3, srcPropInfos[0].getPropValue(entityParam));
+            srcPropInfos[1].dbType.set(stmt, 4, srcPropInfos[1].getPropValue(entityParam));
+        } : (stmt, entityParam) -> {
+            for (int i = 0, len = srcPropInfos.length; i < len; i++) {
+                srcPropInfos[i].dbType.set(stmt, i + 1, srcPropInfos[i].dbType.defaultValue());
+            }
+
+            for (int i = 0, len = srcPropInfos.length; i < len; i++) {
+                srcPropInfos[i].dbType.set(stmt, len + i + 1, srcPropInfos[i].getPropValue(entityParam));
+            }
+        });
 
         final BiParametersSetter<PreparedStatement, Collection<?>> paramSetter2 = srcPropInfos.length == 1 ? (stmt, entities) -> {
             int index = 1;
@@ -162,8 +183,10 @@ final class JoinInfo {
 
             selectSQLBuilderAndParamSetterForBatchPool.put(PSC.class, Tuple.of(sqlBuilder2, paramSetter2));
 
+            final String setNullSql = PSC.update(referencedEntityClass).set(referencedPropNames).where(cond).sql();
             final String deleteSql = PSC.deleteFrom(referencedEntityClass).where(cond).sql();
 
+            setNullSqlAndParamSetterPool.put(PSC.class, Tuple.of(setNullSql, setNullParamSetter));
             deleteSqlAndParamSetterPool.put(PSC.class, Tuple.of(deleteSql, paramSetter));
         }
 
@@ -194,8 +217,10 @@ final class JoinInfo {
 
             selectSQLBuilderAndParamSetterForBatchPool.put(PAC.class, Tuple.of(sqlBuilder2, paramSetter2));
 
+            final String setNullSql = PAC.update(referencedEntityClass).set(referencedPropNames).where(cond).sql();
             final String deleteSql = PAC.deleteFrom(referencedEntityClass).where(cond).sql();
 
+            setNullSqlAndParamSetterPool.put(PAC.class, Tuple.of(setNullSql, setNullParamSetter));
             deleteSqlAndParamSetterPool.put(PAC.class, Tuple.of(deleteSql, paramSetter));
         }
 
@@ -226,8 +251,10 @@ final class JoinInfo {
 
             selectSQLBuilderAndParamSetterForBatchPool.put(PLC.class, Tuple.of(sqlBuilder2, paramSetter2));
 
+            final String setNullSql = PLC.update(referencedEntityClass).set(referencedPropNames).where(cond).sql();
             final String deleteSql = PLC.deleteFrom(referencedEntityClass).where(cond).sql();
 
+            setNullSqlAndParamSetterPool.put(PLC.class, Tuple.of(setNullSql, setNullParamSetter));
             deleteSqlAndParamSetterPool.put(PLC.class, Tuple.of(deleteSql, paramSetter));
         }
 
@@ -289,8 +316,7 @@ final class JoinInfo {
 
     public Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> getSelectSQLBuilderAndParamSetter(
             final Class<? extends SQLBuilder> sbc) {
-        final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = selectSQLBuilderAndParamSetterPool
-                .get(sbc);
+        final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = selectSQLBuilderAndParamSetterPool.get(sbc);
 
         if (tp == null) {
             throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
@@ -303,6 +329,16 @@ final class JoinInfo {
             final Class<? extends SQLBuilder> sbc) {
         final Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = selectSQLBuilderAndParamSetterForBatchPool
                 .get(sbc);
+
+        if (tp == null) {
+            throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
+        }
+
+        return tp;
+    }
+
+    public Tuple2<String, BiParametersSetter<PreparedStatement, Object>> getSetNullSqlAndParamSetter(final Class<? extends SQLBuilder> sbc) {
+        final Tuple2<String, BiParametersSetter<PreparedStatement, Object>> tp = setNullSqlAndParamSetterPool.get(sbc);
 
         if (tp == null) {
             throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getCanonicalClassName(sbc));

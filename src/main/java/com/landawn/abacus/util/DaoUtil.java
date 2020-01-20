@@ -1888,9 +1888,6 @@ final class DaoUtil {
                             final Object entity = (args[0]);
                             final OnDeleteAction onDeleteAction = (OnDeleteAction) args[1];
 
-                            if (onDeleteAction == OnDeleteAction.SET_NULL) {
-                                throw new UnsupportedOperationException("'OnDeleteAction.SET_NULL' is not supported yet");
-                            }
 
                             if (onDeleteAction == null || onDeleteAction == OnDeleteAction.NO_ACTION) {
                                 return proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
@@ -1908,7 +1905,8 @@ final class DaoUtil {
                                     Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = null;
 
                                     for (JoinInfo propJoinInfo : entityJoinInfo.values()) {
-                                        tp = propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+                                        tp = onDeleteAction == OnDeleteAction.SET_NULL ? propJoinInfo.getSetNullSqlAndParamSetter(sbc)
+                                                : propJoinInfo.getDeleteSqlAndParamSetter(sbc);
 
                                         result += proxy.prepareQuery(tp._1).setParameters(entity, tp._2).update();
                                     }
@@ -1968,11 +1966,7 @@ final class DaoUtil {
                             final Collection<Object> entities = (Collection) args[0];
                             final OnDeleteAction onDeleteAction = (OnDeleteAction) args[1];
                             final int batchSize = (Integer) args[2];
-                            N.checkArgPositive(batchSize, "batchSize");
-
-                            if (onDeleteAction == OnDeleteAction.SET_NULL) {
-                                throw new UnsupportedOperationException("'OnDeleteAction.SET_NULL' is not supported yet");
-                            }
+                            N.checkArgPositive(batchSize, "batchSize"); 
 
                             if (N.isNullOrEmpty(entities)) {
                                 return 0;
@@ -1999,7 +1993,8 @@ final class DaoUtil {
                                                 Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = null;
 
                                                 for (JoinInfo propJoinInfo : entityJoinInfo.values()) {
-                                                    tp = propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+                                                    tp = onDeleteAction == OnDeleteAction.SET_NULL ? propJoinInfo.getSetNullSqlAndParamSetter(sbc)
+                                                            : propJoinInfo.getDeleteSqlAndParamSetter(sbc);
 
                                                     tmpResult += N.sum(proxy.prepareQuery(tp._1).addBatchParameters2(bp, tp._2).batchUpdate());
                                                 }
