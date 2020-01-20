@@ -21,6 +21,7 @@ public enum OnDeleteAction {
     NO_ACTION(0),
     /**
      * Field SET_NULL.
+     * @deprecated Unsupported operation.
      */
     SET_NULL(1),
     /**
