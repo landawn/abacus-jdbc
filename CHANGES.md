@@ -1,3 +1,10 @@
+### 1.10.6
+
+* Rename `Dao.saveAll` to `Dao.batchSave`.
+* Refactoring: change `delete(entity, deleteAllJoinEntities)` to `delete(entity, onDeleteAction)`.
+* Improvements and bug fix.
+
+
 ### 1.10.5
 
 * Supports `@Handler`.

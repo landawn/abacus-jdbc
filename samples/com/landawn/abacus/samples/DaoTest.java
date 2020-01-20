@@ -34,6 +34,7 @@ import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.OnDeleteAction;
 import com.landawn.abacus.util.SQLTransaction;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.LongStream;
@@ -140,10 +141,10 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        userDao.delete(userFromDB, true);
-        userDao.delete(userFromDB, false);
-        userDao.batchDelete(N.asList(userFromDB), true);
-        userDao.batchDelete(N.asList(userFromDB), false);
+        userDao.delete(userFromDB, OnDeleteAction.CASCADE);
+        userDao.delete(userFromDB, OnDeleteAction.NO_ACTION);
+        userDao.batchDelete(N.asList(userFromDB), OnDeleteAction.CASCADE);
+        userDao.batchDelete(N.asList(userFromDB), OnDeleteAction.NO_ACTION);
 
         assertFalse(userDao.exists(id));
     }
@@ -239,7 +240,7 @@ public class DaoTest {
             edrs.add(EmployeeDeptRelationship.builder().employeeId(i * 1).deptId(i * 2).build());
         }
 
-        employeeDeptRelationshipDao.saveAll(edrs);
+        employeeDeptRelationshipDao.batchSave(edrs);
 
         List<EntityId> ids = Stream.of(edrs)
                 .map(edr -> EntityId.of("EmployeeDeptRelationship.employeeId", edr.getEmployeeId(), "deptId", edr.getDeptId()))

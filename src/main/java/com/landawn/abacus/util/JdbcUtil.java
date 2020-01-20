@@ -12513,8 +12513,8 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          * @see CrudDao#batchInsert(Collection)
          */
-        default void saveAll(final Collection<? extends T> entitiesToSave) throws SQLException {
-            saveAll(entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+        default void batchSave(final Collection<? extends T> entitiesToSave) throws SQLException {
+            batchSave(entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -12526,7 +12526,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          * @see CrudDao#batchInsert(Collection)
          */
-        void saveAll(final Collection<? extends T> entitiesToSave, final int batchSize) throws SQLException;
+        void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws SQLException;
 
         /**
          * Insert the specified entities to database by batch.
@@ -12538,8 +12538,8 @@ public final class JdbcUtil {
          * @see CrudDao#batchInsert(Collection)
          */
         @Beta
-        default void saveAll(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws SQLException {
-            saveAll(namedInsertSQL, entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+        default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws SQLException {
+            batchSave(namedInsertSQL, entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -12553,7 +12553,7 @@ public final class JdbcUtil {
          * @see CrudDao#batchInsert(Collection)
          */
         @Beta
-        void saveAll(final String namedInsertSQL, final Collection<? extends T> entitiesToSave, final int batchSize) throws SQLException;
+        void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave, final int batchSize) throws SQLException;
 
         /**
          *
@@ -14173,11 +14173,11 @@ public final class JdbcUtil {
         /**
          *
          * @param entity
-         * @param deleteAllJoinEntities
+         * @param onDeleteAction
          * @return
          * @throws SQLException the SQL exception
          */
-        int delete(final T entity, final boolean deleteAllJoinEntities) throws SQLException;
+        int delete(final T entity, final OnDeleteAction onDeleteAction) throws SQLException;
 
         /**
          *
@@ -14201,23 +14201,23 @@ public final class JdbcUtil {
         /**
          *
          * @param entities
-         * @param deleteAllJoinEntities
+         * @param onDeleteAction
          * @return
          * @throws SQLException the SQL exception
          */
-        default int batchDelete(final Collection<? extends T> entities, final boolean deleteAllJoinEntities) throws SQLException {
-            return batchDelete(entities, deleteAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
+        default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction) throws SQLException {
+            return batchDelete(entities, onDeleteAction, JdbcUtil.DEFAULT_BATCH_SIZE);
         }
 
         /**
          *
          * @param entities
-         * @param deleteAllJoinEntities
+         * @param onDeleteAction
          * @param batchSize
          * @return
          * @throws SQLException the SQL exception
          */
-        int batchDelete(final Collection<? extends T> entities, final boolean deleteAllJoinEntities, final int batchSize) throws SQLException;
+        int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction, final int batchSize) throws SQLException;
 
         /**
          *
@@ -14344,7 +14344,7 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default void saveAll(final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException, SQLException {
+        default void batchSave(final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -14360,7 +14360,7 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default void saveAll(final Collection<? extends T> entitiesToSave, final int batchSize) throws UnsupportedOperationException, SQLException {
+        default void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -14376,7 +14376,7 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default void saveAll(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException, SQLException {
+        default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -14393,7 +14393,7 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default void saveAll(final String namedInsertSQL, final Collection<? extends T> entitiesToSave, final int batchSize)
+        default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave, final int batchSize)
                 throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
@@ -14580,7 +14580,7 @@ public final class JdbcUtil {
         /**
          *
          * @param entity
-         * @param deleteAllJoinEntities
+         * @param onDeleteAction
          * @return
          * @throws UnsupportedOperationException
          * @throws SQLException
@@ -14588,7 +14588,7 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default int delete(final T entity, final boolean deleteAllJoinEntities) throws UnsupportedOperationException, SQLException {
+        default int delete(final T entity, final OnDeleteAction onDeleteAction) throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -14624,7 +14624,7 @@ public final class JdbcUtil {
         /**
          *
          * @param entities
-         * @param deleteAllJoinEntities
+         * @param onDeleteAction
          * @return
          * @throws UnsupportedOperationException
          * @throws SQLException
@@ -14632,7 +14632,7 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default int batchDelete(final Collection<? extends T> entities, final boolean deleteAllJoinEntities)
+        default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction)
                 throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
@@ -14640,7 +14640,7 @@ public final class JdbcUtil {
         /**
          *
          * @param entities
-         * @param deleteAllJoinEntities
+         * @param onDeleteAction
          * @param batchSize
          * @return
          * @throws UnsupportedOperationException
@@ -14649,7 +14649,7 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default int batchDelete(final Collection<? extends T> entities, final boolean deleteAllJoinEntities, final int batchSize)
+        default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction, final int batchSize)
                 throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }

@@ -790,7 +790,7 @@ final class DaoUtil {
 
                             return null;
                         };
-                    } else if (methodName.equals("saveAll") && paramLen == 2 && int.class.equals(paramTypes[1])) {
+                    } else if (methodName.equals("batchSave") && paramLen == 2 && int.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
                             final Collection<?> entities = (Collection<Object>) args[0];
                             final int batchSize = (Integer) args[1];
@@ -830,7 +830,7 @@ final class DaoUtil {
 
                             return null;
                         };
-                    } else if (methodName.equals("saveAll") && paramLen == 3 && int.class.equals(paramTypes[2])) {
+                    } else if (methodName.equals("batchSave") && paramLen == 3 && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
                             final String namedInsertSQL = (String) args[0];
                             final Collection<?> entities = (Collection<Object>) args[1];
@@ -1883,12 +1883,16 @@ final class DaoUtil {
                     } else if (methodName.equals("delete") && paramLen == 1 && !Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(args[0], idParamSetterByEntity).update();
                     } else if (methodName.equals("delete") && paramLen == 2 && !Condition.class.isAssignableFrom(paramTypes[0])
-                            && boolean.class.equals(paramTypes[1])) {
+                            && OnDeleteAction.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
                             final Object entity = (args[0]);
-                            final boolean deleteAllJoinEntities = (Boolean) args[1];
+                            final OnDeleteAction onDeleteAction = (OnDeleteAction) args[1];
 
-                            if (deleteAllJoinEntities == false) {
+                            if (onDeleteAction == OnDeleteAction.SET_NULL) {
+                                throw new UnsupportedOperationException("'OnDeleteAction.SET_NULL' is not supported yet");
+                            }
+
+                            if (onDeleteAction == null || onDeleteAction == OnDeleteAction.NO_ACTION) {
                                 return proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
                             }
 
@@ -1956,18 +1960,23 @@ final class DaoUtil {
                                 return N.toIntExact(result);
                             }
                         };
-                    } else if (methodName.equals("batchDelete") && paramLen == 3 && boolean.class.equals(paramTypes[1]) && int.class.equals(paramTypes[2])) {
+                    } else if (methodName.equals("batchDelete") && paramLen == 3 && OnDeleteAction.class.equals(paramTypes[1])
+                            && int.class.equals(paramTypes[2])) {
                         final JdbcUtil.BiParametersSetter<NamedQuery, Object> paramSetter = idParamSetterByEntity;
 
                         call = (proxy, args) -> {
                             final Collection<Object> entities = (Collection) args[0];
-                            final boolean deleteAllJoinEntities = (Boolean) args[1];
+                            final OnDeleteAction onDeleteAction = (OnDeleteAction) args[1];
                             final int batchSize = (Integer) args[2];
                             N.checkArgPositive(batchSize, "batchSize");
 
+                            if (onDeleteAction == OnDeleteAction.SET_NULL) {
+                                throw new UnsupportedOperationException("'OnDeleteAction.SET_NULL' is not supported yet");
+                            }
+
                             if (N.isNullOrEmpty(entities)) {
                                 return 0;
-                            } else if (deleteAllJoinEntities == false) {
+                            } else if (onDeleteAction == null || onDeleteAction == OnDeleteAction.NO_ACTION) {
                                 return ((JdbcUtil.CrudDao) proxy).batchDelete(entities, batchSize);
                             }
 
