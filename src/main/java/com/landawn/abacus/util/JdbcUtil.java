@@ -12140,6 +12140,16 @@ public final class JdbcUtil {
             }
         }
 
+        /** 
+         * Unsupported operation.
+         * @deprecated won't be implemented. It should be defined and done in DB server side.
+         */
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(value = { ElementType.METHOD })
+        public static @interface OnDelete {
+            OnDeleteAction action() default OnDeleteAction.NO_ACTION;
+        }
+
         /**
          *
          * @return
