@@ -140,7 +140,7 @@ final class JoinInfo {
             }
         });
 
-        final BiParametersSetter<PreparedStatement, Collection<?>> paramSetter2 = srcPropInfos.length == 1 ? (stmt, entities) -> {
+        final BiParametersSetter<PreparedStatement, Collection<?>> batchParaSetter = srcPropInfos.length == 1 ? (stmt, entities) -> {
             int index = 1;
 
             for (Object entity : entities) {
@@ -169,7 +169,7 @@ final class JoinInfo {
 
             selectSQLBuilderAndParamSetterPool.put(PSC.class, Tuple.of(sqlBuilder, paramSetter));
 
-            final BiFunction<Collection<String>, Integer, String> sqlBuilder2 = (selectPropNames, size) -> {
+            final BiFunction<Collection<String>, Integer, String> batchSQLBuilder = (selectPropNames, size) -> {
                 if (size == 1) {
                     return sqlBuilder.apply(selectPropNames);
                 } else {
@@ -181,7 +181,7 @@ final class JoinInfo {
                 }
             };
 
-            selectSQLBuilderAndParamSetterForBatchPool.put(PSC.class, Tuple.of(sqlBuilder2, paramSetter2));
+            selectSQLBuilderAndParamSetterForBatchPool.put(PSC.class, Tuple.of(batchSQLBuilder, batchParaSetter));
 
             final String setNullSql = PSC.update(referencedEntityClass).set(referencedPropNames).where(cond).sql();
             final String deleteSql = PSC.deleteFrom(referencedEntityClass).where(cond).sql();
@@ -203,7 +203,7 @@ final class JoinInfo {
 
             selectSQLBuilderAndParamSetterPool.put(PAC.class, Tuple.of(sqlBuilder, paramSetter));
 
-            final BiFunction<Collection<String>, Integer, String> sqlBuilder2 = (selectPropNames, size) -> {
+            final BiFunction<Collection<String>, Integer, String> batchSQLBuilder = (selectPropNames, size) -> {
                 if (size == 1) {
                     return sqlBuilder.apply(selectPropNames);
                 } else {
@@ -215,7 +215,7 @@ final class JoinInfo {
                 }
             };
 
-            selectSQLBuilderAndParamSetterForBatchPool.put(PAC.class, Tuple.of(sqlBuilder2, paramSetter2));
+            selectSQLBuilderAndParamSetterForBatchPool.put(PAC.class, Tuple.of(batchSQLBuilder, batchParaSetter));
 
             final String setNullSql = PAC.update(referencedEntityClass).set(referencedPropNames).where(cond).sql();
             final String deleteSql = PAC.deleteFrom(referencedEntityClass).where(cond).sql();
@@ -237,7 +237,7 @@ final class JoinInfo {
 
             selectSQLBuilderAndParamSetterPool.put(PLC.class, Tuple.of(sqlBuilder, paramSetter));
 
-            final BiFunction<Collection<String>, Integer, String> sqlBuilder2 = (selectPropNames, size) -> {
+            final BiFunction<Collection<String>, Integer, String> batchSQLBuilder = (selectPropNames, size) -> {
                 if (size == 1) {
                     return sqlBuilder.apply(selectPropNames);
                 } else {
@@ -249,7 +249,7 @@ final class JoinInfo {
                 }
             };
 
-            selectSQLBuilderAndParamSetterForBatchPool.put(PLC.class, Tuple.of(sqlBuilder2, paramSetter2));
+            selectSQLBuilderAndParamSetterForBatchPool.put(PLC.class, Tuple.of(batchSQLBuilder, batchParaSetter));
 
             final String setNullSql = PLC.update(referencedEntityClass).set(referencedPropNames).where(cond).sql();
             final String deleteSql = PLC.deleteFrom(referencedEntityClass).where(cond).sql();
