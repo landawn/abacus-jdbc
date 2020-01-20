@@ -16,6 +16,9 @@ package com.landawn.abacus.util;
 
 import com.landawn.abacus.annotation.Beta;
 
+/**
+ * It should be defined and done in DB server side.
+ */
 @Beta
 public enum OnDeleteAction {
     /**

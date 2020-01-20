@@ -12142,6 +12142,7 @@ public final class JdbcUtil {
 
         /** 
          * Unsupported operation.
+         * 
          * @deprecated won't be implemented. It should be defined and done in DB server side.
          */
         @Retention(RetentionPolicy.RUNTIME)
@@ -14128,7 +14129,7 @@ public final class JdbcUtil {
         /**
          *
          * @param entity
-         * @param onDeleteAction
+         * @param onDeleteAction It should be defined and done in DB server side.
          * @return
          * @throws SQLException the SQL exception
          */
@@ -14157,7 +14158,7 @@ public final class JdbcUtil {
         /**
          *
          * @param entities
-         * @param onDeleteAction
+         * @param onDeleteAction It should be defined and done in DB server side.
          * @return
          * @throws SQLException the SQL exception
          */
@@ -14169,7 +14170,7 @@ public final class JdbcUtil {
         /**
          *
          * @param entities
-         * @param onDeleteAction
+         * @param onDeleteAction It should be defined and done in DB server side.
          * @param batchSize
          * @return
          * @throws SQLException the SQL exception
