@@ -3,6 +3,7 @@
 * Move `JdbcUtil.FetchDirection` to `com.landawn.abacus.util.FetchDirection`.
 * Improvements and bug fix.
 
+
 ### 1.10.6
 
 * Rename `Dao.saveAll` to `Dao.batchSave`.
