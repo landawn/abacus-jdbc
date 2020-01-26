@@ -12105,6 +12105,19 @@ public final class JdbcUtil {
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.METHOD, ElementType.TYPE })
+        public static @interface SqlLogEnabled {
+            /**
+             * 
+             * @return
+             */
+            boolean value() default true;
+        }
+
+        /**
+         *
+         */
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(value = { ElementType.METHOD, ElementType.TYPE })
         public static @interface PerfLog {
             /**
              * start to log performance for sql if the execution time >= the specified(or default) execution time in milliseconds.

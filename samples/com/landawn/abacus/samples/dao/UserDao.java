@@ -26,9 +26,11 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     int updateFirstAndLastName(@Bind("firstName") String newFirstName, @Bind("lastName") String newLastName, @Bind("id") long id) throws SQLException;
 
     @NamedSelect("SELECT first_name, last_name FROM user WHERE id = :id")
+    @SqlLogEnabled
     User getFirstAndLastNameBy(@Bind("id") long id) throws SQLException;
 
     @NamedSelect("SELECT id, first_name, last_name, email FROM user")
+    @SqlLogEnabled(false)
     Stream<User> allUsers() throws SQLException;
 
     @NamedInsert(sql = "INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)", isBatch = true)
