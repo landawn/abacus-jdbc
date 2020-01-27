@@ -12164,6 +12164,34 @@ public final class JdbcUtil {
             OnDeleteAction action() default OnDeleteAction.NO_ACTION;
         }
 
+        //    // TODO: First of all, it's bad idea to implement cache in DAL layer?!, 2, How?
+        //    // TODO: second, what will key be like?: {methodName=[args]} -> JSON or kryo? 
+        //    @Retention(RetentionPolicy.RUNTIME)
+        //    @Target(value = { ElementType.METHOD, ElementType.TYPE })
+        //    static @interface Cache {
+        //        boolean value() default true;
+        //        
+        //        // KeyGenerator keyGenerator() default KeyGenerator.JSON; KeyGenerator.JSON/KRYO;
+        //
+        //        long liveTime() default 30 * 60 * 1000; // unit milliseconds.
+        //
+        //        long idleTime() default 3 * 60 * 1000; // unit milliseconds.
+        //
+        //        int maxSize() default Integer.MAX_VALUE; // for list/DataSet.
+        //        
+        //        boolean isCloneRequired() default false;
+        //        
+        //        boolean isStaticData() default false; // won't be removed by @RefreshCache.
+        //    }
+        //    
+        //    @Retention(RetentionPolicy.RUNTIME)
+        //    @Target(value = { ElementType.METHOD })
+        //    static @interface RefreshCache {
+        //        boolean value() default true;
+        //
+        //        // @KeyFilter keyFilter() default null; @KeyFilter.startsWith/notStartsWith/contains/notContains.
+        //    }
+
         /**
          *
          * @return
