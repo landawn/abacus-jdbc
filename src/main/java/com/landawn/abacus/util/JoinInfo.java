@@ -71,11 +71,11 @@ final class JoinInfo {
 
         referencedEntityClass = referencedEntityType.clazz();
 
-        final String joinByVal = joinPropInfo.getAnnotation(JoinedBy.class).value();
+        final String joinByVal = StringUtil.join(joinPropInfo.getAnnotation(JoinedBy.class).value(), ", ");
 
         if (N.isNullOrEmpty(joinByVal)) {
             throw new IllegalArgumentException(
-                    "Invalid value: " + joinByVal + " for annotation @JoinBy on property '" + joinPropInfo.name + "' in class: " + entityClass);
+                    "Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: " + entityClass);
         }
 
         referencedEntityInfo = ParserUtil.getEntityInfo(referencedEntityClass);
@@ -91,16 +91,16 @@ final class JoinInfo {
 
             if (tmp.length > 2) {
                 throw new IllegalArgumentException(
-                        "Invalid value: " + joinByVal + " for annotation @JoinBy on property '" + joinPropInfo.name + "' in class: " + entityClass);
+                        "Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: " + entityClass);
             }
 
             if ((srcPropInfos[i] = entityInfo.getPropInfo(tmp[0])) == null) {
-                throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinBy on property '" + joinPropInfo.name + "' in class: "
+                throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: "
                         + entityClass + ". No property found with name: '" + tmp[0] + "' in the class: " + entityClass);
             }
 
             if ((referencedPropInfos[i] = referencedEntityInfo.getPropInfo(tmp.length == 1 ? tmp[0] : tmp[1])) == null) {
-                throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinBy on property '" + joinPropInfo.name + "' in class: "
+                throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: "
                         + entityClass + ". No referenced property found with name: '" + (tmp.length == 1 ? tmp[0] : tmp[1]) + "' in the class: "
                         + referencedEntityClass);
             }

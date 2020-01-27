@@ -36,6 +36,6 @@ public class User {
     @JoinedBy("id=userId")
     private Address address;
 
-    @JoinedBy("id=userId, lastName=street")
+    @JoinedBy({ "id=userId", "lastName=street" })
     private List<Address> address2;
 }

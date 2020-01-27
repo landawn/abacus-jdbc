@@ -1,3 +1,8 @@
+### 1.10.8
+
+* Improvements and bug fix.
+
+
 ### 1.10.7
 
 * Move `JdbcUtil.FetchDirection` to `com.landawn.abacus.util.FetchDirection`.
