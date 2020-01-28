@@ -12164,33 +12164,85 @@ public final class JdbcUtil {
             OnDeleteAction action() default OnDeleteAction.NO_ACTION;
         }
 
-        //    // TODO: First of all, it's bad idea to implement cache in DAL layer?!, 2, How?
-        //    // TODO: second, what will key be like?: {methodName=[args]} -> JSON or kryo? 
-        //    @Retention(RetentionPolicy.RUNTIME)
-        //    @Target(value = { ElementType.METHOD, ElementType.TYPE })
-        //    static @interface Cache {
-        //        boolean value() default true;
-        //        
-        //        // KeyGenerator keyGenerator() default KeyGenerator.JSON; KeyGenerator.JSON/KRYO;
-        //
-        //        long liveTime() default 30 * 60 * 1000; // unit milliseconds.
-        //
-        //        long idleTime() default 3 * 60 * 1000; // unit milliseconds.
-        //
-        //        int maxSize() default Integer.MAX_VALUE; // for list/DataSet.
-        //        
-        //        boolean isCloneRequired() default false;
-        //        
-        //        boolean isStaticData() default false; // won't be removed by @RefreshCache.
-        //    }
-        //    
-        //    @Retention(RetentionPolicy.RUNTIME)
-        //    @Target(value = { ElementType.METHOD })
-        //    static @interface RefreshCache {
-        //        boolean value() default true;
-        //
-        //        // @KeyFilter keyFilter() default null; @KeyFilter.startsWith/notStartsWith/contains/notContains.
-        //    }
+        // TODO: First of all, it's bad idea to implement cache in DAL layer?!, 2, How?
+        // TODO: second, what will key be like?: {methodName=[args]} -> JSON or kryo? 
+
+        /** 
+         * Unsupported operation.
+         * 
+         * @deprecated not implemented.
+         */
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(value = { ElementType.METHOD, ElementType.TYPE })
+        static @interface CacheResult {
+            /**
+             * Flag to identity if cache query result of annotated methods/class.
+             * @return
+             */
+            boolean value() default true;
+
+            // KeyGenerator keyGenerator() default KeyGenerator.JSON; KeyGenerator.JSON/KRYO;
+
+            /**
+             * 
+             * @return
+             */
+            long liveTime() default 30 * 60 * 1000; // unit milliseconds.
+
+            /**
+             * 
+             * @return
+             */
+            long idleTime() default 3 * 60 * 1000; // unit milliseconds.
+
+            /**
+             * Minimum required size to cache query result if the return type is {@code Collection} or {@code DataSet}.
+             * This setting will be ignore if the return types are not {@code Collection} or {@code DataSet}.
+             * 
+             * @return
+             */
+            int minSize() default 0; // for list/DataSet.
+
+            /**
+             * If the query result won't be cached if it's size is bigger than {@code maxSize} if the return type is {@code Collection} or {@code DataSet}.
+             * This setting will be ignore if the return types are not {@code Collection} or {@code DataSet}.
+             *  
+             * @return
+             */
+            int maxSize() default Integer.MAX_VALUE; // for list/DataSet.
+
+            /**
+             * 
+             * @return
+             */
+            boolean isCloneRequired() default false;
+
+            /**
+             * If it's set to true, the cached result won't be removed by method annotated by {@code RefershCache}.
+             * 
+             * @return
+             */
+            boolean isStaticData() default false;
+        }
+
+        /** 
+         * Unsupported operation.
+         * 
+         * @deprecated not implemented.
+         */
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(value = { ElementType.METHOD })
+        static @interface RefreshCache {
+            /**
+             * flag to identity if refresh query result cached by the Dao class
+             * @return
+             */
+            boolean value() default true;
+
+            // @KeyFilter keyFilter() default null; @KeyFilter.startsWith/notStartsWith/contains/notContains.
+
+            boolean refreshStaticData() default false;
+        }
 
         /**
          *
