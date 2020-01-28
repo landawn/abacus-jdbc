@@ -9048,7 +9048,7 @@ public class SQLExecutor {
          * @return
          */
         @Beta
-        public <R> ContinuableFuture<R> asyncApply(final Function<Mapper<T, ID>, R> func) {
+        public <R> ContinuableFuture<R> asyncCall(final Function<Mapper<T, ID>, R> func) {
             N.checkArgNotNull(func, "func");
 
             return sqlExecutor._asyncExecutor.execute(() -> func.apply(this));
@@ -9062,7 +9062,7 @@ public class SQLExecutor {
          * @return
          */
         @Beta
-        public <R> ContinuableFuture<R> asyncApply(final Function<Mapper<T, ID>, R> func, final Executor executor) {
+        public <R> ContinuableFuture<R> asyncCall(final Function<Mapper<T, ID>, R> func, final Executor executor) {
             N.checkArgNotNull(func, "func");
             N.checkArgNotNull(executor, "executor");
 
@@ -9075,7 +9075,7 @@ public class SQLExecutor {
          * @return
          */
         @Beta
-        public ContinuableFuture<Void> asyncAccept(final Consumer<Mapper<T, ID>> action) {
+        public ContinuableFuture<Void> asyncRun(final Consumer<Mapper<T, ID>> action) {
             N.checkArgNotNull(action, "action");
 
             return sqlExecutor._asyncExecutor.execute(() -> action.accept(this));
@@ -9088,7 +9088,7 @@ public class SQLExecutor {
          * @return
          */
         @Beta
-        public ContinuableFuture<Void> asyncAccept(final Consumer<Mapper<T, ID>> action, final Executor executor) {
+        public ContinuableFuture<Void> asyncRun(final Consumer<Mapper<T, ID>> action, final Executor executor) {
             N.checkArgNotNull(action, "action");
             N.checkArgNotNull(executor, "executor");
 

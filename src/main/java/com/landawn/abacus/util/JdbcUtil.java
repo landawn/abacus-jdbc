@@ -13725,8 +13725,8 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
-        default <R> ContinuableFuture<R> asyncApply(final Throwables.Function<TD, R, SQLException> func) {
-            return asyncApply(func, executor());
+        default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<TD, R, SQLException> func) {
+            return asyncCall(func, executor());
         }
 
         /**
@@ -13737,7 +13737,7 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
-        default <R> ContinuableFuture<R> asyncApply(final Throwables.Function<TD, R, SQLException> func, final Executor executor) {
+        default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<TD, R, SQLException> func, final Executor executor) {
             N.checkArgNotNull(func, "func");
             N.checkArgNotNull(executor, "executor");
 
@@ -13752,8 +13752,8 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
-        default ContinuableFuture<Void> asyncAccept(final Throwables.Consumer<TD, SQLException> action) {
-            return asyncAccept(action, executor());
+        default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<TD, SQLException> action) {
+            return asyncRun(action, executor());
         }
 
         /**
@@ -13763,7 +13763,7 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
-        default ContinuableFuture<Void> asyncAccept(final Throwables.Consumer<TD, SQLException> action, final Executor executor) {
+        default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<TD, SQLException> action, final Executor executor) {
             N.checkArgNotNull(action, "action");
             N.checkArgNotNull(executor, "executor");
 

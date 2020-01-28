@@ -3771,7 +3771,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      */
     @Beta
-    public <R> ContinuableFuture<R> asyncApply(final Throwables.Function<Q, R, SQLException> func) {
+    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<Q, R, SQLException> func) {
         checkArgNotNull(func, "func");
         assertNotClosed();
 
@@ -3788,7 +3788,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      */
     @Beta
-    public <R> ContinuableFuture<R> asyncApply(final Throwables.Function<Q, R, SQLException> func, final Executor executor) {
+    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<Q, R, SQLException> func, final Executor executor) {
         checkArgNotNull(func, "func");
         checkArgNotNull(executor, "executor");
         assertNotClosed();
@@ -3804,7 +3804,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      */
     @Beta
-    public ContinuableFuture<Void> asyncAccept(final Throwables.Consumer<Q, SQLException> action) {
+    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<Q, SQLException> action) {
         checkArgNotNull(action, "action");
         assertNotClosed();
 
@@ -3820,7 +3820,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      */
     @Beta
-    public ContinuableFuture<Void> asyncAccept(final Throwables.Consumer<Q, SQLException> action, final Executor executor) {
+    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<Q, SQLException> action, final Executor executor) {
         checkArgNotNull(action, "action");
         checkArgNotNull(executor, "executor");
         assertNotClosed();
