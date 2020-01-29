@@ -2813,7 +2813,7 @@ final class DaoUtil {
             final Dao.CacheResult cacheResultAnno = StreamEx.of(m.getAnnotations()).select(Dao.CacheResult.class).last().orElse(daoClassCacheResultAnno);
             final Dao.RefreshCache refreshResultAnno = StreamEx.of(m.getAnnotations()).select(Dao.RefreshCache.class).last().orElse(daoClassRefreshCacheAnno);
 
-            if (cacheResultAnno != null
+            if (cacheResultAnno != null && cacheResultAnno.disabled() == false
                     && (N.isNullOrEmpty(cacheResultAnno.filter())
                             || StreamEx.of(cacheResultAnno.filter()).anyMatch(it -> StringUtil.containsIgnoreCase(it, m.getName())))
                     && (refreshResultAnno == null || N.isNullOrEmpty(refreshResultAnno.filter())
@@ -2902,7 +2902,7 @@ final class DaoUtil {
                 };
             }
 
-            if (refreshResultAnno != null && (N.isNullOrEmpty(refreshResultAnno.filter())
+            if (refreshResultAnno != null && refreshResultAnno.disabled() == false && (N.isNullOrEmpty(refreshResultAnno.filter())
                     || StreamEx.of(refreshResultAnno.filter()).anyMatch(it -> StringUtil.containsIgnoreCase(it, m.getName())))) {
                 final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
 

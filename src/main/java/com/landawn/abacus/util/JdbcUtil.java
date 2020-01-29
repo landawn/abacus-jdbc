@@ -12172,17 +12172,10 @@ public final class JdbcUtil {
         @Target(value = { ElementType.METHOD, ElementType.TYPE })
         static @interface CacheResult {
             /**
-             * Flag to identity if cache query result of annotated methods/class.
-             * @return
-             * @deprecated use {@code enabled} if it's assigned with attribute name.
-             */
-            boolean value() default true;
-
-            /**
-             * Flag to identity if {@code CacheResult} is enabled.
+             * Flag to identity if {@code CacheResult} is disabled.
              * @return
              */
-            boolean enabled() default true;
+            boolean disabled() default false;
 
             /**
              * 
@@ -12243,18 +12236,12 @@ public final class JdbcUtil {
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.METHOD, ElementType.TYPE })
         static @interface RefreshCache {
-            /**
-             * flag to identity if refresh query result cached by the Dao class
-             * @return
-             * @deprecated use {@code enabled} if it's assigned with attribute name.
-             */
-            boolean value() default true;
 
             /**
-             * Flag to identity if {@code RefreshCache} is enabled.
+             * Flag to identity if {@code RefreshCache} is disabled.
              * @return
              */
-            boolean enabled() default true;
+            boolean disabled() default false;
 
             //    /**
             //     * 
