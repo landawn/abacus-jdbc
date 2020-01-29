@@ -2880,7 +2880,7 @@ final class DaoUtil {
 
                     result = temp.apply(proxy, args);
 
-                    if (N.notNullOrEmpty(cachekey) || result != null) {
+                    if (N.notNullOrEmpty(cachekey) && result != null) {
                         if (result instanceof DataSet) {
                             final DataSet dataSet = (DataSet) result;
 
