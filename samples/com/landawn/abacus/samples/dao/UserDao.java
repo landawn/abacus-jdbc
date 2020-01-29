@@ -7,9 +7,11 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.samples.dao.handler.UserDaoHandlerA;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.JdbcUtil;
+import com.landawn.abacus.util.JdbcUtil.Dao.CacheResult;
 import com.landawn.abacus.util.JdbcUtil.Dao.Handler;
 import com.landawn.abacus.util.JdbcUtil.Dao.Handler.Filter;
 import com.landawn.abacus.util.JdbcUtil.Dao.PerfLog;
+import com.landawn.abacus.util.JdbcUtil.Dao.RefreshCache;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Propagation;
 import com.landawn.abacus.util.SQLBuilder;
@@ -18,6 +20,8 @@ import com.landawn.abacus.util.stream.Stream;
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
 @Handler(type = UserDaoHandlerA.class)
 @Handler(qualifier = "handler1", filter = @Filter(qualifier = "notForDataSource"))
+@CacheResult(cloneForReadFromCache="none")
+@RefreshCache
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
     @NamedInsert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
     void insertWithId(User user) throws SQLException;

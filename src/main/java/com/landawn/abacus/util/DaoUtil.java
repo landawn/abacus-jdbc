@@ -47,15 +47,20 @@ import com.landawn.abacus.DataSet;
 import com.landawn.abacus.DataSourceManager;
 import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.EntityId;
+import com.landawn.abacus.cache.Cache;
+import com.landawn.abacus.cache.CacheFactory;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.core.DirtyMarkerUtil;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
+import com.landawn.abacus.parser.KryoParser;
+import com.landawn.abacus.parser.ParserFactory;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
 import com.landawn.abacus.util.Fn.IntFunctions;
 import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
@@ -203,6 +208,30 @@ final class DaoUtil {
         noLogMethods.add("prepareNamedQuery");
         noLogMethods.add("prepareCallableQuery");
         noLogMethods.add("targetEntityClass");
+    }
+
+    private static final Map<Class<?>, Predicate<Object>> isValuePresentMap = N.newHashMap(20);
+
+    static {
+        final Map<Class<?>, Predicate<?>> tmp = N.newHashMap(20);
+
+        tmp.put(u.Nullable.class, (u.Nullable<?> t) -> t.isPresent());
+        tmp.put(u.Optional.class, (u.Optional<?> t) -> t.isPresent());
+        tmp.put(u.OptionalBoolean.class, (u.OptionalBoolean t) -> t.isPresent());
+        tmp.put(u.OptionalChar.class, (u.OptionalChar t) -> t.isPresent());
+        tmp.put(u.OptionalByte.class, (u.OptionalByte t) -> t.isPresent());
+        tmp.put(u.OptionalShort.class, (u.OptionalShort t) -> t.isPresent());
+        tmp.put(u.OptionalInt.class, (u.OptionalInt t) -> t.isPresent());
+        tmp.put(u.OptionalLong.class, (u.OptionalLong t) -> t.isPresent());
+        tmp.put(u.OptionalFloat.class, (u.OptionalFloat t) -> t.isPresent());
+        tmp.put(u.OptionalDouble.class, (u.OptionalDouble t) -> t.isPresent());
+
+        tmp.put(java.util.Optional.class, (java.util.Optional<?> t) -> t.isPresent());
+        tmp.put(java.util.OptionalInt.class, (java.util.OptionalInt t) -> t.isPresent());
+        tmp.put(java.util.OptionalLong.class, (java.util.OptionalLong t) -> t.isPresent());
+        tmp.put(java.util.OptionalDouble.class, (java.util.OptionalDouble t) -> t.isPresent());
+
+        isValuePresentMap.putAll((Map<? extends Class<?>, ? extends Predicate<Object>>) tmp);
     }
 
     /**
@@ -474,6 +503,8 @@ final class DaoUtil {
         final SQLExecutor sqlExecutor = ds != null ? new SQLExecutor(ds, null, nonNullSQLMapper, null, nonNullAsyncExecutor)
                 : new SQLExecutor(dsm, null, nonNullSQLMapper, null, nonNullAsyncExecutor);
 
+        final Cache<String, Object> cache = CacheFactory.createLocalCache(1000, 3000);
+
         java.lang.reflect.Type[] typeArguments = null;
 
         if (N.notNullOrEmpty(daoInterface.getGenericInterfaces()) && daoInterface.getGenericInterfaces()[0] instanceof ParameterizedType) {
@@ -519,7 +550,8 @@ final class DaoUtil {
         final Map<Method, Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable>> methodInvokerMap = new HashMap<>();
 
         final List<Method> sqlMethods = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface))
-                .append(daoInterface)
+                .prepend(daoInterface)
+                .reversed()
                 .distinct()
                 .flatMapp(clazz -> clazz.getDeclaredMethods())
                 .filter(m -> !Modifier.isStatic(m.getModifiers()))
@@ -667,21 +699,36 @@ final class DaoUtil {
                 : (pq, entity) -> pq.setParameters(entity);
 
         final Dao.SqlLogEnabled daoClassSqlLogAnno = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface))
-                .append(daoInterface)
+                .prepend(daoInterface)
                 .flatMapp(cls -> cls.getAnnotations())
                 .select(Dao.SqlLogEnabled.class)
-                .last()
+                .first()
                 .orNull();
 
         final Dao.PerfLog daoClassPerfLogAnno = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface))
-                .append(daoInterface)
+                .prepend(daoInterface)
                 .flatMapp(cls -> cls.getAnnotations())
                 .select(Dao.PerfLog.class)
-                .last()
+                .first()
+                .orNull();
+
+        final Dao.CacheResult daoClassCacheResultAnno = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface))
+                .prepend(daoInterface)
+                .flatMapp(cls -> cls.getAnnotations())
+                .select(Dao.CacheResult.class)
+                .first()
+                .orNull();
+
+        final Dao.RefreshCache daoClassRefreshCacheAnno = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface))
+                .prepend(daoInterface)
+                .flatMapp(cls -> cls.getAnnotations())
+                .select(Dao.RefreshCache.class)
+                .first()
                 .orNull();
 
         final List<Dao.Handler> daoClassHandlerList = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface))
-                .append(daoInterface)
+                .prepend(daoInterface)
+                .reversed()
                 .flatMapp(cls -> cls.getAnnotations())
                 .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoUtil.HandlerList.class))
                 .flattMap(
@@ -2758,6 +2805,111 @@ final class DaoUtil {
                     } else {
                         return JdbcUtil.callNotInStartedTransaction(dataSource, () -> tmp.apply(proxy, args));
                     }
+                };
+            }
+
+            final Dao.CacheResult cacheResultAnno = StreamEx.of(m.getAnnotations()).select(Dao.CacheResult.class).last().orElse(daoClassCacheResultAnno);
+            final Dao.RefreshCache refreshResultAnno = StreamEx.of(m.getAnnotations()).select(Dao.RefreshCache.class).last().orElse(daoClassRefreshCacheAnno);
+
+            if (cacheResultAnno != null
+                    && (N.isNullOrEmpty(cacheResultAnno.filter())
+                            || StreamEx.of(cacheResultAnno.filter()).anyMatch(it -> StringUtil.containsIgnoreCase(it, m.getName())))
+                    && (refreshResultAnno == null || N.isNullOrEmpty(refreshResultAnno.filter())
+                            || StreamEx.of(refreshResultAnno.filter()).noneMatch(it -> StringUtil.containsIgnoreCase(it, m.getName())))) {
+                final String cloneForReadFromCacheAttr = cacheResultAnno.cloneForReadFromCache();
+
+                if (!(N.isNullOrEmpty(cloneForReadFromCacheAttr) || N.asSet("none", "kryo").contains(cloneForReadFromCacheAttr.toLowerCase()))) {
+                    throw new UnsupportedOperationException(
+                            "Unsupported 'cloneForReadFromCache' : " + cloneForReadFromCacheAttr + " in annotation 'CacheResult' on method: " + fullMethodName);
+                }
+
+                final KryoParser kryoParser = "kryo".endsWith(cloneForReadFromCacheAttr) ? ParserFactory.createKryoParser() : null;
+
+                final Function<Object, Object> cloneFunc = N.isNullOrEmpty(cloneForReadFromCacheAttr) || "none".equalsIgnoreCase(cloneForReadFromCacheAttr)
+                        ? Fn.identity()
+                        : r -> {
+                            if (r == null) {
+                                return r;
+                            } else if (isValuePresentMap.getOrDefault(r.getClass(), Fn.alwaysFalse()).test(r) == false) {
+                                return r;
+                            } else {
+                                return kryoParser.clone(r);
+                            }
+                        };
+
+                final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
+
+                call = (proxy, args) -> {
+                    String cachekey = null;
+
+                    if (kryoParser != null) {
+                        try {
+                            cachekey = kryoParser.serialize(N.toJSON(N.asMap(fullMethodName, args)));
+                        } catch (Exception e) {
+                            // ignore;
+                            logger.warn("Failed to generated cache key and not able cache the result for method: " + fullMethodName);
+                        }
+                    } else {
+                        final List<Object> newArgs = Stream.of(args).map(it -> {
+                            if (it == null) {
+                                return "null";
+                            }
+
+                            final Type<?> type = N.typeOf(it.getClass());
+
+                            if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isEntity() || type.isEntityId()) {
+                                return it;
+                            } else {
+                                return it.toString();
+                            }
+                        }).toList();
+
+                        try {
+                            cachekey = N.toJSON(N.asMap(fullMethodName, newArgs));
+                        } catch (Exception e) {
+                            // ignore;
+                            logger.warn("Failed to generated cache key and not able cache the result for method: " + fullMethodName);
+                        }
+                    }
+
+                    Object result = N.isNullOrEmpty(cachekey) ? null : cache.gett(cachekey);
+
+                    if (result != null) {
+                        return cloneFunc.apply(result);
+                    }
+
+                    result = temp.apply(proxy, args);
+
+                    if (N.notNullOrEmpty(cachekey) || result != null) {
+                        if (result instanceof DataSet) {
+                            final DataSet dataSet = (DataSet) result;
+
+                            if (dataSet.size() >= cacheResultAnno.minSize() && dataSet.size() <= cacheResultAnno.maxSize()) {
+                                cache.put(cachekey, result, cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
+                            }
+                        } else if (result instanceof Collection) {
+                            final Collection<Object> c = (Collection<Object>) result;
+
+                            if (c.size() >= cacheResultAnno.minSize() && c.size() <= cacheResultAnno.maxSize()) {
+                                cache.put(cachekey, result, cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
+                            }
+                        } else {
+                            cache.put(cachekey, result, cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
+                        }
+                    }
+
+                    return result;
+                };
+            }
+
+            if (refreshResultAnno != null && (N.isNullOrEmpty(refreshResultAnno.filter())
+                    || StreamEx.of(refreshResultAnno.filter()).anyMatch(it -> StringUtil.containsIgnoreCase(it, m.getName())))) {
+                final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
+
+                call = (proxy, args) -> {
+                    cache.clear();
+
+                    return temp.apply(proxy, args);
                 };
             }
 

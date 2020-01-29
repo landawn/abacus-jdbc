@@ -35,12 +35,34 @@ import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.OnDeleteAction;
+import com.landawn.abacus.util.Profiler;
 import com.landawn.abacus.util.SQLTransaction;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.LongStream;
 import com.landawn.abacus.util.stream.Stream;
 
 public class DaoTest {
+
+    @Test
+    public void test_cache() throws SQLException {
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
+
+        User userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+        assertNotNull(userFromDB);
+
+        System.out.println(userFromDB);
+        assertNotNull(userFromDB);
+
+        Profiler.run(1, 10000, 1, () -> userDao.gett(100L)).printResult();
+
+        userDao.delete(userFromDB);
+
+        Profiler.run(1, 10000, 1, () -> userDao.gett(100L)).printResult();
+
+        userDao.delete(userFromDB);
+    }
 
     @Test
     public void test_handler() throws SQLException {

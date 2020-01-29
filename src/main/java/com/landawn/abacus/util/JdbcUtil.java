@@ -12164,13 +12164,9 @@ public final class JdbcUtil {
             OnDeleteAction action() default OnDeleteAction.NO_ACTION;
         }
 
-        // TODO: First of all, it's bad idea to implement cache in DAL layer?!, 2, How?
-        // TODO: second, what will key be like?: {methodName=[args]} -> JSON or kryo? 
-
+        // TODO: First of all, it's bad idea to implement cache in DAL layer?! and how if not?
         /** 
-         * Unsupported operation.
          * 
-         * @deprecated not implemented.
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.METHOD, ElementType.TYPE })
@@ -12178,10 +12174,15 @@ public final class JdbcUtil {
             /**
              * Flag to identity if cache query result of annotated methods/class.
              * @return
+             * @deprecated use {@code enabled} if it's assigned with attribute name.
              */
             boolean value() default true;
 
-            // KeyGenerator keyGenerator() default KeyGenerator.JSON; KeyGenerator.JSON/KRYO;
+            /**
+             * Flag to identity if {@code CacheResult} is enabled.
+             * @return
+             */
+            boolean enabled() default true;
 
             /**
              * 
@@ -12212,36 +12213,62 @@ public final class JdbcUtil {
             int maxSize() default Integer.MAX_VALUE; // for list/DataSet.
 
             /**
+             * It can be {@code "none" and "kryo"}.
              * 
              * @return
              */
-            boolean isCloneRequired() default false;
+            String cloneForReadFromCache() default "none";
+
+            //    /**
+            //     * If it's set to true, the cached result won't be removed by method annotated by {@code RefershCache}.
+            //     * 
+            //     * @return
+            //     */
+            //    boolean isStaticData() default false;
 
             /**
-             * If it's set to true, the cached result won't be removed by method annotated by {@code RefershCache}.
+             * Those conditions(by contains ignore case) will be joined by {@code OR}, not {@code AND}.
+             * It's only applied if target of annotation {@code RefreshCache} is {@code Type}, and will be ignored if target is method.
              * 
              * @return
              */
-            boolean isStaticData() default false;
+            String[] filter() default { "query", "queryFor", "list", "get", "find", "findFirst", "exist", "count" };
+
+            // TODO: second, what will key be like?: {methodName=[args]} -> JSON or kryo? 
+            // KeyGenerator keyGenerator() default KeyGenerator.JSON; KeyGenerator.JSON/KRYO;
         }
 
         /** 
-         * Unsupported operation.
-         * 
-         * @deprecated not implemented.
          */
         @Retention(RetentionPolicy.RUNTIME)
-        @Target(value = { ElementType.METHOD })
+        @Target(value = { ElementType.METHOD, ElementType.TYPE })
         static @interface RefreshCache {
             /**
              * flag to identity if refresh query result cached by the Dao class
              * @return
+             * @deprecated use {@code enabled} if it's assigned with attribute name.
              */
             boolean value() default true;
 
-            // @KeyFilter keyFilter() default null; @KeyFilter.startsWith/notStartsWith/contains/notContains.
+            /**
+             * Flag to identity if {@code RefreshCache} is enabled.
+             * @return
+             */
+            boolean enabled() default true;
 
-            boolean refreshStaticData() default false;
+            //    /**
+            //     * 
+            //     * @return
+            //     */
+            //    boolean forceRefreshStaticData() default false;
+
+            /**
+             * Those conditions(by contains ignore case) will be joined by {@code OR}, not {@code AND}.
+             * It's only applied if target of annotation {@code RefreshCache} is {@code Type}, and will be ignored if target is method.
+             * 
+             * @return
+             */
+            String[] filter() default { "save", "insert", "update", "delete", "upsert", "execute" };
         }
 
         /**
