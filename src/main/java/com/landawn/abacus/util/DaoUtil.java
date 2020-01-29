@@ -106,6 +106,8 @@ final class DaoUtil {
         // singleton for utility class.
     }
 
+    private static final KryoParser kryoParser = ParserFactory.isKryoAvailable() ? ParserFactory.createKryoParser() : null;
+
     /** The Constant daoPool. */
     @SuppressWarnings("rawtypes")
     private static final Map<String, JdbcUtil.Dao> daoPool = new ConcurrentHashMap<>();
@@ -2822,8 +2824,6 @@ final class DaoUtil {
                     throw new UnsupportedOperationException(
                             "Unsupported 'cloneForReadFromCache' : " + cloneForReadFromCacheAttr + " in annotation 'CacheResult' on method: " + fullMethodName);
                 }
-
-                final KryoParser kryoParser = "kryo".endsWith(cloneForReadFromCacheAttr) ? ParserFactory.createKryoParser() : null;
 
                 final Function<Object, Object> cloneFunc = N.isNullOrEmpty(cloneForReadFromCacheAttr) || "none".equalsIgnoreCase(cloneForReadFromCacheAttr)
                         ? Fn.identity()
