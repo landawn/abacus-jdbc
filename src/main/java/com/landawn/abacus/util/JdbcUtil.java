@@ -97,6 +97,7 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
+import com.landawn.abacus.util.DaoUtil.NonDBOperation;
 import com.landawn.abacus.util.ExceptionalStream.StreamE;
 import com.landawn.abacus.util.Fn.BiConsumers;
 import com.landawn.abacus.util.Fn.Suppliers;
@@ -12262,18 +12263,22 @@ public final class JdbcUtil {
          *
          * @return
          */
+        @NonDBOperation
         Class<T> targetEntityClass();
 
         /**
          *
          * @return
          */
+        @NonDBOperation
         javax.sql.DataSource dataSource();
 
         // SQLExecutor sqlExecutor();
 
+        @NonDBOperation
         SQLMapper sqlMapper();
 
+        @NonDBOperation
         Executor executor();
 
         //    /**
@@ -12282,6 +12287,7 @@ public final class JdbcUtil {
         //     * @return
         //     * @throws UncheckedSQLException
         //     */
+        //     @NonDBOperation
         //    default SQLTransaction beginTransaction(final IsolationLevel isolationLevel) throws UncheckedSQLException {
         //        return beginTransaction(isolationLevel, false);
         //    }
@@ -12321,6 +12327,7 @@ public final class JdbcUtil {
         //     * @throws UncheckedSQLException
         //     * @see {@link SQLExecutor#beginTransaction(IsolationLevel, boolean)}
         //     */
+        //     @NonDBOperation
         //    default SQLTransaction beginTransaction(final IsolationLevel isolationLevel, final boolean forUpdateOnly) throws UncheckedSQLException {
         //        N.checkArgNotNull(isolationLevel, "isolationLevel");
         //
@@ -12361,6 +12368,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default PreparedQuery prepareQuery(final String query) throws SQLException {
             return JdbcUtil.prepareQuery(dataSource(), query);
         }
@@ -12372,6 +12380,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws SQLException {
             return JdbcUtil.prepareQuery(dataSource(), query, generateKeys);
         }
@@ -12383,6 +12392,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws SQLException {
             return JdbcUtil.prepareQuery(dataSource(), query, returnColumnIndexes);
         }
@@ -12394,6 +12404,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws SQLException {
             return JdbcUtil.prepareQuery(dataSource(), query, returnColumnNames);
         }
@@ -12405,6 +12416,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default PreparedQuery prepareQuery(final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
                 throws SQLException {
             return JdbcUtil.prepareQuery(dataSource(), sql, stmtCreator);
@@ -12416,6 +12428,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery);
         }
@@ -12427,6 +12440,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, generateKeys);
         }
@@ -12438,6 +12452,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
         }
@@ -12449,6 +12464,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
         }
@@ -12460,6 +12476,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery,
                 final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, stmtCreator);
@@ -12471,6 +12488,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default NamedQuery prepareNamedQuery(final NamedSQL namedSQL) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedSQL);
         }
@@ -12482,6 +12500,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default NamedQuery prepareNamedQuery(final NamedSQL namedSQL, final boolean generateKeys) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedSQL, generateKeys);
         }
@@ -12493,6 +12512,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default NamedQuery prepareNamedQuery(final NamedSQL namedQuery, final int[] returnColumnIndexes) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
         }
@@ -12504,6 +12524,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default NamedQuery prepareNamedQuery(final NamedSQL namedQuery, final String[] returnColumnNames) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
         }
@@ -12515,6 +12536,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default NamedQuery prepareNamedQuery(final NamedSQL namedSQL,
                 final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedSQL, stmtCreator);
@@ -12526,6 +12548,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default PreparedCallableQuery prepareCallableQuery(final String query) throws SQLException {
             return JdbcUtil.prepareCallableQuery(dataSource(), query);
         }
@@ -12537,6 +12560,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @NonDBOperation
         default PreparedCallableQuery prepareCallableQuery(final String sql,
                 final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
             return JdbcUtil.prepareCallableQuery(dataSource(), sql, stmtCreator);
@@ -13739,6 +13763,7 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
+        @NonDBOperation
         default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<TD, R, SQLException> func) {
             return asyncCall(func, executor());
         }
@@ -13751,6 +13776,7 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
+        @NonDBOperation
         default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<TD, R, SQLException> func, final Executor executor) {
             N.checkArgNotNull(func, "func");
             N.checkArgNotNull(executor, "executor");
@@ -13766,6 +13792,7 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
+        @NonDBOperation
         default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<TD, SQLException> action) {
             return asyncRun(action, executor());
         }
@@ -13777,6 +13804,7 @@ public final class JdbcUtil {
          * @return
          */
         @Beta
+        @NonDBOperation
         default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<TD, SQLException> action, final Executor executor) {
             N.checkArgNotNull(action, "action");
             N.checkArgNotNull(executor, "executor");

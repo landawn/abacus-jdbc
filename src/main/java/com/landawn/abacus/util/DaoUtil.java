@@ -34,6 +34,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
@@ -197,19 +198,6 @@ final class DaoUtil {
 
             return sql;
         });
-    }
-
-    /** The Constant noLogMethods. */
-    private static final Set<String> noLogMethods = N.newHashSet();
-
-    static {
-        noLogMethods.add("dataSource");
-        noLogMethods.add("sqlMapper");
-        noLogMethods.add("executor");
-        noLogMethods.add("prepareQuery");
-        noLogMethods.add("prepareNamedQuery");
-        noLogMethods.add("prepareCallableQuery");
-        noLogMethods.add("targetEntityClass");
     }
 
     private static final Map<Class<?>, Predicate<Object>> isValuePresentMap = N.newHashMap(20);
@@ -496,7 +484,7 @@ final class DaoUtil {
             return daoInstance;
         }
 
-        final Logger logger = LoggerFactory.getLogger(daoInterface);
+        final Logger daoLogger = LoggerFactory.getLogger(daoInterface);
 
         final javax.sql.DataSource primaryDataSource = ds != null ? ds : dsm.getPrimaryDataSource();
         final SQLMapper nonNullSQLMapper = sqlMapper == null ? new SQLMapper() : sqlMapper;
@@ -506,6 +494,7 @@ final class DaoUtil {
                 : new SQLExecutor(dsm, null, nonNullSQLMapper, null, nonNullAsyncExecutor);
 
         final Cache<String, Object> cache = CacheFactory.createLocalCache(1000, 3000);
+        final Set<Method> nonDBOperationSet = new HashSet<>();
 
         java.lang.reflect.Type[] typeArguments = null;
 
@@ -738,6 +727,10 @@ final class DaoUtil {
                 .toList();
 
         for (Method m : sqlMethods) {
+            if (!Modifier.isPublic(m.getModifiers())) {
+                continue;
+            }
+
             final Class<?> declaringClass = m.getDeclaringClass();
             final String methodName = m.getName();
             final Class<?>[] paramTypes = m.getParameterTypes();
@@ -1637,8 +1630,8 @@ final class DaoUtil {
                             }
 
                             if (N.notNullOrEmpty(ids) && ids.size() != entities.size()) {
-                                if (logger.isWarnEnabled()) {
-                                    logger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
+                                if (daoLogger.isWarnEnabled()) {
+                                    daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
                                             entities.size());
                                 }
                             }
@@ -1700,8 +1693,8 @@ final class DaoUtil {
                             }
 
                             if (N.notNullOrEmpty(ids) && ids.size() != entities.size()) {
-                                if (logger.isWarnEnabled()) {
-                                    logger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
+                                if (daoLogger.isWarnEnabled()) {
+                                    daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
                                             entities.size());
                                 }
                             }
@@ -2461,8 +2454,8 @@ final class DaoUtil {
                                 }
 
                                 if (N.notNullOrEmpty(ids) && ids.size() != batchParameters.size()) {
-                                    if (logger.isWarnEnabled()) {
-                                        logger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
+                                    if (daoLogger.isWarnEnabled()) {
+                                        daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
                                                 batchParameters.size());
                                     }
                                 }
@@ -2581,119 +2574,81 @@ final class DaoUtil {
                 }
             }
 
-            final List<JdbcUtil.Handler<?>> handlerList = StreamEx.of(m.getAnnotations())
-                    .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoUtil.HandlerList.class))
-                    .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
-                            : N.asList(((DaoUtil.HandlerList) anno).value()))
-                    .prepend(daoClassHandlerList)
-                    .filter(handlerAnno -> {
-                        final Dao.Handler.Filter filter = handlerAnno.filter();
-
-                        if (N.notNullOrEmpty(handlerAnno.filter().qualifier())) {
-                            return N.checkArgNotNull(HandlerFilterFactory.get(filter.qualifier()),
-                                    "No Handler.Filter found by qualifier: " + filter.qualifier()).test(m);
-                        } else {
-                            return N.checkArgNotNull(HandlerFilterFactory.getOrCreate(filter.type()), "No Handler.Filter found by type: " + filter.type())
-                                    .test(m);
-                        }
-                    })
-                    .map(handlerAnno -> N.notNullOrEmpty(handlerAnno.qualifier()) ? HandlerFactory.get(handlerAnno.qualifier())
-                            : HandlerFactory.getOrCreate(handlerAnno.type()))
-                    .carry(handler -> N.checkArgNotNull(handler,
-                            "No handler found/registered with qualifier or type in class/method: " + daoInterface + "." + m.getName()))
-                    .reversed()
-                    .toList();
-
-            final Dao.Transactional transactionalAnno = StreamEx.of(m.getAnnotations()).select(Dao.Transactional.class).last().orNull();
-
-            //    if (transactionalAnno != null && Modifier.isAbstract(m.getModifiers())) {
-            //        throw new UnsupportedOperationException(
-            //                "Annotation @Transactional is only supported by interface methods with default implementation: default xxx dbOperationABC(someParameters, String ... sqls), not supported by abstract method: "
-            //                        + m.getName());
-            //    }
-
             final String fullMethodName = daoInterface.getSimpleName() + "." + m.getName();
+            final boolean isNonDBOperation = StreamEx.of(m.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(DaoUtil.NonDBOperation.class));
 
-            final Dao.SqlLogEnabled sqlLogAnno = StreamEx.of(m.getAnnotations()).select(Dao.SqlLogEnabled.class).last().orElse(daoClassSqlLogAnno);
-            final Dao.PerfLog perfLogAnno = StreamEx.of(m.getAnnotations()).select(Dao.PerfLog.class).last().orElse(daoClassPerfLogAnno);
-            final boolean hasSqlLogAnno = sqlLogAnno != null;
-            final boolean hasPerfLogAnno = perfLogAnno != null;
+            if (isNonDBOperation) {
+                nonDBOperationSet.add(m);
 
-            final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> tmp = call;
+                if (daoLogger.isDebugEnabled()) {
+                    daoLogger.debug("Non-DB operation method: " + fullMethodName);
+                }
 
-            if (transactionalAnno == null || transactionalAnno.propagation() == Propagation.SUPPORTS) {
-                if (hasSqlLogAnno || hasPerfLogAnno) {
-                    call = (proxy, args) -> {
-                        final boolean prevSqlLogEnabled = hasSqlLogAnno ? JdbcUtil.isSQLLogEnabled() : false;
-                        final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
+                // ignore
+            } else {
+                final List<JdbcUtil.Handler<?>> handlerList = StreamEx.of(m.getAnnotations())
+                        .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoUtil.HandlerList.class))
+                        .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
+                                : N.asList(((DaoUtil.HandlerList) anno).value()))
+                        .prepend(daoClassHandlerList)
+                        .filter(handlerAnno -> {
+                            final Dao.Handler.Filter filter = handlerAnno.filter();
 
-                        if (hasSqlLogAnno) {
-                            JdbcUtil.enableSQLLog(sqlLogAnno.value());
-                        }
-
-                        if (hasPerfLogAnno) {
-                            JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
-                        }
-
-                        final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
-
-                        try {
-                            return tmp.apply(proxy, args);
-                        } finally {
-                            if (hasPerfLogAnno) {
-                                if (perfLogAnno.minExecutionTimeForOperation() >= 0 && logger.isInfoEnabled()) {
-                                    final long elapsedTime = System.currentTimeMillis() - startTime;
-
-                                    if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                        logger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
-                                    }
-                                }
-
-                                JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+                            if (N.notNullOrEmpty(handlerAnno.filter().qualifier())) {
+                                return N.checkArgNotNull(HandlerFilterFactory.get(filter.qualifier()),
+                                        "No Handler.Filter found by qualifier: " + filter.qualifier()).test(m);
+                            } else {
+                                return N.checkArgNotNull(HandlerFilterFactory.getOrCreate(filter.type()), "No Handler.Filter found by type: " + filter.type())
+                                        .test(m);
                             }
+                        })
+                        .map(handlerAnno -> N.notNullOrEmpty(handlerAnno.qualifier()) ? HandlerFactory.get(handlerAnno.qualifier())
+                                : HandlerFactory.getOrCreate(handlerAnno.type()))
+                        .carry(handler -> N.checkArgNotNull(handler,
+                                "No handler found/registered with qualifier or type in class/method: " + daoInterface + "." + m.getName()))
+                        .reversed()
+                        .toList();
+
+                final Dao.Transactional transactionalAnno = StreamEx.of(m.getAnnotations()).select(Dao.Transactional.class).last().orNull();
+
+                //    if (transactionalAnno != null && Modifier.isAbstract(m.getModifiers())) {
+                //        throw new UnsupportedOperationException(
+                //                "Annotation @Transactional is only supported by interface methods with default implementation: default xxx dbOperationABC(someParameters, String ... sqls), not supported by abstract method: "
+                //                        + m.getName());
+                //    }
+
+                final Dao.SqlLogEnabled sqlLogAnno = StreamEx.of(m.getAnnotations()).select(Dao.SqlLogEnabled.class).last().orElse(daoClassSqlLogAnno);
+                final Dao.PerfLog perfLogAnno = StreamEx.of(m.getAnnotations()).select(Dao.PerfLog.class).last().orElse(daoClassPerfLogAnno);
+                final boolean hasSqlLogAnno = sqlLogAnno != null;
+                final boolean hasPerfLogAnno = perfLogAnno != null;
+
+                final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> tmp = call;
+
+                if (transactionalAnno == null || transactionalAnno.propagation() == Propagation.SUPPORTS) {
+                    if (hasSqlLogAnno || hasPerfLogAnno) {
+                        call = (proxy, args) -> {
+                            final boolean prevSqlLogEnabled = hasSqlLogAnno ? JdbcUtil.isSQLLogEnabled() : false;
+                            final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
 
                             if (hasSqlLogAnno) {
-                                JdbcUtil.enableSQLLog(prevSqlLogEnabled);
+                                JdbcUtil.enableSQLLog(sqlLogAnno.value());
                             }
-                        }
-                    };
 
-                } else {
-                    // Do not need to do anything.
-                }
-            } else if (transactionalAnno.propagation() == Propagation.REQUIRED) {
-                call = (proxy, args) -> {
-                    final boolean prevSqlLogEnabled = hasSqlLogAnno ? JdbcUtil.isSQLLogEnabled() : false;
-                    final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
+                            if (hasPerfLogAnno) {
+                                JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
+                            }
 
-                    if (hasSqlLogAnno) {
-                        JdbcUtil.enableSQLLog(sqlLogAnno.value());
-                    }
+                            final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
 
-                    if (hasPerfLogAnno) {
-                        JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
-                    }
-
-                    final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
-
-                    final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
-                    Object result = null;
-
-                    try {
-                        result = tmp.apply(proxy, args);
-
-                        tran.commit();
-                    } finally {
-                        if (hasSqlLogAnno || hasPerfLogAnno) {
                             try {
-                                tran.rollbackIfNotCommitted();
+                                return tmp.apply(proxy, args);
                             } finally {
                                 if (hasPerfLogAnno) {
-                                    if (perfLogAnno.minExecutionTimeForOperation() >= 0 && logger.isInfoEnabled()) {
+                                    if (perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
                                         final long elapsedTime = System.currentTimeMillis() - startTime;
 
                                         if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                            logger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
+                                            daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
                                         }
                                     }
 
@@ -2704,18 +2659,13 @@ final class DaoUtil {
                                     JdbcUtil.enableSQLLog(prevSqlLogEnabled);
                                 }
                             }
-                        } else {
-                            tran.rollbackIfNotCommitted();
-                        }
+                        };
+
+                    } else {
+                        // Do not need to do anything.
                     }
-
-                    return result;
-                };
-            } else if (transactionalAnno.propagation() == Propagation.REQUIRES_NEW) {
-                call = (proxy, args) -> {
-                    final javax.sql.DataSource dataSource = proxy.dataSource();
-
-                    return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
+                } else if (transactionalAnno.propagation() == Propagation.REQUIRED) {
+                    call = (proxy, args) -> {
                         final boolean prevSqlLogEnabled = hasSqlLogAnno ? JdbcUtil.isSQLLogEnabled() : false;
                         final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
 
@@ -2742,11 +2692,11 @@ final class DaoUtil {
                                     tran.rollbackIfNotCommitted();
                                 } finally {
                                     if (hasPerfLogAnno) {
-                                        if (perfLogAnno.minExecutionTimeForOperation() >= 0 && logger.isInfoEnabled()) {
+                                        if (perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
                                             final long elapsedTime = System.currentTimeMillis() - startTime;
 
                                             if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                                logger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
+                                                daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
                                             }
                                         }
 
@@ -2763,13 +2713,11 @@ final class DaoUtil {
                         }
 
                         return result;
-                    });
-                };
-            } else if (transactionalAnno.propagation() == Propagation.NOT_SUPPORTED) {
-                call = (proxy, args) -> {
-                    final javax.sql.DataSource dataSource = proxy.dataSource();
+                    };
+                } else if (transactionalAnno.propagation() == Propagation.REQUIRES_NEW) {
+                    call = (proxy, args) -> {
+                        final javax.sql.DataSource dataSource = proxy.dataSource();
 
-                    if (hasSqlLogAnno || hasPerfLogAnno) {
                         return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
                             final boolean prevSqlLogEnabled = hasSqlLogAnno ? JdbcUtil.isSQLLogEnabled() : false;
                             final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
@@ -2784,170 +2732,239 @@ final class DaoUtil {
 
                             final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
 
-                            try {
-                                return tmp.apply(proxy, args);
-                            } finally {
-                                if (hasPerfLogAnno) {
-                                    if (perfLogAnno.minExecutionTimeForOperation() >= 0 && logger.isInfoEnabled()) {
-                                        final long elapsedTime = System.currentTimeMillis() - startTime;
+                            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                            Object result = null;
 
-                                        if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                            logger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
+                            try {
+                                result = tmp.apply(proxy, args);
+
+                                tran.commit();
+                            } finally {
+                                if (hasSqlLogAnno || hasPerfLogAnno) {
+                                    try {
+                                        tran.rollbackIfNotCommitted();
+                                    } finally {
+                                        if (hasPerfLogAnno) {
+                                            if (perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
+                                                final long elapsedTime = System.currentTimeMillis() - startTime;
+
+                                                if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
+                                                    daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
+                                                }
+                                            }
+
+                                            JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+                                        }
+
+                                        if (hasSqlLogAnno) {
+                                            JdbcUtil.enableSQLLog(prevSqlLogEnabled);
                                         }
                                     }
-
-                                    JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+                                } else {
+                                    tran.rollbackIfNotCommitted();
                                 }
+                            }
+
+                            return result;
+                        });
+                    };
+                } else if (transactionalAnno.propagation() == Propagation.NOT_SUPPORTED) {
+                    call = (proxy, args) -> {
+                        final javax.sql.DataSource dataSource = proxy.dataSource();
+
+                        if (hasSqlLogAnno || hasPerfLogAnno) {
+                            return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
+                                final boolean prevSqlLogEnabled = hasSqlLogAnno ? JdbcUtil.isSQLLogEnabled() : false;
+                                final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
 
                                 if (hasSqlLogAnno) {
-                                    JdbcUtil.enableSQLLog(prevSqlLogEnabled);
+                                    JdbcUtil.enableSQLLog(sqlLogAnno.value());
                                 }
-                            }
-                        });
-                    } else {
-                        return JdbcUtil.callNotInStartedTransaction(dataSource, () -> tmp.apply(proxy, args));
-                    }
-                };
-            }
 
-            final Dao.CacheResult cacheResultAnno = StreamEx.of(m.getAnnotations()).select(Dao.CacheResult.class).last().orElse(daoClassCacheResultAnno);
-            final Dao.RefreshCache refreshResultAnno = StreamEx.of(m.getAnnotations()).select(Dao.RefreshCache.class).last().orElse(daoClassRefreshCacheAnno);
+                                if (hasPerfLogAnno) {
+                                    JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
+                                }
 
-            if (cacheResultAnno != null && cacheResultAnno.disabled() == false
-                    && (N.isNullOrEmpty(cacheResultAnno.filter())
-                            || StreamEx.of(cacheResultAnno.filter()).anyMatch(it -> StringUtil.containsIgnoreCase(it, m.getName())))
-                    && (refreshResultAnno == null || N.isNullOrEmpty(refreshResultAnno.filter())
-                            || StreamEx.of(refreshResultAnno.filter()).noneMatch(it -> StringUtil.containsIgnoreCase(it, m.getName())))) {
-                final String cloneForReadFromCacheAttr = cacheResultAnno.cloneForReadFromCache();
+                                final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
 
-                if (!(N.isNullOrEmpty(cloneForReadFromCacheAttr) || N.asSet("none", "kryo").contains(cloneForReadFromCacheAttr.toLowerCase()))) {
-                    throw new UnsupportedOperationException(
-                            "Unsupported 'cloneForReadFromCache' : " + cloneForReadFromCacheAttr + " in annotation 'CacheResult' on method: " + fullMethodName);
+                                try {
+                                    return tmp.apply(proxy, args);
+                                } finally {
+                                    if (hasPerfLogAnno) {
+                                        if (perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
+                                            final long elapsedTime = System.currentTimeMillis() - startTime;
+
+                                            if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
+                                                daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
+                                            }
+                                        }
+
+                                        JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+                                    }
+
+                                    if (hasSqlLogAnno) {
+                                        JdbcUtil.enableSQLLog(prevSqlLogEnabled);
+                                    }
+                                }
+                            });
+                        } else {
+                            return JdbcUtil.callNotInStartedTransaction(dataSource, () -> tmp.apply(proxy, args));
+                        }
+                    };
                 }
 
-                final Function<Object, Object> cloneFunc = N.isNullOrEmpty(cloneForReadFromCacheAttr) || "none".equalsIgnoreCase(cloneForReadFromCacheAttr)
-                        ? Fn.identity()
-                        : r -> {
-                            if (r == null) {
-                                return r;
-                            } else if (isValuePresentMap.getOrDefault(r.getClass(), Fn.alwaysFalse()).test(r) == false) {
-                                return r;
-                            } else {
-                                return kryoParser.clone(r);
-                            }
-                        };
+                final Dao.CacheResult cacheResultAnno = StreamEx.of(m.getAnnotations()).select(Dao.CacheResult.class).last().orElse(daoClassCacheResultAnno);
+                final Dao.RefreshCache refreshResultAnno = StreamEx.of(m.getAnnotations())
+                        .select(Dao.RefreshCache.class)
+                        .last()
+                        .orElse(daoClassRefreshCacheAnno);
 
-                final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
+                if (cacheResultAnno != null && cacheResultAnno.disabled() == false
+                        && (N.isNullOrEmpty(cacheResultAnno.filter())
+                                || StreamEx.of(cacheResultAnno.filter()).anyMatch(it -> StringUtil.containsIgnoreCase(m.getName(), it)))
+                        && (refreshResultAnno == null || N.isNullOrEmpty(refreshResultAnno.filter())
+                                || StreamEx.of(refreshResultAnno.filter()).noneMatch(it -> StringUtil.containsIgnoreCase(m.getName(), it)))) {
 
-                call = (proxy, args) -> {
-                    String cachekey = null;
-
-                    if (kryoParser != null) {
-                        try {
-                            cachekey = kryoParser.serialize(N.toJSON(N.asMap(fullMethodName, args)));
-                        } catch (Exception e) {
-                            // ignore;
-                            logger.warn("Failed to generated cache key and not able cache the result for method: " + fullMethodName);
-                        }
-                    } else {
-                        final List<Object> newArgs = Stream.of(args).map(it -> {
-                            if (it == null) {
-                                return "null";
-                            }
-
-                            final Type<?> type = N.typeOf(it.getClass());
-
-                            if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isEntity() || type.isEntityId()) {
-                                return it;
-                            } else {
-                                return it.toString();
-                            }
-                        }).toList();
-
-                        try {
-                            cachekey = N.toJSON(N.asMap(fullMethodName, newArgs));
-                        } catch (Exception e) {
-                            // ignore;
-                            logger.warn("Failed to generated cache key and not able cache the result for method: " + fullMethodName);
-                        }
+                    if (daoLogger.isDebugEnabled()) {
+                        daoLogger.debug("Add CacheResult method: " + m);
                     }
 
-                    Object result = N.isNullOrEmpty(cachekey) ? null : cache.gett(cachekey);
+                    final String cloneForReadFromCacheAttr = cacheResultAnno.cloneForReadFromCache();
 
-                    if (result != null) {
-                        return cloneFunc.apply(result);
+                    if (!(N.isNullOrEmpty(cloneForReadFromCacheAttr) || N.asSet("none", "kryo").contains(cloneForReadFromCacheAttr.toLowerCase()))) {
+                        throw new UnsupportedOperationException("Unsupported 'cloneForReadFromCache' : " + cloneForReadFromCacheAttr
+                                + " in annotation 'CacheResult' on method: " + fullMethodName);
                     }
 
-                    result = temp.apply(proxy, args);
+                    final Function<Object, Object> cloneFunc = N.isNullOrEmpty(cloneForReadFromCacheAttr) || "none".equalsIgnoreCase(cloneForReadFromCacheAttr)
+                            ? Fn.identity()
+                            : r -> {
+                                if (r == null) {
+                                    return r;
+                                } else if (isValuePresentMap.getOrDefault(r.getClass(), Fn.alwaysFalse()).test(r) == false) {
+                                    return r;
+                                } else {
+                                    return kryoParser.clone(r);
+                                }
+                            };
 
-                    if (N.notNullOrEmpty(cachekey) && result != null) {
-                        if (result instanceof DataSet) {
-                            final DataSet dataSet = (DataSet) result;
+                    final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
 
-                            if (dataSet.size() >= cacheResultAnno.minSize() && dataSet.size() <= cacheResultAnno.maxSize()) {
-                                cache.put(cachekey, result, cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
-                            }
-                        } else if (result instanceof Collection) {
-                            final Collection<Object> c = (Collection<Object>) result;
+                    call = (proxy, args) -> {
+                        String cachekey = null;
 
-                            if (c.size() >= cacheResultAnno.minSize() && c.size() <= cacheResultAnno.maxSize()) {
-                                cache.put(cachekey, result, cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
+                        if (kryoParser != null) {
+                            try {
+                                cachekey = kryoParser.serialize(N.toJSON(N.asMap(fullMethodName, args)));
+                            } catch (Exception e) {
+                                // ignore;
+                                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullMethodName);
                             }
                         } else {
-                            cache.put(cachekey, result, cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
-                        }
-                    }
+                            final List<Object> newArgs = Stream.of(args).map(it -> {
+                                if (it == null) {
+                                    return "null";
+                                }
 
-                    return result;
-                };
-            }
+                                final Type<?> type = N.typeOf(it.getClass());
 
-            if (refreshResultAnno != null && refreshResultAnno.disabled() == false && (N.isNullOrEmpty(refreshResultAnno.filter())
-                    || StreamEx.of(refreshResultAnno.filter()).anyMatch(it -> StringUtil.containsIgnoreCase(it, m.getName())))) {
-                final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
+                                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isEntity() || type.isEntityId()) {
+                                    return it;
+                                } else {
+                                    return it.toString();
+                                }
+                            }).toList();
 
-                call = (proxy, args) -> {
-                    cache.clear();
-
-                    return temp.apply(proxy, args);
-                };
-            }
-
-            if (N.notNullOrEmpty(handlerList)) {
-                final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
-                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(m, ImmutableList.of(m.getParameterTypes()),
-                        m.getReturnType());
-
-                call = (proxy, args) -> {
-                    for (JdbcUtil.Handler handler : handlerList) {
-                        handler.beforeInvoke(proxy, args, methodSignature);
-                    }
-
-                    Result<?, Exception> result = null;
-                    Exception ex = null;
-
-                    try {
-                        result = Result.of(temp.apply(proxy, args), null);
-                    } catch (Exception e) {
-                        result = Result.of(null, e);
-                        ex = e;
-                    } finally {
-                        try {
-                            for (JdbcUtil.Handler handler : handlerList) {
-                                handler.afterInvoke(result, proxy, args, methodSignature);
+                            try {
+                                cachekey = N.toJSON(N.asMap(fullMethodName, newArgs));
+                            } catch (Exception e) {
+                                // ignore;
+                                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullMethodName);
                             }
-                        } catch (Exception e) {
-                            if (ex != null) {
-                                ex.addSuppressed(e);
+                        }
+
+                        Object result = N.isNullOrEmpty(cachekey) ? null : cache.gett(cachekey);
+
+                        if (result != null) {
+                            return cloneFunc.apply(result);
+                        }
+
+                        result = temp.apply(proxy, args);
+
+                        if (N.notNullOrEmpty(cachekey) && result != null) {
+                            if (result instanceof DataSet) {
+                                final DataSet dataSet = (DataSet) result;
+
+                                if (dataSet.size() >= cacheResultAnno.minSize() && dataSet.size() <= cacheResultAnno.maxSize()) {
+                                    cache.put(cachekey, result, cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
+                                }
+                            } else if (result instanceof Collection) {
+                                final Collection<Object> c = (Collection<Object>) result;
+
+                                if (c.size() >= cacheResultAnno.minSize() && c.size() <= cacheResultAnno.maxSize()) {
+                                    cache.put(cachekey, result, cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
+                                }
                             } else {
-                                result = Result.of(null, e);
-                                ex = e;
+                                cache.put(cachekey, result, cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
                             }
                         }
+
+                        return result;
+                    };
+                }
+
+                if (refreshResultAnno != null && refreshResultAnno.disabled() == false && (N.isNullOrEmpty(refreshResultAnno.filter())
+                        || StreamEx.of(refreshResultAnno.filter()).anyMatch(it -> StringUtil.containsIgnoreCase(m.getName(), it)))) {
+
+                    if (daoLogger.isDebugEnabled()) {
+                        daoLogger.debug("Add RefreshCache method: " + m);
                     }
 
-                    return result.orElseThrow();
-                };
+                    final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
+
+                    call = (proxy, args) -> {
+                        cache.clear();
+
+                        return temp.apply(proxy, args);
+                    };
+                }
+
+                if (N.notNullOrEmpty(handlerList)) {
+                    final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
+                    final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(m, ImmutableList.of(m.getParameterTypes()),
+                            m.getReturnType());
+
+                    call = (proxy, args) -> {
+                        for (JdbcUtil.Handler handler : handlerList) {
+                            handler.beforeInvoke(proxy, args, methodSignature);
+                        }
+
+                        Result<?, Exception> result = null;
+                        Exception ex = null;
+
+                        try {
+                            result = Result.of(temp.apply(proxy, args), null);
+                        } catch (Exception e) {
+                            result = Result.of(null, e);
+                            ex = e;
+                        } finally {
+                            try {
+                                for (JdbcUtil.Handler handler : handlerList) {
+                                    handler.afterInvoke(result, proxy, args, methodSignature);
+                                }
+                            } catch (Exception e) {
+                                if (ex != null) {
+                                    ex.addSuppressed(e);
+                                } else {
+                                    result = Result.of(null, e);
+                                    ex = e;
+                                }
+                            }
+                        }
+
+                        return result.orElseThrow();
+                    };
+                }
             }
 
             methodInvokerMap.put(m, call);
@@ -2958,8 +2975,8 @@ final class DaoUtil {
         final Class<TD>[] interfaceClasses = N.asArray(daoInterface);
 
         final InvocationHandler h = (proxy, method, args) -> {
-            if (!noLogMethods.contains(method.getName())) {
-                logger.debug("Invoking Dao method: {} with args: {}", method.getName(), args);
+            if (daoLogger.isDebugEnabled() && !nonDBOperationSet.contains(method)) {
+                daoLogger.debug("Invoking Dao method: {} with args: {}", method.getName(), args);
             }
 
             return proxyInvoker.apply((JdbcUtil.Dao) proxy, method, args);
@@ -2982,5 +2999,11 @@ final class DaoUtil {
     @Target(value = { ElementType.METHOD, ElementType.TYPE })
     static @interface HandlerList {
         Dao.Handler[] value();
+    }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(value = { ElementType.METHOD })
+    static @interface NonDBOperation {
+
     }
 }
