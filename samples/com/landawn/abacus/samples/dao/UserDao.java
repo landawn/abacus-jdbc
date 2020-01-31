@@ -20,7 +20,7 @@ import com.landawn.abacus.util.stream.Stream;
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
 @Handler(type = UserDaoHandlerA.class)
 @Handler(qualifier = "handler1", filter = @Filter(qualifier = "notForDataSource"))
-@CacheResult(cloneForReadFromCache="none")
+@CacheResult(cloneWhenReadFromCache="none")
 @RefreshCache
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
     @NamedInsert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")

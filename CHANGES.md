@@ -1,6 +1,7 @@
 ### 1.10.9
 
 * Rename `asyncApply/Accept` to `asyncCall/Run`.
+* Support Dao cache.
 * Improvements and bug fix.
 
 

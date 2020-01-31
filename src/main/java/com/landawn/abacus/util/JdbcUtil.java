@@ -12210,8 +12210,9 @@ public final class JdbcUtil {
              * It can be {@code "none" and "kryo"}.
              * 
              * @return
+             * @see https://github.com/EsotericSoftware/kryo
              */
-            String cloneForReadFromCache() default "none";
+            String cloneWhenReadFromCache() default "none";
 
             //    /**
             //     * If it's set to true, the cached result won't be removed by method annotated by {@code RefershCache}.

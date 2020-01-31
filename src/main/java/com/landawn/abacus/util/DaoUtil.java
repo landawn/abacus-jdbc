@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
@@ -96,6 +97,8 @@ import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.function.LongFunction;
 import com.landawn.abacus.util.function.Predicate;
+import com.landawn.abacus.util.stream.BaseStream;
+import com.landawn.abacus.util.stream.EntryStream;
 import com.landawn.abacus.util.stream.IntStream.IntStreamEx;
 import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
@@ -223,6 +226,9 @@ final class DaoUtil {
 
         isValuePresentMap.putAll((Map<? extends Class<?>, ? extends Predicate<Object>>) tmp);
     }
+
+    private static Set<Class<?>> notCacheableTypes = N.asSet(void.class, Void.class, Iterator.class, java.util.stream.BaseStream.class, BaseStream.class,
+            EntryStream.class, ExceptionalStream.class);
 
     /**
      * Creates the method handle.
@@ -2829,16 +2835,19 @@ final class DaoUtil {
                         daoLogger.debug("Add CacheResult method: " + m);
                     }
 
-                    final String cloneForReadFromCacheAttr = cacheResultAnno.cloneForReadFromCache();
+                    if (Stream.of(notCacheableTypes).anyMatch(it -> it.isAssignableFrom(m.getReturnType()))) {
+                        throw new UnsupportedOperationException("The return type of method: " + fullMethodName + " is not cacheable: " + m.getReturnType());
+                    }
 
-                    if (!(N.isNullOrEmpty(cloneForReadFromCacheAttr) || N.asSet("none", "kryo").contains(cloneForReadFromCacheAttr.toLowerCase()))) {
-                        throw new UnsupportedOperationException("Unsupported 'cloneForReadFromCache' : " + cloneForReadFromCacheAttr
+                    final String cloneWhenReadFromCacheAttr = cacheResultAnno.cloneWhenReadFromCache();
+
+                    if (!(N.isNullOrEmpty(cloneWhenReadFromCacheAttr) || N.asSet("none", "kryo").contains(cloneWhenReadFromCacheAttr.toLowerCase()))) {
+                        throw new UnsupportedOperationException("Unsupported 'cloneWhenReadFromCache' : " + cloneWhenReadFromCacheAttr
                                 + " in annotation 'CacheResult' on method: " + fullMethodName);
                     }
 
-                    final Function<Object, Object> cloneFunc = N.isNullOrEmpty(cloneForReadFromCacheAttr) || "none".equalsIgnoreCase(cloneForReadFromCacheAttr)
-                            ? Fn.identity()
-                            : r -> {
+                    final Function<Object, Object> cloneFunc = N.isNullOrEmpty(cloneWhenReadFromCacheAttr)
+                            || "none".equalsIgnoreCase(cloneWhenReadFromCacheAttr) ? Fn.identity() : r -> {
                                 if (r == null) {
                                     return r;
                                 } else if (isValuePresentMap.getOrDefault(r.getClass(), Fn.alwaysFalse()).test(r) == false) {
