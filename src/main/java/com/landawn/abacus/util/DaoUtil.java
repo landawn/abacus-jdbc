@@ -499,9 +499,6 @@ final class DaoUtil {
         final SQLExecutor sqlExecutor = ds != null ? new SQLExecutor(ds, null, nonNullSQLMapper, null, nonNullAsyncExecutor)
                 : new SQLExecutor(dsm, null, nonNullSQLMapper, null, nonNullAsyncExecutor);
 
-        final Cache<String, Object> cache = CacheFactory.createLocalCache(1000, 3000);
-        final Set<Method> nonDBOperationSet = new HashSet<>();
-
         java.lang.reflect.Type[] typeArguments = null;
 
         if (N.notNullOrEmpty(daoInterface.getGenericInterfaces()) && daoInterface.getGenericInterfaces()[0] instanceof ParameterizedType) {
@@ -731,6 +728,19 @@ final class DaoUtil {
                 .flattMap(
                         anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno) : N.asList(((DaoUtil.HandlerList) anno).value()))
                 .toList();
+
+        final Dao.Cache daoClassCacheAnno = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface))
+                .prepend(daoInterface)
+                .flatMapp(cls -> cls.getAnnotations())
+                .select(Dao.Cache.class)
+                .first()
+                .orNull();
+
+        final int capacity = daoClassCacheAnno == null ? 1000 : daoClassCacheAnno.capacity();
+        final long evictDelay = daoClassCacheAnno == null ? 3000 : daoClassCacheAnno.evictDelay();
+
+        final Cache<String, Object> cache = CacheFactory.createLocalCache(capacity, evictDelay);
+        final Set<Method> nonDBOperationSet = new HashSet<>();
 
         for (Method m : sqlMethods) {
             if (!Modifier.isPublic(m.getModifiers())) {

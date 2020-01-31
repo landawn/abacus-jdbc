@@ -12170,6 +12170,17 @@ public final class JdbcUtil {
          * 
          */
         @Retention(RetentionPolicy.RUNTIME)
+        @Target(value = { ElementType.TYPE })
+        static @interface Cache {
+            int capacity() default 1000;
+
+            long evictDelay() default 3000; // unit milliseconds.
+        }
+
+        /** 
+         * 
+         */
+        @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.METHOD, ElementType.TYPE })
         static @interface CacheResult {
             /**
