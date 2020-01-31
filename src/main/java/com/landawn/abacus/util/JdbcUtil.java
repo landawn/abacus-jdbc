@@ -121,7 +121,6 @@ import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.BiConsumer;
 import com.landawn.abacus.util.function.BinaryOperator;
 import com.landawn.abacus.util.function.Function;
-import com.landawn.abacus.util.function.Predicate;
 import com.landawn.abacus.util.function.Supplier;
 import com.landawn.abacus.util.stream.Collector;
 import com.landawn.abacus.util.stream.EntryStream;
@@ -11544,12 +11543,6 @@ public final class JdbcUtil {
                 Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             // empty action.
         }
-
-        public static interface Filter extends Predicate<Method> {
-
-            @Override
-            boolean test(Method method);
-        }
     }
 
     @SuppressWarnings("rawtypes")
@@ -12102,6 +12095,17 @@ public final class JdbcUtil {
             Propagation propagation() default Propagation.REQUIRED;
         }
 
+        /** 
+         * Unsupported operation.
+         * 
+         * @deprecated won't be implemented. It should be defined and done in DB server side.
+         */
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(value = { ElementType.METHOD })
+        public static @interface OnDelete {
+            OnDeleteAction action() default OnDeleteAction.NO_ACTION;
+        }
+
         /**
          *
          */
@@ -12144,26 +12148,13 @@ public final class JdbcUtil {
             @SuppressWarnings("rawtypes")
             Class<? extends JdbcUtil.Handler<? extends Dao>> type() default DaoHandler.class;
 
-            Filter filter() default @Filter(type = JdbcUtil.Handler.Filter.class);
-
-            @Retention(RetentionPolicy.RUNTIME)
-            @Target(value = { ElementType.TYPE })
-            public static @interface Filter {
-                String qualifier() default "";
-
-                Class<? extends JdbcUtil.Handler.Filter> type() default JdbcUtil.Handler.Filter.class;
-            }
-        }
-
-        /** 
-         * Unsupported operation.
-         * 
-         * @deprecated won't be implemented. It should be defined and done in DB server side.
-         */
-        @Retention(RetentionPolicy.RUNTIME)
-        @Target(value = { ElementType.METHOD })
-        public static @interface OnDelete {
-            OnDeleteAction action() default OnDeleteAction.NO_ACTION;
+            /**
+             * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
+             * It's only applied if target of annotation {@code Handler} is {@code Type}, and will be ignored if target is method.
+             * 
+             * @return
+             */
+            String[] filter() default { ".*" };
         }
 
         // TODO: First of all, it's bad idea to implement cache in DAL layer?! and how if not?
@@ -12234,7 +12225,7 @@ public final class JdbcUtil {
             //    boolean isStaticData() default false;
 
             /**
-             * Those conditions(by contains ignore case) will be joined by {@code OR}, not {@code AND}.
+             * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
              * It's only applied if target of annotation {@code RefreshCache} is {@code Type}, and will be ignored if target is method.
              * 
              * @return
@@ -12264,7 +12255,7 @@ public final class JdbcUtil {
             //    boolean forceRefreshStaticData() default false;
 
             /**
-             * Those conditions(by contains ignore case) will be joined by {@code OR}, not {@code AND}.
+             * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
              * It's only applied if target of annotation {@code RefreshCache} is {@code Type}, and will be ignored if target is method.
              * 
              * @return

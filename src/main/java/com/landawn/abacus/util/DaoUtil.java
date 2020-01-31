@@ -44,6 +44,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.regex.Pattern;
 
 import com.landawn.abacus.DataSet;
 import com.landawn.abacus.DataSourceManager;
@@ -2602,28 +2603,6 @@ final class DaoUtil {
 
                 // ignore
             } else {
-                final List<JdbcUtil.Handler<?>> handlerList = StreamEx.of(m.getAnnotations())
-                        .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoUtil.HandlerList.class))
-                        .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
-                                : N.asList(((DaoUtil.HandlerList) anno).value()))
-                        .prepend(daoClassHandlerList)
-                        .filter(handlerAnno -> {
-                            final Dao.Handler.Filter filter = handlerAnno.filter();
-
-                            if (N.notNullOrEmpty(handlerAnno.filter().qualifier())) {
-                                return N.checkArgNotNull(HandlerFilterFactory.get(filter.qualifier()),
-                                        "No Handler.Filter found by qualifier: " + filter.qualifier()).test(m);
-                            } else {
-                                return N.checkArgNotNull(HandlerFilterFactory.getOrCreate(filter.type()), "No Handler.Filter found by type: " + filter.type())
-                                        .test(m);
-                            }
-                        })
-                        .map(handlerAnno -> N.notNullOrEmpty(handlerAnno.qualifier()) ? HandlerFactory.get(handlerAnno.qualifier())
-                                : HandlerFactory.getOrCreate(handlerAnno.type()))
-                        .carry(handler -> N.checkArgNotNull(handler,
-                                "No handler found/registered with qualifier or type in class/method: " + daoInterface + "." + m.getName()))
-                        .reversed()
-                        .toList();
 
                 final Dao.Transactional transactionalAnno = StreamEx.of(m.getAnnotations()).select(Dao.Transactional.class).last().orNull();
 
@@ -2829,18 +2808,23 @@ final class DaoUtil {
                     };
                 }
 
-                final Dao.CacheResult cacheResultAnno = StreamEx.of(m.getAnnotations()).select(Dao.CacheResult.class).last().orElse(daoClassCacheResultAnno);
+                final Predicate<String> filterByMethodName = it -> N.notNullOrEmpty(it)
+                        && (StringUtil.containsIgnoreCase(m.getName(), it) || Pattern.matches(it, m.getName()));
+
+                final Dao.CacheResult cacheResultAnno = StreamEx.of(m.getAnnotations())
+                        .select(Dao.CacheResult.class)
+                        .last()
+                        .orElse((daoClassCacheResultAnno != null && N.anyMatch(daoClassCacheResultAnno.filter(), filterByMethodName)) ? daoClassCacheResultAnno
+                                : null);
+
                 final Dao.RefreshCache refreshResultAnno = StreamEx.of(m.getAnnotations())
                         .select(Dao.RefreshCache.class)
                         .last()
-                        .orElse(daoClassRefreshCacheAnno);
+                        .orElse((daoClassRefreshCacheAnno != null && N.anyMatch(daoClassRefreshCacheAnno.filter(), filterByMethodName))
+                                ? daoClassRefreshCacheAnno
+                                : null);
 
-                if (cacheResultAnno != null && cacheResultAnno.disabled() == false
-                        && (N.isNullOrEmpty(cacheResultAnno.filter())
-                                || StreamEx.of(cacheResultAnno.filter()).anyMatch(it -> StringUtil.containsIgnoreCase(m.getName(), it)))
-                        && (refreshResultAnno == null || N.isNullOrEmpty(refreshResultAnno.filter())
-                                || StreamEx.of(refreshResultAnno.filter()).noneMatch(it -> StringUtil.containsIgnoreCase(m.getName(), it)))) {
-
+                if (cacheResultAnno != null && cacheResultAnno.disabled() == false) {
                     if (daoLogger.isDebugEnabled()) {
                         daoLogger.debug("Add CacheResult method: " + m);
                     }
@@ -2932,9 +2916,7 @@ final class DaoUtil {
                     };
                 }
 
-                if (refreshResultAnno != null && refreshResultAnno.disabled() == false && (N.isNullOrEmpty(refreshResultAnno.filter())
-                        || StreamEx.of(refreshResultAnno.filter()).anyMatch(it -> StringUtil.containsIgnoreCase(m.getName(), it)))) {
-
+                if (refreshResultAnno != null && refreshResultAnno.disabled() == false) {
                     if (daoLogger.isDebugEnabled()) {
                         daoLogger.debug("Add RefreshCache method: " + m);
                     }
@@ -2947,6 +2929,18 @@ final class DaoUtil {
                         return temp.apply(proxy, args);
                     };
                 }
+
+                final List<JdbcUtil.Handler<?>> handlerList = StreamEx.of(m.getAnnotations())
+                        .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoUtil.HandlerList.class))
+                        .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
+                                : N.asList(((DaoUtil.HandlerList) anno).value()))
+                        .prepend(StreamEx.of(daoClassHandlerList).filter(h -> StreamEx.of(h.filter()).anyMatch(filterByMethodName)))
+                        .map(handlerAnno -> N.notNullOrEmpty(handlerAnno.qualifier()) ? HandlerFactory.get(handlerAnno.qualifier())
+                                : HandlerFactory.getOrCreate(handlerAnno.type()))
+                        .carry(handler -> N.checkArgNotNull(handler,
+                                "No handler found/registered with qualifier or type in class/method: " + daoInterface + "." + m.getName()))
+                        .reversed()
+                        .toList();
 
                 if (N.notNullOrEmpty(handlerList)) {
                     final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
