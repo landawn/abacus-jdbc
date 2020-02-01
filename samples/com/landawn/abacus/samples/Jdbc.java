@@ -90,10 +90,29 @@ public class Jdbc {
         sqlExecutor.execute(sql_address_drop_table);
         sqlExecutor.execute(sql_address_creat_table);
 
-        final String sql_employee_dept_relationship_drop_table = "DROP TABLE IF EXISTS employee_dept_relationship";
-        final String sql_employee_dept_relationship_creat_table = "CREATE TABLE IF NOT EXISTS employee_dept_relationship (" //
-                + "employee_id bigint(20) NOT NULL, " //
-                + "dept_id bigint(20) NOT NULL)";
+        // this code is copied from: https://www.baeldung.com/hibernate-many-to-many
+
+        final String sql_employee_drop_table = "DROP TABLE IF EXISTS employee";
+        final String sql_employee_creat_table = "CREATE TABLE IF NOT EXISTS employee (" //
+                + "employee_id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
+                + "first_name varchar(50) DEFAULT NULL, " //
+                + "last_name varchar(50) DEFAULT NULL)";
+
+        sqlExecutor.execute(sql_employee_drop_table);
+        sqlExecutor.execute(sql_employee_creat_table);
+
+        final String sql_project_drop_table = "DROP TABLE IF EXISTS project";
+        final String sql_project_creat_table = "CREATE TABLE IF NOT EXISTS project (" //
+                + "project_id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY, " // 
+                + "title varchar(50) DEFAULT NULL)";
+
+        sqlExecutor.execute(sql_project_drop_table);
+        sqlExecutor.execute(sql_project_creat_table);
+
+        final String sql_employee_dept_relationship_drop_table = "DROP TABLE IF EXISTS employee_project";
+        final String sql_employee_dept_relationship_creat_table = "CREATE TABLE IF NOT EXISTS employee_project (" //
+                + "employee_id int(11) NOT NULL, " //
+                + "project_id int(11) NOT NULL)";
 
         sqlExecutor.execute(sql_employee_dept_relationship_drop_table);
         sqlExecutor.execute(sql_employee_dept_relationship_creat_table);

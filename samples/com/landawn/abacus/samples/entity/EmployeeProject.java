@@ -11,8 +11,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Id({ "employeeId", "deptId" })
-public class EmployeeDeptRelationship {
+@Id({ "employeeId", "projectId" })
+public class EmployeeProject {
     private long employeeId;
-    private long deptId;
+    private long projectId;
 }

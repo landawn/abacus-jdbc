@@ -3,7 +3,6 @@ package com.landawn.abacus.samples;
 import static com.landawn.abacus.samples.Jdbc.addressMapper;
 import static com.landawn.abacus.samples.Jdbc.dataSource;
 import static com.landawn.abacus.samples.Jdbc.deviceMapper;
-import static com.landawn.abacus.samples.Jdbc.employeeDeptRelationshipDao;
 import static com.landawn.abacus.samples.Jdbc.noUpdateUserDao;
 import static com.landawn.abacus.samples.Jdbc.readOnlyUserDao;
 import static com.landawn.abacus.samples.Jdbc.sqlExecutor;
@@ -22,11 +21,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.EntityId;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.samples.entity.Address;
 import com.landawn.abacus.samples.entity.Device;
-import com.landawn.abacus.samples.entity.EmployeeDeptRelationship;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
@@ -252,32 +249,6 @@ public class DaoTest {
         }
 
         userDao.delete(user);
-    }
-
-    @Test
-    public void test_entityId() throws SQLException {
-        List<EmployeeDeptRelationship> edrs = new ArrayList<>();
-
-        for (int i = 0; i < 1001; i++) {
-            edrs.add(EmployeeDeptRelationship.builder().employeeId(i * 1).deptId(i * 2).build());
-        }
-
-        employeeDeptRelationshipDao.batchSave(edrs);
-
-        List<EntityId> ids = Stream.of(edrs)
-                .map(edr -> EntityId.of("EmployeeDeptRelationship.employeeId", edr.getEmployeeId(), "deptId", edr.getDeptId()))
-                .toList();
-
-        employeeDeptRelationshipDao.batchGet(ids);
-
-        assertEquals(1, employeeDeptRelationshipDao.delete(edrs.get(0)));
-        assertEquals(1, employeeDeptRelationshipDao.deleteById(ids.get(1)));
-        assertEquals(ids.size() - 2, employeeDeptRelationshipDao.batchDeleteByIds(ids));
-        assertEquals(0, employeeDeptRelationshipDao.batchDelete(edrs));
-
-        List<EntityId> ids2 = employeeDeptRelationshipDao.batchInsert(edrs);
-        assertTrue(N.notNullOrEmpty(ids2));
-        assertEquals(edrs.size(), employeeDeptRelationshipDao.batchDelete(edrs));
     }
 
     @Test
