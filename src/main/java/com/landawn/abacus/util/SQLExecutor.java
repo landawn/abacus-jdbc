@@ -8600,15 +8600,15 @@ public class SQLExecutor {
                 final StatementSetter statementSetter = (namedSQL, stmt, parameters) -> tp._2.accept(stmt, entities);
 
                 if (propJoinInfo.isManyToManyJoin()) {
-                    // TODO won't work
-                    //    final DataSet dataSet = sqlExecutor.query(sql, statementSetter);
-                    //    propJoinInfo.setJoinPropEntities(entities, dataSet);
+                    final BiRowMapper<Object> biRowMapper = BiRowMapper.to(propJoinInfo.referencedEntityClass, true);
+                    final BiRowMapper<Pair<Object, Object>> pairBiRowMapper = (rs, cls) -> Pair.of(rs.getObject(1), biRowMapper.apply(rs, cls));
 
-                    for (T entity : entities) {
-                        loadJoinEntities(entity, joinEntityPropName, selectPropNames);
-                    }
+                    final List<Pair<Object, Object>> joinPropEntities = sqlExecutor.list(sql, statementSetter, pairBiRowMapper);
+
+                    propJoinInfo.setJoinPropEntities(entities, Stream.of(joinPropEntities).groupTo(it -> it.left, it -> it.right));
                 } else {
                     final List<?> joinPropEntities = sqlExecutor.list(propJoinInfo.referencedEntityClass, sql, statementSetter);
+
                     propJoinInfo.setJoinPropEntities(entities, joinPropEntities);
                 }
             }

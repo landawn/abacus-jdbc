@@ -40,6 +40,7 @@ import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Profiler;
+import com.landawn.abacus.util.SQLParser;
 import com.landawn.abacus.util.SQLTransaction;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.LongStream;
@@ -584,6 +585,12 @@ public class DaoTest {
     }
 
     @Test
+    public void test_SQLParser() throws SQLException {
+        String sql = "SELECT employee_id AS \"employeeId\", first_name AS \"firstName\", last_name AS \"lastName\" FROM employee WHERE 1 < 2";
+        SQLParser.parse(sql).forEach(Fn.println());
+    }
+
+    @Test
     public void crud_many_to_many() throws SQLException {
 
         Employee employee = Employee.builder().employeeId(100).firstName("Forrest").lastName("Gump").build();
@@ -607,7 +614,13 @@ public class DaoTest {
         employeeDao.loadAllJoinEntities(employeeFromDB);
         System.out.println(employeeFromDB);
 
+        employeeDao.loadJoinEntities(employeeFromDB, Project.class, N.asList("title"));
+        System.out.println(employeeFromDB);
+
         projectDao.loadAllJoinEntities(projectFromDB);
+        System.out.println(projectFromDB);
+
+        projectDao.loadJoinEntities(projectFromDB, Employee.class, N.asList("firstName"));
         System.out.println(projectFromDB);
 
         employee = Employee.builder().employeeId(101).firstName("Forrest").lastName("Gump").build();
@@ -620,12 +633,22 @@ public class DaoTest {
         entityId = employeeProjectDao.insert(employeeProject);
         N.println(entityId);
 
+        employeeProject = EmployeeProject.builder().employeeId(100).projectId(project.getProjectId()).build();
+        entityId = employeeProjectDao.insert(employeeProject);
+        N.println(entityId);
+
         List<Employee> employees = employeeDao.list(CF.alwaysTrue());
         employeeDao.loadAllJoinEntities(employees);
         System.out.println(employees);
 
+        employeeDao.loadJoinEntities(employees, Project.class, N.asList("title"));
+        System.out.println(employees);
+
         List<Project> projects = projectDao.list(CF.alwaysTrue());
         projectDao.loadAllJoinEntities(projects);
+        System.out.println(projects);
+
+        projectDao.loadJoinEntities(projects, Employee.class, N.asList("firstName"));
         System.out.println(projects);
 
         employeeDao.delete(CF.alwaysTrue());

@@ -1511,44 +1511,19 @@ final class DaoUtil {
                                     DirtyMarkerUtil.markDirty((DirtyMarker) entity, propJoinInfo.joinPropInfo.name, false);
                                 }
                             } else {
+                                final Tuple2<BiFunction<Collection<String>, Integer, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
+                                        .getSelectSQLBuilderAndParamSetterForBatch(sbc);
+
                                 if (propJoinInfo.isManyToManyJoin()) {
-                                    // TODO won't work.
-                                    //    final DataSet dataSet = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
-                                    //            .setParameters(entities, tp._2)
-                                    //            .query();
-                                    //
-                                    //    propJoinInfo.setJoinPropEntities(entities, dataSet);
+                                    final BiRowMapper<Object> biRowMapper = BiRowMapper.to(propJoinInfo.referencedEntityClass, true);
+                                    final BiRowMapper<Pair<Object, Object>> pairBiRowMapper = (rs, cls) -> Pair.of(rs.getObject(1), biRowMapper.apply(rs, cls));
 
-                                    final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
-                                            .getSelectSQLBuilderAndParamSetter(sbc);
+                                    final List<Pair<Object, Object>> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
+                                            .setParameters(entities, tp._2)
+                                            .list(pairBiRowMapper);
 
-                                    try (JdbcUtil.PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).closeAfterExecution(false)) {
-                                        for (Object entity : entities) {
-                                            if (propJoinInfo.joinPropInfo.type.isCollection()) {
-                                                final List<?> propEntities = preparedQuery.setParameters(entity, tp._2)
-                                                        .list(propJoinInfo.referencedEntityClass);
-
-                                                if (propJoinInfo.joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
-                                                    propJoinInfo.joinPropInfo.setPropValue(entity, propEntities);
-                                                } else {
-                                                    final Collection<Object> c = (Collection) N.newInstance(propJoinInfo.joinPropInfo.clazz);
-                                                    c.addAll(propEntities);
-                                                    propJoinInfo.joinPropInfo.setPropValue(entity, c);
-                                                }
-                                            } else {
-                                                propJoinInfo.joinPropInfo.setPropValue(entity,
-                                                        preparedQuery.setParameters(entity, tp._2).findFirst(propJoinInfo.referencedEntityClass).orNull());
-                                            }
-
-                                            if (isDirtyMarker) {
-                                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propJoinInfo.joinPropInfo.name, false);
-                                            }
-                                        }
-                                    }
+                                    propJoinInfo.setJoinPropEntities(entities, Stream.of(joinPropEntities).groupTo(it -> it.left, it -> it.right));
                                 } else {
-                                    final Tuple2<BiFunction<Collection<String>, Integer, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
-                                            .getSelectSQLBuilderAndParamSetterForBatch(sbc);
-
                                     final List<?> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
                                             .setParameters(entities, tp._2)
                                             .list(propJoinInfo.referencedEntityClass);
