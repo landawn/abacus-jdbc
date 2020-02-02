@@ -1050,7 +1050,8 @@ public class SQLExecutor {
     }
 
     static <ID> Function<Object, ID> getIdGetter(final Object entity) {
-        return (Function<Object, ID>) JdbcUtil.getIdGeneratorGetterSetter(entity == null ? null : entity.getClass(), NamingPolicy.LOWER_CASE_WITH_UNDERSCORE)._2;
+        return (Function<Object, ID>) JdbcUtil.getIdGeneratorGetterSetter(entity == null ? null : entity.getClass(),
+                NamingPolicy.LOWER_CASE_WITH_UNDERSCORE)._2;
     }
 
     static <ID> BiConsumer<ID, Object> getIdSetter(final Object entity) {
@@ -8597,8 +8598,19 @@ public class SQLExecutor {
 
                 final String sql = tp._1.apply(selectPropNames, entities.size());
                 final StatementSetter statementSetter = (namedSQL, stmt, parameters) -> tp._2.accept(stmt, entities);
-                final List<?> joinPropEntities = sqlExecutor.list(propJoinInfo.referencedEntityClass, sql, statementSetter);
-                propJoinInfo.setJoinPropEntities(entities, joinPropEntities);
+
+                if (propJoinInfo.isManyToManyJoin()) {
+                    // TODO won't work
+                    //    final DataSet dataSet = sqlExecutor.query(sql, statementSetter);
+                    //    propJoinInfo.setJoinPropEntities(entities, dataSet);
+
+                    for (T entity : entities) {
+                        loadJoinEntities(entity, joinEntityPropName, selectPropNames);
+                    }
+                } else {
+                    final List<?> joinPropEntities = sqlExecutor.list(propJoinInfo.referencedEntityClass, sql, statementSetter);
+                    propJoinInfo.setJoinPropEntities(entities, joinPropEntities);
+                }
             }
         }
 

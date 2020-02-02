@@ -14,8 +14,10 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.condition.ConditionFactory.CF;
-import com.landawn.abacus.samples.dao.EmployeeDeptRelationshipDao;
+import com.landawn.abacus.samples.dao.EmployeeDao;
+import com.landawn.abacus.samples.dao.EmployeeProjectDao;
 import com.landawn.abacus.samples.dao.NoUpdateUserDao;
+import com.landawn.abacus.samples.dao.ProjectDao;
 import com.landawn.abacus.samples.dao.ReadOnlyUserDao;
 import com.landawn.abacus.samples.dao.UserDao;
 import com.landawn.abacus.samples.entity.Address;
@@ -49,8 +51,11 @@ public class Jdbc {
 
     static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
     static final NoUpdateUserDao noUpdateUserDao = JdbcUtil.createDao(NoUpdateUserDao.class, dataSource);
-    static final ReadOnlyUserDao readOnlyUserDao = JdbcUtil.createDao(ReadOnlyUserDao.class, dataSource);
-    static final EmployeeDeptRelationshipDao employeeDeptRelationshipDao = JdbcUtil.createDao(EmployeeDeptRelationshipDao.class, dataSource);
+    static final ReadOnlyUserDao readOnlyUserDao = JdbcUtil.createDao(ReadOnlyUserDao.class, dataSource); 
+
+    static final EmployeeDao employeeDao = JdbcUtil.createDao(EmployeeDao.class, dataSource);
+    static final ProjectDao projectDao = JdbcUtil.createDao(ProjectDao.class, dataSource);
+    static final EmployeeProjectDao employeeProjectDao = JdbcUtil.createDao(EmployeeProjectDao.class, dataSource);
 
     // initialize DB schema.
     static {

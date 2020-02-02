@@ -3,7 +3,10 @@ package com.landawn.abacus.samples;
 import static com.landawn.abacus.samples.Jdbc.addressMapper;
 import static com.landawn.abacus.samples.Jdbc.dataSource;
 import static com.landawn.abacus.samples.Jdbc.deviceMapper;
+import static com.landawn.abacus.samples.Jdbc.employeeDao;
+import static com.landawn.abacus.samples.Jdbc.employeeProjectDao;
 import static com.landawn.abacus.samples.Jdbc.noUpdateUserDao;
+import static com.landawn.abacus.samples.Jdbc.projectDao;
 import static com.landawn.abacus.samples.Jdbc.readOnlyUserDao;
 import static com.landawn.abacus.samples.Jdbc.sqlExecutor;
 import static com.landawn.abacus.samples.Jdbc.userDao;
@@ -11,6 +14,7 @@ import static com.landawn.abacus.samples.Jdbc.userMapper;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -21,9 +25,13 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.EntityId;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.samples.entity.Address;
 import com.landawn.abacus.samples.entity.Device;
+import com.landawn.abacus.samples.entity.Employee;
+import com.landawn.abacus.samples.entity.EmployeeProject;
+import com.landawn.abacus.samples.entity.Project;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
@@ -31,7 +39,6 @@ import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.OnDeleteAction;
 import com.landawn.abacus.util.Profiler;
 import com.landawn.abacus.util.SQLTransaction;
 import com.landawn.abacus.util.stream.IntStream;
@@ -143,30 +150,30 @@ public class DaoTest {
         assertFalse(userDao.exists(userFromDB.getId()));
     }
 
-    @Test
-    public void test_includingJoinEntities() throws SQLException {
-
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-        userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
-
-        User userFromDB = userDao.gett(100L, true);
-        System.out.println(userFromDB);
-        assertNotNull(userFromDB);
-
-        userDao.deleteById(100L);
-
-        long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
-        userFromDB = userDao.gett(id);
-        System.out.println(userFromDB);
-        assertNotNull(userFromDB);
-
-        userDao.delete(userFromDB, OnDeleteAction.CASCADE);
-        userDao.delete(userFromDB, OnDeleteAction.NO_ACTION);
-        userDao.batchDelete(N.asList(userFromDB), OnDeleteAction.CASCADE);
-        userDao.batchDelete(N.asList(userFromDB), OnDeleteAction.NO_ACTION);
-
-        assertFalse(userDao.exists(id));
-    }
+    //    @Test
+    //    public void test_includingJoinEntities() throws SQLException {
+    //
+    //        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+    //        userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
+    //
+    //        User userFromDB = userDao.gett(100L, true);
+    //        System.out.println(userFromDB);
+    //        assertNotNull(userFromDB);
+    //
+    //        userDao.deleteById(100L);
+    //
+    //        long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
+    //        userFromDB = userDao.gett(id);
+    //        System.out.println(userFromDB);
+    //        assertNotNull(userFromDB);
+    //
+    //        userDao.delete(userFromDB, OnDeleteAction.CASCADE);
+    //        userDao.delete(userFromDB, OnDeleteAction.NO_ACTION);
+    //        userDao.batchDelete(N.asList(userFromDB), OnDeleteAction.CASCADE);
+    //        userDao.batchDelete(N.asList(userFromDB), OnDeleteAction.NO_ACTION);
+    //
+    //        assertFalse(userDao.exists(id));
+    //    }
 
     @Test
     public void test_batch() throws SQLException {
@@ -574,5 +581,57 @@ public class DaoTest {
         assertEquals(users2, users3);
 
         userDao.batchDelete(users);
+    }
+
+    @Test
+    public void crud_many_to_many() throws SQLException {
+
+        Employee employee = Employee.builder().employeeId(100).firstName("Forrest").lastName("Gump").build();
+        employeeDao.insert(employee);
+
+        Employee employeeFromDB = employeeDao.gett(employee.getEmployeeId());
+        employeeDao.loadAllJoinEntities(employeeFromDB);
+        System.out.println(employeeFromDB);
+
+        Project project = Project.builder().projectId(1000).title("Project X").build();
+        projectDao.insert(project);
+
+        Project projectFromDB = projectDao.gett(project.getProjectId());
+        projectDao.loadAllJoinEntities(projectFromDB);
+        System.out.println(projectFromDB);
+
+        EmployeeProject employeeProject = EmployeeProject.builder().employeeId(employeeFromDB.getEmployeeId()).projectId(projectFromDB.getProjectId()).build();
+        EntityId entityId = employeeProjectDao.insert(employeeProject);
+        N.println(entityId);
+
+        employeeDao.loadAllJoinEntities(employeeFromDB);
+        System.out.println(employeeFromDB);
+
+        projectDao.loadAllJoinEntities(projectFromDB);
+        System.out.println(projectFromDB);
+
+        employee = Employee.builder().employeeId(101).firstName("Forrest").lastName("Gump").build();
+        employeeDao.insert(employee);
+
+        project = Project.builder().projectId(1001).title("Project X").build();
+        projectDao.insert(project);
+
+        employeeProject = EmployeeProject.builder().employeeId(employee.getEmployeeId()).projectId(project.getProjectId()).build();
+        entityId = employeeProjectDao.insert(employeeProject);
+        N.println(entityId);
+
+        List<Employee> employees = employeeDao.list(CF.alwaysTrue());
+        employeeDao.loadAllJoinEntities(employees);
+        System.out.println(employees);
+
+        List<Project> projects = projectDao.list(CF.alwaysTrue());
+        projectDao.loadAllJoinEntities(projects);
+        System.out.println(projects);
+
+        employeeDao.delete(CF.alwaysTrue());
+        projectDao.delete(CF.alwaysTrue());
+        employeeProjectDao.delete(CF.alwaysTrue());
+        assertFalse(employeeProjectDao.exists(entityId));
+        assertNull(employeeProjectDao.gett(entityId));
     }
 }

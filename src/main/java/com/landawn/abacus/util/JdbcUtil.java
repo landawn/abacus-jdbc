@@ -14264,16 +14264,16 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         int delete(final T entity) throws SQLException;
-
-        /**
-         *
-         * @param entity
-         * @param onDeleteAction It should be defined and done in DB server side.
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        @Beta
-        int delete(final T entity, final OnDeleteAction onDeleteAction) throws SQLException;
+//
+//    /**
+//     *
+//     * @param entity
+//     * @param onDeleteAction It should be defined and done in DB server side.
+//     * @return
+//     * @throws SQLException the SQL exception
+//     */
+//    @Beta
+//    int delete(final T entity, final OnDeleteAction onDeleteAction) throws SQLException;
 
         /**
          *
@@ -14294,28 +14294,28 @@ public final class JdbcUtil {
          */
         int batchDelete(final Collection<? extends T> entities, final int batchSize) throws SQLException;
 
-        /**
-         *
-         * @param entities
-         * @param onDeleteAction It should be defined and done in DB server side.
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        @Beta
-        default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction) throws SQLException {
-            return batchDelete(entities, onDeleteAction, JdbcUtil.DEFAULT_BATCH_SIZE);
-        }
-
-        /**
-         *
-         * @param entities
-         * @param onDeleteAction It should be defined and done in DB server side.
-         * @param batchSize
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        @Beta
-        int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction, final int batchSize) throws SQLException;
+        //    /**
+        //     *
+        //     * @param entities
+        //     * @param onDeleteAction It should be defined and done in DB server side.
+        //     * @return
+        //     * @throws SQLException the SQL exception
+        //     */
+        //    @Beta
+        //    default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction) throws SQLException {
+        //        return batchDelete(entities, onDeleteAction, JdbcUtil.DEFAULT_BATCH_SIZE);
+        //    }
+        //
+        //    /**
+        //     *
+        //     * @param entities
+        //     * @param onDeleteAction It should be defined and done in DB server side.
+        //     * @param batchSize
+        //     * @return
+        //     * @throws SQLException the SQL exception
+        //     */
+        //    @Beta
+        //    int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction, final int batchSize) throws SQLException;
 
         /**
          *
@@ -14675,20 +14675,20 @@ public final class JdbcUtil {
             throw new UnsupportedOperationException();
         }
 
-        /**
-         *
-         * @param entity
-         * @param onDeleteAction
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
-        @Deprecated
-        @Override
-        default int delete(final T entity, final OnDeleteAction onDeleteAction) throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
-        }
+        //    /**
+        //     *
+        //     * @param entity
+        //     * @param onDeleteAction
+        //     * @return
+        //     * @throws UnsupportedOperationException
+        //     * @throws SQLException
+        //     * @deprecated unsupported Operation
+        //     */
+        //    @Deprecated
+        //    @Override
+        //    default int delete(final T entity, final OnDeleteAction onDeleteAction) throws UnsupportedOperationException, SQLException {
+        //        throw new UnsupportedOperationException();
+        //    }
 
         /**
          *
@@ -14719,38 +14719,38 @@ public final class JdbcUtil {
             throw new UnsupportedOperationException();
         }
 
-        /**
-         *
-         * @param entities
-         * @param onDeleteAction
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
-        @Deprecated
-        @Override
-        default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction)
-                throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         *
-         * @param entities
-         * @param onDeleteAction
-         * @param batchSize
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
-        @Deprecated
-        @Override
-        default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction, final int batchSize)
-                throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
-        }
+        //    /**
+        //     *
+        //     * @param entities
+        //     * @param onDeleteAction
+        //     * @return
+        //     * @throws UnsupportedOperationException
+        //     * @throws SQLException
+        //     * @deprecated unsupported Operation
+        //     */
+        //    @Deprecated
+        //    @Override
+        //    default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction)
+        //            throws UnsupportedOperationException, SQLException {
+        //        throw new UnsupportedOperationException();
+        //    }
+        //
+        //    /**
+        //     *
+        //     * @param entities
+        //     * @param onDeleteAction
+        //     * @param batchSize
+        //     * @return
+        //     * @throws UnsupportedOperationException
+        //     * @throws SQLException
+        //     * @deprecated unsupported Operation
+        //     */
+        //    @Deprecated
+        //    @Override
+        //    default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction, final int batchSize)
+        //            throws UnsupportedOperationException, SQLException {
+        //        throw new UnsupportedOperationException();
+        //    }
 
         /**
          *

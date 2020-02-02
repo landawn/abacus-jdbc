@@ -4,6 +4,6 @@ import com.landawn.abacus.EntityId;
 import com.landawn.abacus.samples.entity.EmployeeProject;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.SQLBuilder;
-
-public interface EmployeeDeptRelationshipDao extends JdbcUtil.CrudDao<EmployeeProject, EntityId, SQLBuilder.PSC, EmployeeDeptRelationshipDao> {
+ 
+public interface EmployeeProjectDao extends JdbcUtil.CrudDao<EmployeeProject, EntityId, SQLBuilder.PSC, EmployeeProjectDao> {
 }

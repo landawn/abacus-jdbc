@@ -204,7 +204,8 @@ final class DaoUtil {
         });
     }
 
-    private static final Map<Class<?>, Predicate<Object>> isValuePresentMap = N.newHashMap(20);
+    @SuppressWarnings("rawtypes")
+    private static final Map<Class<?>, Predicate> isValuePresentMap = N.newHashMap(20);
 
     static {
         final Map<Class<?>, Predicate<?>> tmp = N.newHashMap(20);
@@ -225,7 +226,7 @@ final class DaoUtil {
         tmp.put(java.util.OptionalLong.class, (java.util.OptionalLong t) -> t.isPresent());
         tmp.put(java.util.OptionalDouble.class, (java.util.OptionalDouble t) -> t.isPresent());
 
-        isValuePresentMap.putAll((Map<? extends Class<?>, ? extends Predicate<Object>>) tmp);
+        isValuePresentMap.putAll(tmp);
     }
 
     private static Set<Class<?>> notCacheableTypes = N.asSet(void.class, Void.class, Iterator.class, java.util.stream.BaseStream.class, BaseStream.class,
@@ -720,6 +721,9 @@ final class DaoUtil {
                 .select(Dao.RefreshCache.class)
                 .first()
                 .orNull();
+
+        final MutableBoolean hasCacheResult = MutableBoolean.of(false);
+        final MutableBoolean hasRefreshCache = MutableBoolean.of(false);
 
         final List<Dao.Handler> daoClassHandlerList = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface))
                 .prepend(daoInterface)
@@ -1507,14 +1511,50 @@ final class DaoUtil {
                                     DirtyMarkerUtil.markDirty((DirtyMarker) entity, propJoinInfo.joinPropInfo.name, false);
                                 }
                             } else {
-                                final Tuple2<BiFunction<Collection<String>, Integer, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
-                                        .getSelectSQLBuilderAndParamSetterForBatch(sbc);
+                                if (propJoinInfo.isManyToManyJoin()) {
+                                    // TODO won't work.
+                                    //    final DataSet dataSet = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
+                                    //            .setParameters(entities, tp._2)
+                                    //            .query();
+                                    //
+                                    //    propJoinInfo.setJoinPropEntities(entities, dataSet);
 
-                                final List<?> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
-                                        .setParameters(entities, tp._2)
-                                        .list(propJoinInfo.referencedEntityClass);
+                                    final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
+                                            .getSelectSQLBuilderAndParamSetter(sbc);
 
-                                propJoinInfo.setJoinPropEntities(entities, joinPropEntities);
+                                    try (JdbcUtil.PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).closeAfterExecution(false)) {
+                                        for (Object entity : entities) {
+                                            if (propJoinInfo.joinPropInfo.type.isCollection()) {
+                                                final List<?> propEntities = preparedQuery.setParameters(entity, tp._2)
+                                                        .list(propJoinInfo.referencedEntityClass);
+
+                                                if (propJoinInfo.joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
+                                                    propJoinInfo.joinPropInfo.setPropValue(entity, propEntities);
+                                                } else {
+                                                    final Collection<Object> c = (Collection) N.newInstance(propJoinInfo.joinPropInfo.clazz);
+                                                    c.addAll(propEntities);
+                                                    propJoinInfo.joinPropInfo.setPropValue(entity, c);
+                                                }
+                                            } else {
+                                                propJoinInfo.joinPropInfo.setPropValue(entity,
+                                                        preparedQuery.setParameters(entity, tp._2).findFirst(propJoinInfo.referencedEntityClass).orNull());
+                                            }
+
+                                            if (isDirtyMarker) {
+                                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propJoinInfo.joinPropInfo.name, false);
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    final Tuple2<BiFunction<Collection<String>, Integer, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
+                                            .getSelectSQLBuilderAndParamSetterForBatch(sbc);
+
+                                    final List<?> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
+                                            .setParameters(entities, tp._2)
+                                            .list(propJoinInfo.referencedEntityClass);
+
+                                    propJoinInfo.setJoinPropEntities(entities, joinPropEntities);
+                                }
                             }
 
                             return null;
@@ -1948,44 +1988,45 @@ final class DaoUtil {
                         call = (proxy, args) -> proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(args[0], idParamSetter).update();
                     } else if (methodName.equals("delete") && paramLen == 1 && !Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(args[0], idParamSetterByEntity).update();
-                    } else if (methodName.equals("delete") && paramLen == 2 && !Condition.class.isAssignableFrom(paramTypes[0])
-                            && OnDeleteAction.class.equals(paramTypes[1])) {
-                        call = (proxy, args) -> {
-                            final Object entity = (args[0]);
-                            final OnDeleteAction onDeleteAction = (OnDeleteAction) args[1];
 
-                            if (onDeleteAction == null || onDeleteAction == OnDeleteAction.NO_ACTION) {
-                                return proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
-                            }
-
-                            final Map<String, JoinInfo> entityJoinInfo = JoinInfo.getEntityJoinInfo(entityClass);
-
-                            if (N.isNullOrEmpty(entityJoinInfo)) {
-                                return proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
-                            } else {
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
-                                long result = 0;
-
-                                try {
-                                    Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = null;
-
-                                    for (JoinInfo propJoinInfo : entityJoinInfo.values()) {
-                                        tp = onDeleteAction == OnDeleteAction.SET_NULL ? propJoinInfo.getSetNullSqlAndParamSetter(sbc)
-                                                : propJoinInfo.getDeleteSqlAndParamSetter(sbc);
-
-                                        result += proxy.prepareQuery(tp._1).setParameters(entity, tp._2).update();
-                                    }
-
-                                    result += proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
-
-                                    tran.commit();
-                                } finally {
-                                    tran.rollbackIfNotCommitted();
-                                }
-
-                                return N.toIntExact(result);
-                            }
-                        };
+                        //} else if (methodName.equals("delete") && paramLen == 2 && !Condition.class.isAssignableFrom(paramTypes[0])
+                        //        && OnDeleteAction.class.equals(paramTypes[1])) {
+                        //    call = (proxy, args) -> {
+                        //        final Object entity = (args[0]);
+                        //        final OnDeleteAction onDeleteAction = (OnDeleteAction) args[1];
+                        //
+                        //        if (onDeleteAction == null || onDeleteAction == OnDeleteAction.NO_ACTION) {
+                        //            return proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
+                        //        }
+                        //
+                        //        final Map<String, JoinInfo> entityJoinInfo = JoinInfo.getEntityJoinInfo(entityClass);
+                        //
+                        //        if (N.isNullOrEmpty(entityJoinInfo)) {
+                        //            return proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
+                        //        } else {
+                        //            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                        //            long result = 0;
+                        //
+                        //            try {
+                        //                Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = null;
+                        //
+                        //                for (JoinInfo propJoinInfo : entityJoinInfo.values()) {
+                        //                    tp = onDeleteAction == OnDeleteAction.SET_NULL ? propJoinInfo.getSetNullSqlAndParamSetter(sbc)
+                        //                            : propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+                        //
+                        //                    result += proxy.prepareQuery(tp._1).setParameters(entity, tp._2).update();
+                        //                }
+                        //
+                        //                result += proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
+                        //
+                        //                tran.commit();
+                        //            } finally {
+                        //                tran.rollbackIfNotCommitted();
+                        //            }
+                        //
+                        //            return N.toIntExact(result);
+                        //        }
+                        //    };
                     } else if ((methodName.equals("batchDelete") || methodName.equals("batchDeleteByIds")) && paramLen == 2
                             && int.class.equals(paramTypes[1])) {
 
@@ -2023,61 +2064,61 @@ final class DaoUtil {
                                 return N.toIntExact(result);
                             }
                         };
-                    } else if (methodName.equals("batchDelete") && paramLen == 3 && OnDeleteAction.class.equals(paramTypes[1])
-                            && int.class.equals(paramTypes[2])) {
-                        final JdbcUtil.BiParametersSetter<NamedQuery, Object> paramSetter = idParamSetterByEntity;
-
-                        call = (proxy, args) -> {
-                            final Collection<Object> entities = (Collection) args[0];
-                            final OnDeleteAction onDeleteAction = (OnDeleteAction) args[1];
-                            final int batchSize = (Integer) args[2];
-                            N.checkArgPositive(batchSize, "batchSize");
-
-                            if (N.isNullOrEmpty(entities)) {
-                                return 0;
-                            } else if (onDeleteAction == null || onDeleteAction == OnDeleteAction.NO_ACTION) {
-                                return ((JdbcUtil.CrudDao) proxy).batchDelete(entities, batchSize);
-                            }
-
-                            final Map<String, JoinInfo> entityJoinInfo = JoinInfo.getEntityJoinInfo(entityClass);
-
-                            if (N.isNullOrEmpty(entityJoinInfo)) {
-                                return ((JdbcUtil.CrudDao) proxy).batchDelete(entities, batchSize);
-                            }
-
-                            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
-                            long result = 0;
-
-                            try {
-                                try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedDeleteByIdSQL).closeAfterExecution(false)) {
-                                    result = ExceptionalStream.of(entities) //
-                                            .splitToList(batchSize) //
-                                            .sumLong(bp -> {
-                                                long tmpResult = 0;
-
-                                                Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = null;
-
-                                                for (JoinInfo propJoinInfo : entityJoinInfo.values()) {
-                                                    tp = onDeleteAction == OnDeleteAction.SET_NULL ? propJoinInfo.getSetNullSqlAndParamSetter(sbc)
-                                                            : propJoinInfo.getDeleteSqlAndParamSetter(sbc);
-
-                                                    tmpResult += N.sum(proxy.prepareQuery(tp._1).addBatchParameters2(bp, tp._2).batchUpdate());
-                                                }
-
-                                                tmpResult += N.sum(nameQuery.addBatchParameters(bp, paramSetter).batchUpdate());
-
-                                                return tmpResult;
-                                            })
-                                            .orZero();
-                                }
-
-                                tran.commit();
-                            } finally {
-                                tran.rollbackIfNotCommitted();
-                            }
-
-                            return N.toIntExact(result);
-                        };
+                        //    } else if (methodName.equals("batchDelete") && paramLen == 3 && OnDeleteAction.class.equals(paramTypes[1])
+                        //        && int.class.equals(paramTypes[2])) {
+                        //    final JdbcUtil.BiParametersSetter<NamedQuery, Object> paramSetter = idParamSetterByEntity;
+                        //    
+                        //    call = (proxy, args) -> {
+                        //        final Collection<Object> entities = (Collection) args[0];
+                        //        final OnDeleteAction onDeleteAction = (OnDeleteAction) args[1];
+                        //        final int batchSize = (Integer) args[2];
+                        //        N.checkArgPositive(batchSize, "batchSize");
+                        //    
+                        //        if (N.isNullOrEmpty(entities)) {
+                        //            return 0;
+                        //        } else if (onDeleteAction == null || onDeleteAction == OnDeleteAction.NO_ACTION) {
+                        //            return ((JdbcUtil.CrudDao) proxy).batchDelete(entities, batchSize);
+                        //        }
+                        //    
+                        //        final Map<String, JoinInfo> entityJoinInfo = JoinInfo.getEntityJoinInfo(entityClass);
+                        //    
+                        //        if (N.isNullOrEmpty(entityJoinInfo)) {
+                        //            return ((JdbcUtil.CrudDao) proxy).batchDelete(entities, batchSize);
+                        //        }
+                        //    
+                        //        final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                        //        long result = 0;
+                        //    
+                        //        try {
+                        //            try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedDeleteByIdSQL).closeAfterExecution(false)) {
+                        //                result = ExceptionalStream.of(entities) //
+                        //                        .splitToList(batchSize) //
+                        //                        .sumLong(bp -> {
+                        //                            long tmpResult = 0;
+                        //    
+                        //                            Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = null;
+                        //    
+                        //                            for (JoinInfo propJoinInfo : entityJoinInfo.values()) {
+                        //                                tp = onDeleteAction == OnDeleteAction.SET_NULL ? propJoinInfo.getSetNullSqlAndParamSetter(sbc)
+                        //                                        : propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+                        //    
+                        //                                tmpResult += N.sum(proxy.prepareQuery(tp._1).addBatchParameters2(bp, tp._2).batchUpdate());
+                        //                            }
+                        //    
+                        //                            tmpResult += N.sum(nameQuery.addBatchParameters(bp, paramSetter).batchUpdate());
+                        //    
+                        //                            return tmpResult;
+                        //                        })
+                        //                        .orZero();
+                        //            }
+                        //    
+                        //            tran.commit();
+                        //        } finally {
+                        //            tran.rollbackIfNotCommitted();
+                        //        }
+                        //    
+                        //        return N.toIntExact(result);
+                        //    };
                     } else {
                         call = (proxy, args) -> {
                             throw new UnsupportedOperationException("Unsupported operation: " + m);
@@ -2914,6 +2955,8 @@ final class DaoUtil {
 
                         return result;
                     };
+
+                    hasCacheResult.setTrue();
                 }
 
                 if (refreshResultAnno != null && refreshResultAnno.disabled() == false) {
@@ -2928,6 +2971,8 @@ final class DaoUtil {
 
                         return temp.apply(proxy, args);
                     };
+
+                    hasRefreshCache.setTrue();
                 }
 
                 final List<JdbcUtil.Handler<?>> handlerList = StreamEx.of(m.getAnnotations())
@@ -2981,6 +3026,12 @@ final class DaoUtil {
             }
 
             methodInvokerMap.put(m, call);
+        }
+
+        if (hasRefreshCache.isTrue() && hasCacheResult.isFalse()) {
+            throw new UnsupportedOperationException("Class: " + daoInterface
+                    + " or its super interfaces or methods are annotated by @RefreshCache, but none of them is annotated with @CacheResult. "
+                    + "Please remove the unnecessary @RefreshCache annotations or Add @CacheResult annotation if it's really needed.");
         }
 
         final Throwables.TriFunction<JdbcUtil.Dao, Method, Object[], ?, Throwable> proxyInvoker = (proxy, method, args) -> methodInvokerMap.get(method)

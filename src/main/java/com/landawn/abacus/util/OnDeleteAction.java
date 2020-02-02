@@ -18,6 +18,7 @@ import com.landawn.abacus.annotation.Beta;
 
 /**
  * It should be defined and done in DB server side.
+ * @deprecated won't & should not be implemented.
  */
 @Beta
 public enum OnDeleteAction {
