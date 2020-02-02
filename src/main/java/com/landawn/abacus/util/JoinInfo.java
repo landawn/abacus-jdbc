@@ -88,9 +88,9 @@ final class JoinInfo {
             isManyToManyJoin = true;
 
             if (joinColumnPairs.length != 2) {
-                throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
-                        + "' in class: " + entityClass
-                        + ". The format for many-many join should be: employee_id = EmployeeProject.employee_id, EmployeeProject.project_id=project_id");
+                throw new IllegalArgumentException(
+                        "Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: " + entityClass
+                                + ". The format for many-many join should be: employeeId = EmployeeProject.employeeId, EmployeeProject.projectId=projectId");
             }
 
             srcPropInfos = new PropInfo[1];
@@ -112,9 +112,9 @@ final class JoinInfo {
             final String middleEntity = left[1].substring(0, left[1].indexOf('.'));
 
             if (!right[0].startsWith(middleEntity + ".")) {
-                throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
-                        + "' in class: " + entityClass
-                        + ". The format for many-many join should be: employee_id = EmployeeProject.employee_id, EmployeeProject.project_id=project_id");
+                throw new IllegalArgumentException(
+                        "Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: " + entityClass
+                                + ". The format for many-many join should be: employeeId = EmployeeProject.employeeId, EmployeeProject.projectId=projectId");
             }
 
             final String entityPackageName = ClassUtil.getPackageName(entityClass);
