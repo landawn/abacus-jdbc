@@ -216,16 +216,23 @@ final class JoinInfo {
 
                         final StringBuilder sb = Objectory.createStringBuilder();
 
-                        final String selectPropNamesPart = Stream.of(SQLParser.parse(PSC.select(newSelectPropNames).from(referencedEntityClass).sql()))
+                        sb.append(batchSelectHeader);
+
+                        Stream.of(SQLParser.parse(PSC.select(newSelectPropNames).from(referencedEntityClass).sql()))
                                 .skip(2)
                                 .skipLast(4)
                                 .map(it -> selectPropNameMap.getOrDefault(it, it))
-                                .collect(() -> sb, BiConsumers.ofAppend())
-                                .toString();
+                                .collect(() -> sb, BiConsumers.ofAppend());
+
+                        sb.append(batchSelectFromToJoinOn);
+
+                        sb.append(StringUtil.repeat(middleEntityCondStr, size, " OR "));
+
+                        final String sql = sb.toString();
 
                         Objectory.recycle(sb);
 
-                        return batchSelectHeader + selectPropNamesPart + batchSelectFromToJoinOn + StringUtil.repeat(middleEntityCondStr, size, " OR ");
+                        return sql;
                     }
                 };
 
@@ -295,16 +302,23 @@ final class JoinInfo {
 
                         final StringBuilder sb = Objectory.createStringBuilder();
 
-                        final String selectPropNamesPart = Stream.of(SQLParser.parse(PAC.select(newSelectPropNames).from(referencedEntityClass).sql()))
+                        sb.append(batchSelectHeader);
+
+                        Stream.of(SQLParser.parse(PAC.select(newSelectPropNames).from(referencedEntityClass).sql()))
                                 .skip(2)
                                 .skipLast(4)
                                 .map(it -> selectPropNameMap.getOrDefault(it, it))
-                                .collect(() -> sb, BiConsumers.ofAppend())
-                                .toString();
+                                .collect(() -> sb, BiConsumers.ofAppend());
+
+                        sb.append(batchSelectFromToJoinOn);
+
+                        sb.append(StringUtil.repeat(middleEntityCondStr, size, " OR "));
+
+                        final String sql = sb.toString();
 
                         Objectory.recycle(sb);
 
-                        return batchSelectHeader + selectPropNamesPart + batchSelectFromToJoinOn + StringUtil.repeat(middleEntityCondStr, size, " OR ");
+                        return sql;
                     }
                 };
 
@@ -374,16 +388,23 @@ final class JoinInfo {
 
                         final StringBuilder sb = Objectory.createStringBuilder();
 
-                        final String selectPropNamesPart = Stream.of(SQLParser.parse(PLC.select(newSelectPropNames).from(referencedEntityClass).sql()))
+                        sb.append(batchSelectHeader);
+
+                        Stream.of(SQLParser.parse(PLC.select(newSelectPropNames).from(referencedEntityClass).sql()))
                                 .skip(2)
                                 .skipLast(4)
                                 .map(it -> selectPropNameMap.getOrDefault(it, it))
-                                .collect(() -> sb, BiConsumers.ofAppend())
-                                .toString();
+                                .collect(() -> sb, BiConsumers.ofAppend());
+
+                        sb.append(batchSelectFromToJoinOn);
+
+                        sb.append(StringUtil.repeat(middleEntityCondStr, size, " OR "));
+
+                        final String sql = sb.toString();
 
                         Objectory.recycle(sb);
 
-                        return batchSelectHeader + selectPropNamesPart + batchSelectFromToJoinOn + StringUtil.repeat(middleEntityCondStr, size, " OR ");
+                        return sql;
                     }
                 };
 
