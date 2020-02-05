@@ -60,6 +60,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -5487,32 +5488,20 @@ public final class JdbcUtil {
 
     /**
      *
-     * @param sqlCmd
-     * @throws UncheckedSQLException
+     * @param sqlAction 
      */
     @Beta
-    static void run(Throwables.Runnable<SQLException> sqlCmd) throws UncheckedSQLException {
-        try {
-            sqlCmd.run();
-        } catch (SQLException e) {
-            throw new UncheckedSQLException(e);
-        }
+    public static ContinuableFuture<Void> asyncRun(final Throwables.Runnable<Exception> sqlAction) {
+        return asyncExecutor.execute(sqlAction);
     }
 
     /**
      *
-     * @param <R>
-     * @param sqlCmd
-     * @return
-     * @throws UncheckedSQLException
+     * @param sqlAction
      */
     @Beta
-    static <R> R call(Throwables.Callable<R, SQLException> sqlCmd) throws UncheckedSQLException {
-        try {
-            return sqlCmd.call();
-        } catch (SQLException e) {
-            throw new UncheckedSQLException(e);
-        }
+    public static <R> ContinuableFuture<R> asyncCall(final Callable<R> sqlAction) {
+        return asyncExecutor.execute(sqlAction);
     }
 
     /**
@@ -14264,16 +14253,16 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         int delete(final T entity) throws SQLException;
-//
-//    /**
-//     *
-//     * @param entity
-//     * @param onDeleteAction It should be defined and done in DB server side.
-//     * @return
-//     * @throws SQLException the SQL exception
-//     */
-//    @Beta
-//    int delete(final T entity, final OnDeleteAction onDeleteAction) throws SQLException;
+        //
+        //    /**
+        //     *
+        //     * @param entity
+        //     * @param onDeleteAction It should be defined and done in DB server side.
+        //     * @return
+        //     * @throws SQLException the SQL exception
+        //     */
+        //    @Beta
+        //    int delete(final T entity, final OnDeleteAction onDeleteAction) throws SQLException;
 
         /**
          *
