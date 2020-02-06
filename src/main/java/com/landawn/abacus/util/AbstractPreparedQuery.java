@@ -496,8 +496,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     public Q setTimestamp(int parameterIndex, java.util.Date x) throws SQLException {
-        stmt.setTimestamp(parameterIndex,
-                x == null ? null : x instanceof java.sql.Timestamp ? (java.sql.Timestamp) x : new java.sql.Timestamp(x.getTime()));
+        stmt.setTimestamp(parameterIndex, x == null ? null : x instanceof java.sql.Timestamp ? (java.sql.Timestamp) x : new java.sql.Timestamp(x.getTime()));
 
         return (Q) this;
     }
@@ -1638,6 +1637,57 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     @Beta
+    public <T> Q addBatchParameters(final Collection<T> batchParameters,
+            Throwables.TriConsumer<? super Q, ? super S, ? super T, ? extends SQLException> parametersSetter) throws SQLException {
+        checkArgNotNull(batchParameters, "batchParameters");
+        checkArgNotNull(parametersSetter, "parametersSetter");
+
+        return addBatchParameters(batchParameters.iterator(), parametersSetter);
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param batchParameters
+     * @param parametersSetter
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    @Beta
+    public <T> Q addBatchParameters(final Iterator<T> batchParameters,
+            Throwables.TriConsumer<? super Q, ? super S, ? super T, ? extends SQLException> parametersSetter) throws SQLException {
+        checkArgNotNull(batchParameters, "batchParameters");
+        checkArgNotNull(parametersSetter, "parametersSetter");
+
+        boolean noException = false;
+
+        try {
+            final Iterator<T> iter = batchParameters;
+
+            while (iter.hasNext()) {
+                parametersSetter.accept((Q) this, stmt, iter.next());
+                stmt.addBatch();
+                isBatch = true;
+            }
+
+            noException = true;
+        } finally {
+            if (noException == false) {
+                close();
+            }
+        }
+
+        return (Q) this;
+    }
+
+    /**
+     * @param <T>
+     * @param batchParameters
+     * @param parametersSetter
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    @Beta
     public <T> Q addBatchParameters2(final Collection<T> batchParameters, BiParametersSetter<? super S, ? super T> parametersSetter) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
         checkArgNotNull(parametersSetter, "parametersSetter");
@@ -2570,8 +2620,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      * @see ResultExtractor#toMap(RowMapper, RowMapper, BinaryOperator)
      */
-    public <K, V> Map<K, V> listToMap(final RowMapper<K> keyMapper, final RowMapper<V> valueMapper, final BinaryOperator<V> mergeFunction)
-            throws SQLException {
+    public <K, V> Map<K, V> listToMap(final RowMapper<K> keyMapper, final RowMapper<V> valueMapper, final BinaryOperator<V> mergeFunction) throws SQLException {
         return listToMap(keyMapper, valueMapper, mergeFunction, Suppliers.<K, V> ofMap());
     }
 
