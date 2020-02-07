@@ -1688,11 +1688,11 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     @Beta
-    public <T> Q addBatchParameters2(final Collection<T> batchParameters, BiParametersSetter<? super S, ? super T> parametersSetter) throws SQLException {
+    public <T> Q addBatchParametters(final Collection<T> batchParameters, BiParametersSetter<? super S, ? super T> parametersSetter) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
         checkArgNotNull(parametersSetter, "parametersSetter");
 
-        return addBatchParameters2(batchParameters.iterator(), parametersSetter);
+        return addBatchParametters(batchParameters.iterator(), parametersSetter);
     }
 
     /**
@@ -1704,7 +1704,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     @Beta
-    public <T> Q addBatchParameters2(final Iterator<T> batchParameters, BiParametersSetter<? super S, ? super T> parametersSetter) throws SQLException {
+    public <T> Q addBatchParametters(final Iterator<T> batchParameters, BiParametersSetter<? super S, ? super T> parametersSetter) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
         checkArgNotNull(parametersSetter, "parametersSetter");
 
@@ -1727,6 +1727,35 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         }
 
         return (Q) this;
+    }
+
+    /**
+     * @param <T>
+     * @param batchParameters
+     * @param parametersSetter
+     * @return
+     * @throws SQLException the SQL exception
+     * @deprecated replaced by {@code addBatchParametters}
+     */
+    @Deprecated
+    @Beta
+    public <T> Q addBatchParameters2(final Collection<T> batchParameters, BiParametersSetter<? super S, ? super T> parametersSetter) throws SQLException {
+        return addBatchParametters(batchParameters, parametersSetter);
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param batchParameters
+     * @param parametersSetter
+     * @return
+     * @throws SQLException the SQL exception
+     * @deprecated replaced by {@code addBatchParametters}
+     */
+    @Deprecated
+    @Beta
+    public <T> Q addBatchParameters2(final Iterator<T> batchParameters, BiParametersSetter<? super S, ? super T> parametersSetter) throws SQLException {
+        return addBatchParametters(batchParameters, parametersSetter);
     }
 
     /**
