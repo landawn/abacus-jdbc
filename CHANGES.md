@@ -1,3 +1,8 @@
+### 1.20
+
+* Improvements and bug fix.
+
+
 ### 1.10.9
 
 * Rename `asyncApply/Accept` to `asyncCall/Run`.
