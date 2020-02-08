@@ -11702,17 +11702,19 @@ public final class JdbcUtil {
              * @deprecated using sql="SELECT ... FROM ..." for explicit call.
              */
             @Deprecated
-            String value()
-
-            default "";
+            String value() default "";
 
             /**
              *
              * @return
              */
-            String sql()
+            String id() default ""; // id defined SqlMapper
 
-            default "";
+            /**
+             *
+             * @return
+             */
+            String sql() default "";
 
             /**
              *
@@ -11741,9 +11743,13 @@ public final class JdbcUtil {
              * @deprecated using sql="SELECT ... FROM ..." for explicit call.
              */
             @Deprecated
-            String value()
+            String value() default "";
 
-            default "";
+            /**
+             *
+             * @return
+             */
+            String id() default ""; // id defined SqlMapper
 
             /**
              *
@@ -11772,9 +11778,13 @@ public final class JdbcUtil {
              * @deprecated using sql="SELECT ... FROM ..." for explicit call.
              */
             @Deprecated
-            String value()
+            String value() default "";
 
-            default "";
+            /**
+             *
+             * @return
+             */
+            String id() default ""; // id defined SqlMapper
 
             /**
              *
@@ -11803,9 +11813,13 @@ public final class JdbcUtil {
              * @deprecated using sql="SELECT ... FROM ..." for explicit call.
              */
             @Deprecated
-            String value()
+            String value() default "";
 
-            default "";
+            /**
+             *
+             * @return
+             */
+            String id() default ""; // id defined SqlMapper
 
             /**
              *
@@ -11834,17 +11848,19 @@ public final class JdbcUtil {
              * @deprecated using sql="SELECT ... FROM ..." for explicit call.
              */
             @Deprecated
-            String value()
-
-            default "";
+            String value() default "";
 
             /**
              *
              * @return
              */
-            String sql()
+            String id() default ""; // id defined SqlMapper
 
-            default "";
+            /**
+             *
+             * @return
+             */
+            String sql() default "";
 
             /**
              *
@@ -11873,9 +11889,13 @@ public final class JdbcUtil {
              * @deprecated using sql="SELECT ... FROM ..." for explicit call.
              */
             @Deprecated
-            String value()
+            String value() default "";
 
-            default "";
+            /**
+             *
+             * @return
+             */
+            String id() default ""; // id defined SqlMapper
 
             /**
              *
@@ -11916,9 +11936,13 @@ public final class JdbcUtil {
              * @deprecated using sql="SELECT ... FROM ..." for explicit call.
              */
             @Deprecated
-            String value()
+            String value() default "";
 
-            default "";
+            /**
+             *
+             * @return
+             */
+            String id() default ""; // id defined SqlMapper
 
             /**
              *
@@ -11959,9 +11983,13 @@ public final class JdbcUtil {
              * @deprecated using sql="SELECT ... FROM ..." for explicit call.
              */
             @Deprecated
-            String value()
+            String value() default "";
 
-            default "";
+            /**
+             *
+             * @return
+             */
+            String id() default ""; // id defined SqlMapper
 
             /**
              *
@@ -12002,9 +12030,13 @@ public final class JdbcUtil {
              * @deprecated using sql="call update_account(?)" for explicit call.
              */
             @Deprecated
-            String value()
+            String value() default "";
 
-            default "";
+            /**
+             *
+             * @return
+             */
+            String id() default ""; // id defined SqlMapper
 
             /**
              *
@@ -12053,12 +12085,24 @@ public final class JdbcUtil {
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
         public static @interface Sqls {
+            /**
+             *
+             * @return
+             * @deprecated using {@code sqls} for explicit call.
+             */
+            String[] value() default "";
 
             /**
              *
              * @return
              */
-            String[] value() default "";
+            String[] sqls() default "";
+
+            /**
+             *
+             * @return
+             */
+            String[] ids() default ""; // id defined SqlMapper
         }
 
         /**

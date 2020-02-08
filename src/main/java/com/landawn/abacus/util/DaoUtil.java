@@ -85,7 +85,7 @@ import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
-import com.landawn.abacus.util.Tuple.Tuple4;
+import com.landawn.abacus.util.Tuple.Tuple5;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -118,89 +118,369 @@ final class DaoUtil {
     private static final Map<String, JdbcUtil.Dao> daoPool = new ConcurrentHashMap<>();
 
     /** The Constant sqlAnnoMap. */
-    private static final Map<Class<? extends Annotation>, Function<Annotation, String>> sqlAnnoMap = new HashMap<>();
+    private static final Map<Class<? extends Annotation>, BiFunction<Annotation, SQLMapper, Tuple5<String, Integer, Integer, Boolean, Integer>>> sqlAnnoMap = new HashMap<>();
 
     static {
-        sqlAnnoMap.put(Dao.Select.class, (Annotation anno) -> {
-            String sql = StringUtil.trim(((Dao.Select) anno).sql());
+        sqlAnnoMap.put(Dao.Select.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final Dao.Select tmp = (Dao.Select) anno;
+            int queryTimeout = tmp.queryTimeout();
+            int fetchSize = tmp.fetchSize();
+            final boolean isBatch = false;
+            final int batchSize = -1;
+
+            String sql = StringUtil.trim(tmp.sql());
 
             if (N.isNullOrEmpty(sql)) {
-                sql = StringUtil.trim(((Dao.Select) anno).value());
+                sql = StringUtil.trim(tmp.value());
             }
 
-            return sql;
+            if (N.notNullOrEmpty(tmp.id())) {
+                final String id = tmp.id();
+
+                if (sqlMapper == null) {
+                    throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
+                }
+
+                sql = sqlMapper.get(id).getParameterizedSQL();
+
+                if (N.isNullOrEmpty(sql)) {
+                    throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
+                }
+
+                final Map<String, String> attrs = sqlMapper.getAttrs(id);
+
+                if (N.notNullOrEmpty(attrs)) {
+                    if (attrs.containsKey(SQLMapper.TIMEOUT)) {
+                        queryTimeout = N.parseInt(attrs.get(SQLMapper.TIMEOUT));
+                    }
+
+                    if (attrs.containsKey(SQLMapper.FETCH_SIZE)) {
+                        fetchSize = N.parseInt(attrs.get(SQLMapper.FETCH_SIZE));
+                    }
+                }
+            }
+
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
         });
-        sqlAnnoMap.put(Dao.Insert.class, (Annotation anno) -> {
-            String sql = StringUtil.trim(((Dao.Insert) anno).sql());
+
+        sqlAnnoMap.put(Dao.Insert.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final Dao.Insert tmp = (Dao.Insert) anno;
+            int queryTimeout = tmp.queryTimeout();
+            final int fetchSize = -1;
+            final boolean isBatch = false;
+            final int batchSize = -1;
+
+            String sql = StringUtil.trim(tmp.sql());
 
             if (N.isNullOrEmpty(sql)) {
-                sql = StringUtil.trim(((Dao.Insert) anno).value());
+                sql = StringUtil.trim(tmp.value());
             }
 
-            return sql;
+            if (N.notNullOrEmpty(tmp.id())) {
+                final String id = tmp.id();
+
+                if (sqlMapper == null) {
+                    throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
+                }
+
+                sql = sqlMapper.get(id).getParameterizedSQL();
+
+                if (N.isNullOrEmpty(sql)) {
+                    throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
+                }
+
+                final Map<String, String> attrs = sqlMapper.getAttrs(id);
+
+                if (N.notNullOrEmpty(attrs)) {
+                    if (attrs.containsKey(SQLMapper.TIMEOUT)) {
+                        queryTimeout = N.parseInt(attrs.get(SQLMapper.TIMEOUT));
+                    }
+                }
+            }
+
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
         });
-        sqlAnnoMap.put(Dao.Update.class, (Annotation anno) -> {
-            String sql = StringUtil.trim(((Dao.Update) anno).sql());
+
+        sqlAnnoMap.put(Dao.Update.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final Dao.Update tmp = (Dao.Update) anno;
+            int queryTimeout = tmp.queryTimeout();
+            final int fetchSize = -1;
+            final boolean isBatch = false;
+            final int batchSize = -1;
+
+            String sql = StringUtil.trim(tmp.sql());
 
             if (N.isNullOrEmpty(sql)) {
-                sql = StringUtil.trim(((Dao.Update) anno).value());
+                sql = StringUtil.trim(tmp.value());
             }
 
-            return sql;
+            if (N.notNullOrEmpty(tmp.id())) {
+                final String id = tmp.id();
+
+                if (sqlMapper == null) {
+                    throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
+                }
+
+                sql = sqlMapper.get(id).getParameterizedSQL();
+
+                if (N.isNullOrEmpty(sql)) {
+                    throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
+                }
+
+                final Map<String, String> attrs = sqlMapper.getAttrs(id);
+
+                if (N.notNullOrEmpty(attrs)) {
+                    if (attrs.containsKey(SQLMapper.TIMEOUT)) {
+                        queryTimeout = N.parseInt(attrs.get(SQLMapper.TIMEOUT));
+                    }
+                }
+            }
+
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
         });
-        sqlAnnoMap.put(Dao.Delete.class, (Annotation anno) -> {
-            String sql = StringUtil.trim(((Dao.Delete) anno).sql());
+
+        sqlAnnoMap.put(Dao.Delete.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final Dao.Delete tmp = (Dao.Delete) anno;
+            int queryTimeout = tmp.queryTimeout();
+            final int fetchSize = -1;
+            final boolean isBatch = false;
+            final int batchSize = -1;
+
+            String sql = StringUtil.trim(tmp.sql());
 
             if (N.isNullOrEmpty(sql)) {
-                sql = StringUtil.trim(((Dao.Delete) anno).value());
+                sql = StringUtil.trim(tmp.value());
             }
 
-            return sql;
+            if (N.notNullOrEmpty(tmp.id())) {
+                final String id = tmp.id();
+
+                if (sqlMapper == null) {
+                    throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
+                }
+
+                sql = sqlMapper.get(id).getParameterizedSQL();
+
+                if (N.isNullOrEmpty(sql)) {
+                    throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
+                }
+
+                final Map<String, String> attrs = sqlMapper.getAttrs(id);
+
+                if (N.notNullOrEmpty(attrs)) {
+                    if (attrs.containsKey(SQLMapper.TIMEOUT)) {
+                        queryTimeout = N.parseInt(attrs.get(SQLMapper.TIMEOUT));
+                    }
+                }
+            }
+
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
         });
-        sqlAnnoMap.put(Dao.NamedSelect.class, (Annotation anno) -> {
-            String sql = StringUtil.trim(((Dao.NamedSelect) anno).sql());
+
+        sqlAnnoMap.put(Dao.NamedSelect.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final Dao.NamedSelect tmp = (Dao.NamedSelect) anno;
+            int queryTimeout = tmp.queryTimeout();
+            int fetchSize = tmp.fetchSize();
+            final boolean isBatch = false;
+            final int batchSize = -1;
+
+            String sql = StringUtil.trim(tmp.sql());
 
             if (N.isNullOrEmpty(sql)) {
-                sql = StringUtil.trim(((Dao.NamedSelect) anno).value());
+                sql = StringUtil.trim(tmp.value());
             }
 
-            return sql;
+            if (N.notNullOrEmpty(tmp.id())) {
+                final String id = tmp.id();
+
+                if (sqlMapper == null) {
+                    throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
+                }
+
+                sql = sqlMapper.get(id).getNamedSQL();
+
+                if (N.isNullOrEmpty(sql)) {
+                    throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
+                }
+
+                final Map<String, String> attrs = sqlMapper.getAttrs(id);
+
+                if (N.notNullOrEmpty(attrs)) {
+                    if (attrs.containsKey(SQLMapper.TIMEOUT)) {
+                        queryTimeout = N.parseInt(attrs.get(SQLMapper.TIMEOUT));
+                    }
+
+                    if (attrs.containsKey(SQLMapper.FETCH_SIZE)) {
+                        fetchSize = N.parseInt(attrs.get(SQLMapper.FETCH_SIZE));
+                    }
+                }
+            }
+
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
         });
-        sqlAnnoMap.put(Dao.NamedInsert.class, (Annotation anno) -> {
-            String sql = StringUtil.trim(((Dao.NamedInsert) anno).sql());
+
+        sqlAnnoMap.put(Dao.NamedInsert.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final Dao.NamedInsert tmp = (Dao.NamedInsert) anno;
+            int queryTimeout = tmp.queryTimeout();
+            final int fetchSize = -1;
+            final boolean isBatch = tmp.isBatch();
+            int batchSize = tmp.batchSize();
+
+            String sql = StringUtil.trim(tmp.sql());
 
             if (N.isNullOrEmpty(sql)) {
-                sql = StringUtil.trim(((Dao.NamedInsert) anno).value());
+                sql = StringUtil.trim(tmp.value());
             }
 
-            return sql;
+            if (N.notNullOrEmpty(tmp.id())) {
+                final String id = tmp.id();
+
+                if (sqlMapper == null) {
+                    throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
+                }
+
+                sql = sqlMapper.get(id).getNamedSQL();
+
+                if (N.isNullOrEmpty(sql)) {
+                    throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
+                }
+
+                final Map<String, String> attrs = sqlMapper.getAttrs(id);
+
+                if (N.notNullOrEmpty(attrs)) {
+                    if (attrs.containsKey(SQLMapper.TIMEOUT)) {
+                        queryTimeout = N.parseInt(attrs.get(SQLMapper.TIMEOUT));
+                    }
+
+                    if (attrs.containsKey(SQLMapper.BATCH_SIZE)) {
+                        batchSize = N.parseInt(attrs.get(SQLMapper.BATCH_SIZE));
+                    }
+                }
+            }
+
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
         });
-        sqlAnnoMap.put(Dao.NamedUpdate.class, (Annotation anno) -> {
-            String sql = StringUtil.trim(((Dao.NamedUpdate) anno).sql());
+
+        sqlAnnoMap.put(Dao.NamedUpdate.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final Dao.NamedUpdate tmp = (Dao.NamedUpdate) anno;
+            int queryTimeout = tmp.queryTimeout();
+            final int fetchSize = -1;
+            final boolean isBatch = tmp.isBatch();
+            int batchSize = tmp.batchSize();
+
+            String sql = StringUtil.trim(tmp.sql());
 
             if (N.isNullOrEmpty(sql)) {
-                sql = StringUtil.trim(((Dao.NamedUpdate) anno).value());
+                sql = StringUtil.trim(tmp.value());
             }
 
-            return sql;
+            if (N.notNullOrEmpty(tmp.id())) {
+                final String id = tmp.id();
+
+                if (sqlMapper == null) {
+                    throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
+                }
+
+                sql = sqlMapper.get(id).getNamedSQL();
+
+                if (N.isNullOrEmpty(sql)) {
+                    throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
+                }
+
+                final Map<String, String> attrs = sqlMapper.getAttrs(id);
+
+                if (N.notNullOrEmpty(attrs)) {
+                    if (attrs.containsKey(SQLMapper.TIMEOUT)) {
+                        queryTimeout = N.parseInt(attrs.get(SQLMapper.TIMEOUT));
+                    }
+
+                    if (attrs.containsKey(SQLMapper.BATCH_SIZE)) {
+                        batchSize = N.parseInt(attrs.get(SQLMapper.BATCH_SIZE));
+                    }
+                }
+            }
+
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
         });
-        sqlAnnoMap.put(Dao.NamedDelete.class, (Annotation anno) -> {
-            String sql = StringUtil.trim(((Dao.NamedDelete) anno).sql());
+
+        sqlAnnoMap.put(Dao.NamedDelete.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final Dao.NamedDelete tmp = (Dao.NamedDelete) anno;
+            int queryTimeout = tmp.queryTimeout();
+            final int fetchSize = -1;
+            final boolean isBatch = tmp.isBatch();
+            int batchSize = tmp.batchSize();
+
+            String sql = StringUtil.trim(tmp.sql());
 
             if (N.isNullOrEmpty(sql)) {
-                sql = StringUtil.trim(((Dao.NamedDelete) anno).value());
+                sql = StringUtil.trim(tmp.value());
             }
 
-            return sql;
+            if (N.notNullOrEmpty(tmp.id())) {
+                final String id = tmp.id();
+
+                if (sqlMapper == null) {
+                    throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
+                }
+
+                sql = sqlMapper.get(id).getNamedSQL();
+
+                if (N.isNullOrEmpty(sql)) {
+                    throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
+                }
+
+                final Map<String, String> attrs = sqlMapper.getAttrs(id);
+
+                if (N.notNullOrEmpty(attrs)) {
+                    if (attrs.containsKey(SQLMapper.TIMEOUT)) {
+                        queryTimeout = N.parseInt(attrs.get(SQLMapper.TIMEOUT));
+                    }
+
+                    if (attrs.containsKey(SQLMapper.BATCH_SIZE)) {
+                        batchSize = N.parseInt(attrs.get(SQLMapper.BATCH_SIZE));
+                    }
+                }
+            }
+
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
         });
-        sqlAnnoMap.put(Dao.Call.class, (Annotation anno) -> {
-            String sql = StringUtil.trim(((Dao.Call) anno).sql());
+
+        sqlAnnoMap.put(Dao.Call.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final Dao.Call tmp = (Dao.Call) anno;
+            int queryTimeout = tmp.queryTimeout();
+            final int fetchSize = -1;
+            final boolean isBatch = false;
+            final int batchSize = -1;
+
+            String sql = StringUtil.trim(tmp.sql());
 
             if (N.isNullOrEmpty(sql)) {
-                sql = StringUtil.trim(((Dao.Call) anno).value());
+                sql = StringUtil.trim(tmp.value());
             }
 
-            return sql;
+            if (N.notNullOrEmpty(tmp.id())) {
+                final String id = tmp.id();
+
+                if (sqlMapper == null) {
+                    throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
+                }
+
+                sql = sqlMapper.get(id).getParameterizedSQL();
+
+                if (N.isNullOrEmpty(sql)) {
+                    throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
+                }
+
+                final Map<String, String> attrs = sqlMapper.getAttrs(id);
+
+                if (N.notNullOrEmpty(attrs)) {
+                    if (attrs.containsKey(SQLMapper.TIMEOUT)) {
+                        queryTimeout = N.parseInt(attrs.get(SQLMapper.TIMEOUT));
+                    }
+                }
+            }
+
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
         });
     }
 
@@ -774,6 +1054,24 @@ final class DaoUtil {
                 }
             }
 
+            String[] tmpSqls = sqlsAnno.sqls();
+
+            if (N.notNullOrEmpty(sqlsAnno.ids())) {
+                final String[] sqlIds = sqlsAnno.ids();
+
+                if (sqlMapper == null) {
+                    throw new IllegalArgumentException("No SQLMapper is defined or passed for ids: " + N.toString(sqlIds));
+                }
+
+                if (N.anyMatch(sqlIds, id -> sqlMapper.get(id) == null)) {
+                    throw new IllegalArgumentException("No sqls are found in SQLMapper by ids: " + N.filter(sqlIds, id -> sqlMapper.get(id) == null));
+                }
+
+                tmpSqls = N.map(sqlIds, id -> sqlMapper.get(id).getNamedSQL()).toArray(new String[sqlIds.length]);
+            }
+
+            final String[] sqls = tmpSqls;
+
             Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> call = null;
 
             if (!Modifier.isAbstract(m.getModifiers())) {
@@ -787,7 +1085,7 @@ final class DaoUtil {
                                             + m.getName());
                         }
 
-                        args[paramLen - 1] = sqlsAnno.value();
+                        args[paramLen - 1] = sqls;
                     }
 
                     return methodHandle.bindTo(proxy).invokeWithArguments(args);
@@ -2101,7 +2399,13 @@ final class DaoUtil {
                     }
                 } else {
                     final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
-                    final String query = N.checkArgNotNullOrEmpty(sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno), "sql can't be null or empty");
+
+                    final Tuple5<String, Integer, Integer, Boolean, Integer> tp = sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno, sqlMapper);
+                    final String query = N.checkArgNotNullOrEmpty(tp._1, "sql can't be null or empty");
+                    final int queryTimeout = tp._2;
+                    final int fetchSize = tp._3;
+                    final boolean isBatch = tp._4;
+                    final int tmpBatchSize = tp._5;
 
                     final boolean returnGeneratedKeys = isNoId == false
                             && (sqlAnno.annotationType().equals(Dao.Insert.class) || sqlAnno.annotationType().equals(Dao.NamedInsert.class));
@@ -2171,44 +2475,6 @@ final class DaoUtil {
                                 "Using named query: @NamedSelect/NamedUpdate/NamedInsert/NamedDelete when parameter type is Entity/Map/EntityId in method: "
                                         + m.getName());
                     }
-
-                    Tuple4<Integer, Integer, Boolean, Integer> tp = null;
-
-                    if (sqlAnno instanceof Dao.Select) {
-                        final Dao.Select tmp = (Dao.Select) sqlAnno;
-                        tp = Tuple.of(tmp.queryTimeout(), tmp.fetchSize(), false, -1);
-                    } else if (sqlAnno instanceof Dao.NamedSelect) {
-                        final Dao.NamedSelect tmp = (Dao.NamedSelect) sqlAnno;
-                        tp = Tuple.of(tmp.queryTimeout(), tmp.fetchSize(), false, -1);
-                    } else if (sqlAnno instanceof Dao.Insert) {
-                        final Dao.Insert tmp = (Dao.Insert) sqlAnno;
-                        tp = Tuple.of(tmp.queryTimeout(), -1, false, -1);
-                    } else if (sqlAnno instanceof Dao.NamedInsert) {
-                        final Dao.NamedInsert tmp = (Dao.NamedInsert) sqlAnno;
-                        tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
-                    } else if (sqlAnno instanceof Dao.Update) {
-                        final Dao.Update tmp = (Dao.Update) sqlAnno;
-                        tp = Tuple.of(tmp.queryTimeout(), -1, false, -1);
-                    } else if (sqlAnno instanceof Dao.NamedUpdate) {
-                        final Dao.NamedUpdate tmp = (Dao.NamedUpdate) sqlAnno;
-                        tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
-                    } else if (sqlAnno instanceof Dao.Delete) {
-                        final Dao.Delete tmp = (Dao.Delete) sqlAnno;
-                        tp = Tuple.of(tmp.queryTimeout(), -1, false, -1);
-                    } else if (sqlAnno instanceof Dao.NamedDelete) {
-                        final Dao.NamedDelete tmp = (Dao.NamedDelete) sqlAnno;
-                        tp = Tuple.of(tmp.queryTimeout(), -1, tmp.isBatch(), tmp.batchSize());
-                    } else if (sqlAnno instanceof Dao.Call) {
-                        final Dao.Call tmp = (Dao.Call) sqlAnno;
-                        tp = Tuple.of(tmp.queryTimeout(), -1, false, -1);
-                    } else {
-                        tp = Tuple.of(-1, -1, false, -1);
-                    }
-
-                    final int queryTimeout = tp._1;
-                    final int fetchSize = tp._2;
-                    final boolean isBatch = tp._3;
-                    final int tmpBatchSize = tp._4;
 
                     if (isBatch) {
                         if (!((paramLen == 1 && Collection.class.isAssignableFrom(paramTypes[0]))
