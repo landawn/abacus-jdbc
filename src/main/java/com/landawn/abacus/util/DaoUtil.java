@@ -1039,6 +1039,7 @@ final class DaoUtil {
             final int paramLen = paramTypes.length;
 
             final Dao.Sqls sqlsAnno = StreamEx.of(m.getAnnotations()).select(Dao.Sqls.class).onlyOne().orNull();
+            List<String> sqlList = null;
 
             if (sqlsAnno != null) {
                 if (Modifier.isAbstract(m.getModifiers())) {
@@ -1052,25 +1053,29 @@ final class DaoUtil {
                             "To support sqls binding by @Sqls, the type of last parameter must be: String... sqls. It can't be : " + paramTypes[paramLen - 1]
                                     + " on method: " + m.getName());
                 }
-            }
 
-            String[] tmpSqls = sqlsAnno.sqls();
+                sqlList = Stream.of(sqlsAnno.sqls()).filter(Fn.notNullOrEmpty()).toList();
 
-            if (N.notNullOrEmpty(sqlsAnno.ids())) {
-                final String[] sqlIds = sqlsAnno.ids();
-
-                if (sqlMapper == null) {
-                    throw new IllegalArgumentException("No SQLMapper is defined or passed for ids: " + N.toString(sqlIds));
+                if (N.isNullOrEmpty(sqlList)) {
+                    sqlList = Stream.of(sqlsAnno.value()).filter(Fn.notNullOrEmpty()).toList();
                 }
 
-                if (N.anyMatch(sqlIds, id -> sqlMapper.get(id) == null)) {
-                    throw new IllegalArgumentException("No sqls are found in SQLMapper by ids: " + N.filter(sqlIds, id -> sqlMapper.get(id) == null));
-                }
+                final List<String> sqlIds = Stream.of(sqlsAnno.ids()).filter(Fn.notNullOrEmpty()).toList();
 
-                tmpSqls = N.map(sqlIds, id -> sqlMapper.get(id).sql()).toArray(new String[sqlIds.length]);
+                if (N.notNullOrEmpty(sqlIds)) {
+                    if (sqlMapper == null) {
+                        throw new IllegalArgumentException("No SQLMapper is defined or passed for ids: " + sqlIds);
+                    }
+
+                    if (N.anyMatch(sqlIds, id -> sqlMapper.get(id) == null)) {
+                        throw new IllegalArgumentException("No sqls are found in SQLMapper by ids: " + N.filter(sqlIds, id -> sqlMapper.get(id) == null));
+                    }
+
+                    sqlList = N.map(sqlIds, id -> sqlMapper.get(id).sql());
+                }
             }
 
-            final String[] sqls = tmpSqls;
+            final String[] sqls = sqlList == null ? N.EMPTY_STRING_ARRAY : sqlList.toArray(new String[sqlList.size()]);
 
             Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> call = null;
 
