@@ -141,7 +141,7 @@ final class DaoUtil {
                     throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
                 }
 
-                sql = sqlMapper.get(id).getParameterizedSQL();
+                sql = sqlMapper.get(id).getParameterizedSql();
 
                 if (N.isNullOrEmpty(sql)) {
                     throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
@@ -183,7 +183,7 @@ final class DaoUtil {
                     throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
                 }
 
-                sql = sqlMapper.get(id).getParameterizedSQL();
+                sql = sqlMapper.get(id).getParameterizedSql();
 
                 if (N.isNullOrEmpty(sql)) {
                     throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
@@ -221,7 +221,7 @@ final class DaoUtil {
                     throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
                 }
 
-                sql = sqlMapper.get(id).getParameterizedSQL();
+                sql = sqlMapper.get(id).getParameterizedSql();
 
                 if (N.isNullOrEmpty(sql)) {
                     throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
@@ -259,7 +259,7 @@ final class DaoUtil {
                     throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
                 }
 
-                sql = sqlMapper.get(id).getParameterizedSQL();
+                sql = sqlMapper.get(id).getParameterizedSql();
 
                 if (N.isNullOrEmpty(sql)) {
                     throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
@@ -297,7 +297,7 @@ final class DaoUtil {
                     throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
                 }
 
-                sql = sqlMapper.get(id).getNamedSQL();
+                sql = sqlMapper.get(id).sql();
 
                 if (N.isNullOrEmpty(sql)) {
                     throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
@@ -339,7 +339,7 @@ final class DaoUtil {
                     throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
                 }
 
-                sql = sqlMapper.get(id).getNamedSQL();
+                sql = sqlMapper.get(id).sql();
 
                 if (N.isNullOrEmpty(sql)) {
                     throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
@@ -381,7 +381,7 @@ final class DaoUtil {
                     throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
                 }
 
-                sql = sqlMapper.get(id).getNamedSQL();
+                sql = sqlMapper.get(id).sql();
 
                 if (N.isNullOrEmpty(sql)) {
                     throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
@@ -423,7 +423,7 @@ final class DaoUtil {
                     throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
                 }
 
-                sql = sqlMapper.get(id).getNamedSQL();
+                sql = sqlMapper.get(id).sql();
 
                 if (N.isNullOrEmpty(sql)) {
                     throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
@@ -465,7 +465,7 @@ final class DaoUtil {
                     throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
                 }
 
-                sql = sqlMapper.get(id).getParameterizedSQL();
+                sql = sqlMapper.get(id).getParameterizedSql();
 
                 if (N.isNullOrEmpty(sql)) {
                     throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
@@ -695,12 +695,12 @@ final class DaoUtil {
     }
 
     @SuppressWarnings("rawtypes")
-    private static AbstractPreparedQuery prepareQuery(final Dao proxy, final String query, final boolean isNamedQuery, final NamedSQL namedSQL,
+    private static AbstractPreparedQuery prepareQuery(final Dao proxy, final String query, final boolean isNamedQuery, final ParsedSql namedSql,
             final int fetchSize, final boolean isBatch, final int batchSize, final int queryTimeout, final boolean returnGeneratedKeys,
             final String[] returnColumnNames, final boolean isCall, final List<OutParameter> outParameterList) throws SQLException, Exception {
 
         final AbstractPreparedQuery preparedQuery = isCall ? proxy.prepareCallableQuery(query)
-                : (isNamedQuery ? (returnGeneratedKeys ? proxy.prepareNamedQuery(namedSQL, returnColumnNames) : proxy.prepareNamedQuery(namedSQL))
+                : (isNamedQuery ? (returnGeneratedKeys ? proxy.prepareNamedQuery(namedSql, returnColumnNames) : proxy.prepareNamedQuery(namedSql))
                         : (returnGeneratedKeys ? proxy.prepareQuery(query, returnColumnNames) : proxy.prepareQuery(query)));
 
         if (isCall && N.notNullOrEmpty(outParameterList)) {
@@ -930,12 +930,12 @@ final class DaoUtil {
             sql_deleteById = isNoId ? null : NLC.deleteFrom(entityClass).where(idCond).sql();
         }
 
-        final NamedSQL namedGetByIdSQL = N.isNullOrEmpty(sql_getById) ? null : NamedSQL.parse(sql_getById);
-        final NamedSQL namedExistsByIdSQL = N.isNullOrEmpty(sql_existsById) ? null : NamedSQL.parse(sql_existsById);
-        final NamedSQL namedInsertWithIdSQL = N.isNullOrEmpty(sql_insertWithId) ? null : NamedSQL.parse(sql_insertWithId);
-        final NamedSQL namedInsertWithoutIdSQL = N.isNullOrEmpty(sql_insertWithoutId) ? null : NamedSQL.parse(sql_insertWithoutId);
-        final NamedSQL namedUpdateByIdSQL = N.isNullOrEmpty(sql_updateById) ? null : NamedSQL.parse(sql_updateById);
-        final NamedSQL namedDeleteByIdSQL = N.isNullOrEmpty(sql_deleteById) ? null : NamedSQL.parse(sql_deleteById);
+        final ParsedSql namedGetByIdSQL = N.isNullOrEmpty(sql_getById) ? null : ParsedSql.parse(sql_getById);
+        final ParsedSql namedExistsByIdSQL = N.isNullOrEmpty(sql_existsById) ? null : ParsedSql.parse(sql_existsById);
+        final ParsedSql namedInsertWithIdSQL = N.isNullOrEmpty(sql_insertWithId) ? null : ParsedSql.parse(sql_insertWithId);
+        final ParsedSql namedInsertWithoutIdSQL = N.isNullOrEmpty(sql_insertWithoutId) ? null : ParsedSql.parse(sql_insertWithoutId);
+        final ParsedSql namedUpdateByIdSQL = N.isNullOrEmpty(sql_updateById) ? null : ParsedSql.parse(sql_updateById);
+        final ParsedSql namedDeleteByIdSQL = N.isNullOrEmpty(sql_deleteById) ? null : ParsedSql.parse(sql_deleteById);
 
         final ImmutableMap<String, String> propColumnNameMap = SQLBuilder.getPropColumnNameMap(entityClass, namingPolicy);
 
@@ -1067,7 +1067,7 @@ final class DaoUtil {
                     throw new IllegalArgumentException("No sqls are found in SQLMapper by ids: " + N.filter(sqlIds, id -> sqlMapper.get(id) == null));
                 }
 
-                tmpSqls = N.map(sqlIds, id -> sqlMapper.get(id).getNamedSQL()).toArray(new String[sqlIds.length]);
+                tmpSqls = N.map(sqlIds, id -> sqlMapper.get(id).sql()).toArray(new String[sqlIds.length]);
             }
 
             final String[] sqls = tmpSqls;
@@ -1120,7 +1120,7 @@ final class DaoUtil {
 
                                 DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
                             } else {
-                                final NamedSQL namedInsertSQL = isNoId || isDefaultIdTester.test(idGetter.apply(entity)) ? namedInsertWithoutIdSQL
+                                final ParsedSql namedInsertSQL = isNoId || isDefaultIdTester.test(idGetter.apply(entity)) ? namedInsertWithoutIdSQL
                                         : namedInsertWithIdSQL;
 
                                 proxy.prepareNamedQuery(namedInsertSQL).setParameters(entity).update();
@@ -1168,7 +1168,7 @@ final class DaoUtil {
                                 return 0;
                             }
 
-                            final NamedSQL namedInsertSQL = isNoId || isDefaultIdTester.test(idGetter.apply(N.firstOrNullIfEmpty(entities)))
+                            final ParsedSql namedInsertSQL = isNoId || isDefaultIdTester.test(idGetter.apply(N.firstOrNullIfEmpty(entities)))
                                     ? namedInsertWithoutIdSQL
                                     : namedInsertWithIdSQL;
 
@@ -1842,14 +1842,14 @@ final class DaoUtil {
                         call = (proxy, args) -> {
                             final Object entity = args[0];
 
-                            NamedSQL namedInsertSQL = null;
+                            ParsedSql namedInsertSQL = null;
 
                             if (isDirtyMarker) {
                                 final Collection<String> propNamesToSave = SQLBuilder.getInsertPropNames(entity, null);
 
                                 N.checkArgNotNullOrEmpty(propNamesToSave, "propNamesToSave");
 
-                                namedInsertSQL = NamedSQL.parse(namedInsertSQLBuilderFunc.apply(propNamesToSave).sql());
+                                namedInsertSQL = ParsedSql.parse(namedInsertSQLBuilderFunc.apply(propNamesToSave).sql());
                             } else {
                                 if (isDefaultIdTester.test(idGetter.apply(entity))) {
                                     namedInsertSQL = namedInsertWithoutIdSQL;
@@ -1919,7 +1919,7 @@ final class DaoUtil {
                             }
 
                             final boolean isDefaultIdPropValue = isDefaultIdTester.test(idGetter.apply(N.firstOrNullIfEmpty(entities)));
-                            final NamedSQL namedInsertSQL = isDefaultIdPropValue ? namedInsertWithoutIdSQL : namedInsertWithIdSQL;
+                            final ParsedSql namedInsertSQL = isDefaultIdPropValue ? namedInsertWithoutIdSQL : namedInsertWithIdSQL;
                             List<Object> ids = null;
 
                             if (entities.size() <= batchSize) {
@@ -2412,7 +2412,7 @@ final class DaoUtil {
 
                     final boolean isCall = sqlAnno.annotationType().getSimpleName().endsWith("Call");
                     final boolean isNamedQuery = sqlAnno.annotationType().getSimpleName().startsWith("Named");
-                    final NamedSQL namedSQL = isNamedQuery ? NamedSQL.parse(query) : null;
+                    final ParsedSql namedSql = isNamedQuery ? ParsedSql.parse(query) : null;
                     final List<Dao.OutParameter> outParameterList = StreamEx.of(m.getAnnotations())
                             .select(Dao.OutParameter.class)
                             .append(StreamEx.of(m.getAnnotations()).select(DaoUtil.OutParameterList.class).flatMapp(e -> e.value()))
@@ -2633,7 +2633,7 @@ final class DaoUtil {
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
 
                         call = (proxy, args) -> {
-                            Object result = queryFunc.apply(prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, -1, queryTimeout,
+                            Object result = queryFunc.apply(prepareQuery(proxy, query, isNamedQuery, namedSql, fetchSize, isBatch, -1, queryTimeout,
                                     returnGeneratedKeys, returnColumnNames, isCall, outParameterList).settParameters(args, finalParametersSetter), args);
 
                             if (idDirtyMarkerReturnType) {
@@ -2661,7 +2661,7 @@ final class DaoUtil {
                                 final boolean isEntity = paramLen == 1 && args[0] != null && ClassUtil.isEntity(args[0].getClass());
                                 final Object entity = isEntity ? args[0] : null;
 
-                                final Optional<Object> id = prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, -1, queryTimeout,
+                                final Optional<Object> id = prepareQuery(proxy, query, isNamedQuery, namedSql, fetchSize, isBatch, -1, queryTimeout,
                                         returnGeneratedKeys, returnColumnNames, isCall, outParameterList).settParameters(args, finalParametersSetter)
                                                 .insert(keyExtractor);
 
@@ -2701,14 +2701,14 @@ final class DaoUtil {
                                 if (N.isNullOrEmpty(batchParameters)) {
                                     ids = new ArrayList<>(0);
                                 } else if (batchParameters.size() < batchSize) {
-                                    ids = ((NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, -1, queryTimeout,
+                                    ids = ((NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSql, fetchSize, isBatch, -1, queryTimeout,
                                             returnGeneratedKeys, returnColumnNames, isCall, outParameterList)).addBatchParameters(batchParameters)
                                                     .batchInsert();
                                 } else {
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
-                                        try (NamedQuery nameQuery = (NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch,
+                                        try (NamedQuery nameQuery = (NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSql, fetchSize, isBatch,
                                                 batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
                                                         .closeAfterExecution(false)) {
 
@@ -2782,7 +2782,7 @@ final class DaoUtil {
                                     && DirtyMarker.class.isAssignableFrom(paramTypes[0]);
 
                             call = (proxy, args) -> {
-                                final AbstractPreparedQuery preparedQuery = prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch, -1,
+                                final AbstractPreparedQuery preparedQuery = prepareQuery(proxy, query, isNamedQuery, namedSql, fetchSize, isBatch, -1,
                                         queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList).settParameters(args,
                                                 finalParametersSetter);
 
@@ -2791,7 +2791,7 @@ final class DaoUtil {
                                 if (idDirtyMarker) {
                                     if (isNamedQuery
                                             && (sqlAnno.annotationType().equals(Dao.Update.class) || sqlAnno.annotationType().equals(Dao.NamedUpdate.class))) {
-                                        ((DirtyMarker) args[0]).markDirty(namedSQL.getNamedParameters(), false);
+                                        ((DirtyMarker) args[0]).markDirty(namedSql.getNamedParameters(), false);
                                     } else {
                                         ((DirtyMarker) args[0]).markDirty(false);
                                     }
@@ -2820,7 +2820,7 @@ final class DaoUtil {
                                 if (N.isNullOrEmpty(batchParameters)) {
                                     updatedRecordCount = 0;
                                 } else if (batchParameters.size() < batchSize) {
-                                    final NamedQuery preparedQuery = ((NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch,
+                                    final NamedQuery preparedQuery = ((NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSql, fetchSize, isBatch,
                                             batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList))
                                                     .addBatchParameters(batchParameters);
 
@@ -2833,7 +2833,7 @@ final class DaoUtil {
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
-                                        try (NamedQuery nameQuery = (NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSQL, fetchSize, isBatch,
+                                        try (NamedQuery nameQuery = (NamedQuery) prepareQuery(proxy, query, isNamedQuery, namedSql, fetchSize, isBatch,
                                                 batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
                                                         .closeAfterExecution(false)) {
 
@@ -2855,7 +2855,7 @@ final class DaoUtil {
                                             && (sqlAnno.annotationType().equals(Dao.Update.class) || sqlAnno.annotationType().equals(Dao.NamedUpdate.class))) {
 
                                         for (Object e : batchParameters) {
-                                            ((DirtyMarker) e).markDirty(namedSQL.getNamedParameters(), false);
+                                            ((DirtyMarker) e).markDirty(namedSql.getNamedParameters(), false);
                                         }
                                     } else {
                                         for (Object e : batchParameters) {
