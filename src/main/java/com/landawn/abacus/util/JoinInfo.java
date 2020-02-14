@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.landawn.abacus.DirtyMarker;
-import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
@@ -60,15 +59,14 @@ final class JoinInfo {
                     "No property found by name: '" + joinEntityPropName + "' in class: " + ClassUtil.getCanonicalClassName(entityClass));
         } else if (!joinPropInfo.isAnnotationPresent(JoinedBy.class)) {
             throw new IllegalArgumentException("Property '" + joinPropInfo.name + "' in class: " + entityClass + " is not annotated by @JoinedBy");
-        } else if (joinPropInfo.isAnnotationPresent(Column.class)) {
+        } else if (N.notNullOrEmpty(joinPropInfo.columnName)) {
             throw new IllegalArgumentException("Property '" + joinPropInfo.name + "' in class: " + entityClass + " is annotated by @Column");
         }
 
         referencedEntityType = joinPropInfo.type.isCollection() ? joinPropInfo.type.getElementType() : joinPropInfo.type;
 
-        if (!referencedEntityType.isEntity() || joinPropInfo.isAnnotationPresent(Column.class)) {
-            throw new IllegalArgumentException(
-                    "Property '" + joinPropInfo.name + "' in class: " + entityClass + " is not an entity type or annotated by @Column");
+        if (!referencedEntityType.isEntity()) {
+            throw new IllegalArgumentException("Property '" + joinPropInfo.name + "' in class: " + entityClass + " is not an entity type");
         }
 
         referencedEntityClass = referencedEntityType.clazz();
