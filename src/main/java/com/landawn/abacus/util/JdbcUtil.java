@@ -1034,8 +1034,9 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      * @see {@link ResultSet#absolute(int)}
      */
+    @SuppressWarnings("deprecation")
     public static int skip(final ResultSet rs, long n) throws SQLException {
-        return InternalJdbcUtil.skip(rs, n);
+        return InternalUtil.skip(rs, n);
     }
 
     /**
@@ -1087,8 +1088,9 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException the SQL exception
      */
+    @SuppressWarnings("deprecation")
     public static List<String> getColumnLabelList(ResultSet rs) throws SQLException {
-        return InternalJdbcUtil.getColumnLabelList(rs);
+        return InternalUtil.getColumnLabelList(rs);
     }
 
     /**
@@ -1099,8 +1101,9 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException the SQL exception
      */
+    @SuppressWarnings("deprecation")
     public static String getColumnLabel(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
-        return InternalJdbcUtil.getColumnLabel(rsmd, columnIndex);
+        return InternalUtil.getColumnLabel(rsmd, columnIndex);
     }
 
     /**
@@ -1111,8 +1114,9 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException the SQL exception
      */
+    @SuppressWarnings("deprecation")
     public static Object getColumnValue(final ResultSet rs, final int columnIndex) throws SQLException {
-        return InternalJdbcUtil.getColumnValue(rs, columnIndex);
+        return InternalUtil.getColumnValue(rs, columnIndex);
     }
 
     /**
@@ -1123,8 +1127,9 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException the SQL exception
      */
+    @SuppressWarnings("deprecation")
     public static Object getColumnValue(final ResultSet rs, final String columnLabel) throws SQLException {
-        return InternalJdbcUtil.getColumnValue(rs, columnLabel);
+        return InternalUtil.getColumnValue(rs, columnLabel);
     }
 
     /**
@@ -10902,7 +10907,8 @@ public final class JdbcUtil {
          */
         static <T> BiRowMapper<T> to(Class<? extends T> targetClass, final boolean ignoreNonMatchedColumns) {
             return new BiRowMapper<T>() {
-                private Throwables.BiFunction<ResultSet, List<String>, T, SQLException> mapper = InternalJdbcUtil.to(targetClass, ignoreNonMatchedColumns);
+                @SuppressWarnings("deprecation")
+                private final Throwables.BiFunction<ResultSet, List<String>, T, SQLException> mapper = InternalUtil.to(targetClass, ignoreNonMatchedColumns);
 
                 @Override
                 public T apply(ResultSet rs, List<String> columnLabelList) throws SQLException {
@@ -11171,7 +11177,8 @@ public final class JdbcUtil {
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
                                 final PropInfo[] propInfos = new PropInfo[rsColumnCount];
 
-                                final Map<String, String> column2FieldNameMap = InternalJdbcUtil.getColumn2FieldNameMap(targetClass);
+                                @SuppressWarnings("deprecation")
+                                final Map<String, String> column2FieldNameMap = InternalUtil.getColumn2FieldNameMap(targetClass);
 
                                 for (int i = 0; i < rsColumnCount; i++) {
                                     propInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
@@ -11389,8 +11396,9 @@ public final class JdbcUtil {
 
         ColumnGetter<Object> GET_OBJECT = new ColumnGetter<Object>() {
             @Override
+            @SuppressWarnings("deprecation")
             public Object apply(final int columnIndex, final ResultSet rs) throws SQLException {
-                return InternalJdbcUtil.getColumnValue(rs, columnIndex);
+                return InternalUtil.getColumnValue(rs, columnIndex);
             }
         };
 

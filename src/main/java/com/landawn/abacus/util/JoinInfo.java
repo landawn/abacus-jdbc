@@ -59,7 +59,7 @@ final class JoinInfo {
                     "No property found by name: '" + joinEntityPropName + "' in class: " + ClassUtil.getCanonicalClassName(entityClass));
         } else if (!joinPropInfo.isAnnotationPresent(JoinedBy.class)) {
             throw new IllegalArgumentException("Property '" + joinPropInfo.name + "' in class: " + entityClass + " is not annotated by @JoinedBy");
-        } else if (N.notNullOrEmpty(joinPropInfo.columnName)) {
+        } else if (joinPropInfo.columnName.isPresent()) {
             throw new IllegalArgumentException("Property '" + joinPropInfo.name + "' in class: " + entityClass + " is annotated by @Column");
         }
 

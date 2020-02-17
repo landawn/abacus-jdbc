@@ -1,5 +1,6 @@
 package com.landawn.abacus.samples;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -48,8 +49,8 @@ public class TransactionTest extends Jdbc {
             // JdbcUtil.beginTransaction doesn't share the transaction started by static method SQLExecutor.beginTransaction
             SQLTransaction tranB = JdbcUtil.beginTransaction(dataSource);
 
-            assertTrue(tranA.connection() != tranB.connection());
-            assertTrue(tranA != tranB);
+            assertTrue(tranA.connection() == tranB.connection());
+            assertTrue(tranA == tranB);
 
             try {
                 SP sp = NSC.selectFrom(User.class).where(CF.equal("id", 1)).pair();
@@ -59,11 +60,11 @@ public class TransactionTest extends Jdbc {
                 tranB.rollbackIfNotCommitted();
             }
 
-            assertTrue(tranB.status() == Status.COMMITTED);
-            assertTrue(tranA.isActive());
+            assertTrue(tranB.status() == Status.ACTIVE);
         } finally {
             tranA.rollbackIfNotCommitted();
         }
-    }
 
+        assertEquals(Status.ROLLED_BACK, tranA.status());
+    }
 }
