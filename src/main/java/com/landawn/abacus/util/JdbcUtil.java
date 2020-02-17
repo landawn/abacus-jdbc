@@ -128,7 +128,6 @@ import com.landawn.abacus.util.stream.Collector;
 import com.landawn.abacus.util.stream.EntryStream;
 import com.landawn.abacus.util.stream.Stream;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class JdbcUtil.
  *
@@ -1560,7 +1559,7 @@ public final class JdbcUtil {
             }
         }
 
-        return SQLOperation.UPDATE; // TODO change it to SQLOperation.UNKNOWN in 1.10.1 release
+        return SQLOperation.UNKNOWN;
     }
 
     /**
