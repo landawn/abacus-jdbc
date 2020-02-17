@@ -10887,7 +10887,7 @@ public final class JdbcUtil {
         T apply(ResultSet rs, List<String> columnLabels) throws SQLException;
 
         /**
-         * Don't cache or reuse the returned {@code BiRowMapper} instance.
+         * Don't cache or reuse the returned {@code BiRowMapper} instance. It's stateful.
          *
          * @param <T>
          * @param targetClass
@@ -10898,7 +10898,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * Don't cache or reuse the returned {@code BiRowMapper} instance.
+         * Don't cache or reuse the returned {@code BiRowMapper} instance. It's stateful.
          *
          * @param <T>
          * @param targetClass
