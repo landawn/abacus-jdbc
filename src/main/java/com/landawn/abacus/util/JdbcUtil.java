@@ -81,6 +81,7 @@ import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.SequentialOnly;
+import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.core.DirtyMarkerUtil;
 import com.landawn.abacus.core.RowDataSet;
@@ -10894,7 +10895,7 @@ public final class JdbcUtil {
          * @return
          */
         @SequentialOnly
-        // TODO Add @Stateful
+        @Stateful
         static <T> BiRowMapper<T> to(Class<? extends T> targetClass) {
             return to(targetClass, false);
         }
@@ -10908,7 +10909,7 @@ public final class JdbcUtil {
          * @return
          */
         @SequentialOnly
-        // TODO Add @Stateful
+        @Stateful
         static <T> BiRowMapper<T> to(Class<? extends T> targetClass, final boolean ignoreNonMatchedColumns) {
             return new BiRowMapper<T>() {
                 @SuppressWarnings("deprecation")
