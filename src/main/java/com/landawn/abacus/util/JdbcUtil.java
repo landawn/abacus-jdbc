@@ -12103,19 +12103,19 @@ public final class JdbcUtil {
              * @return
              * @deprecated using {@code sqls} for explicit call.
              */
-            String[] value() default "";
+            String[] value() default {};
 
             /**
              *
              * @return
              */
-            String[] sqls() default "";
+            String[] sqls() default {};
 
             /**
              *
              * @return
              */
-            String[] ids() default ""; // id defined SqlMapper
+            String[] ids() default {}; // id defined SqlMapper
         }
 
         /**
