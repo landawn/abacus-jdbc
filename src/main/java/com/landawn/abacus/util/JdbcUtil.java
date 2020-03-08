@@ -13956,17 +13956,19 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default Optional<T> get(final ID id) throws SQLException {
-            return get(null, id);
+            return Optional.of(gett(id));
         }
 
         /**
          *
-         * @param selectPropNames
          * @param id
+         * @param selectPropNames
          * @return
          * @throws SQLException the SQL exception
          */
-        Optional<T> get(final Collection<String> selectPropNames, final ID id) throws SQLException;
+        default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws SQLException {
+            return Optional.of(gett(id, selectPropNames));
+        }
 
         /**
          *
@@ -13976,13 +13978,19 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws SQLException {
-            final Optional<T> result = get(id);
+            return Optional.of(gett(id, includeAllJoinEntities));
+        }
 
-            if (includeAllJoinEntities && result.isPresent()) {
-                loadAllJoinEntities(result.get());
-            }
-
-            return result;
+        /**
+         * 
+         * @param id
+         * @param selectPropNames
+         * @param includeAllJoinEntities
+         * @return
+         * @throws SQLException
+         */
+        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws SQLException {
+            return Optional.of(gett(id, selectPropNames, includeAllJoinEntities));
         }
 
         /**
@@ -13993,56 +14001,51 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws SQLException {
-            final Optional<T> result = get(id);
-
-            if (result.isPresent()) {
-                loadJoinEntities(result.get(), joinEntitiesToLoad);
-            }
-
-            return result;
+            return Optional.of(gett(id, joinEntitiesToLoad));
         }
 
         /**
-         *
+         * 
          * @param id
+         * @param selectPropNames
          * @param joinEntitiesToLoad
          * @return
-         * @throws SQLException the SQL exception
+         * @throws SQLException
          */
-        default Optional<T> get(final ID id, final Collection<Class<?>> joinEntitiesToLoad) throws SQLException {
-            final Optional<T> result = get(id);
-
-            if (result.isPresent()) {
-                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
-                    loadJoinEntities(result.get(), joinEntityClass);
-                }
-            }
-
-            return result;
+        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws SQLException {
+            return Optional.of(gett(id, selectPropNames, joinEntitiesToLoad));
         }
 
         /**
-         * Gets the t.
-         *
+         * 
          * @param id
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        default T gett(final ID id) throws SQLException {
-            return get(id).orNull();
-        }
-
-        /**
-         * Gets the t.
-         *
          * @param selectPropNames
+         * @param joinEntitiesToLoad
+         * @return
+         * @throws SQLException
+         */
+        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws SQLException {
+            return Optional.of(gett(id, selectPropNames, joinEntitiesToLoad));
+        }
+
+        /**
+         * Gets the t.
+         *
          * @param id
          * @return
          * @throws SQLException the SQL exception
          */
-        default T gett(final Collection<String> selectPropNames, final ID id) throws SQLException {
-            return get(selectPropNames, id).orNull();
-        }
+         T gett(final ID id) throws SQLException;
+
+        /**
+         * Gets the t.
+         * @param id
+         * @param selectPropNames
+         *
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        T gett(final ID id, final Collection<String> selectPropNames) throws SQLException;
 
         /**
          *
@@ -14052,7 +14055,31 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default T gett(final ID id, final boolean includeAllJoinEntities) throws SQLException {
-            return get(id, includeAllJoinEntities).orNull();
+            final T result = gett(id);
+
+            if (result != null && includeAllJoinEntities) {
+                loadAllJoinEntities(result);
+            }
+
+            return result;
+        }
+
+        /**
+         * 
+         * @param id
+         * @param selectPropNames
+         * @param includeAllJoinEntities
+         * @return
+         * @throws SQLException
+         */
+        default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws SQLException {
+            final T result = gett(id, selectPropNames);
+
+            if (result != null && includeAllJoinEntities) {
+                loadAllJoinEntities(result);
+            }
+
+            return result;
         }
 
         /**
@@ -14063,18 +14090,51 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws SQLException {
-            return get(id, joinEntitiesToLoad).orNull();
+            final T result = gett(id);
+
+            if (result != null) {
+                loadJoinEntities(result, joinEntitiesToLoad);
+            }
+
+            return result;
         }
 
         /**
-         *
+         * 
          * @param id
+         * @param selectPropNames
          * @param joinEntitiesToLoad
          * @return
-         * @throws SQLException the SQL exception
+         * @throws SQLException
          */
-        default T gett(final ID id, final Collection<Class<?>> joinEntitiesToLoad) throws SQLException {
-            return get(id, joinEntitiesToLoad).orNull();
+        default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws SQLException {
+            final T result = gett(id, selectPropNames);
+
+            if (result != null) {
+                loadJoinEntities(result, joinEntitiesToLoad);
+            }
+
+            return result;
+        }
+
+        /**
+         * 
+         * @param id
+         * @param selectPropNames
+         * @param joinEntitiesToLoad
+         * @return
+         * @throws SQLException
+         */
+        default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws SQLException {
+            final T result = gett(id, selectPropNames);
+
+            if (result != null) {
+                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    loadJoinEntities(result, joinEntityClass);
+                }
+            }
+
+            return result;
         }
 
         /**
@@ -14279,7 +14339,7 @@ public final class JdbcUtil {
                 return exists(id);
             }
 
-            final T dbEntity = gett(propNamesToRefresh, id);
+            final T dbEntity = gett(id, propNamesToRefresh);
 
             if (dbEntity == null) {
                 return false;

@@ -2230,7 +2230,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     public <T> Optional<T> get(final Class<T> targetClass) throws DuplicatedResultException, SQLException {
-        return Optional.ofNullable(gett(targetClass));
+        return Optional.of(gett(targetClass));
     }
 
     /**
@@ -2242,7 +2242,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     public <T> Optional<T> get(RowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
-        return Optional.ofNullable(gett(rowMapper));
+        return Optional.of(gett(rowMapper));
     }
 
     /**
@@ -2254,7 +2254,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     public <T> Optional<T> get(BiRowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
-        return Optional.ofNullable(gett(rowMapper));
+        return Optional.of(gett(rowMapper));
     }
 
     /**

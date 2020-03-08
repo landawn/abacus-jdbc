@@ -2040,13 +2040,13 @@ final class DaoUtil {
 
                             return ids;
                         };
-                    } else if (methodName.equals("get")) {
+                    } else if (methodName.equals("gett")) {
                         if (paramLen == 1) {
-                            call = (proxy, args) -> proxy.prepareNamedQuery(namedGetByIdSQL).settParameters(args[0], idParamSetter).get(entityClass);
+                            call = (proxy, args) -> proxy.prepareNamedQuery(namedGetByIdSQL).settParameters(args[0], idParamSetter).gett(entityClass);
                         } else {
-                            call = (proxy, args) -> proxy.prepareNamedQuery(namedSelectSQLBuilderFunc.apply((Collection<String>) args[0], idCond).sql())
-                                    .settParameters(args[1], idParamSetter)
-                                    .get(entityClass);
+                            call = (proxy, args) -> proxy.prepareNamedQuery(namedSelectSQLBuilderFunc.apply((Collection<String>) args[1], idCond).sql())
+                                    .settParameters(args[0], idParamSetter)
+                                    .gett(entityClass);
                         }
                     } else if (methodName.equals("batchGet") && paramLen == 3 && Collection.class.equals(paramTypes[0])
                             && Collection.class.equals(paramTypes[1]) && int.class.equals(paramTypes[2])) {

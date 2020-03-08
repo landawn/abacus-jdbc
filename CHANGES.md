@@ -1,3 +1,9 @@
+### 1.20.4
+
+* Refactoring: `CrudDao.get(selectPropNames, ID)` to `CrudDao.get(ID, selectPropNames)`.
+* Improvements and bug fix.
+
+
 ### 1.20.3
 
 * Improvements and bug fix.
