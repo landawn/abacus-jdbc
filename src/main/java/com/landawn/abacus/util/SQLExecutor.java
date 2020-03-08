@@ -1981,7 +1981,7 @@ public class SQLExecutor {
      */
     @SafeVarargs
     public final <T> Optional<T> get(final Class<T> targetClass, final String sql, final Object... parameters) throws DuplicatedResultException {
-        return Optional.of(gett(targetClass, sql, parameters));
+        return Optional.ofNullable(gett(targetClass, sql, parameters));
     }
 
     /**
@@ -1998,7 +1998,7 @@ public class SQLExecutor {
     @SafeVarargs
     public final <T> Optional<T> get(final Class<T> targetClass, final String sql, final StatementSetter statementSetter, final Object... parameters)
             throws DuplicatedResultException {
-        return Optional.of(gett(targetClass, sql, statementSetter, parameters));
+        return Optional.ofNullable(gett(targetClass, sql, statementSetter, parameters));
     }
 
     /**
@@ -2015,7 +2015,7 @@ public class SQLExecutor {
     @SafeVarargs
     public final <T> Optional<T> get(final Class<T> targetClass, final String sql, final JdbcSettings jdbcSettings, final Object... parameters)
             throws DuplicatedResultException {
-        return Optional.of(gett(targetClass, sql, jdbcSettings, parameters));
+        return Optional.ofNullable(gett(targetClass, sql, jdbcSettings, parameters));
     }
 
     /**
@@ -2033,7 +2033,7 @@ public class SQLExecutor {
     @SafeVarargs
     public final <T> Optional<T> get(final Class<T> targetClass, final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings,
             final Object... parameters) throws DuplicatedResultException {
-        return Optional.of(gett(targetClass, sql, statementSetter, jdbcSettings, parameters));
+        return Optional.ofNullable(gett(targetClass, sql, statementSetter, jdbcSettings, parameters));
     }
 
     /**
@@ -2050,7 +2050,7 @@ public class SQLExecutor {
     @SafeVarargs
     public final <T> Optional<T> get(final Class<T> targetClass, final Connection conn, final String sql, final Object... parameters)
             throws DuplicatedResultException {
-        return Optional.of(gett(targetClass, conn, sql, parameters));
+        return Optional.ofNullable(gett(targetClass, conn, sql, parameters));
     }
 
     /**
@@ -2068,7 +2068,7 @@ public class SQLExecutor {
     @SafeVarargs
     public final <T> Optional<T> get(final Class<T> targetClass, final Connection conn, final String sql, final StatementSetter statementSetter,
             final Object... parameters) throws DuplicatedResultException {
-        return Optional.of(gett(targetClass, conn, sql, statementSetter, parameters));
+        return Optional.ofNullable(gett(targetClass, conn, sql, statementSetter, parameters));
     }
 
     /**
@@ -2086,7 +2086,7 @@ public class SQLExecutor {
     @SafeVarargs
     public final <T> Optional<T> get(final Class<T> targetClass, final Connection conn, final String sql, final JdbcSettings jdbcSettings,
             final Object... parameters) throws DuplicatedResultException {
-        return Optional.of(gett(targetClass, conn, sql, jdbcSettings, parameters));
+        return Optional.ofNullable(gett(targetClass, conn, sql, jdbcSettings, parameters));
     }
 
     /**
@@ -2105,7 +2105,7 @@ public class SQLExecutor {
     @SafeVarargs
     public final <T> Optional<T> get(final Class<T> targetClass, final Connection conn, final String sql, final StatementSetter statementSetter,
             JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
-        return Optional.of(gett(targetClass, conn, sql, statementSetter, jdbcSettings, parameters));
+        return Optional.ofNullable(gett(targetClass, conn, sql, statementSetter, jdbcSettings, parameters));
     }
 
     /**
@@ -2120,7 +2120,7 @@ public class SQLExecutor {
      */
     @SafeVarargs
     public final <T> Optional<T> get(final String sql, final JdbcUtil.RowMapper<T> rowMapper, final Object... parameters) throws DuplicatedResultException {
-        return Optional.of(gett(sql, rowMapper, parameters));
+        return Optional.ofNullable(gett(sql, rowMapper, parameters));
     }
 
     /**
@@ -2136,7 +2136,7 @@ public class SQLExecutor {
      */
     public final <T> Optional<T> get(final String sql, final StatementSetter statementSetter, final JdbcUtil.RowMapper<T> rowMapper, final Object... parameters)
             throws DuplicatedResultException {
-        return Optional.of(gett(sql, statementSetter, rowMapper, parameters));
+        return Optional.ofNullable(gett(sql, statementSetter, rowMapper, parameters));
     }
 
     /**
@@ -2152,7 +2152,7 @@ public class SQLExecutor {
      */
     public final <T> Optional<T> get(final String sql, final JdbcUtil.RowMapper<T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters)
             throws DuplicatedResultException {
-        return Optional.of(gett(sql, rowMapper, jdbcSettings, parameters));
+        return Optional.ofNullable(gett(sql, rowMapper, jdbcSettings, parameters));
     }
 
     /**
@@ -2171,7 +2171,7 @@ public class SQLExecutor {
     @SafeVarargs
     public final <T> Optional<T> get(final String sql, final StatementSetter statementSetter, final JdbcUtil.RowMapper<T> rowMapper,
             final JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
-        return Optional.of(gett(sql, statementSetter, rowMapper, jdbcSettings, parameters));
+        return Optional.ofNullable(gett(sql, statementSetter, rowMapper, jdbcSettings, parameters));
     }
 
     /**
@@ -2189,7 +2189,7 @@ public class SQLExecutor {
     @SafeVarargs
     public final <T> Optional<T> get(final Connection conn, final String sql, final JdbcUtil.RowMapper<T> rowMapper, final Object... parameters)
             throws DuplicatedResultException {
-        return Optional.of(gett(conn, sql, rowMapper, parameters));
+        return Optional.ofNullable(gett(conn, sql, rowMapper, parameters));
     }
 
     /**
@@ -2207,7 +2207,7 @@ public class SQLExecutor {
     @SafeVarargs
     public final <T> Optional<T> get(final Connection conn, final String sql, final StatementSetter statementSetter, final JdbcUtil.RowMapper<T> rowMapper,
             final Object... parameters) {
-        return Optional.of(gett(conn, sql, statementSetter, rowMapper, parameters));
+        return Optional.ofNullable(gett(conn, sql, statementSetter, rowMapper, parameters));
     }
 
     /**
@@ -2225,7 +2225,7 @@ public class SQLExecutor {
     @SafeVarargs
     public final <T> Optional<T> get(final Connection conn, final String sql, final JdbcUtil.RowMapper<T> rowMapper, JdbcSettings jdbcSettings,
             final Object... parameters) throws DuplicatedResultException {
-        return Optional.of(gett(conn, sql, rowMapper, jdbcSettings, parameters));
+        return Optional.ofNullable(gett(conn, sql, rowMapper, jdbcSettings, parameters));
     }
 
     /**
@@ -2245,7 +2245,7 @@ public class SQLExecutor {
     @SafeVarargs
     public final <T> Optional<T> get(final Connection conn, final String sql, final StatementSetter statementSetter, final JdbcUtil.RowMapper<T> rowMapper,
             final JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
-        return Optional.of(gett(conn, sql, statementSetter, rowMapper, jdbcSettings, parameters));
+        return Optional.ofNullable(gett(conn, sql, statementSetter, rowMapper, jdbcSettings, parameters));
     }
 
     /**
@@ -5921,7 +5921,7 @@ public class SQLExecutor {
          * @throws DuplicatedResultException if two or more records are found.
          */
         public Optional<T> get(final ID id) throws DuplicatedResultException {
-            return Optional.of(gett(id));
+            return Optional.ofNullable(gett(id));
         }
 
         //    /**
@@ -5934,7 +5934,7 @@ public class SQLExecutor {
         //    @Deprecated
         //    @SafeVarargs
         //    public final Optional<T> get(final ID id, final String... selectPropNames) {
-        //        return Optional.of(gett(id, selectPropNames));
+        //        return Optional.ofNullable(gett(id, selectPropNames));
         //    }
 
         /**
@@ -5945,7 +5945,7 @@ public class SQLExecutor {
          * @throws DuplicatedResultException if two or more records are found.
          */
         public Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException {
-            return Optional.of(gett(id, selectPropNames));
+            return Optional.ofNullable(gett(id, selectPropNames));
         }
 
         /**
@@ -5957,7 +5957,7 @@ public class SQLExecutor {
          * @throws DuplicatedResultException if two or more records are found.
          */
         public Optional<T> get(final Connection conn, final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException {
-            return Optional.of(gett(conn, id, selectPropNames));
+            return Optional.ofNullable(gett(conn, id, selectPropNames));
         }
 
         /**

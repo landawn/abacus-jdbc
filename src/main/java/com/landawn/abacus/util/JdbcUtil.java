@@ -13956,7 +13956,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default Optional<T> get(final ID id) throws SQLException {
-            return Optional.of(gett(id));
+            return Optional.ofNullable(gett(id));
         }
 
         /**
@@ -13967,7 +13967,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws SQLException {
-            return Optional.of(gett(id, selectPropNames));
+            return Optional.ofNullable(gett(id, selectPropNames));
         }
 
         /**
@@ -13978,7 +13978,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws SQLException {
-            return Optional.of(gett(id, includeAllJoinEntities));
+            return Optional.ofNullable(gett(id, includeAllJoinEntities));
         }
 
         /**
@@ -13990,7 +13990,7 @@ public final class JdbcUtil {
          * @throws SQLException
          */
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws SQLException {
-            return Optional.of(gett(id, selectPropNames, includeAllJoinEntities));
+            return Optional.ofNullable(gett(id, selectPropNames, includeAllJoinEntities));
         }
 
         /**
@@ -14001,7 +14001,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws SQLException {
-            return Optional.of(gett(id, joinEntitiesToLoad));
+            return Optional.ofNullable(gett(id, joinEntitiesToLoad));
         }
 
         /**
@@ -14013,7 +14013,7 @@ public final class JdbcUtil {
          * @throws SQLException
          */
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws SQLException {
-            return Optional.of(gett(id, selectPropNames, joinEntitiesToLoad));
+            return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
         }
 
         /**
@@ -14025,7 +14025,7 @@ public final class JdbcUtil {
          * @throws SQLException
          */
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws SQLException {
-            return Optional.of(gett(id, selectPropNames, joinEntitiesToLoad));
+            return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
         }
 
         /**
@@ -14460,7 +14460,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default Optional<T> get(final long id) throws SQLException {
-            return Optional.of(gett(id));
+            return Optional.ofNullable(gett(id));
         }
 
         /**
@@ -14471,7 +14471,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default Optional<T> get(final long id, final Collection<String> selectPropNames) throws SQLException {
-            return Optional.of(gett(id, selectPropNames));
+            return Optional.ofNullable(gett(id, selectPropNames));
         }
 
         /**
