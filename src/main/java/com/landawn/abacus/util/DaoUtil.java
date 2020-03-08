@@ -2044,9 +2044,18 @@ final class DaoUtil {
                         if (paramLen == 1) {
                             call = (proxy, args) -> proxy.prepareNamedQuery(namedGetByIdSQL).settParameters(args[0], idParamSetter).gett(entityClass);
                         } else {
-                            call = (proxy, args) -> proxy.prepareNamedQuery(namedSelectSQLBuilderFunc.apply((Collection<String>) args[1], idCond).sql())
-                                    .settParameters(args[0], idParamSetter)
-                                    .gett(entityClass);
+                            call = (proxy, args) -> {
+                                final Collection<String> selectPropNames = (Collection<String>) args[1];
+
+                                if (N.isNullOrEmpty(selectPropNames)) {
+                                    return proxy.prepareNamedQuery(namedGetByIdSQL).settParameters(args[0], idParamSetter).gett(entityClass);
+
+                                } else {
+                                    return proxy.prepareNamedQuery(namedSelectSQLBuilderFunc.apply(selectPropNames, idCond).sql())
+                                            .settParameters(args[0], idParamSetter)
+                                            .gett(entityClass);
+                                }
+                            };
                         }
                     } else if (methodName.equals("batchGet") && paramLen == 3 && Collection.class.equals(paramTypes[0])
                             && Collection.class.equals(paramTypes[1]) && int.class.equals(paramTypes[2])) {
