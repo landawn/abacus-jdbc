@@ -1,3 +1,9 @@
+### 1.20.5
+
+* Add: `CrudDaoL`.
+* Improvements and bug fix.
+
+
 ### 1.20.4
 
 * Refactoring: `CrudDao.get(selectPropNames, ID)` to `CrudDao.get(ID, selectPropNames)`.
