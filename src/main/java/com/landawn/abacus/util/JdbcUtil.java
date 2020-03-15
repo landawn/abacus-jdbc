@@ -5392,11 +5392,11 @@ public final class JdbcUtil {
      */
     public static void enableSQLLog(boolean b) {
         // synchronized (isSQLLogEnabled_TL) {
-        if (logger.isInfoEnabled() && isSQLLogEnabled_TL.get() != b) {
+        if (logger.isDebugEnabled() && isSQLLogEnabled_TL.get() != b) {
             if (b) {
-                logger.info("Turn on [SQL] log");
+                logger.debug("Turn on [SQL] log");
             } else {
-                logger.info("Turn off [SQL] log");
+                logger.debug("Turn off [SQL] log");
             }
         }
 
@@ -5422,11 +5422,11 @@ public final class JdbcUtil {
      */
     public static void setMinExecutionTimeForSQLPerfLog(long minExecutionTimeForSQLPerfLog) {
         // synchronized (minExecutionTimeForSQLPerfLog_TL) {
-        if (logger.isInfoEnabled() && minExecutionTimeForSQLPerfLog_TL.get() != minExecutionTimeForSQLPerfLog) {
+        if (logger.isDebugEnabled() && minExecutionTimeForSQLPerfLog_TL.get() != minExecutionTimeForSQLPerfLog) {
             if (minExecutionTimeForSQLPerfLog >= 0) {
-                logger.info("set 'minExecutionTimeForSQLPerfLog' to: " + minExecutionTimeForSQLPerfLog);
+                logger.debug("set 'minExecutionTimeForSQLPerfLog' to: " + minExecutionTimeForSQLPerfLog);
             } else {
-                logger.info("Turn off SQL perfermance log");
+                logger.debug("Turn off SQL perfermance log");
             }
         }
 
