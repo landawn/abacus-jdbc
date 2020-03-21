@@ -3125,7 +3125,7 @@ final class DaoUtil {
                         daoLogger.debug("Add CacheResult method: " + m);
                     }
 
-                    if (Stream.of(notCacheableTypes).anyMatch(it -> it.isAssignableFrom(m.getReturnType()))) {
+                    if (Stream.of(notCacheableTypes).anyMatch(it -> it.isAssignableFrom(returnType))) {
                         throw new UnsupportedOperationException("The return type of method: " + fullMethodName + " is not cacheable: " + m.getReturnType());
                     }
 
