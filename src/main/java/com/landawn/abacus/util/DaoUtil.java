@@ -1054,24 +1054,13 @@ final class DaoUtil {
                                     + " on method: " + m.getName());
                 }
 
-                sqlList = Stream.of(sqlsAnno.sqls()).filter(Fn.notNullOrEmpty()).toList();
-
-                if (N.isNullOrEmpty(sqlList)) {
+                if (sqlMapper == null) {
                     sqlList = Stream.of(sqlsAnno.value()).filter(Fn.notNullOrEmpty()).toList();
-                }
-
-                final List<String> sqlIds = Stream.of(sqlsAnno.ids()).filter(Fn.notNullOrEmpty()).toList();
-
-                if (N.notNullOrEmpty(sqlIds)) {
-                    if (sqlMapper == null) {
-                        throw new IllegalArgumentException("No SQLMapper is defined or passed for ids: " + sqlIds);
-                    }
-
-                    if (N.anyMatch(sqlIds, id -> sqlMapper.get(id) == null)) {
-                        throw new IllegalArgumentException("No sqls are found in SQLMapper by ids: " + N.filter(sqlIds, id -> sqlMapper.get(id) == null));
-                    }
-
-                    sqlList = N.map(sqlIds, id -> sqlMapper.get(id).sql());
+                } else {
+                    sqlList = Stream.of(sqlsAnno.value())
+                            .map(it -> sqlMapper.get(it) == null ? it : sqlMapper.get(it).sql())
+                            .filter(Fn.notNullOrEmpty())
+                            .toList();
                 }
             }
 
