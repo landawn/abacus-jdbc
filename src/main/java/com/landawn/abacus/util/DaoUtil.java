@@ -550,6 +550,10 @@ final class DaoUtil {
         final int paramLen = paramTypes.length;
         final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
         final boolean isListQuery = isListQuery(method);
+        final boolean isExists = (boolean.class.equals(returnType) || Boolean.class.equals(returnType))
+                && ((methodName.startsWith("exists") && (methodName.length() == 6 || Character.isUpperCase(methodName.charAt(6))))
+                        || (methodName.startsWith("exist") && (methodName.length() == 5 || Character.isUpperCase(methodName.charAt(5))))
+                        || (methodName.startsWith("has") && (methodName.length() == 3 || Character.isUpperCase(methodName.charAt(3)))));
 
         if (hasRowMapperOrExtractor) {
             if (RowMapper.class.isAssignableFrom(lastParamType)) {
@@ -630,6 +634,8 @@ final class DaoUtil {
                     return (preparedQuery, args) -> (R) preparedQuery.query((BiResultExtractor) args[paramLen - 1]);
                 }
             }
+        } else if (isExists) {
+            return (preparedQuery, args) -> (R) (Boolean) preparedQuery.exists();
         } else if (DataSet.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.query();
         } else if (ClassUtil.isEntity(returnType) || Map.class.isAssignableFrom(returnType)) {
@@ -662,8 +668,6 @@ final class DaoUtil {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(eleType);
                 }
             }
-        } else if ((boolean.class.equals(returnType) || Boolean.class.equals(returnType)) && (methodName.startsWith("exist") || methodName.startsWith("has"))) {
-            return (preparedQuery, args) -> (R) (Boolean) preparedQuery.exists();
         } else if (OptionalBoolean.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForBoolean();
         } else if (OptionalChar.class.isAssignableFrom(returnType)) {
