@@ -11637,6 +11637,9 @@ public final class JdbcUtil {
      *          <li>Or else if the return type of the method is {@code List}, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"}, {@code PreparedQuery#list(Class)} will be called.</li>
      *      </ul>
      *      <ul>
+     *          <li>Or else if the return type of the method is {@code boolean/Boolean}, and the method name starts with {@code "exist"/"has"}, {@code PreparedQuery#exist()} will be called.</li>
+     *      </ul>
+     *      <ul>
      *          <li>Or else, {@code PreparedQuery#queryForSingleResult(Class).orElse(N.defaultValueOf(returnType)} will be called.</li>
      *      </ul>
      * </ul>

@@ -544,6 +544,7 @@ final class DaoUtil {
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Method method,
             final boolean hasRowMapperOrExtractor, final boolean hasRowFilter) {
+        final String methodName = method.getName();
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
         final int paramLen = paramTypes.length;
@@ -661,6 +662,8 @@ final class DaoUtil {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(eleType);
                 }
             }
+        } else if ((boolean.class.equals(returnType) || Boolean.class.equals(returnType)) && (methodName.startsWith("exist") || methodName.startsWith("has"))) {
+            return (preparedQuery, args) -> (R) (Boolean) preparedQuery.exists();
         } else if (OptionalBoolean.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForBoolean();
         } else if (OptionalChar.class.isAssignableFrom(returnType)) {
