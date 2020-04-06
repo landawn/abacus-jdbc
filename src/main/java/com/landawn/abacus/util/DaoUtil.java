@@ -544,16 +544,13 @@ final class DaoUtil {
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Method method,
             final boolean hasRowMapperOrExtractor, final boolean hasRowFilter) {
-        final String methodName = method.getName();
+        method.getName();
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
         final int paramLen = paramTypes.length;
         final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
         final boolean isListQuery = isListQuery(method);
-        final boolean isExists = (boolean.class.equals(returnType) || Boolean.class.equals(returnType))
-                && ((methodName.startsWith("exists") && (methodName.length() == 6 || Character.isUpperCase(methodName.charAt(6))))
-                        || (methodName.startsWith("exist") && (methodName.length() == 5 || Character.isUpperCase(methodName.charAt(5))))
-                        || (methodName.startsWith("has") && (methodName.length() == 3 || Character.isUpperCase(methodName.charAt(3)))));
+        final boolean isExists = isExistsQuery(method);
 
         if (hasRowMapperOrExtractor) {
             if (RowMapper.class.isAssignableFrom(lastParamType)) {
@@ -764,9 +761,55 @@ final class DaoUtil {
         }
     }
 
+    private static boolean isExistsQuery(final Method method) {
+        final String methodName = method.getName();
+        final Class<?> returnType = method.getReturnType();
+
+        final boolean isExists = (boolean.class.equals(returnType) || Boolean.class.equals(returnType))
+                && ((methodName.startsWith("exists") && (methodName.length() == 6 || Character.isUpperCase(methodName.charAt(6))))
+                        || (methodName.startsWith("exist") && (methodName.length() == 5 || Character.isUpperCase(methodName.charAt(5))))
+                        || (methodName.startsWith("has") && (methodName.length() == 3 || Character.isUpperCase(methodName.charAt(3)))));
+        return isExists;
+    }
+
+    private static String createCacheKey(final Method method, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
+        String cachekey = null;
+
+        if (kryoParser != null) {
+            try {
+                cachekey = kryoParser.serialize(N.toJSON(N.asMap(fullClassMethodName, args)));
+            } catch (Exception e) {
+                // ignore;
+                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
+            }
+        } else {
+            final List<Object> newArgs = Stream.of(args).map(it -> {
+                if (it == null) {
+                    return "null";
+                }
+
+                final Type<?> type = N.typeOf(it.getClass());
+
+                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isEntity() || type.isEntityId()) {
+                    return it;
+                } else {
+                    return it.toString();
+                }
+            }).toList();
+
+            try {
+                cachekey = N.toJSON(N.asMap(fullClassMethodName, newArgs));
+            } catch (Exception e) {
+                // ignore;
+                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
+            }
+        }
+        return cachekey;
+    }
+
     @SuppressWarnings({ "rawtypes" })
     static <T, SB extends SQLBuilder, TD extends JdbcUtil.Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
-            final DataSourceManager dsm, final SQLMapper sqlMapper, final Executor executor) {
+            final DataSourceManager dsm, final SQLMapper sqlMapper, final Cache<String, Object> daoCache, final Executor executor) {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(ds, "dataSource");
 
@@ -1031,7 +1074,7 @@ final class DaoUtil {
         final int capacity = daoClassCacheAnno == null ? 1000 : daoClassCacheAnno.capacity();
         final long evictDelay = daoClassCacheAnno == null ? 3000 : daoClassCacheAnno.evictDelay();
 
-        final Cache<String, Object> cache = CacheFactory.createLocalCache(capacity, evictDelay);
+        final Cache<String, Object> cache = daoCache == null ? CacheFactory.createLocalCache(capacity, evictDelay) : daoCache;
         final Set<Method> nonDBOperationSet = new HashSet<>();
 
         for (Method m : sqlMethods) {
@@ -2883,14 +2926,15 @@ final class DaoUtil {
                 }
             }
 
-            final String fullMethodName = daoInterface.getSimpleName() + "." + m.getName();
+            final String simpleClassMethodName = daoInterface.getSimpleName() + "." + m.getName();
+            final String fullClassMethodName = ClassUtil.getCanonicalClassName(daoInterface) + "." + m.getName();
             final boolean isNonDBOperation = StreamEx.of(m.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(DaoUtil.NonDBOperation.class));
 
             if (isNonDBOperation) {
                 nonDBOperationSet.add(m);
 
                 if (daoLogger.isDebugEnabled()) {
-                    daoLogger.debug("Non-DB operation method: " + fullMethodName);
+                    daoLogger.debug("Non-DB operation method: " + simpleClassMethodName);
                 }
 
                 // ignore
@@ -2935,7 +2979,7 @@ final class DaoUtil {
                                         final long elapsedTime = System.currentTimeMillis() - startTime;
 
                                         if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                            daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
+                                            daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
                                         }
                                     }
 
@@ -2983,7 +3027,7 @@ final class DaoUtil {
                                             final long elapsedTime = System.currentTimeMillis() - startTime;
 
                                             if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                                daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
+                                                daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
                                             }
                                         }
 
@@ -3036,7 +3080,7 @@ final class DaoUtil {
                                                 final long elapsedTime = System.currentTimeMillis() - startTime;
 
                                                 if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                                    daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
+                                                    daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
                                                 }
                                             }
 
@@ -3082,7 +3126,7 @@ final class DaoUtil {
                                             final long elapsedTime = System.currentTimeMillis() - startTime;
 
                                             if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                                daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + fullMethodName);
+                                                daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
                                             }
                                         }
 
@@ -3122,14 +3166,15 @@ final class DaoUtil {
                     }
 
                     if (Stream.of(notCacheableTypes).anyMatch(it -> it.isAssignableFrom(returnType))) {
-                        throw new UnsupportedOperationException("The return type of method: " + fullMethodName + " is not cacheable: " + m.getReturnType());
+                        throw new UnsupportedOperationException(
+                                "The return type of method: " + simpleClassMethodName + " is not cacheable: " + m.getReturnType());
                     }
 
                     final String cloneWhenReadFromCacheAttr = cacheResultAnno.cloneWhenReadFromCache();
 
                     if (!(N.isNullOrEmpty(cloneWhenReadFromCacheAttr) || N.asSet("none", "kryo").contains(cloneWhenReadFromCacheAttr.toLowerCase()))) {
                         throw new UnsupportedOperationException("Unsupported 'cloneWhenReadFromCache' : " + cloneWhenReadFromCacheAttr
-                                + " in annotation 'CacheResult' on method: " + fullMethodName);
+                                + " in annotation 'CacheResult' on method: " + simpleClassMethodName);
                     }
 
                     final Function<Object, Object> cloneFunc = N.isNullOrEmpty(cloneWhenReadFromCacheAttr)
@@ -3146,37 +3191,7 @@ final class DaoUtil {
                     final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
 
                     call = (proxy, args) -> {
-                        String cachekey = null;
-
-                        if (kryoParser != null) {
-                            try {
-                                cachekey = kryoParser.serialize(N.toJSON(N.asMap(fullMethodName, args)));
-                            } catch (Exception e) {
-                                // ignore;
-                                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullMethodName);
-                            }
-                        } else {
-                            final List<Object> newArgs = Stream.of(args).map(it -> {
-                                if (it == null) {
-                                    return "null";
-                                }
-
-                                final Type<?> type = N.typeOf(it.getClass());
-
-                                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isEntity() || type.isEntityId()) {
-                                    return it;
-                                } else {
-                                    return it.toString();
-                                }
-                            }).toList();
-
-                            try {
-                                cachekey = N.toJSON(N.asMap(fullMethodName, newArgs));
-                            } catch (Exception e) {
-                                // ignore;
-                                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullMethodName);
-                            }
-                        }
+                        final String cachekey = createCacheKey(m, fullClassMethodName, args, daoLogger);
 
                         Object result = N.isNullOrEmpty(cachekey) ? null : cache.gett(cachekey);
 

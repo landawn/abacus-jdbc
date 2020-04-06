@@ -82,6 +82,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
+import com.landawn.abacus.cache.Cache;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.core.DirtyMarkerUtil;
 import com.landawn.abacus.core.RowDataSet;
@@ -15239,6 +15240,22 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
+     * @param <T>
+     * @param <SB>
+     * @param <TD>
+     * @param daoInterface
+     * @param ds
+     * @param sqlMapper
+     * @param cache
+     * @return
+     */
+    public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
+            final SQLMapper sqlMapper, final Cache<String, Object> cache) {
+        return createDao(daoInterface, ds, sqlMapper, cache, asyncExecutor.getExecutor());
+    }
+
+    /**
      *
      * @param <T>
      * @param <SB>
@@ -15266,6 +15283,23 @@ public final class JdbcUtil {
      */
     public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
             final SQLMapper sqlMapper, final Executor executor) {
-        return DaoUtil.createDao(daoInterface, ds, null, sqlMapper, executor);
+        return createDao(daoInterface, ds, sqlMapper, null, executor);
+    }
+
+    /**
+     * 
+     * @param <T>
+     * @param <SB>
+     * @param <TD>
+     * @param daoInterface
+     * @param ds
+     * @param sqlMapper
+     * @param cache
+     * @param executor
+     * @return
+     */
+    public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
+            final SQLMapper sqlMapper, final Cache<String, Object> cache, final Executor executor) {
+        return DaoUtil.createDao(daoInterface, ds, null, sqlMapper, cache, executor);
     }
 }
