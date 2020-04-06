@@ -765,7 +765,7 @@ final class DaoUtil {
         final String methodName = method.getName();
         final Class<?> returnType = method.getReturnType();
 
-        final boolean isExists = (boolean.class.equals(returnType) || Boolean.class.equals(returnType))
+        final boolean isExists = boolean.class.equals(returnType)
                 && ((methodName.startsWith("exists") && (methodName.length() == 6 || Character.isUpperCase(methodName.charAt(6))))
                         || (methodName.startsWith("exist") && (methodName.length() == 5 || Character.isUpperCase(methodName.charAt(5))))
                         || (methodName.startsWith("has") && (methodName.length() == 3 || Character.isUpperCase(methodName.charAt(3)))));

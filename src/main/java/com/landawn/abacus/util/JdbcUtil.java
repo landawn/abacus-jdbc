@@ -11638,7 +11638,7 @@ public final class JdbcUtil {
      *          <li>Or else if the return type of the method is {@code List}, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"}, {@code PreparedQuery#list(Class)} will be called.</li>
      *      </ul>
      *      <ul>
-     *          <li>Or else if the return type of the method is {@code boolean/Boolean}, and the method name starts with {@code "exist"/"has"}, {@code PreparedQuery#exist()} will be called.</li>
+     *          <li>Or else if the return type of the method is {@code boolean}, and the method name starts with {@code "exist"/"has"}, {@code PreparedQuery#exist()} will be called.</li>
      *      </ul>
      *      <ul>
      *          <li>Or else, {@code PreparedQuery#queryForSingleResult(Class).orElse(N.defaultValueOf(returnType)} will be called.</li>
@@ -15247,9 +15247,11 @@ public final class JdbcUtil {
      * @param daoInterface
      * @param ds
      * @param sqlMapper
-     * @param cache
+     * @param cache Don't share cache between Dao.
      * @return
+     * @deprecated
      */
+    @Deprecated
     public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
             final SQLMapper sqlMapper, final Cache<String, Object> cache) {
         return createDao(daoInterface, ds, sqlMapper, cache, asyncExecutor.getExecutor());
@@ -15294,10 +15296,12 @@ public final class JdbcUtil {
      * @param daoInterface
      * @param ds
      * @param sqlMapper
-     * @param cache
+     * @param cache Don't share cache between Dao.
      * @param executor
      * @return
+     * @deprecated
      */
+    @Deprecated
     public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
             final SQLMapper sqlMapper, final Cache<String, Object> cache, final Executor executor) {
         return DaoUtil.createDao(daoInterface, ds, null, sqlMapper, cache, executor);
