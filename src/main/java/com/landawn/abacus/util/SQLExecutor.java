@@ -7470,27 +7470,27 @@ public class SQLExecutor {
             switch (namingPolicy) {
                 case LOWER_CASE_WITH_UNDERSCORE:
                     if (N.isNullOrEmpty(selectPropNames)) {
-                        sqlBuilder = NSC.selectFrom(targetClass).where(whereCause);
+                        sqlBuilder = NSC.selectFrom(targetClass).append(whereCause);
                     } else {
-                        sqlBuilder = NSC.select(selectPropNames).from(targetClass).where(whereCause);
+                        sqlBuilder = NSC.select(selectPropNames).from(targetClass).append(whereCause);
                     }
 
                     break;
 
                 case UPPER_CASE_WITH_UNDERSCORE:
                     if (N.isNullOrEmpty(selectPropNames)) {
-                        sqlBuilder = NAC.selectFrom(targetClass).where(whereCause);
+                        sqlBuilder = NAC.selectFrom(targetClass).append(whereCause);
                     } else {
-                        sqlBuilder = NAC.select(selectPropNames).from(targetClass).where(whereCause);
+                        sqlBuilder = NAC.select(selectPropNames).from(targetClass).append(whereCause);
                     }
 
                     break;
 
                 case LOWER_CAMEL_CASE:
                     if (N.isNullOrEmpty(selectPropNames)) {
-                        sqlBuilder = NLC.selectFrom(targetClass).where(whereCause);
+                        sqlBuilder = NLC.selectFrom(targetClass).append(whereCause);
                     } else {
-                        sqlBuilder = NLC.select(selectPropNames).from(targetClass).where(whereCause);
+                        sqlBuilder = NLC.select(selectPropNames).from(targetClass).append(whereCause);
                     }
 
                     break;
@@ -8142,13 +8142,13 @@ public class SQLExecutor {
 
             switch (namingPolicy) {
                 case LOWER_CASE_WITH_UNDERSCORE:
-                    return NSC.update(targetClass).set(props).where(whereCause).pair();
+                    return NSC.update(targetClass).set(props).append(whereCause).pair();
 
                 case UPPER_CASE_WITH_UNDERSCORE:
-                    return NAC.update(targetClass).set(props).where(whereCause).pair();
+                    return NAC.update(targetClass).set(props).append(whereCause).pair();
 
                 case LOWER_CAMEL_CASE:
-                    return NLC.update(targetClass).set(props).where(whereCause).pair();
+                    return NLC.update(targetClass).set(props).append(whereCause).pair();
 
                 default:
                     throw new RuntimeException("Unsupported naming policy: " + namingPolicy);
@@ -8325,17 +8325,17 @@ public class SQLExecutor {
 
             switch (namingPolicy) {
                 case LOWER_CASE_WITH_UNDERSCORE:
-                    sp = NSC.deleteFrom(targetClass).where(whereCause).pair();
+                    sp = NSC.deleteFrom(targetClass).append(whereCause).pair();
 
                     break;
 
                 case UPPER_CASE_WITH_UNDERSCORE:
-                    sp = NAC.deleteFrom(targetClass).where(whereCause).pair();
+                    sp = NAC.deleteFrom(targetClass).append(whereCause).pair();
 
                     break;
 
                 case LOWER_CAMEL_CASE:
-                    sp = NLC.deleteFrom(targetClass).where(whereCause).pair();
+                    sp = NLC.deleteFrom(targetClass).append(whereCause).pair();
 
                     break;
 

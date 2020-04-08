@@ -49,6 +49,29 @@ import com.landawn.abacus.util.stream.Stream;
 public class DaoTest {
 
     @Test
+    public void test_orderBy() throws SQLException {
+        JdbcUtil.enableSQLLog(true);
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
+
+        User userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+        assertNotNull(userFromDB);
+
+        userDao.deleteById(100L);
+
+        long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
+        userFromDB = userDao.gett(id);
+        System.out.println(userFromDB);
+        assertNotNull(userFromDB);
+        
+        userDao.query(CF.criteria().groupBy("last_Name").having(CF.ne("last_Name", "aa")).orderBy("FIRST_NAME")).println();
+        userDao.deleteById(id);
+
+        assertFalse(userDao.exists(id));
+    }
+
+    @Test
     public void test_cache() throws SQLException {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));

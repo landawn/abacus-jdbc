@@ -895,31 +895,31 @@ final class DaoUtil {
         final NamingPolicy namingPolicy = sbc.equals(PSC.class) ? NamingPolicy.LOWER_CASE_WITH_UNDERSCORE
                 : (sbc.equals(PAC.class) ? NamingPolicy.UPPER_CASE_WITH_UNDERSCORE : NamingPolicy.LOWER_CAMEL_CASE);
 
-        final Function<Condition, SQLBuilder.SP> selectFromSQLBuilderFunc = sbc.equals(PSC.class) ? cond -> PSC.selectFrom(entityClass).where(cond).pair()
-                : (sbc.equals(PAC.class) ? cond -> PAC.selectFrom(entityClass).where(cond).pair() : cond -> PLC.selectFrom(entityClass).where(cond).pair());
+        final Function<Condition, SQLBuilder.SP> selectFromSQLBuilderFunc = sbc.equals(PSC.class) ? cond -> PSC.selectFrom(entityClass).append(cond).pair()
+                : (sbc.equals(PAC.class) ? cond -> PAC.selectFrom(entityClass).append(cond).pair() : cond -> PLC.selectFrom(entityClass).append(cond).pair());
 
         final BiFunction<String, Condition, SQLBuilder.SP> singleQuerySQLBuilderFunc = sbc.equals(PSC.class)
-                ? (selectPropName, cond) -> PSC.select(selectPropName).from(entityClass).where(cond).pair()
-                : (sbc.equals(PAC.class) ? (selectPropName, cond) -> PAC.select(selectPropName).from(entityClass).where(cond).pair()
-                        : (selectPropName, cond) -> PLC.select(selectPropName).from(entityClass).where(cond).pair());
+                ? (selectPropName, cond) -> PSC.select(selectPropName).from(entityClass).append(cond).pair()
+                : (sbc.equals(PAC.class) ? (selectPropName, cond) -> PAC.select(selectPropName).from(entityClass).append(cond).pair()
+                        : (selectPropName, cond) -> PLC.select(selectPropName).from(entityClass).append(cond).pair());
 
         final BiFunction<Collection<String>, Condition, SQLBuilder> selectSQLBuilderFunc = sbc.equals(PSC.class)
-                ? ((selectPropNames, cond) -> N.isNullOrEmpty(selectPropNames) ? PSC.selectFrom(entityClass).where(cond)
-                        : PSC.select(selectPropNames).from(entityClass).where(cond))
+                ? ((selectPropNames, cond) -> N.isNullOrEmpty(selectPropNames) ? PSC.selectFrom(entityClass).append(cond)
+                        : PSC.select(selectPropNames).from(entityClass).append(cond))
                 : (sbc.equals(PAC.class)
-                        ? ((selectPropNames, cond) -> N.isNullOrEmpty(selectPropNames) ? PAC.selectFrom(entityClass).where(cond)
-                                : PAC.select(selectPropNames).from(entityClass).where(cond))
-                        : (selectPropNames, cond) -> (N.isNullOrEmpty(selectPropNames) ? PLC.selectFrom(entityClass).where(cond)
-                                : PLC.select(selectPropNames).from(entityClass).where(cond)));
+                        ? ((selectPropNames, cond) -> N.isNullOrEmpty(selectPropNames) ? PAC.selectFrom(entityClass).append(cond)
+                                : PAC.select(selectPropNames).from(entityClass).append(cond))
+                        : (selectPropNames, cond) -> (N.isNullOrEmpty(selectPropNames) ? PLC.selectFrom(entityClass).append(cond)
+                                : PLC.select(selectPropNames).from(entityClass).append(cond)));
 
         final BiFunction<Collection<String>, Condition, SQLBuilder> namedSelectSQLBuilderFunc = sbc.equals(PSC.class)
-                ? ((selectPropNames, cond) -> N.isNullOrEmpty(selectPropNames) ? NSC.selectFrom(entityClass).where(cond)
-                        : NSC.select(selectPropNames).from(entityClass).where(cond))
+                ? ((selectPropNames, cond) -> N.isNullOrEmpty(selectPropNames) ? NSC.selectFrom(entityClass).append(cond)
+                        : NSC.select(selectPropNames).from(entityClass).append(cond))
                 : (sbc.equals(PAC.class)
-                        ? ((selectPropNames, cond) -> N.isNullOrEmpty(selectPropNames) ? NAC.selectFrom(entityClass).where(cond)
-                                : NAC.select(selectPropNames).from(entityClass).where(cond))
-                        : (selectPropNames, cond) -> (N.isNullOrEmpty(selectPropNames) ? NLC.selectFrom(entityClass).where(cond)
-                                : NLC.select(selectPropNames).from(entityClass).where(cond)));
+                        ? ((selectPropNames, cond) -> N.isNullOrEmpty(selectPropNames) ? NAC.selectFrom(entityClass).append(cond)
+                                : NAC.select(selectPropNames).from(entityClass).append(cond))
+                        : (selectPropNames, cond) -> (N.isNullOrEmpty(selectPropNames) ? NLC.selectFrom(entityClass).append(cond)
+                                : NLC.select(selectPropNames).from(entityClass).append(cond)));
 
         final Function<Collection<String>, SQLBuilder> namedInsertSQLBuilderFunc = sbc.equals(PSC.class)
                 ? (propNamesToInsert -> N.isNullOrEmpty(propNamesToInsert) ? NSC.insertInto(entityClass) : NSC.insert(propNamesToInsert).into(entityClass))
@@ -1778,12 +1778,12 @@ final class DaoUtil {
                             final Condition cond = (Condition) args[1];
                             N.checkArgNotNullOrEmpty(props, "updateProps");
 
-                            final SP sp = parameterizedUpdateFunc.apply(entityClass).set(props).where(cond).pair();
+                            final SP sp = parameterizedUpdateFunc.apply(entityClass).set(props).append(cond).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).update();
                         };
                     } else if (methodName.equals("delete") && paramLen == 1 && Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedDeleteFromFunc.apply(entityClass).where((Condition) args[0]).pair();
+                            final SP sp = parameterizedDeleteFromFunc.apply(entityClass).append((Condition) args[0]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).update();
                         };
                     } else if (methodName.equals("loadJoinEntities") && paramLen == 3 && !Collection.class.isAssignableFrom(paramTypes[0])
