@@ -65,7 +65,7 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
         
-        userDao.query(CF.criteria().groupBy("last_Name").having(CF.ne("last_Name", "aa")).orderBy("FIRST_NAME")).println();
+        userDao.query(CF.criteria().groupBy("lastName").having(CF.ne("lastName", "aa")).orderBy("firstName")).println();
         userDao.deleteById(id);
 
         assertFalse(userDao.exists(id));
