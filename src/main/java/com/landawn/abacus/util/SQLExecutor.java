@@ -8490,7 +8490,8 @@ public class SQLExecutor {
          * @param selectPropNames
          */
         public void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) {
-            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(targetClass, joinEntityClass);
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(Mapper.class, targetClass, joinEntityClass);
+
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetClass);
 
             for (String joinEntityPropName : joinEntityPropNames) {
@@ -8518,7 +8519,7 @@ public class SQLExecutor {
                 return;
             }
 
-            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(targetClass, joinEntityClass);
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(Mapper.class, targetClass, joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetClass);
 
             for (String joinEntityPropName : joinEntityPropNames) {
@@ -8542,7 +8543,7 @@ public class SQLExecutor {
          * @param selectPropNames
          */
         public void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) {
-            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(targetClass, joinEntityPropName);
+            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(Mapper.class, targetClass, joinEntityPropName);
             final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                     .getSelectSQLBuilderAndParamSetter(sbc);
 
@@ -8592,7 +8593,7 @@ public class SQLExecutor {
             } else if (entities.size() == 1) {
                 loadJoinEntities(N.firstOrNullIfEmpty(entities), joinEntityPropName, selectPropNames);
             } else {
-                final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(targetClass, joinEntityPropName);
+                final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(Mapper.class, targetClass, joinEntityPropName);
                 final Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
                         .getSelectSQLBuilderAndParamSetterForBatch(sbc);
 
@@ -8713,7 +8714,7 @@ public class SQLExecutor {
          * @param entity
          */
         public void loadAllJoinEntities(T entity) {
-            loadJoinEntities(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet());
+            loadJoinEntities(entity, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet());
         }
 
         /**
@@ -8735,7 +8736,7 @@ public class SQLExecutor {
          * @param executor
          */
         public void loadAllJoinEntities(final T entity, final Executor executor) {
-            loadJoinEntities(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet(), executor);
+            loadJoinEntities(entity, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet(), executor);
         }
 
         /**
@@ -8747,7 +8748,7 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntities(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet());
+            loadJoinEntities(entities, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet());
         }
 
         /**
@@ -8773,7 +8774,7 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntities(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
+            loadJoinEntities(entities, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet(), executor);
         }
 
         /**
@@ -8792,7 +8793,7 @@ public class SQLExecutor {
          * @param selectPropNames
          */
         public void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) {
-            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(Mapper.class, entity.getClass(), joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entity.getClass());
 
             for (String joinEntityPropName : joinEntityPropNames) {
@@ -8821,7 +8822,7 @@ public class SQLExecutor {
             }
 
             final Class<?> entityClass = N.firstOrNullIfEmpty(entities).getClass();
-            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(Mapper.class, entityClass, joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entityClass);
 
             for (String joinEntityPropName : joinEntityPropNames) {
@@ -8980,7 +8981,7 @@ public class SQLExecutor {
          * @param entity
          */
         public void loadJoinEntitiesIfNull(T entity) {
-            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet());
+            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet());
         }
 
         /**
@@ -9002,7 +9003,7 @@ public class SQLExecutor {
          * @param executor
          */
         public void loadJoinEntitiesIfNull(final T entity, final Executor executor) {
-            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet(), executor);
+            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet(), executor);
         }
 
         /**
@@ -9014,7 +9015,7 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet());
+            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet());
         }
 
         /**
@@ -9040,7 +9041,7 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
+            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet(), executor);
         }
 
         private static final Throwables.Consumer<? super Exception, RuntimeException> throwRuntimeExceptionAction = e -> {

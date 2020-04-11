@@ -12300,6 +12300,14 @@ public final class JdbcUtil {
             String[] filter() default { "save", "insert", "update", "delete", "upsert", "execute" };
         }
 
+        /** 
+         */
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(value = { ElementType.TYPE })
+        static @interface AllowJoiningByNullOrDefaultValue {
+            boolean value() default false;
+        }
+
         /**
          *
          * @return
@@ -13216,572 +13224,6 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param entity
-         * @param joinEntityClass
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntities(final T entity, final Class<?> joinEntityClass) throws SQLException {
-            loadJoinEntities(entity, joinEntityClass, null);
-        }
-
-        /**
-         *
-         * @param entity
-         * @param joinEntityClass
-         * @param selectPropNames
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
-            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
-            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entity.getClass());
-
-            for (String joinEntityPropName : joinEntityPropNames) {
-                loadJoinEntities(entity, joinEntityPropName, selectPropNames);
-            }
-        }
-
-        /**
-         *
-         * @param entities
-         * @param joinEntityClass
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
-            loadJoinEntities(entities, joinEntityClass, null);
-        }
-
-        /**
-         *
-         * @param entities
-         * @param joinEntityClass
-         * @param selectPropNames
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
-                throws SQLException {
-            if (N.isNullOrEmpty(entities)) {
-                return;
-            }
-
-            final Class<?> entityClass = N.firstOrNullIfEmpty(entities).getClass();
-            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
-            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entityClass);
-
-            for (String joinEntityPropName : joinEntityPropNames) {
-                loadJoinEntities(entities, joinEntityPropName, selectPropNames);
-            }
-        }
-
-        /**
-         *
-         * @param entity
-         * @param joinEntityPropName
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntities(final T entity, final String joinEntityPropName) throws SQLException {
-            loadJoinEntities(entity, joinEntityPropName, null);
-        }
-
-        /**
-         *
-         * @param entity
-         * @param joinEntityPropName
-         * @param selectPropNames
-         * @throws SQLException the SQL exception
-         */
-        void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException;
-
-        /**
-         *
-         * @param entities
-         * @param joinEntityPropName
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws SQLException {
-            loadJoinEntities(entities, joinEntityPropName, null);
-        }
-
-        /**
-         *
-         * @param entities
-         * @param joinEntityPropName
-         * @param selectPropNames
-         * @throws SQLException the SQL exception
-         */
-        void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException;
-
-        /**
-         *
-         * @param entity
-         * @param joinEntityPropNames
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
-            if (N.isNullOrEmpty(joinEntityPropNames)) {
-                return;
-            }
-
-            for (String joinEntityPropName : joinEntityPropNames) {
-                loadJoinEntities(entity, joinEntityPropName);
-            }
-        }
-
-        /**
-         *
-         * @param entity
-         * @param joinEntityPropNames
-         * @param inParallel
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
-            if (inParallel) {
-                loadJoinEntities(entity, joinEntityPropNames, executor());
-            } else {
-                loadJoinEntities(entity, joinEntityPropNames);
-            }
-        }
-
-        /**
-         *
-         * @param entity
-         * @param joinEntityPropNames
-         * @param executor
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
-            if (N.isNullOrEmpty(joinEntityPropNames)) {
-                return;
-            }
-
-            final List<ContinuableFuture<Void>> futures = StreamE.of(joinEntityPropNames, SQLException.class)
-                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor))
-                    .toList();
-
-            JdbcUtil.complete(futures);
-        }
-
-        /**
-         *
-         * @param entities
-         * @param joinEntityPropName
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
-            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
-                return;
-            }
-
-            for (String joinEntityPropName : joinEntityPropNames) {
-                loadJoinEntities(entities, joinEntityPropName);
-            }
-        }
-
-        /**
-         *
-         * @param entities
-         * @param joinEntityPropName
-         * @param inParallel
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
-                throws SQLException {
-            if (inParallel) {
-                loadJoinEntities(entities, joinEntityPropNames, executor());
-            } else {
-                loadJoinEntities(entities, joinEntityPropNames);
-            }
-        }
-
-        /**
-         *
-         * @param entities
-         * @param joinEntityPropName
-         * @param executor
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
-            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
-                return;
-            }
-
-            final List<ContinuableFuture<Void>> futures = StreamE.of(joinEntityPropNames, SQLException.class)
-                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entities, joinEntityPropName), executor))
-                    .toList();
-
-            JdbcUtil.complete(futures);
-        }
-
-        /**
-         *
-         * @param entity
-         * @throws SQLException the SQL exception
-         */
-        default void loadAllJoinEntities(T entity) throws SQLException {
-            loadJoinEntities(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet());
-        }
-
-        /**
-         *
-         * @param entity
-         * @param inParallel
-         * @throws SQLException the SQL exception
-         */
-        default void loadAllJoinEntities(final T entity, final boolean inParallel) throws SQLException {
-            if (inParallel) {
-                loadAllJoinEntities(entity, executor());
-            } else {
-                loadAllJoinEntities(entity);
-            }
-        }
-
-        /**
-         *
-         * @param entity
-         * @param executor
-         * @throws SQLException the SQL exception
-         */
-        default void loadAllJoinEntities(final T entity, final Executor executor) throws SQLException {
-            loadJoinEntities(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet(), executor);
-        }
-
-        /**
-         *
-         * @param entities
-         * @throws SQLException the SQL exception
-         */
-        default void loadAllJoinEntities(final Collection<T> entities) throws SQLException {
-            if (N.isNullOrEmpty(entities)) {
-                return;
-            }
-
-            loadJoinEntities(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet());
-        }
-
-        /**
-         *
-         * @param entities
-         * @param inParallel
-         * @throws SQLException the SQL exception
-         */
-        default void loadAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws SQLException {
-            if (inParallel) {
-                loadAllJoinEntities(entities, executor());
-            } else {
-                loadAllJoinEntities(entities);
-            }
-        }
-
-        /**
-         *
-         * @param entities
-         * @param executor
-         * @throws SQLException the SQL exception
-         */
-        default void loadAllJoinEntities(final Collection<T> entities, final Executor executor) throws SQLException {
-            if (N.isNullOrEmpty(entities)) {
-                return;
-            }
-
-            loadJoinEntities(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
-        }
-
-        /**
-         *
-         * @param entity
-         * @param joinEntityClass
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass) throws SQLException {
-            loadJoinEntitiesIfNull(entity, joinEntityClass, null);
-        }
-
-        /**
-         *
-         * @param entity
-         * @param joinEntityClass
-         * @param selectPropNames
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
-            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entity.getClass(), joinEntityClass);
-            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entity.getClass());
-
-            for (String joinEntityPropName : joinEntityPropNames) {
-                loadJoinEntitiesIfNull(entity, joinEntityPropName, selectPropNames);
-            }
-        }
-
-        /**
-         *
-         * @param entities
-         * @param joinEntityClass
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
-            loadJoinEntitiesIfNull(entities, joinEntityClass, null);
-        }
-
-        /**
-         *
-         * @param entities
-         * @param joinEntityClass
-         * @param selectPropNames
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
-                throws SQLException {
-            if (N.isNullOrEmpty(entities)) {
-                return;
-            }
-
-            final Class<?> entityClass = N.firstOrNullIfEmpty(entities).getClass();
-            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(entityClass, joinEntityClass);
-            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, entityClass);
-
-            if (joinEntityPropNames.size() == 1) {
-                loadJoinEntitiesIfNull(entities, joinEntityPropNames.get(0), selectPropNames);
-            } else {
-                for (String joinEntityPropName : joinEntityPropNames) {
-                    loadJoinEntitiesIfNull(entities, joinEntityPropName, selectPropNames);
-                }
-            }
-        }
-
-        /**
-         *
-         * @param entity
-         * @param joinEntityPropName
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName) throws SQLException {
-            loadJoinEntitiesIfNull(entity, joinEntityPropName, null);
-        }
-
-        /**
-         *
-         * @param entity
-         * ?
-         * @param joinEntityPropName
-         * @param selectPropNames
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException {
-            final Class<?> cls = entity.getClass();
-            final PropInfo propInfo = ParserUtil.getEntityInfo(cls).getPropInfo(joinEntityPropName);
-
-            if (propInfo.getPropValue(entity) == null) {
-                loadJoinEntities(entity, joinEntityPropName, selectPropNames);
-            }
-        }
-
-        /**
-         *
-         * @param entities
-         * @param joinEntityPropName
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName) throws SQLException {
-            loadJoinEntitiesIfNull(entities, joinEntityPropName, null);
-        }
-
-        /**
-         *
-         * @param entities
-         * @param joinEntityPropName
-         * @param selectPropNames
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
-                throws SQLException {
-            if (N.isNullOrEmpty(entities)) {
-                return;
-            }
-
-            final Class<?> cls = N.firstOrNullIfEmpty(entities).getClass();
-            final PropInfo propInfo = ParserUtil.getEntityInfo(cls).getPropInfo(joinEntityPropName);
-            final List<T> newEntities = N.filter(entities, entity -> propInfo.getPropValue(entity) == null);
-
-            loadJoinEntities(newEntities, joinEntityPropName, selectPropNames);
-        }
-
-        /**
-         *
-         * @param entity
-         * @param joinEntityPropNames
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
-            if (N.isNullOrEmpty(joinEntityPropNames)) {
-                return;
-            }
-
-            for (String joinEntityPropName : joinEntityPropNames) {
-                loadJoinEntitiesIfNull(entity, joinEntityPropName);
-            }
-        }
-
-        /**
-         *
-         * @param entity
-         * @param joinEntityPropNames
-         * @param inParallel
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
-            if (inParallel) {
-                loadJoinEntitiesIfNull(entity, joinEntityPropNames, executor());
-            } else {
-                loadJoinEntitiesIfNull(entity, joinEntityPropNames);
-            }
-        }
-
-        /**
-         *
-         * @param entity
-         * @param joinEntityPropNames
-         * @param executor
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
-            if (N.isNullOrEmpty(joinEntityPropNames)) {
-                return;
-            }
-
-            final List<ContinuableFuture<Void>> futures = StreamE.of(joinEntityPropNames, SQLException.class)
-                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entity, joinEntityPropName), executor))
-                    .toList();
-
-            JdbcUtil.complete(futures);
-        }
-
-        /**
-         *
-         * @param entities
-         * @param joinEntityPropName
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
-            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
-                return;
-            }
-
-            for (String joinEntityPropName : joinEntityPropNames) {
-                loadJoinEntitiesIfNull(entities, joinEntityPropName);
-            }
-        }
-
-        /**
-         *
-         * @param entities
-         * @param joinEntityPropName
-         * @param inParallel
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
-                throws SQLException {
-            if (inParallel) {
-                loadJoinEntitiesIfNull(entities, joinEntityPropNames, executor());
-            } else {
-                loadJoinEntitiesIfNull(entities, joinEntityPropNames);
-            }
-        }
-
-        /**
-         *
-         * @param entities
-         * @param joinEntityPropName
-         * @param executor
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
-                throws SQLException {
-            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
-                return;
-            }
-
-            final List<ContinuableFuture<Void>> futures = StreamE.of(joinEntityPropNames, SQLException.class)
-                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entities, joinEntityPropName), executor))
-                    .toList();
-
-            JdbcUtil.complete(futures);
-        }
-
-        /**
-         *
-         * @param entity
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(T entity) throws SQLException {
-            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet());
-        }
-
-        /**
-         *
-         * @param entity
-         * @param inParallel
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) throws SQLException {
-            if (inParallel) {
-                loadJoinEntitiesIfNull(entity, executor());
-            } else {
-                loadJoinEntitiesIfNull(entity);
-            }
-        }
-
-        /**
-         *
-         * @param entity
-         * @param executor
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws SQLException {
-            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfo(entity.getClass()).keySet(), executor);
-        }
-
-        /**
-         *
-         * @param entities
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final Collection<T> entities) throws SQLException {
-            if (N.isNullOrEmpty(entities)) {
-                return;
-            }
-
-            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet());
-        }
-
-        /**
-         *
-         * @param entities
-         * @param inParallel
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) throws SQLException {
-            if (inParallel) {
-                loadJoinEntitiesIfNull(entities, executor());
-            } else {
-                loadJoinEntitiesIfNull(entities);
-            }
-        }
-
-        /**
-         *
-         * @param entities
-         * @param executor
-         * @throws SQLException the SQL exception
-         */
-        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) throws SQLException {
-            if (N.isNullOrEmpty(entities)) {
-                return;
-            }
-
-            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfo(N.firstOrNullIfEmpty(entities).getClass()).keySet(), executor);
-        }
-
-        /**
-         *
          * @param updateProps
          * @param cond
          * @return
@@ -14049,7 +13491,7 @@ public final class JdbcUtil {
             final T result = gett(id);
 
             if (result != null && includeAllJoinEntities) {
-                loadAllJoinEntities(result);
+                checkJoinEntityHelper(this).loadAllJoinEntities(result);
             }
 
             return result;
@@ -14067,7 +13509,7 @@ public final class JdbcUtil {
             final T result = gett(id, selectPropNames);
 
             if (result != null && includeAllJoinEntities) {
-                loadAllJoinEntities(result);
+                checkJoinEntityHelper(this).loadAllJoinEntities(result);
             }
 
             return result;
@@ -14084,7 +13526,7 @@ public final class JdbcUtil {
             final T result = gett(id);
 
             if (result != null) {
-                loadJoinEntities(result, joinEntitiesToLoad);
+                checkJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
             }
 
             return result;
@@ -14102,7 +13544,7 @@ public final class JdbcUtil {
             final T result = gett(id, selectPropNames);
 
             if (result != null) {
-                loadJoinEntities(result, joinEntitiesToLoad);
+                checkJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
             }
 
             return result;
@@ -14120,8 +13562,10 @@ public final class JdbcUtil {
             final T result = gett(id, selectPropNames);
 
             if (result != null) {
+                final JoinEntityHelper<T, SB, TD> joinEntityHelper = checkJoinEntityHelper(this);
+
                 for (Class<?> joinEntityClass : joinEntitiesToLoad) {
-                    loadJoinEntities(result, joinEntityClass);
+                    joinEntityHelper.loadJoinEntities(result, joinEntityClass);
                 }
             }
 
@@ -15209,6 +14653,604 @@ public final class JdbcUtil {
         }
 
         return (Tuple3) map.get(namingPolicy);
+    }
+
+    public static interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> extends Dao<T, SB, TD> {
+
+        /**
+         *
+         * @return
+         * @deprecated internal only
+         */
+        @Deprecated
+        @Internal
+        @NonDBOperation
+        Class<T> targetDaoInterface();
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final T entity, final Class<?> joinEntityClass) throws SQLException {
+            loadJoinEntities(entity, joinEntityClass, null);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @param selectPropNames
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
+            final Class<?> targetEntityClass = targetEntityClass();
+            final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntities(entity, joinEntityPropName, selectPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
+            loadJoinEntities(entities, joinEntityClass, null);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @param selectPropNames
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+                throws SQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            final Class<?> targetEntityClass = targetEntityClass();
+            final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntities(entities, joinEntityPropName, selectPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropName
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final T entity, final String joinEntityPropName) throws SQLException {
+            loadJoinEntities(entity, joinEntityPropName, null);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @throws SQLException the SQL exception
+         */
+        void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException;
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws SQLException {
+            loadJoinEntities(entities, joinEntityPropName, null);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @throws SQLException the SQL exception
+         */
+        void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException;
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntities(entity, joinEntityPropName);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param inParallel
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
+            if (inParallel) {
+                loadJoinEntities(entity, joinEntityPropNames, executor());
+            } else {
+                loadJoinEntities(entity, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param executor
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            final List<ContinuableFuture<Void>> futures = StreamE.of(joinEntityPropNames, SQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor))
+                    .toList();
+
+            JdbcUtil.complete(futures);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntities(entities, joinEntityPropName);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param inParallel
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
+                throws SQLException {
+            if (inParallel) {
+                loadJoinEntities(entities, joinEntityPropNames, executor());
+            } else {
+                loadJoinEntities(entities, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param executor
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            final List<ContinuableFuture<Void>> futures = StreamE.of(joinEntityPropNames, SQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entities, joinEntityPropName), executor))
+                    .toList();
+
+            JdbcUtil.complete(futures);
+        }
+
+        /**
+         *
+         * @param entity
+         * @throws SQLException the SQL exception
+         */
+        default void loadAllJoinEntities(T entity) throws SQLException {
+            loadJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entity
+         * @param inParallel
+         * @throws SQLException the SQL exception
+         */
+        default void loadAllJoinEntities(final T entity, final boolean inParallel) throws SQLException {
+            if (inParallel) {
+                loadAllJoinEntities(entity, executor());
+            } else {
+                loadAllJoinEntities(entity);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param executor
+         * @throws SQLException the SQL exception
+         */
+        default void loadAllJoinEntities(final T entity, final Executor executor) throws SQLException {
+            loadJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entities
+         * @throws SQLException the SQL exception
+         */
+        default void loadAllJoinEntities(final Collection<T> entities) throws SQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            loadJoinEntities(entities, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entities
+         * @param inParallel
+         * @throws SQLException the SQL exception
+         */
+        default void loadAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws SQLException {
+            if (inParallel) {
+                loadAllJoinEntities(entities, executor());
+            } else {
+                loadAllJoinEntities(entities);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param executor
+         * @throws SQLException the SQL exception
+         */
+        default void loadAllJoinEntities(final Collection<T> entities, final Executor executor) throws SQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            loadJoinEntities(entities, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass) throws SQLException {
+            loadJoinEntitiesIfNull(entity, joinEntityClass, null);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @param selectPropNames
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
+            final Class<?> targetEntityClass = targetEntityClass();
+            final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntitiesIfNull(entity, joinEntityPropName, selectPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
+            loadJoinEntitiesIfNull(entities, joinEntityClass, null);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @param selectPropNames
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+                throws SQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            final Class<?> targetEntityClass = targetEntityClass();
+            final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+
+            if (joinEntityPropNames.size() == 1) {
+                loadJoinEntitiesIfNull(entities, joinEntityPropNames.get(0), selectPropNames);
+            } else {
+                for (String joinEntityPropName : joinEntityPropNames) {
+                    loadJoinEntitiesIfNull(entities, joinEntityPropName, selectPropNames);
+                }
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropName
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName) throws SQLException {
+            loadJoinEntitiesIfNull(entity, joinEntityPropName, null);
+        }
+
+        /**
+         *
+         * @param entity
+         * ?
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException {
+            final Class<?> cls = entity.getClass();
+            final PropInfo propInfo = ParserUtil.getEntityInfo(cls).getPropInfo(joinEntityPropName);
+
+            if (propInfo.getPropValue(entity) == null) {
+                loadJoinEntities(entity, joinEntityPropName, selectPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName) throws SQLException {
+            loadJoinEntitiesIfNull(entities, joinEntityPropName, null);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
+                throws SQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            final Class<?> cls = N.firstOrNullIfEmpty(entities).getClass();
+            final PropInfo propInfo = ParserUtil.getEntityInfo(cls).getPropInfo(joinEntityPropName);
+            final List<T> newEntities = N.filter(entities, entity -> propInfo.getPropValue(entity) == null);
+
+            loadJoinEntities(newEntities, joinEntityPropName, selectPropNames);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntitiesIfNull(entity, joinEntityPropName);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param inParallel
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
+            if (inParallel) {
+                loadJoinEntitiesIfNull(entity, joinEntityPropNames, executor());
+            } else {
+                loadJoinEntitiesIfNull(entity, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param executor
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            final List<ContinuableFuture<Void>> futures = StreamE.of(joinEntityPropNames, SQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entity, joinEntityPropName), executor))
+                    .toList();
+
+            JdbcUtil.complete(futures);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntitiesIfNull(entities, joinEntityPropName);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param inParallel
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
+                throws SQLException {
+            if (inParallel) {
+                loadJoinEntitiesIfNull(entities, joinEntityPropNames, executor());
+            } else {
+                loadJoinEntitiesIfNull(entities, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param executor
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
+                throws SQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            final List<ContinuableFuture<Void>> futures = StreamE.of(joinEntityPropNames, SQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entities, joinEntityPropName), executor))
+                    .toList();
+
+            JdbcUtil.complete(futures);
+        }
+
+        /**
+         *
+         * @param entity
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(T entity) throws SQLException {
+            loadJoinEntitiesIfNull(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entity
+         * @param inParallel
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) throws SQLException {
+            if (inParallel) {
+                loadJoinEntitiesIfNull(entity, executor());
+            } else {
+                loadJoinEntitiesIfNull(entity);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param executor
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws SQLException {
+            loadJoinEntitiesIfNull(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entities
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final Collection<T> entities) throws SQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            loadJoinEntitiesIfNull(entities, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entities
+         * @param inParallel
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) throws SQLException {
+            if (inParallel) {
+                loadJoinEntitiesIfNull(entities, executor());
+            } else {
+                loadJoinEntitiesIfNull(entities);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param executor
+         * @throws SQLException the SQL exception
+         */
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) throws SQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            loadJoinEntitiesIfNull(entities, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
+        }
+    }
+
+    private static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> JoinEntityHelper<T, SB, TD> checkJoinEntityHelper(final Dao<T, SB, TD> dao) {
+        if (dao instanceof JoinEntityHelper) {
+            return (JoinEntityHelper<T, SB, TD>) dao;
+        } else {
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't extends interface JoinEntityHelper");
+        }
+    }
+
+    private static List<String> getJoinEntityPropNamesByType(final Class<?> targetDaoInterface, final Class<?> targetEntityClass,
+            final Class<?> joinEntityClass) {
+        return JoinInfo.getJoinEntityPropNamesByType(targetDaoInterface, targetEntityClass, joinEntityClass);
+    }
+
+    private static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass) {
+        return JoinInfo.getEntityJoinInfo(targetDaoInterface, targetEntityClass);
     }
 
     /**

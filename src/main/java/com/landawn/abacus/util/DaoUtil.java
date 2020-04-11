@@ -1137,6 +1137,8 @@ final class DaoUtil {
 
             } else if (m.getName().equals("targetEntityClass") && Class.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> entityClass;
+            }  else if (m.getName().equals("targetDaoInterface") && Class.class.isAssignableFrom(returnType) && paramLen == 0) {
+                call = (proxy, args) -> daoInterface;
             } else if (methodName.equals("dataSource") && javax.sql.DataSource.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> primaryDataSource;
             } else if (methodName.equals("sqlExecutor") && SQLExecutor.class.isAssignableFrom(returnType) && paramLen == 0) {
@@ -1786,13 +1788,19 @@ final class DaoUtil {
                             final SP sp = parameterizedDeleteFromFunc.apply(entityClass).append((Condition) args[0]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).update();
                         };
-                    } else if (methodName.equals("loadJoinEntities") && paramLen == 3 && !Collection.class.isAssignableFrom(paramTypes[0])
+                    } else {
+                        call = (proxy, args) -> {
+                            throw new UnsupportedOperationException("Unsupported operation: " + m);
+                        };
+                    }
+                } else if (declaringClass.equals(JdbcUtil.JoinEntityHelper.class)) {
+                    if (methodName.equals("loadJoinEntities") && paramLen == 3 && !Collection.class.isAssignableFrom(paramTypes[0])
                             && String.class.isAssignableFrom(paramTypes[1]) && Collection.class.isAssignableFrom(paramTypes[2])) {
                         call = (proxy, args) -> {
                             final Object entity = args[0];
                             final String joinEntityPropName = (String) args[1];
                             final Collection<String> selectPropNames = (Collection<String>) args[2];
-                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(entityClass, joinEntityPropName);
+                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
                             final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getSelectSQLBuilderAndParamSetter(sbc);
 
@@ -1824,7 +1832,7 @@ final class DaoUtil {
                             final Collection<Object> entities = (Collection) args[0];
                             final String joinEntityPropName = (String) args[1];
                             final Collection<String> selectPropNames = (Collection<String>) args[2];
-                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(entityClass, joinEntityPropName);
+                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
 
                             if (N.isNullOrEmpty(entities)) {
                                 // Do nothing.
@@ -1881,7 +1889,7 @@ final class DaoUtil {
                             throw new UnsupportedOperationException("Unsupported operation: " + m);
                         };
                     }
-                } else if (m.getDeclaringClass().equals(JdbcUtil.CrudDao.class)) {
+                } else if (declaringClass.equals(JdbcUtil.CrudDao.class)) {
                     if (methodName.equals("insert") && paramLen == 1) {
                         call = (proxy, args) -> {
                             final Object entity = args[0];

@@ -20,6 +20,7 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Fn.BiConsumers;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
+import com.landawn.abacus.util.JdbcUtil.Dao;
 import com.landawn.abacus.util.SQLBuilder.PAC;
 import com.landawn.abacus.util.SQLBuilder.PLC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
@@ -40,6 +41,7 @@ final class JoinInfo {
     final Function<Object, Object> srcEntityKeyExtractor;
     final Function<Object, Object> referencedEntityKeyExtractor;
     final boolean isManyToManyJoin;
+    final boolean allowJoiningByNullOrDefaultValue;
 
     private final Map<Class<? extends SQLBuilder>, Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>> selectSQLBuilderAndParamSetterPool = new HashMap<>();
 
@@ -49,9 +51,10 @@ final class JoinInfo {
 
     private final Map<Class<? extends SQLBuilder>, Tuple2<String, BiParametersSetter<PreparedStatement, Object>>> deleteSqlAndParamSetterPool = new HashMap<>();
 
-    JoinInfo(final Class<?> entityClass, final String joinEntityPropName) {
+    JoinInfo(final Class<?> entityClass, final String joinEntityPropName, final boolean allowJoiningByNullOrDefaultValue) {
+        this.allowJoiningByNullOrDefaultValue = allowJoiningByNullOrDefaultValue;
         this.entityClass = entityClass;
-        entityInfo = ParserUtil.getEntityInfo(entityClass);
+        this.entityInfo = ParserUtil.getEntityInfo(entityClass);
         this.joinPropInfo = entityInfo.getPropInfo(joinEntityPropName);
 
         if (joinPropInfo == null) {
@@ -140,14 +143,14 @@ final class JoinInfo {
             final List<String> middleSelectPropNames = N.asList(right[0].substring(right[0].indexOf('.') + 1));
             final Condition middleEntityCond = CF.eq(left[1].substring(left[1].indexOf('.') + 1));
 
-            final BiParametersSetter<PreparedStatement, Object> paramSetter = (stmt, entityParam) -> srcPropInfos[0].dbType.set(stmt, 1,
-                    srcPropInfos[0].getPropValue(entityParam));
+            final BiParametersSetter<PreparedStatement, Object> paramSetter = (stmt, entity) -> srcPropInfos[0].dbType.set(stmt, 1,
+                    checkPropValue(srcPropInfos[0], entity));
 
             final BiParametersSetter<PreparedStatement, Collection<?>> batchParaSetter = (stmt, entities) -> {
                 int index = 1;
 
                 for (Object entity : entities) {
-                    srcPropInfos[0].dbType.set(stmt, index++, srcPropInfos[0].getPropValue(entity));
+                    srcPropInfos[0].dbType.set(stmt, index++, checkPropValue(srcPropInfos[0], entity));
                 }
             };
 
@@ -409,7 +412,7 @@ final class JoinInfo {
                 selectSQLBuilderAndParamSetterForBatchPool.put(PLC.class, Tuple.of(batchSQLBuilder, batchParaSetter));
             }
 
-            srcEntityKeyExtractor = entity -> srcPropInfos[0].getPropValue(entity);
+            srcEntityKeyExtractor = entity -> checkPropValue(srcPropInfos[0], entity);
             referencedEntityKeyExtractor = entity -> referencedPropInfos[0].getPropValue(entity);
             // ===============================================================================================================================
         } else {
@@ -445,31 +448,31 @@ final class JoinInfo {
             final List<String> referencedPropNames = Stream.of(referencedPropInfos).map(p -> p.name).toList();
 
             final BiParametersSetter<PreparedStatement, Object> paramSetter = srcPropInfos.length == 1
-                    ? (stmt, entityParam) -> srcPropInfos[0].dbType.set(stmt, 1, srcPropInfos[0].getPropValue(entityParam))
-                    : (srcPropInfos.length == 2 ? (stmt, entityParam) -> {
-                        srcPropInfos[0].dbType.set(stmt, 1, srcPropInfos[0].getPropValue(entityParam));
-                        srcPropInfos[1].dbType.set(stmt, 2, srcPropInfos[1].getPropValue(entityParam));
-                    } : (stmt, entityParam) -> {
+                    ? (stmt, entity) -> srcPropInfos[0].dbType.set(stmt, 1, checkPropValue(srcPropInfos[0], entity))
+                    : (srcPropInfos.length == 2 ? (stmt, entity) -> {
+                        srcPropInfos[0].dbType.set(stmt, 1, checkPropValue(srcPropInfos[0], entity));
+                        srcPropInfos[1].dbType.set(stmt, 2, checkPropValue(srcPropInfos[1], entity));
+                    } : (stmt, entity) -> {
                         for (int i = 0, len = srcPropInfos.length; i < len; i++) {
-                            srcPropInfos[i].dbType.set(stmt, i + 1, srcPropInfos[i].getPropValue(entityParam));
+                            srcPropInfos[i].dbType.set(stmt, i + 1, checkPropValue(srcPropInfos[i], entity));
                         }
                     });
 
-            final BiParametersSetter<PreparedStatement, Object> setNullParamSetter = srcPropInfos.length == 1 ? (stmt, entityParam) -> {
+            final BiParametersSetter<PreparedStatement, Object> setNullParamSetter = srcPropInfos.length == 1 ? (stmt, entity) -> {
                 srcPropInfos[0].dbType.set(stmt, 1, srcPropInfos[0].dbType.defaultValue());
-                srcPropInfos[0].dbType.set(stmt, 2, srcPropInfos[0].getPropValue(entityParam));
-            } : (srcPropInfos.length == 2 ? (stmt, entityParam) -> {
+                srcPropInfos[0].dbType.set(stmt, 2, checkPropValue(srcPropInfos[0], entity));
+            } : (srcPropInfos.length == 2 ? (stmt, entity) -> {
                 srcPropInfos[0].dbType.set(stmt, 1, srcPropInfos[0].dbType.defaultValue());
                 srcPropInfos[1].dbType.set(stmt, 2, srcPropInfos[1].dbType.defaultValue());
-                srcPropInfos[0].dbType.set(stmt, 3, srcPropInfos[0].getPropValue(entityParam));
-                srcPropInfos[1].dbType.set(stmt, 4, srcPropInfos[1].getPropValue(entityParam));
-            } : (stmt, entityParam) -> {
+                srcPropInfos[0].dbType.set(stmt, 3, checkPropValue(srcPropInfos[0], entity));
+                srcPropInfos[1].dbType.set(stmt, 4, checkPropValue(srcPropInfos[1], entity));
+            } : (stmt, entity) -> {
                 for (int i = 0, len = srcPropInfos.length; i < len; i++) {
                     srcPropInfos[i].dbType.set(stmt, i + 1, srcPropInfos[i].dbType.defaultValue());
                 }
 
                 for (int i = 0, len = srcPropInfos.length; i < len; i++) {
-                    srcPropInfos[i].dbType.set(stmt, len + i + 1, srcPropInfos[i].getPropValue(entityParam));
+                    srcPropInfos[i].dbType.set(stmt, len + i + 1, checkPropValue(srcPropInfos[i], entity));
                 }
             });
 
@@ -477,14 +480,14 @@ final class JoinInfo {
                 int index = 1;
 
                 for (Object entity : entities) {
-                    srcPropInfos[0].dbType.set(stmt, index++, srcPropInfos[0].getPropValue(entity));
+                    srcPropInfos[0].dbType.set(stmt, index++, checkPropValue(srcPropInfos[0], entity));
                 }
             } : (stmt, entities) -> {
                 int index = 1;
 
                 for (Object entity : entities) {
                     for (int i = 0, len = srcPropInfos.length; i < len; i++) {
-                        srcPropInfos[i].dbType.set(stmt, index++, srcPropInfos[i].getPropValue(entity));
+                        srcPropInfos[i].dbType.set(stmt, index++, checkPropValue(srcPropInfos[i], entity));
                     }
                 }
             };
@@ -634,7 +637,7 @@ final class JoinInfo {
                 final PropInfo srcPropInfo = srcPropInfos[0];
                 final PropInfo referencedPropInfo = referencedPropInfos[0];
 
-                srcEntityKeyExtractorTmp = entity -> srcPropInfo.getPropValue(entity);
+                srcEntityKeyExtractorTmp = entity -> checkPropValue(srcPropInfo, entity);
                 referencedEntityKeyExtractorTmp = entity -> referencedPropInfo.getPropValue(entity);
             } else if (srcPropInfos.length == 2) {
                 final PropInfo srcPropInfo_1 = srcPropInfos[0];
@@ -642,7 +645,7 @@ final class JoinInfo {
                 final PropInfo referencedPropInfo_1 = referencedPropInfos[0];
                 final PropInfo referencedPropInfo_2 = referencedPropInfos[1];
 
-                srcEntityKeyExtractorTmp = entity -> Tuple.of(srcPropInfo_1.getPropValue(entity), srcPropInfo_2.getPropValue(entity));
+                srcEntityKeyExtractorTmp = entity -> Tuple.of(checkPropValue(srcPropInfo_1, entity), checkPropValue(srcPropInfo_2, entity));
                 referencedEntityKeyExtractorTmp = entity -> Tuple.of(referencedPropInfo_1.getPropValue(entity), referencedPropInfo_2.getPropValue(entity));
             } else if (srcPropInfos.length == 3) {
                 final PropInfo srcPropInfo_1 = srcPropInfos[0];
@@ -652,8 +655,8 @@ final class JoinInfo {
                 final PropInfo referencedPropInfo_2 = referencedPropInfos[1];
                 final PropInfo referencedPropInfo_3 = referencedPropInfos[2];
 
-                srcEntityKeyExtractorTmp = entity -> Tuple.of(srcPropInfo_1.getPropValue(entity), srcPropInfo_2.getPropValue(entity),
-                        srcPropInfo_3.getPropValue(entity));
+                srcEntityKeyExtractorTmp = entity -> Tuple.of(checkPropValue(srcPropInfo_1, entity), checkPropValue(srcPropInfo_2, entity),
+                        checkPropValue(srcPropInfo_3, entity));
 
                 referencedEntityKeyExtractorTmp = entity -> Tuple.of(referencedPropInfo_1.getPropValue(entity), referencedPropInfo_2.getPropValue(entity),
                         referencedPropInfo_3.getPropValue(entity));
@@ -662,7 +665,7 @@ final class JoinInfo {
                     final List<Object> keys = new ArrayList<>(srcPropInfos.length);
 
                     for (PropInfo srcPropInfo : srcPropInfos) {
-                        keys.add(srcPropInfo.getPropValue(entity));
+                        keys.add(checkPropValue(srcPropInfo, entity));
                     }
 
                     return keys;
@@ -768,13 +771,23 @@ final class JoinInfo {
         }
     }
 
-    private final static Map<Class<?>, Map<String, JoinInfo>> entityJoinInfoPool = new ConcurrentHashMap<>();
+    private final static Map<Class<?>, Map<Class<?>, Map<String, JoinInfo>>> daoEntityJoinInfoPool = new ConcurrentHashMap<>();
 
-    public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> entityClass) {
-        Map<String, JoinInfo> joinInfoMap = entityJoinInfoPool.get(entityClass);
+    public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass) {
+        Map<Class<?>, Map<String, JoinInfo>> entityJoinInfoMap = daoEntityJoinInfoPool.get(entityClass);
+
+        if (entityJoinInfoMap == null) {
+            entityJoinInfoMap = new ConcurrentHashMap<>();
+            daoEntityJoinInfoPool.put(daoClass, entityJoinInfoMap);
+        }
+
+        Map<String, JoinInfo> joinInfoMap = entityJoinInfoMap.get(entityClass);
 
         if (joinInfoMap == null) {
+            final Dao.AllowJoiningByNullOrDefaultValue anno = daoClass.getAnnotation(Dao.AllowJoiningByNullOrDefaultValue.class);
+            final boolean allowJoiningByNullOrDefaultValue = anno == null || anno.value() == false ? false : true;
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+
             joinInfoMap = new LinkedHashMap<>();
 
             for (PropInfo propInfo : entityInfo.propInfoList) {
@@ -782,17 +795,17 @@ final class JoinInfo {
                     continue;
                 }
 
-                joinInfoMap.put(propInfo.name, new JoinInfo(entityClass, propInfo.name));
+                joinInfoMap.put(propInfo.name, new JoinInfo(entityClass, propInfo.name, allowJoiningByNullOrDefaultValue));
             }
 
-            entityJoinInfoPool.put(entityClass, joinInfoMap);
+            entityJoinInfoMap.put(entityClass, joinInfoMap);
         }
 
         return joinInfoMap;
     }
 
-    public static JoinInfo getPropJoinInfo(final Class<?> entityClass, final String joinEntityPropName) {
-        final JoinInfo joinInfo = getEntityJoinInfo(entityClass).get(joinEntityPropName);
+    public static JoinInfo getPropJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String joinEntityPropName) {
+        final JoinInfo joinInfo = getEntityJoinInfo(daoClass, entityClass).get(joinEntityPropName);
 
         if (joinInfo == null) {
             throw new IllegalArgumentException(
@@ -804,14 +817,15 @@ final class JoinInfo {
 
     private final static Map<Class<?>, Map<Class<?>, List<String>>> joinEntityPropNamesByTypePool = new ConcurrentHashMap<>();
 
-    public static List<String> getJoinEntityPropNamesByType(final Class<?> entityClass, final Class<?> joinPropEntityClass) {
+    public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass,
+            final Class<?> joinPropEntityClass) {
         Map<Class<?>, List<String>> joinEntityPropNamesByTypeMap = joinEntityPropNamesByTypePool.get(entityClass);
 
         if (joinEntityPropNamesByTypeMap == null) {
             joinEntityPropNamesByTypeMap = new HashMap<>();
             List<String> joinPropNames = null;
 
-            for (JoinInfo joinInfo : getEntityJoinInfo(entityClass).values()) {
+            for (JoinInfo joinInfo : getEntityJoinInfo(daoClass, entityClass).values()) {
                 joinPropNames = joinEntityPropNamesByTypeMap.get(joinInfo.referencedEntityClass);
 
                 if (joinPropNames == null) {
@@ -831,5 +845,15 @@ final class JoinInfo {
 
     public boolean isManyToManyJoin() {
         return isManyToManyJoin;
+    }
+
+    private Object checkPropValue(PropInfo propInfo, Object entity) {
+        final Object value = propInfo.getPropValue(entity);
+
+        if (allowJoiningByNullOrDefaultValue == false && Primitives.isNullOrDefault(value)) {
+            throw new IllegalArgumentException("The join property value can't be null or default for " + propInfo.clazz + "." + propInfo.name);
+        }
+
+        return value;
     }
 }
