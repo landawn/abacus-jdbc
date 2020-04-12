@@ -1153,13 +1153,14 @@ final class DaoUtil {
             } else if (methodName.equals("cacheSql") && void.class.isAssignableFrom(returnType) && paramLen == 2 && paramTypes[0].equals(String.class)
                     && paramTypes[1].equals(String.class)) {
                 call = (proxy, args) -> {
-                    sqlCache.put((String) args[0], (String) args[1]);
+                    sqlCache.put(N.checkArgNotNullOrEmpty((String) args[0], "key"), N.checkArgNotNullOrEmpty((String) args[1], "sql"));
                     return null;
                 };
             } else if (methodName.equals("cacheSqls") && void.class.isAssignableFrom(returnType) && paramLen == 2 && paramTypes[0].equals(String.class)
                     && paramTypes[1].equals(Collection.class)) {
                 call = (proxy, args) -> {
-                    sqlsCache.put((String) args[0], ImmutableList.copyOf((Collection<String>) args[1]));
+                    sqlsCache.put(N.checkArgNotNullOrEmpty((String) args[0], "key"),
+                            ImmutableList.copyOf(N.checkArgNotNullOrEmpty((Collection<String>) args[1], "sqls")));
                     return null;
                 };
             } else if (methodName.equals("getCachedSql") && String.class.isAssignableFrom(returnType) && paramLen == 1 && paramTypes[0].equals(String.class)) {
