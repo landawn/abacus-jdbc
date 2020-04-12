@@ -1137,7 +1137,7 @@ final class DaoUtil {
 
             } else if (m.getName().equals("targetEntityClass") && Class.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> entityClass;
-            }  else if (m.getName().equals("targetDaoInterface") && Class.class.isAssignableFrom(returnType) && paramLen == 0) {
+            } else if (m.getName().equals("targetDaoInterface") && Class.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> daoInterface;
             } else if (methodName.equals("dataSource") && javax.sql.DataSource.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> primaryDataSource;
@@ -1883,6 +1883,32 @@ final class DaoUtil {
                             }
 
                             return null;
+                        };
+                    } else if (methodName.equals("deleteJoinEntities") && paramLen == 2 && !Collection.class.isAssignableFrom(paramTypes[0])
+                            && String.class.isAssignableFrom(paramTypes[1])) {
+                        call = (proxy, args) -> {
+                            final Object entity = args[0];
+                            final String joinEntityPropName = (String) args[1];
+                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
+                            final Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+
+                            return proxy.prepareQuery(tp._1).setParameters(entity, tp._2).update();
+                        };
+                    } else if (methodName.equals("deleteJoinEntities") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
+                            && String.class.isAssignableFrom(paramTypes[1])) {
+                        call = (proxy, args) -> {
+                            final Collection<Object> entities = (Collection) args[0];
+                            final String joinEntityPropName = (String) args[1];
+                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
+                            final Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+
+                            if (N.isNullOrEmpty(entities)) {
+                                return 0;
+                            } else if (entities.size() == 1) {
+                                return proxy.prepareQuery(tp._1).setParameters(N.firstOrNullIfEmpty(entities), tp._2).update();
+                            } else {
+                                return proxy.prepareQuery(tp._1).addBatchParametters(entities, tp._2).update();
+                            }
                         };
                     } else {
                         call = (proxy, args) -> {

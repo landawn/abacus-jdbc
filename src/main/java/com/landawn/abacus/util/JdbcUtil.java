@@ -14552,6 +14552,23 @@ public final class JdbcUtil {
         }
     }
 
+    static int completeSum(final List<ContinuableFuture<Integer>> futures) throws SQLException {
+        int result = 0;
+        Result<Integer, Exception> ret = null;
+        
+        for (ContinuableFuture<Integer> f : futures) {
+            ret = f.gett();
+            
+            if (ret.isFailure()) {
+                throwSQLExceptionAction.accept(ret.getExceptionIfPresent());
+            }
+            
+            result += ret.orElse(0);
+        }
+        
+        return result;
+    }
+
     @SuppressWarnings("rawtypes")
     private static final Map<Class<?>, Map<NamingPolicy, Tuple3<BiRowMapper, Function, BiConsumer>>> idGeneratorGetterSetterPool = new ConcurrentHashMap<>();
 
@@ -15233,6 +15250,521 @@ public final class JdbcUtil {
             }
 
             loadJoinEntitiesIfNull(entities, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws SQLException {
+            final Class<?> targetEntityClass = targetEntityClass();
+            final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+
+            int result = 0;
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                result += deleteJoinEntities(entity, joinEntityPropName);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return 0;
+            }
+
+            final Class<?> targetEntityClass = targetEntityClass();
+            final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+
+            int result = 0;
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                result += deleteJoinEntities(entities, joinEntityPropName);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        int deleteJoinEntities(final T entity, final String joinEntityPropName) throws SQLException;
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws SQLException;
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return 0;
+            }
+
+            int result = 0;
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                result += deleteJoinEntities(entity, joinEntityPropName);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
+            if (inParallel) {
+                return deleteJoinEntities(entity, joinEntityPropNames, executor());
+            } else {
+                return deleteJoinEntities(entity, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return 0;
+            }
+
+            final List<ContinuableFuture<Integer>> futures = StreamE.of(joinEntityPropNames, SQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entity, joinEntityPropName), executor))
+                    .toList();
+
+            return JdbcUtil.completeSum(futures);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return 0;
+            }
+
+            int result = 0;
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                result += deleteJoinEntities(entities, joinEntityPropName);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
+                throws SQLException {
+            if (inParallel) {
+                return deleteJoinEntities(entities, joinEntityPropNames, executor());
+            } else {
+                return deleteJoinEntities(entities, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
+                throws SQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return 0;
+            }
+
+            final List<ContinuableFuture<Integer>> futures = StreamE.of(joinEntityPropNames, SQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entities, joinEntityPropName), executor))
+                    .toList();
+
+            return JdbcUtil.completeSum(futures);
+        }
+
+        /**
+         *
+         * @param entity
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        default int deleteAllJoinEntities(T entity) throws SQLException {
+            return deleteJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entity
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws SQLException {
+            if (inParallel) {
+                return deleteAllJoinEntities(entity, executor());
+            } else {
+                return deleteAllJoinEntities(entity);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        default int deleteAllJoinEntities(final T entity, final Executor executor) throws SQLException {
+            return deleteJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entities
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        default int deleteAllJoinEntities(final Collection<T> entities) throws SQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return 0;
+            }
+
+            return deleteJoinEntities(entities, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entities
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws SQLException {
+            if (inParallel) {
+                return deleteAllJoinEntities(entities, executor());
+            } else {
+                return deleteAllJoinEntities(entities);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws SQLException the SQL exception
+         */
+        default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws SQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return 0;
+            }
+
+            return deleteJoinEntities(entities, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
+        }
+    }
+
+    public static interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends ReadOnlyJoinEntityHelper<T, SB, TD>>
+            extends JoinEntityHelper<T, SB, TD> {
+
+        /**
+         * 
+         * @param entity
+         * @param joinEntityClass
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final T entity, final String joinEntityPropName) throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel)
+                throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor)
+                throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames)
+                throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
+                throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
+                throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteAllJoinEntities(T entity) throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteAllJoinEntities(final T entity, final Executor executor) throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteAllJoinEntities(final Collection<T> entities) throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws SQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
         }
     }
 

@@ -719,16 +719,16 @@ final class JoinInfo {
     //
     //        return tp;
     //    }
-    //
-    //    public Tuple2<String, BiParametersSetter<PreparedStatement, Object>> getDeleteSqlAndParamSetter(final Class<? extends SQLBuilder> sbc) {
-    //        final Tuple2<String, BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(sbc);
-    //
-    //        if (tp == null) {
-    //            throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
-    //        }
-    //
-    //        return tp;
-    //    }
+
+    public Tuple2<String, BiParametersSetter<PreparedStatement, Object>> getDeleteSqlAndParamSetter(final Class<? extends SQLBuilder> sbc) {
+        final Tuple2<String, BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(sbc);
+
+        if (tp == null) {
+            throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
+        }
+
+        return tp;
+    }
 
     /**
      * For one-to-one or one-to-many join

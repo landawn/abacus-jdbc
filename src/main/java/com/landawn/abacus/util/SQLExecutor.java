@@ -58,6 +58,7 @@ import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
+import com.landawn.abacus.util.ExceptionalStream.StreamE;
 import com.landawn.abacus.util.Fn.IntFunctions;
 import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
@@ -1251,6 +1252,7 @@ public class SQLExecutor {
         PreparedStatement stmt = null;
         int originalIsolationLevel = 0;
         boolean autoCommit = true;
+        final Object[] parameters = new Object[1];
 
         try {
             ds = getDataSource(parsedSql.getParameterizedSql(), parametersList, jdbcSettings);
@@ -1275,7 +1277,9 @@ public class SQLExecutor {
 
             if (len <= batchSize) {
                 for (int i = 0; i < len; i++) {
-                    statementSetter.setParameters(parsedSql, stmt, N.asArray(parametersList.get(i)));
+                    parameters[0] = parametersList.get(i);
+
+                    statementSetter.setParameters(parsedSql, stmt, parameters);
                     stmt.addBatch();
                 }
 
@@ -1284,7 +1288,9 @@ public class SQLExecutor {
                 int num = 0;
 
                 for (int i = 0; i < len; i++) {
-                    statementSetter.setParameters(parsedSql, stmt, N.asArray(parametersList.get(i)));
+                    parameters[0] = parametersList.get(i);
+
+                    statementSetter.setParameters(parsedSql, stmt, parameters);
                     stmt.addBatch();
                     num++;
 
@@ -1367,8 +1373,8 @@ public class SQLExecutor {
             }
 
             if (entity instanceof DirtyMarker) {
-                for (Object parameters : parametersList) {
-                    DirtyMarkerUtil.dirtyPropNames((DirtyMarker) parameters).clear();
+                for (Object e : parametersList) {
+                    DirtyMarkerUtil.dirtyPropNames((DirtyMarker) e).clear();
                 }
             }
         }
@@ -1730,10 +1736,13 @@ public class SQLExecutor {
             stmt = prepareStatement(ds, localConn, parsedSql, statementSetter, jdbcSettings, false, true, parametersList);
 
             int result = 0;
+            final Object[] parameters = new Object[1];
 
             if (len <= batchSize) {
                 for (int i = 0; i < len; i++) {
-                    statementSetter.setParameters(parsedSql, stmt, N.asArray(parametersList.get(i)));
+                    parameters[0] = parametersList.get(i);
+
+                    statementSetter.setParameters(parsedSql, stmt, parameters);
                     stmt.addBatch();
                 }
 
@@ -1742,7 +1751,9 @@ public class SQLExecutor {
                 int num = 0;
 
                 for (int i = 0; i < len; i++) {
-                    statementSetter.setParameters(parsedSql, stmt, N.asArray(parametersList.get(i)));
+                    parameters[0] = parametersList.get(i);
+
+                    statementSetter.setParameters(parsedSql, stmt, parameters);
                     stmt.addBatch();
                     num++;
 
@@ -1761,8 +1772,8 @@ public class SQLExecutor {
             }
 
             if (N.firstOrNullIfEmpty(parametersList) instanceof DirtyMarker) {
-                for (Object parameters : parametersList) {
-                    DirtyMarkerUtil.markDirty((DirtyMarker) parameters, parsedSql.getNamedParameters(), false);
+                for (Object e : parametersList) {
+                    DirtyMarkerUtil.markDirty((DirtyMarker) e, parsedSql.getNamedParameters(), false);
                 }
             }
 
@@ -5686,8 +5697,7 @@ public class SQLExecutor {
         /** The Constant COUNT_SELECT_PROP_NAMES. */
         static final ImmutableList<String> COUNT_SELECT_PROP_NAMES = ImmutableList.of(NSC.COUNT_ALL);
 
-        /** The target class. */
-        private final Class<T> targetClass;
+        private final Class<T> targetEntityClass;
         private final boolean isDirtyMarker;
 
         private final EntityInfo entityInfo;
@@ -5794,9 +5804,9 @@ public class SQLExecutor {
                 }
             }
 
-            this.targetClass = entityClass;
-            this.isDirtyMarker = ClassUtil.isDirtyMarker(targetClass);
-            this.entityInfo = ParserUtil.getEntityInfo(targetClass);
+            this.targetEntityClass = entityClass;
+            this.isDirtyMarker = ClassUtil.isDirtyMarker(targetEntityClass);
+            this.entityInfo = ParserUtil.getEntityInfo(targetEntityClass);
             this.idClass = Primitives.wrap(idClass).isAssignableFrom(Primitives.wrap(idReturnType)) ? (Class<ID>) idReturnType : idClass;
             this.isEntityId = EntityId.class.isAssignableFrom(idClass);
             this.isNoId = isFakeId;
@@ -6009,10 +6019,10 @@ public class SQLExecutor {
             checkIdRequired();
 
             if (N.isNullOrEmpty(selectPropNames)) {
-                return sqlExecutor.gett(targetClass, conn, sql_get_by_id, id);
+                return sqlExecutor.gett(targetEntityClass, conn, sql_get_by_id, id);
             } else {
                 final SP sp = prepareQuery(selectPropNames, idCond);
-                return sqlExecutor.gett(targetClass, conn, sp.sql, id);
+                return sqlExecutor.gett(targetEntityClass, conn, sp.sql, id);
             }
         }
 
@@ -6097,7 +6107,7 @@ public class SQLExecutor {
                     String inSQL = sql + joiner.toString();
 
                     for (int i = 0, to = ids.size() - batchSize; i <= to; i += batchSize) {
-                        resultList.addAll(sqlExecutor.list(targetClass, conn, inSQL, null, null, idList.subList(i, i + batchSize).toArray()));
+                        resultList.addAll(sqlExecutor.list(targetEntityClass, conn, inSQL, null, null, idList.subList(i, i + batchSize).toArray()));
                     }
                 }
 
@@ -6110,7 +6120,8 @@ public class SQLExecutor {
                     }
 
                     String inSQL = sql + joiner.toString();
-                    resultList.addAll(sqlExecutor.list(targetClass, conn, inSQL, null, null, idList.subList(ids.size() - remaining, ids.size()).toArray()));
+                    resultList
+                            .addAll(sqlExecutor.list(targetEntityClass, conn, inSQL, null, null, idList.subList(ids.size() - remaining, ids.size()).toArray()));
                 }
             } else {
                 if (ids.size() >= batchSize) {
@@ -6208,7 +6219,7 @@ public class SQLExecutor {
                 final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.findFirst(targetClass, conn, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
+            return sqlExecutor.findFirst(targetEntityClass, conn, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -6400,7 +6411,7 @@ public class SQLExecutor {
         public List<T> list(final Connection conn, final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.list(targetClass, conn, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
+            return sqlExecutor.list(targetEntityClass, conn, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -6683,7 +6694,7 @@ public class SQLExecutor {
         public List<T> listAll(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.listAll(targetClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
+            return sqlExecutor.listAll(targetEntityClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -6756,7 +6767,7 @@ public class SQLExecutor {
         public Stream<T> stream(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.stream(targetClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
+            return sqlExecutor.stream(targetEntityClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -6934,7 +6945,7 @@ public class SQLExecutor {
         public Stream<T> streamAll(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.streamAll(targetClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
+            return sqlExecutor.streamAll(targetEntityClass, sp.sql, StatementSetter.DEFAULT, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
@@ -7470,27 +7481,27 @@ public class SQLExecutor {
             switch (namingPolicy) {
                 case LOWER_CASE_WITH_UNDERSCORE:
                     if (N.isNullOrEmpty(selectPropNames)) {
-                        sqlBuilder = NSC.selectFrom(targetClass).append(whereCause);
+                        sqlBuilder = NSC.selectFrom(targetEntityClass).append(whereCause);
                     } else {
-                        sqlBuilder = NSC.select(selectPropNames).from(targetClass).append(whereCause);
+                        sqlBuilder = NSC.select(selectPropNames).from(targetEntityClass).append(whereCause);
                     }
 
                     break;
 
                 case UPPER_CASE_WITH_UNDERSCORE:
                     if (N.isNullOrEmpty(selectPropNames)) {
-                        sqlBuilder = NAC.selectFrom(targetClass).append(whereCause);
+                        sqlBuilder = NAC.selectFrom(targetEntityClass).append(whereCause);
                     } else {
-                        sqlBuilder = NAC.select(selectPropNames).from(targetClass).append(whereCause);
+                        sqlBuilder = NAC.select(selectPropNames).from(targetEntityClass).append(whereCause);
                     }
 
                     break;
 
                 case LOWER_CAMEL_CASE:
                     if (N.isNullOrEmpty(selectPropNames)) {
-                        sqlBuilder = NLC.selectFrom(targetClass).append(whereCause);
+                        sqlBuilder = NLC.selectFrom(targetEntityClass).append(whereCause);
                     } else {
-                        sqlBuilder = NLC.select(selectPropNames).from(targetClass).append(whereCause);
+                        sqlBuilder = NLC.select(selectPropNames).from(targetEntityClass).append(whereCause);
                     }
 
                     break;
@@ -7760,13 +7771,13 @@ public class SQLExecutor {
 
             switch (namingPolicy) {
                 case LOWER_CASE_WITH_UNDERSCORE:
-                    return NSC.insert(insertingPropNames).into(targetClass).sql();
+                    return NSC.insert(insertingPropNames).into(targetEntityClass).sql();
 
                 case UPPER_CASE_WITH_UNDERSCORE:
-                    return NAC.insert(insertingPropNames).into(targetClass).sql();
+                    return NAC.insert(insertingPropNames).into(targetEntityClass).sql();
 
                 case LOWER_CAMEL_CASE:
-                    return NLC.insert(insertingPropNames).into(targetClass).sql();
+                    return NLC.insert(insertingPropNames).into(targetEntityClass).sql();
 
                 default:
                     throw new RuntimeException("Unsupported naming policy: " + namingPolicy);
@@ -8142,13 +8153,13 @@ public class SQLExecutor {
 
             switch (namingPolicy) {
                 case LOWER_CASE_WITH_UNDERSCORE:
-                    return NSC.update(targetClass).set(props).append(whereCause).pair();
+                    return NSC.update(targetEntityClass).set(props).append(whereCause).pair();
 
                 case UPPER_CASE_WITH_UNDERSCORE:
-                    return NAC.update(targetClass).set(props).append(whereCause).pair();
+                    return NAC.update(targetEntityClass).set(props).append(whereCause).pair();
 
                 case LOWER_CAMEL_CASE:
-                    return NLC.update(targetClass).set(props).append(whereCause).pair();
+                    return NLC.update(targetEntityClass).set(props).append(whereCause).pair();
 
                 default:
                     throw new RuntimeException("Unsupported naming policy: " + namingPolicy);
@@ -8166,13 +8177,13 @@ public class SQLExecutor {
 
             switch (namingPolicy) {
                 case LOWER_CASE_WITH_UNDERSCORE:
-                    return NSC.update(targetClass).set(propNamesToUpdate).where(idCond).sql();
+                    return NSC.update(targetEntityClass).set(propNamesToUpdate).where(idCond).sql();
 
                 case UPPER_CASE_WITH_UNDERSCORE:
-                    return NAC.update(targetClass).set(propNamesToUpdate).where(idCond).sql();
+                    return NAC.update(targetEntityClass).set(propNamesToUpdate).where(idCond).sql();
 
                 case LOWER_CAMEL_CASE:
-                    return NLC.update(targetClass).set(propNamesToUpdate).where(idCond).sql();
+                    return NLC.update(targetEntityClass).set(propNamesToUpdate).where(idCond).sql();
 
                 default:
                     throw new RuntimeException("Unsupported naming policy: " + namingPolicy);
@@ -8325,17 +8336,17 @@ public class SQLExecutor {
 
             switch (namingPolicy) {
                 case LOWER_CASE_WITH_UNDERSCORE:
-                    sp = NSC.deleteFrom(targetClass).append(whereCause).pair();
+                    sp = NSC.deleteFrom(targetEntityClass).append(whereCause).pair();
 
                     break;
 
                 case UPPER_CASE_WITH_UNDERSCORE:
-                    sp = NAC.deleteFrom(targetClass).append(whereCause).pair();
+                    sp = NAC.deleteFrom(targetEntityClass).append(whereCause).pair();
 
                     break;
 
                 case LOWER_CAMEL_CASE:
-                    sp = NLC.deleteFrom(targetClass).append(whereCause).pair();
+                    sp = NLC.deleteFrom(targetEntityClass).append(whereCause).pair();
 
                     break;
 
@@ -8490,9 +8501,9 @@ public class SQLExecutor {
          * @param selectPropNames
          */
         public void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) {
-            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(Mapper.class, targetClass, joinEntityClass);
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(Mapper.class, targetEntityClass, joinEntityClass);
 
-            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
 
             for (String joinEntityPropName : joinEntityPropNames) {
                 loadJoinEntities(entity, joinEntityPropName, selectPropNames);
@@ -8519,8 +8530,8 @@ public class SQLExecutor {
                 return;
             }
 
-            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(Mapper.class, targetClass, joinEntityClass);
-            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetClass);
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(Mapper.class, targetEntityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
 
             for (String joinEntityPropName : joinEntityPropNames) {
                 loadJoinEntities(entities, joinEntityPropName, selectPropNames);
@@ -8543,7 +8554,7 @@ public class SQLExecutor {
          * @param selectPropNames
          */
         public void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) {
-            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(Mapper.class, targetClass, joinEntityPropName);
+            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(Mapper.class, targetEntityClass, joinEntityPropName);
             final Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                     .getSelectSQLBuilderAndParamSetter(sbc);
 
@@ -8593,7 +8604,7 @@ public class SQLExecutor {
             } else if (entities.size() == 1) {
                 loadJoinEntities(N.firstOrNullIfEmpty(entities), joinEntityPropName, selectPropNames);
             } else {
-                final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(Mapper.class, targetClass, joinEntityPropName);
+                final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(Mapper.class, targetEntityClass, joinEntityPropName);
                 final Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
                         .getSelectSQLBuilderAndParamSetterForBatch(sbc);
 
@@ -8714,7 +8725,7 @@ public class SQLExecutor {
          * @param entity
          */
         public void loadAllJoinEntities(T entity) {
-            loadJoinEntities(entity, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet());
+            loadJoinEntities(entity, JoinInfo.getEntityJoinInfo(Mapper.class, targetEntityClass).keySet());
         }
 
         /**
@@ -8736,7 +8747,7 @@ public class SQLExecutor {
          * @param executor
          */
         public void loadAllJoinEntities(final T entity, final Executor executor) {
-            loadJoinEntities(entity, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet(), executor);
+            loadJoinEntities(entity, JoinInfo.getEntityJoinInfo(Mapper.class, targetEntityClass).keySet(), executor);
         }
 
         /**
@@ -8748,7 +8759,7 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntities(entities, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet());
+            loadJoinEntities(entities, JoinInfo.getEntityJoinInfo(Mapper.class, targetEntityClass).keySet());
         }
 
         /**
@@ -8774,7 +8785,7 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntities(entities, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet(), executor);
+            loadJoinEntities(entities, JoinInfo.getEntityJoinInfo(Mapper.class, targetEntityClass).keySet(), executor);
         }
 
         /**
@@ -8981,7 +8992,7 @@ public class SQLExecutor {
          * @param entity
          */
         public void loadJoinEntitiesIfNull(T entity) {
-            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet());
+            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfo(Mapper.class, targetEntityClass).keySet());
         }
 
         /**
@@ -9003,7 +9014,7 @@ public class SQLExecutor {
          * @param executor
          */
         public void loadJoinEntitiesIfNull(final T entity, final Executor executor) {
-            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet(), executor);
+            loadJoinEntitiesIfNull(entity, JoinInfo.getEntityJoinInfo(Mapper.class, targetEntityClass).keySet(), executor);
         }
 
         /**
@@ -9015,7 +9026,7 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet());
+            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfo(Mapper.class, targetEntityClass).keySet());
         }
 
         /**
@@ -9041,7 +9052,282 @@ public class SQLExecutor {
                 return;
             }
 
-            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfo(Mapper.class, targetClass).keySet(), executor);
+            loadJoinEntitiesIfNull(entities, JoinInfo.getEntityJoinInfo(Mapper.class, targetEntityClass).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(Mapper.class, targetEntityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+
+            int result = 0;
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                result += deleteJoinEntities(entity, joinEntityPropName);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return 0;
+            }
+
+            final List<String> joinEntityPropNames = JoinInfo.getJoinEntityPropNamesByType(Mapper.class, targetEntityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+
+            int result = 0;
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                result += deleteJoinEntities(entities, joinEntityPropName);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteJoinEntities(final T entity, final String joinEntityPropName) throws UncheckedSQLException {
+            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(Mapper.class, targetEntityClass, joinEntityPropName);
+            final Tuple2<String, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+
+            final StatementSetter statementSetter = (parsedSql, stmt, parameters) -> tp._2.accept(stmt, entity);
+
+            return sqlExecutor.update(tp._1, statementSetter);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException {
+            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(Mapper.class, targetEntityClass, joinEntityPropName);
+            final Tuple2<String, BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+
+            final StatementSetter statementSetter = (parsedSql, stmt, parameters) -> tp._2.accept(stmt, parameters[0]);
+            final List<T> parametersList = entities instanceof List ? (List<T>) entities : new ArrayList<>(entities);
+
+            return sqlExecutor.batchUpdate(tp._1, statementSetter, parametersList);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return 0;
+            }
+
+            int result = 0;
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                result += deleteJoinEntities(entity, joinEntityPropName);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException {
+            if (inParallel) {
+                return deleteJoinEntities(entity, joinEntityPropNames, sqlExecutor._asyncExecutor.getExecutor());
+            } else {
+                return deleteJoinEntities(entity, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return 0;
+            }
+
+            final List<ContinuableFuture<Integer>> futures = StreamE.of(joinEntityPropNames, UncheckedSQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entity, joinEntityPropName), executor))
+                    .toList();
+
+            return completeSum(futures);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return 0;
+            }
+
+            int result = 0;
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                result += deleteJoinEntities(entities, joinEntityPropName);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
+                throws UncheckedSQLException {
+            if (inParallel) {
+                return deleteJoinEntities(entities, joinEntityPropNames, sqlExecutor._asyncExecutor.getExecutor());
+            } else {
+                return deleteJoinEntities(entities, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
+                throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return 0;
+            }
+
+            final List<ContinuableFuture<Integer>> futures = StreamE.of(joinEntityPropNames, UncheckedSQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entities, joinEntityPropName), executor))
+                    .toList();
+
+            return completeSum(futures);
+        }
+
+        /**
+         *
+         * @param entity
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteAllJoinEntities(T entity) throws UncheckedSQLException {
+            return deleteJoinEntities(entity, JoinInfo.getEntityJoinInfo(Mapper.class, targetEntityClass).keySet());
+        }
+
+        /**
+         *
+         * @param entity
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteAllJoinEntities(final T entity, final boolean inParallel) throws UncheckedSQLException {
+            if (inParallel) {
+                return deleteAllJoinEntities(entity, sqlExecutor._asyncExecutor.getExecutor());
+            } else {
+                return deleteAllJoinEntities(entity);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException {
+            return deleteJoinEntities(entity, JoinInfo.getEntityJoinInfo(Mapper.class, targetEntityClass).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entities
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteAllJoinEntities(final Collection<T> entities) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return 0;
+            }
+
+            return deleteJoinEntities(entities, JoinInfo.getEntityJoinInfo(Mapper.class, targetEntityClass).keySet());
+        }
+
+        /**
+         *
+         * @param entities
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
+            if (inParallel) {
+                return deleteAllJoinEntities(entities, sqlExecutor._asyncExecutor.getExecutor());
+            } else {
+                return deleteAllJoinEntities(entities);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        public int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return 0;
+            }
+
+            return deleteJoinEntities(entities, JoinInfo.getEntityJoinInfo(Mapper.class, targetEntityClass).keySet(), executor);
         }
 
         private static final Throwables.Consumer<? super Exception, RuntimeException> throwRuntimeExceptionAction = e -> {
@@ -9052,6 +9338,23 @@ public class SQLExecutor {
             for (ContinuableFuture<Void> f : futures) {
                 f.gett().ifFailure(throwRuntimeExceptionAction);
             }
+        }
+
+        static int completeSum(final List<ContinuableFuture<Integer>> futures) {
+            int result = 0;
+            Result<Integer, Exception> ret = null;
+
+            for (ContinuableFuture<Integer> f : futures) {
+                ret = f.gett();
+
+                if (ret.isFailure()) {
+                    throwRuntimeExceptionAction.accept(ret.getExceptionIfPresent());
+                }
+
+                result += ret.orElse(0);
+            }
+
+            return result;
         }
 
         /**
@@ -9113,7 +9416,7 @@ public class SQLExecutor {
          * @return
          */
         public String toStirng() {
-            return "Mapper[" + ClassUtil.getCanonicalClassName(targetClass) + "]";
+            return "Mapper[" + ClassUtil.getCanonicalClassName(targetEntityClass) + "]";
         }
     }
 
