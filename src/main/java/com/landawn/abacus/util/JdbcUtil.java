@@ -12330,6 +12330,14 @@ public final class JdbcUtil {
         @NonDBOperation
         Executor executor();
 
+        void cacheSql(String key, String sql);
+
+        void cacheSqls(String key, Collection<String> sqls);
+
+        String getCachedSql(String key);
+
+        ImmutableList<String> getCachedSqls(String key);
+
         //    /**
         //     *
         //     * @param isolationLevel

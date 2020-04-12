@@ -1077,6 +1077,9 @@ final class DaoUtil {
         final Cache<String, Object> cache = daoCache == null ? CacheFactory.createLocalCache(capacity, evictDelay) : daoCache;
         final Set<Method> nonDBOperationSet = new HashSet<>();
 
+        final Map<String, String> sqlCache = new ConcurrentHashMap<>(0);
+        final Map<String, ImmutableList<String>> sqlsCache = new ConcurrentHashMap<>(0);
+
         for (Method m : sqlMethods) {
             if (!Modifier.isPublic(m.getModifiers())) {
                 continue;
@@ -1147,6 +1150,23 @@ final class DaoUtil {
                 call = (proxy, args) -> nonNullSQLMapper;
             } else if (methodName.equals("executor") && Executor.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> nonNullExecutor;
+            } else if (methodName.equals("cacheSql") && void.class.isAssignableFrom(returnType) && paramLen == 2 && paramTypes[0].equals(String.class)
+                    && paramTypes[1].equals(String.class)) {
+                call = (proxy, args) -> {
+                    sqlCache.put((String) args[0], (String) args[1]);
+                    return null;
+                };
+            } else if (methodName.equals("cacheSqls") && void.class.isAssignableFrom(returnType) && paramLen == 2 && paramTypes[0].equals(String.class)
+                    && paramTypes[1].equals(Collection.class)) {
+                call = (proxy, args) -> {
+                    sqlsCache.put((String) args[0], ImmutableList.copyOf((Collection<String>) args[1]));
+                    return null;
+                };
+            } else if (methodName.equals("getCachedSql") && String.class.isAssignableFrom(returnType) && paramLen == 1 && paramTypes[0].equals(String.class)) {
+                call = (proxy, args) -> sqlCache.get(args[0]);
+            } else if (methodName.equals("getCachedSqls") && ImmutableList.class.isAssignableFrom(returnType) && paramLen == 1
+                    && paramTypes[0].equals(String.class)) {
+                call = (proxy, args) -> sqlsCache.get(args[0]);
             } else {
                 final Annotation sqlAnno = StreamEx.of(m.getAnnotations()).filter(anno -> sqlAnnoMap.containsKey(anno.annotationType())).first().orNull();
 

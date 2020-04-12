@@ -40,6 +40,7 @@ import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Profiler;
+import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLParser;
 import com.landawn.abacus.util.SQLTransaction;
 import com.landawn.abacus.util.stream.IntStream;
@@ -47,6 +48,18 @@ import com.landawn.abacus.util.stream.LongStream;
 import com.landawn.abacus.util.stream.Stream;
 
 public class DaoTest {
+    
+
+    @Test
+    public void test_cacheSql() throws SQLException {
+        String sql = NSC.selectFrom(User.class).where(CF.eq("id")).sql();
+        userDao.cacheSql("selectById", sql);
+        
+        assertEquals(sql, userDao.getCachedSql("selectById"));
+        
+        userDao.cacheSqls("selectById", N.asList(sql));
+        assertEquals(N.asList(sql), userDao.getCachedSqls("selectById"));
+    }
 
     @Test
     public void test_orderBy() throws SQLException {
