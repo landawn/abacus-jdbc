@@ -2596,6 +2596,8 @@ final class DaoUtil {
                         }
                     }
 
+                    final int stmtParamLen = hasRowFilter ? (paramLen - 2) : (hasRowMapperOrExtractor ? paramLen - 1 : paramLen);
+
                     JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter = null;
 
                     if (paramLen == 0) {
@@ -2611,8 +2613,6 @@ final class DaoUtil {
                     } else if (paramLen == 1 && Object[].class.isAssignableFrom(paramTypes[0])) {
                         parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Object[]) args[0]);
                     } else {
-                        final int stmtParamLen = hasRowFilter ? (paramLen - 2) : (hasRowMapperOrExtractor ? paramLen - 1 : paramLen);
-
                         if (stmtParamLen == 0) {
                             // ignore
                         } else if (stmtParamLen == 1) {
@@ -2704,6 +2704,13 @@ final class DaoUtil {
                                                                 + " is not binded with parameter named through annotation @Bind")))
                                         .map(b -> b.value())
                                         .toArray(len -> new String[len]);
+
+                                final List<String> diffParamNames = N.difference(namedSql.getNamedParameters(), N.asList(paramNames));
+
+                                if (N.notNullOrEmpty(diffParamNames)) {
+                                    throw new UnsupportedOperationException("In method: " + ClassUtil.getSimpleClassName(daoInterface) + "." + m.getName()
+                                            + ", The named parameters in sql are different from the names binded by method parameters: " + diffParamNames);
+                                }
 
                                 parametersSetter = (preparedQuery, args) -> {
                                     final NamedQuery namedQuery = ((NamedQuery) preparedQuery);
