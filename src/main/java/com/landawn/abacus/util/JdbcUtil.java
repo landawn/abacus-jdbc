@@ -13888,78 +13888,30 @@ public final class JdbcUtil {
     @Beta
     public static interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, TD>> extends CrudDao<T, Long, SB, TD> {
 
-        /**
-         *
-         * @param id
-         * @return
-         * @throws SQLException the SQL exception
-         */
         default Optional<T> get(final long id) throws SQLException {
-            return Optional.ofNullable(gett(id));
+            return get(Long.valueOf(id));
         }
 
-        /**
-         *
-         * @param id
-         * @param selectPropNames
-         * @return
-         * @throws SQLException the SQL exception
-         */
         default Optional<T> get(final long id, final Collection<String> selectPropNames) throws SQLException {
-            return Optional.ofNullable(gett(id, selectPropNames));
+            return get(Long.valueOf(id), selectPropNames);
         }
 
-        /**
-         * Gets the t.
-         *
-         * @param id
-         * @return
-         * @throws SQLException the SQL exception
-         */
         default T gett(final long id) throws SQLException {
             return gett(Long.valueOf(id));
         }
 
-        /**
-         * Gets the t.
-         * @param id
-         * @param selectPropNames
-         *
-         * @return
-         * @throws SQLException the SQL exception
-         */
         default T gett(final long id, final Collection<String> selectPropNames) throws SQLException {
             return gett(Long.valueOf(id), selectPropNames);
         }
 
-        /**
-         *
-         * @param id
-         * @return true, if successful
-         * @throws SQLException the SQL exception
-         */
         default boolean exists(final long id) throws SQLException {
             return exists(Long.valueOf(id));
         }
 
-        /**
-         *
-         * @param updateProps
-         * @param id
-         * @return
-         * @throws SQLException the SQL exception
-         */
         default int update(final Map<String, Object> updateProps, final long id) throws SQLException {
             return update(updateProps, Long.valueOf(id));
         }
 
-        /**
-         * Delete by id.
-         *
-         * @param id
-         * @return
-         * @throws SQLException the SQL exception
-         */
         default int deleteById(final long id) throws SQLException {
             return deleteById(Long.valueOf(id));
         }
@@ -14555,17 +14507,17 @@ public final class JdbcUtil {
     static int completeSum(final List<ContinuableFuture<Integer>> futures) throws SQLException {
         int result = 0;
         Result<Integer, Exception> ret = null;
-        
+
         for (ContinuableFuture<Integer> f : futures) {
             ret = f.gett();
-            
+
             if (ret.isFailure()) {
                 throwSQLExceptionAction.accept(ret.getExceptionIfPresent());
             }
-            
+
             result += ret.orElse(0);
         }
-        
+
         return result;
     }
 

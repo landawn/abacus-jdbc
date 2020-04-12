@@ -30,7 +30,7 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLExecutor;
-import com.landawn.abacus.util.SQLExecutor.Mapper;
+import com.landawn.abacus.util.SQLExecutor.MapperLEx;
 import com.landawn.abacus.util.SQLTransaction;
 
 /**
@@ -45,13 +45,13 @@ public class Jdbc {
 
     static final DataSource dataSource = JdbcUtil.createDataSource("jdbc:h2:~/test", "sa", "");
     static final SQLExecutor sqlExecutor = new SQLExecutor(dataSource);
-    static final Mapper<User, Long> userMapper = sqlExecutor.mapper(User.class, long.class);
-    static final Mapper<Device, Long> deviceMapper = sqlExecutor.mapper(Device.class, long.class);
-    static final Mapper<Address, Long> addressMapper = sqlExecutor.mapper(Address.class, long.class);
+    static final MapperLEx<User> userMapper = sqlExecutor.mapperEx(User.class);
+    static final MapperLEx<Device> deviceMapper = sqlExecutor.mapperEx(Device.class);
+    static final MapperLEx<Address> addressMapper = sqlExecutor.mapperEx(Address.class);
 
     static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
     static final NoUpdateUserDao noUpdateUserDao = JdbcUtil.createDao(NoUpdateUserDao.class, dataSource);
-    static final ReadOnlyUserDao readOnlyUserDao = JdbcUtil.createDao(ReadOnlyUserDao.class, dataSource); 
+    static final ReadOnlyUserDao readOnlyUserDao = JdbcUtil.createDao(ReadOnlyUserDao.class, dataSource);
 
     static final EmployeeDao employeeDao = JdbcUtil.createDao(EmployeeDao.class, dataSource);
     static final ProjectDao projectDao = JdbcUtil.createDao(ProjectDao.class, dataSource);

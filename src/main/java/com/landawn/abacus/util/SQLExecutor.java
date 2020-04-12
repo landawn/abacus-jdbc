@@ -474,9 +474,17 @@ public class SQLExecutor {
     /** The async SQL executor. */
     private final AsyncSQLExecutor _asyncSQLExecutor;
 
-    /** The mapper pool. */
     @SuppressWarnings("rawtypes")
     private final Map<Class<?>, Mapper> mapperPool = new ConcurrentHashMap<>();
+
+    @SuppressWarnings("rawtypes")
+    private final Map<Class<?>, MapperL> mapperLPool = new ConcurrentHashMap<>();
+
+    @SuppressWarnings("rawtypes")
+    private final Map<Class<?>, MapperEx> mapperExPool = new ConcurrentHashMap<>();
+
+    @SuppressWarnings("rawtypes")
+    private final Map<Class<?>, MapperLEx> mapperExLPool = new ConcurrentHashMap<>();
 
     /**
      * Instantiates a new SQL executor.
@@ -775,6 +783,57 @@ public class SQLExecutor {
             } else if (!mapper.idClass.equals(idClass)) {
                 throw new IllegalArgumentException("Mapper for entity \"" + ClassUtil.getSimpleClassName(entityClass)
                         + "\" has already been created with different id class: " + mapper.idClass);
+            }
+
+            return mapper;
+        }
+    }
+
+    public <T> MapperL<T> mapper(final Class<T> entityClass) {
+        synchronized (mapperLPool) {
+            MapperL<T> mapper = mapperLPool.get(entityClass);
+
+            if (mapper == null) {
+                mapper = new MapperL<>(entityClass, this, this._namingPolicy);
+                mapperLPool.put(entityClass, mapper);
+            }
+
+            return mapper;
+        }
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param <ID>
+     * @param entityClass the id class
+     * @param idClass the id class type of target id property.
+     * It should be {@code Void} class if there is no id property defined for the target entity, or {@code EntityId} class if there is zero or multiple id properties.
+     * @return
+     */
+    public <T, ID> MapperEx<T, ID> mapperEx(final Class<T> entityClass, final Class<ID> idClass) {
+        synchronized (mapperExPool) {
+            MapperEx<T, ID> mapper = mapperExPool.get(entityClass);
+
+            if (mapper == null) {
+                mapper = new MapperEx<>(entityClass, idClass, this, this._namingPolicy);
+                mapperExPool.put(entityClass, mapper);
+            } else if (!mapper.idClass.equals(idClass)) {
+                throw new IllegalArgumentException("MapperEx for entity \"" + ClassUtil.getSimpleClassName(entityClass)
+                        + "\" has already been created with different id class: " + mapper.idClass);
+            }
+
+            return mapper;
+        }
+    }
+
+    public <T> MapperLEx<T> mapperEx(final Class<T> entityClass) {
+        synchronized (mapperExLPool) {
+            MapperLEx<T> mapper = mapperExLPool.get(entityClass);
+
+            if (mapper == null) {
+                mapper = new MapperLEx<>(entityClass, this, this._namingPolicy);
+                mapperExLPool.put(entityClass, mapper);
             }
 
             return mapper;
@@ -5689,7 +5748,7 @@ public class SQLExecutor {
      * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
      * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html">http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html</a>
      */
-    public static final class Mapper<T, ID> {
+    public static class Mapper<T, ID> {
 
         /** The Constant EXISTS_SELECT_PROP_NAMES. */
         static final ImmutableList<String> EXISTS_SELECT_PROP_NAMES = ImmutableList.of(NSC._1);
@@ -5697,12 +5756,14 @@ public class SQLExecutor {
         /** The Constant COUNT_SELECT_PROP_NAMES. */
         static final ImmutableList<String> COUNT_SELECT_PROP_NAMES = ImmutableList.of(NSC.COUNT_ALL);
 
-        private final Class<T> targetEntityClass;
-        private final boolean isDirtyMarker;
+        final SQLExecutor sqlExecutor;
+        final NamingPolicy namingPolicy;
+        final Class<? extends SQLBuilder> sbc;
 
-        private final EntityInfo entityInfo;
-
-        private final Class<ID> idClass;
+        final Class<T> targetEntityClass;
+        final boolean isDirtyMarker;
+        final EntityInfo entityInfo;
+        final Class<ID> idClass;
 
         private final boolean isEntityId;
         private final boolean isNoId;
@@ -5721,12 +5782,6 @@ public class SQLExecutor {
 
         /** The id prop name set. */
         private final ImmutableSet<String> idPropNameSet;
-
-        /** The sql executor. */
-        private final SQLExecutor sqlExecutor;
-
-        /** The naming policy. */
-        private final NamingPolicy namingPolicy;
 
         /** The id cond. */
         private final Condition idCond;
@@ -5748,8 +5803,6 @@ public class SQLExecutor {
 
         /** The sql delete by id. */
         private final String sql_delete_by_id;
-
-        private final Class<? extends SQLBuilder> sbc;
 
         private final BiRowMapper<ID> keyExtractor;
         private final Function<Object, ID> idGetter;
@@ -8487,6 +8540,149 @@ public class SQLExecutor {
 
         /**
          *
+         * @param <R>
+         * @param func
+         * @return
+         */
+        @Beta
+        public <R> ContinuableFuture<R> asyncCall(final Function<Mapper<T, ID>, R> func) {
+            N.checkArgNotNull(func, "func");
+
+            return sqlExecutor._asyncExecutor.execute(() -> func.apply(this));
+        }
+
+        /**
+         *
+         * @param <R>
+         * @param func
+         * @param executor
+         * @return
+         */
+        @Beta
+        public <R> ContinuableFuture<R> asyncCall(final Function<Mapper<T, ID>, R> func, final Executor executor) {
+            N.checkArgNotNull(func, "func");
+            N.checkArgNotNull(executor, "executor");
+
+            return ContinuableFuture.call(() -> func.apply(this), executor);
+        }
+
+        /**
+         *
+         * @param action
+         * @return
+         */
+        @Beta
+        public ContinuableFuture<Void> asyncRun(final Consumer<Mapper<T, ID>> action) {
+            N.checkArgNotNull(action, "action");
+
+            return sqlExecutor._asyncExecutor.execute(() -> action.accept(this));
+        }
+
+        /**
+         *
+         * @param action
+         * @param executor
+         * @return
+         */
+        @Beta
+        public ContinuableFuture<Void> asyncRun(final Consumer<Mapper<T, ID>> action, final Executor executor) {
+            N.checkArgNotNull(action, "action");
+            N.checkArgNotNull(executor, "executor");
+
+            return ContinuableFuture.run(() -> action.accept(this), executor);
+        }
+
+        /**
+         *
+         * @return
+         */
+        public String toStirng() {
+            return "Mapper[" + ClassUtil.getCanonicalClassName(targetEntityClass) + "]";
+        }
+    }
+
+    public static class MapperL<T> extends Mapper<T, Long> {
+        MapperL(final Class<T> entityClass, final SQLExecutor sqlExecutor, final NamingPolicy namingPolicy) {
+            super(entityClass, Long.class, sqlExecutor, namingPolicy);
+        }
+
+        public boolean exists(final long id) {
+            return exists(Long.valueOf(id));
+        }
+
+        public boolean exists(final Connection conn, final long id) {
+            return exists(conn, Long.valueOf(id));
+        }
+
+        public Optional<T> get(final long id) throws DuplicatedResultException {
+            return get(Long.valueOf(id));
+        }
+
+        public Optional<T> get(final long id, final Collection<String> selectPropNames) throws DuplicatedResultException {
+            return get(Long.valueOf(id), selectPropNames);
+        }
+
+        public Optional<T> get(final Connection conn, final long id, final Collection<String> selectPropNames) throws DuplicatedResultException {
+            return get(conn, Long.valueOf(id), selectPropNames);
+        }
+
+        public T gett(final long id) throws DuplicatedResultException {
+            return gett(Long.valueOf(id));
+        }
+
+        public T gett(final long id, final Collection<String> selectPropNames) throws DuplicatedResultException {
+            return gett(Long.valueOf(id), selectPropNames);
+        }
+
+        public T gett(final Connection conn, final long id, final Collection<String> selectPropNames) throws DuplicatedResultException {
+            return gett(conn, Long.valueOf(id), selectPropNames);
+        }
+
+        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+                throws DuplicatedResultException {
+            return queryForSingleResult(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        }
+
+        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final Connection conn, final String singleSelectPropName, final long id)
+                throws DuplicatedResultException {
+            return queryForSingleResult(targetValueClass, conn, singleSelectPropName, Long.valueOf(id));
+        }
+
+        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+                throws DuplicatedResultException {
+            return queryForUniqueResult(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        }
+
+        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final Connection conn, final String singleSelectPropName, final long id)
+                throws DuplicatedResultException {
+            return queryForUniqueResult(targetValueClass, conn, singleSelectPropName, Long.valueOf(id));
+        }
+
+        public int update(final Map<String, Object> props, final long id) {
+            return update(props, Long.valueOf(id));
+        }
+
+        public int update(final Connection conn, final Map<String, Object> props, final long id) {
+            return update(conn, props, Long.valueOf(id));
+        }
+
+        public int deleteById(final long id) {
+            return deleteById(Long.valueOf(id));
+        }
+
+        public int deleteById(final Connection conn, final long id) {
+            return deleteById(conn, Long.valueOf(id));
+        }
+    }
+
+    public static class MapperEx<T, ID> extends Mapper<T, ID> {
+
+        MapperEx(final Class<T> entityClass, final Class<ID> idClass, final SQLExecutor sqlExecutor, final NamingPolicy namingPolicy) {
+            super(entityClass, idClass, sqlExecutor, namingPolicy);
+        }
+
+        /**
+         *
          * @param entity
          * @param joinEntityClass
          */
@@ -9356,67 +9552,79 @@ public class SQLExecutor {
 
             return result;
         }
+    }
 
-        /**
-         *
-         * @param <R>
-         * @param func
-         * @return
-         */
-        @Beta
-        public <R> ContinuableFuture<R> asyncCall(final Function<Mapper<T, ID>, R> func) {
-            N.checkArgNotNull(func, "func");
-
-            return sqlExecutor._asyncExecutor.execute(() -> func.apply(this));
+    public static class MapperLEx<T> extends MapperEx<T, Long> {
+        MapperLEx(final Class<T> entityClass, final SQLExecutor sqlExecutor, final NamingPolicy namingPolicy) {
+            super(entityClass, Long.class, sqlExecutor, namingPolicy);
         }
 
-        /**
-         *
-         * @param <R>
-         * @param func
-         * @param executor
-         * @return
-         */
-        @Beta
-        public <R> ContinuableFuture<R> asyncCall(final Function<Mapper<T, ID>, R> func, final Executor executor) {
-            N.checkArgNotNull(func, "func");
-            N.checkArgNotNull(executor, "executor");
-
-            return ContinuableFuture.call(() -> func.apply(this), executor);
+        public boolean exists(final long id) {
+            return exists(Long.valueOf(id));
         }
 
-        /**
-         *
-         * @param action
-         * @return
-         */
-        @Beta
-        public ContinuableFuture<Void> asyncRun(final Consumer<Mapper<T, ID>> action) {
-            N.checkArgNotNull(action, "action");
-
-            return sqlExecutor._asyncExecutor.execute(() -> action.accept(this));
+        public boolean exists(final Connection conn, final long id) {
+            return exists(conn, Long.valueOf(id));
         }
 
-        /**
-         *
-         * @param action
-         * @param executor
-         * @return
-         */
-        @Beta
-        public ContinuableFuture<Void> asyncRun(final Consumer<Mapper<T, ID>> action, final Executor executor) {
-            N.checkArgNotNull(action, "action");
-            N.checkArgNotNull(executor, "executor");
-
-            return ContinuableFuture.run(() -> action.accept(this), executor);
+        public Optional<T> get(final long id) throws DuplicatedResultException {
+            return get(Long.valueOf(id));
         }
 
-        /**
-         *
-         * @return
-         */
-        public String toStirng() {
-            return "Mapper[" + ClassUtil.getCanonicalClassName(targetEntityClass) + "]";
+        public Optional<T> get(final long id, final Collection<String> selectPropNames) throws DuplicatedResultException {
+            return get(Long.valueOf(id), selectPropNames);
+        }
+
+        public Optional<T> get(final Connection conn, final long id, final Collection<String> selectPropNames) throws DuplicatedResultException {
+            return get(conn, Long.valueOf(id), selectPropNames);
+        }
+
+        public T gett(final long id) throws DuplicatedResultException {
+            return gett(Long.valueOf(id));
+        }
+
+        public T gett(final long id, final Collection<String> selectPropNames) throws DuplicatedResultException {
+            return gett(Long.valueOf(id), selectPropNames);
+        }
+
+        public T gett(final Connection conn, final long id, final Collection<String> selectPropNames) throws DuplicatedResultException {
+            return gett(conn, Long.valueOf(id), selectPropNames);
+        }
+
+        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+                throws DuplicatedResultException {
+            return queryForSingleResult(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        }
+
+        public <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final Connection conn, final String singleSelectPropName, final long id)
+                throws DuplicatedResultException {
+            return queryForSingleResult(targetValueClass, conn, singleSelectPropName, Long.valueOf(id));
+        }
+
+        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+                throws DuplicatedResultException {
+            return queryForUniqueResult(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        }
+
+        public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final Connection conn, final String singleSelectPropName, final long id)
+                throws DuplicatedResultException {
+            return queryForUniqueResult(targetValueClass, conn, singleSelectPropName, Long.valueOf(id));
+        }
+
+        public int update(final Map<String, Object> props, final long id) {
+            return update(props, Long.valueOf(id));
+        }
+
+        public int update(final Connection conn, final Map<String, Object> props, final long id) {
+            return update(conn, props, Long.valueOf(id));
+        }
+
+        public int deleteById(final long id) {
+            return deleteById(Long.valueOf(id));
+        }
+
+        public int deleteById(final Connection conn, final long id) {
+            return deleteById(conn, Long.valueOf(id));
         }
     }
 
