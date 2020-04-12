@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="DEBUG">
+	<Appenders>
+		<Console name="Console" target="SYSTEM_OUT">
+			<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %c{1.} - %msg%n" />
+		</Console>
+	</Appenders>
+
+	<Loggers>
+		<!-- avoid duplicated logs with additivity=false -->
+		<Logger name="com.landawn.abacus" level="info" additivity="false">
+			<AppenderRef ref="Console" />
+		</Logger>
+
+		<Root level="error">
+			<AppenderRef ref="Console" />
+		</Root>
+	</Loggers>
+</Configuration>

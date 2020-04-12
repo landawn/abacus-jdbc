@@ -64,7 +64,7 @@ public class DaoTest {
         userFromDB = userDao.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
-        
+
         userDao.query(CF.criteria().groupBy("lastName").having(CF.ne("lastName", "aa")).orderBy("firstName")).println();
         userDao.deleteById(id);
 
@@ -527,6 +527,12 @@ public class DaoTest {
 
         assertEquals(userFromDB, userFromDB2);
 
+        userDao.deleteJoinEntities(userFromDB, Address.class);
+        userDao.deleteJoinEntities(N.asList(userFromDB, userFromDB, userFromDB), Device.class);
+
+        userMapper.deleteJoinEntities(userFromDB, Address.class);
+        userMapper.deleteJoinEntities(N.asList(userFromDB, userFromDB, userFromDB), Device.class);
+
         userDao.deleteById(100L);
     }
 
@@ -603,6 +609,12 @@ public class DaoTest {
         System.out.println(users3);
 
         assertEquals(users2, users3);
+
+        userDao.deleteJoinEntities(users3, Address.class);
+        userDao.deleteJoinEntities(users, Device.class);
+
+        userMapper.deleteJoinEntities(users2, Address.class);
+        userMapper.deleteJoinEntities(users, Device.class);
 
         userDao.batchDelete(users);
     }

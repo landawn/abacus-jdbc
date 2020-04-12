@@ -817,8 +817,7 @@ final class JoinInfo {
 
     private final static Map<Class<?>, Map<Class<?>, List<String>>> joinEntityPropNamesByTypePool = new ConcurrentHashMap<>();
 
-    public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass,
-            final Class<?> joinPropEntityClass) {
+    public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass, final Class<?> joinPropEntityClass) {
         Map<Class<?>, List<String>> joinEntityPropNamesByTypeMap = joinEntityPropNamesByTypePool.get(entityClass);
 
         if (joinEntityPropNamesByTypeMap == null) {
@@ -851,7 +850,8 @@ final class JoinInfo {
         final Object value = propInfo.getPropValue(entity);
 
         if (allowJoiningByNullOrDefaultValue == false && Primitives.isNullOrDefault(value)) {
-            throw new IllegalArgumentException("The join property value can't be null or default for " + propInfo.clazz + "." + propInfo.name);
+            throw new IllegalArgumentException("The join property value can't be null or default for property: " + propInfo.name
+                    + ". Annotated the Dao class of " + entityClass + " with @AllowJoiningByNullOrDefaultValue to avoid this exception");
         }
 
         return value;
