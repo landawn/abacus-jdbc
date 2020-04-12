@@ -12309,6 +12309,39 @@ public final class JdbcUtil {
         }
 
         /**
+         * Replace the parts defined with format <code>{part}</code> in the sql annotated to the method.
+         * For example:
+         * <p>
+         * <code>
+         * 
+         *  @Select("SELECT first_name, last_name FROM {tableName} WHERE id = :id")
+         *  <br />
+         *  User selectByUserId(@Define("tableName") String realTableName, @Bind("id") int id) throws SQLException;
+         * 
+         * <br />
+         * <br />
+         * <br />
+         * OR with customized '{whatever}':
+         * <br />
+         * 
+         *  @Select("SELECT first_name, last_name FROM {tableName} WHERE id = :id ORDER BY {whatever -> orderBy{{P}}")
+         *  <br/>
+         *  User selectByUserId(@Define("tableName") String realTableName, @Define("{whatever -> orderBy{{P}}") String orderBy, @Bind("id") int id) throws SQLException;
+         * 
+         * </code>
+         * </p>
+         * 
+         * {@code parameters} annotated with <code>@Define</code> must be at the head of the method parameter list.
+         * 
+         */
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(value = { ElementType.PARAMETER })
+        static @interface Define {
+            String value() default "";
+        }
+
+
+        /**
          *
          * @return
          */

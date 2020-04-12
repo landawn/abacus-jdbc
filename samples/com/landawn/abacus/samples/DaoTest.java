@@ -48,15 +48,34 @@ import com.landawn.abacus.util.stream.LongStream;
 import com.landawn.abacus.util.stream.Stream;
 
 public class DaoTest {
-    
+
+    @Test
+    public void test_define() throws Exception {
+
+        List<User> users = IntStream.range(1, 1000)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).email("123@email.com" + i).build())
+                .toList();
+
+        List<Long> ids = userDao.batchInsertWithId(users);
+        assertEquals(users.size(), ids.size());
+
+        assertNotNull(userDao.selectByIdWithDefine("user", "last_name", ids.get(0)));
+        assertEquals(ids.size(), userDao.selectByIdWithDefine_2("user", "id", ids.get(0)).size());
+
+        assertEquals(1, userDao.deleteByIdWithDefine("user", ids.get(0)));
+        assertEquals(ids.size() - 1, userDao.deleteByIdsWithDefine("user", ids));
+
+        assertNull(userDao.selectByIdWithDefine("user", "last_name", ids.get(0)));
+        assertEquals(0, userDao.selectByIdWithDefine_2("user", "id", ids.get(0)).size());
+    }
 
     @Test
     public void test_cacheSql() throws SQLException {
         String sql = NSC.selectFrom(User.class).where(CF.eq("id")).sql();
         userDao.cacheSql("selectById", sql);
-        
+
         assertEquals(sql, userDao.getCachedSql("selectById"));
-        
+
         userDao.cacheSqls("selectById", N.asList(sql));
         assertEquals(N.asList(sql), userDao.getCachedSqls("selectById"));
     }
