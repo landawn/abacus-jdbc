@@ -1163,6 +1163,33 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
+     * @param ds
+     * @return
+     */
+    public static boolean isInTransaction(final javax.sql.DataSource ds) {
+        if (SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL) != null) {
+            return true;
+        }
+
+        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
+            Connection conn = null;
+
+            try {
+                conn = getConnection(ds);
+
+                return org.springframework.jdbc.datasource.DataSourceUtils.isConnectionTransactional(conn, ds);
+            } catch (NoClassDefFoundError e) {
+                isInSpring = false;
+            } finally {
+                releaseConnection(conn, ds);
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Refer to: {@code beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}.
      *
      * @param dataSource
@@ -11638,7 +11665,7 @@ public final class JdbcUtil {
      *          <li>Or else if the return type of the method is {@code List}, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"}, {@code PreparedQuery#list(Class)} will be called.</li>
      *      </ul>
      *      <ul>
-     *          <li>Or else if the return type of the method is {@code boolean}, and the method name starts with {@code "exist"/"has"}, {@code PreparedQuery#exist()} will be called.</li>
+     *          <li>Or else if the return type of the method is {@code boolean/Boolean}, and the method name starts with {@code "exist"/"exists"/"has"}, {@code PreparedQuery#exist()} will be called.</li>
      *      </ul>
      *      <ul>
      *          <li>Or else, {@code PreparedQuery#queryForSingleResult(Class).orElse(N.defaultValueOf(returnType)} will be called.</li>
@@ -11745,6 +11772,8 @@ public final class JdbcUtil {
              * @return
              */
             int queryTimeout() default -1;
+            
+            OP op() default OP.DEFAULT;
         }
 
         /**
@@ -11815,6 +11844,8 @@ public final class JdbcUtil {
              * @return
              */
             int queryTimeout() default -1;
+            
+            OP op() default OP.DEFAULT;
         }
 
         /**
@@ -11850,6 +11881,8 @@ public final class JdbcUtil {
              * @return
              */
             int queryTimeout() default -1;
+            
+            OP op() default OP.DEFAULT;
         }
 
         /**
@@ -11891,6 +11924,8 @@ public final class JdbcUtil {
              * @return
              */
             int queryTimeout() default -1;
+            
+            OP op() default OP.DEFAULT;
         }
 
         /**
@@ -11985,6 +12020,8 @@ public final class JdbcUtil {
              * @return
              */
             int queryTimeout() default -1;
+            
+            OP op() default OP.DEFAULT;
         }
 
         /**
@@ -12032,6 +12069,8 @@ public final class JdbcUtil {
              * @return
              */
             int queryTimeout() default -1;
+            
+            OP op() default OP.DEFAULT;
         }
 
         /**
@@ -12340,6 +12379,52 @@ public final class JdbcUtil {
             String value() default "";
         }
 
+        /**
+         * 
+         * @see The operations in {@code AbstractPreparedQuery}
+         *
+         */
+        public static enum OP {
+            exists, get, findFirst, list,
+
+            /**
+             * @deprecated generally it's unnecessary to specify the {@code "op = OP.stream"} in {@code Select/NamedSelect}.
+             */
+            query,
+
+            /**
+             * 
+             * @deprecated generally it's unnecessary to specify the {@code "op = OP.stream"} in {@code Select/NamedSelect}.
+             */
+            stream,
+
+            /**
+             * 
+             */
+            queryForSingle,
+
+            /**
+             * 
+             */
+            queryForUnique,
+
+            /**
+             * 
+             */
+            update,
+
+            /**
+             * 
+             */
+            largeUpdate,
+
+            /* batchUpdate,*/
+
+            /**
+             * 
+             */
+            DEFAULT;
+        }
 
         /**
          *

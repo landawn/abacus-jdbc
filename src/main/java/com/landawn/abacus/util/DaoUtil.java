@@ -70,6 +70,7 @@ import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.Dao;
+import com.landawn.abacus.util.JdbcUtil.Dao.OP;
 import com.landawn.abacus.util.JdbcUtil.Dao.OutParameter;
 import com.landawn.abacus.util.JdbcUtil.NamedQuery;
 import com.landawn.abacus.util.JdbcUtil.PreparedCallableQuery;
@@ -85,7 +86,7 @@ import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
-import com.landawn.abacus.util.Tuple.Tuple5;
+import com.landawn.abacus.util.Tuple.Tuple6;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -118,7 +119,7 @@ final class DaoUtil {
     private static final Map<String, JdbcUtil.Dao> daoPool = new ConcurrentHashMap<>();
 
     /** The Constant sqlAnnoMap. */
-    private static final Map<Class<? extends Annotation>, BiFunction<Annotation, SQLMapper, Tuple5<String, Integer, Integer, Boolean, Integer>>> sqlAnnoMap = new HashMap<>();
+    private static final Map<Class<? extends Annotation>, BiFunction<Annotation, SQLMapper, Tuple6<String, Integer, Integer, Boolean, Integer, OP>>> sqlAnnoMap = new HashMap<>();
 
     static {
         sqlAnnoMap.put(Dao.Select.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -127,6 +128,7 @@ final class DaoUtil {
             int fetchSize = tmp.fetchSize();
             final boolean isBatch = false;
             final int batchSize = -1;
+            final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -160,7 +162,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.Insert.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -169,6 +171,7 @@ final class DaoUtil {
             final int fetchSize = -1;
             final boolean isBatch = false;
             final int batchSize = -1;
+            final OP op = OP.DEFAULT;
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -198,7 +201,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.Update.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -207,6 +210,7 @@ final class DaoUtil {
             final int fetchSize = -1;
             final boolean isBatch = false;
             final int batchSize = -1;
+            final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -236,7 +240,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.Delete.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -245,6 +249,7 @@ final class DaoUtil {
             final int fetchSize = -1;
             final boolean isBatch = false;
             final int batchSize = -1;
+            final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -274,7 +279,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.NamedSelect.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -283,6 +288,7 @@ final class DaoUtil {
             int fetchSize = tmp.fetchSize();
             final boolean isBatch = false;
             final int batchSize = -1;
+            final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -316,7 +322,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.NamedInsert.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -325,6 +331,7 @@ final class DaoUtil {
             final int fetchSize = -1;
             final boolean isBatch = tmp.isBatch();
             int batchSize = tmp.batchSize();
+            final OP op = OP.DEFAULT;
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -358,7 +365,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.NamedUpdate.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -367,6 +374,7 @@ final class DaoUtil {
             final int fetchSize = -1;
             final boolean isBatch = tmp.isBatch();
             int batchSize = tmp.batchSize();
+            final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -400,7 +408,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.NamedDelete.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -409,6 +417,7 @@ final class DaoUtil {
             final int fetchSize = -1;
             final boolean isBatch = tmp.isBatch();
             int batchSize = tmp.batchSize();
+            final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -442,7 +451,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.Call.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -451,6 +460,7 @@ final class DaoUtil {
             final int fetchSize = -1;
             final boolean isBatch = false;
             final int batchSize = -1;
+            final OP op = OP.DEFAULT;
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -480,7 +490,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize);
+            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
     }
 
@@ -543,16 +553,63 @@ final class DaoUtil {
 
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Method method,
-            final boolean hasRowMapperOrExtractor, final boolean hasRowFilter) {
+            final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final OP op, final String fullClassMethodName) {
         method.getName();
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
         final int paramLen = paramTypes.length;
         final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
-        final boolean isListQuery = isListQuery(method);
-        final boolean isExists = isExistsQuery(method);
+        final boolean isListQuery = isListQuery(method, op, fullClassMethodName);
+        final boolean isExists = isExistsQuery(method, op, fullClassMethodName);
+
+        if ((op == OP.stream && !(Stream.class.isAssignableFrom(returnType) || ExceptionalStream.class.isAssignableFrom(returnType)))
+                || (op == OP.query && !(DataSet.class.isAssignableFrom(returnType) || lastParamType == null
+                        || ResultExtractor.class.isAssignableFrom(lastParamType) || BiResultExtractor.class.isAssignableFrom(lastParamType)))) {
+            throw new UnsupportedOperationException(
+                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+        }
+
+        if ((op == OP.get || op == OP.findFirst) && Nullable.class.isAssignableFrom(returnType)) {
+            throw new UnsupportedOperationException(
+                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+        }
+
+        //    if ((op == OP.queryForSingle || op == OP.queryForUnique)
+        //            && !(Optional.class.isAssignableFrom(returnType) || Nullable.class.isAssignableFrom(returnType))) {
+        //        throw new UnsupportedOperationException(
+        //                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+        //    }
+
+        if ((Stream.class.isAssignableFrom(returnType) || ExceptionalStream.class.isAssignableFrom(returnType)) && !(op == OP.stream || op == OP.DEFAULT)) {
+            throw new UnsupportedOperationException(
+                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+        }
+
+        if (DataSet.class.isAssignableFrom(returnType) && !(op == OP.query || op == OP.DEFAULT)) {
+            throw new UnsupportedOperationException(
+                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+        }
+
+        if (Optional.class.isAssignableFrom(returnType)
+                && !(op == OP.get || op == OP.findFirst || op == OP.queryForSingle || op == OP.queryForUnique || op == OP.DEFAULT)) {
+            throw new UnsupportedOperationException(
+                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+        }
+
+        if (Nullable.class.isAssignableFrom(returnType) && !(op == OP.queryForSingle || op == OP.queryForUnique || op == OP.DEFAULT)) {
+            throw new UnsupportedOperationException(
+                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+        }
 
         if (hasRowMapperOrExtractor) {
+            if (!(op == OP.get || op == OP.findFirst || op == OP.list || op == OP.stream)) {
+                throw new UnsupportedOperationException("RowMapper/ResultExtractor is not supported by OP: " + op + " in method: " + fullClassMethodName);
+            }
+
+            if (hasRowFilter && (op == OP.get || op == OP.query)) {
+                throw new UnsupportedOperationException("RowFilter is not supported by OP: " + op + " in method: " + fullClassMethodName);
+            }
+
             if (RowMapper.class.isAssignableFrom(lastParamType)) {
                 if (isListQuery) {
                     if (hasRowFilter) {
@@ -561,7 +618,15 @@ final class DaoUtil {
                         return (preparedQuery, args) -> (R) preparedQuery.list((RowMapper) args[paramLen - 1]);
                     }
                 } else if (Optional.class.isAssignableFrom(returnType)) {
-                    return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowMapper) args[paramLen - 1]);
+                    if (op == OP.get) {
+                        return (preparedQuery, args) -> (R) preparedQuery.get((RowMapper) args[paramLen - 1]);
+                    } else {
+                        if (hasRowFilter) {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]);
+                        } else {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowMapper) args[paramLen - 1]);
+                        }
+                    }
                 } else if (ExceptionalStream.class.isAssignableFrom(returnType)) {
                     if (hasRowFilter) {
                         return (preparedQuery, args) -> (R) preparedQuery.stream((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]);
@@ -580,7 +645,16 @@ final class DaoUtil {
                                 "The return type of method: " + method.getName() + " can't be: " + returnType + " when RowMapper/BiRowMapper is specified");
                     }
 
-                    return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                    if (op == OP.get) {
+                        return (preparedQuery, args) -> (R) preparedQuery.gett((RowMapper) args[paramLen - 1]);
+                    } else {
+                        if (hasRowFilter) {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1])
+                                    .orElse(N.defaultValueOf(returnType));
+                        } else {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                        }
+                    }
                 }
             } else if (BiRowMapper.class.isAssignableFrom(lastParamType)) {
                 if (isListQuery) {
@@ -590,7 +664,15 @@ final class DaoUtil {
                         return (preparedQuery, args) -> (R) preparedQuery.list((BiRowMapper) args[paramLen - 1]);
                     }
                 } else if (Optional.class.isAssignableFrom(returnType)) {
-                    return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowMapper) args[paramLen - 1]);
+                    if (op == OP.get) {
+                        return (preparedQuery, args) -> (R) preparedQuery.get((BiRowMapper) args[paramLen - 1]);
+                    } else {
+                        if (hasRowFilter) {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1]);
+                        } else {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowMapper) args[paramLen - 1]);
+                        }
+                    }
                 } else if (ExceptionalStream.class.isAssignableFrom(returnType)) {
                     if (hasRowFilter) {
                         return (preparedQuery, args) -> (R) preparedQuery.stream((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1]);
@@ -610,9 +692,23 @@ final class DaoUtil {
                                 "The return type of method: " + method.getName() + " can't be: " + returnType + " when RowMapper/BiRowMapper is specified");
                     }
 
-                    return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                    if (op == OP.get) {
+                        return (preparedQuery, args) -> (R) preparedQuery.gett((BiRowMapper) args[paramLen - 1]);
+                    } else {
+                        if (hasRowFilter) {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1])
+                                    .orElse(N.defaultValueOf(returnType));
+                        } else {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                        }
+                    }
                 }
             } else {
+                if (!(op == OP.query || op == OP.DEFAULT)) {
+                    throw new UnsupportedOperationException(
+                            "ResultExtractor/BiResultExtractor is not supported by OP: " + op + " in method: " + fullClassMethodName);
+                }
+
                 if (method.getGenericParameterTypes()[paramLen - 1] instanceof ParameterizedType) {
                     final java.lang.reflect.Type resultExtractorReturnType = ((ParameterizedType) method.getGenericParameterTypes()[paramLen - 1])
                             .getActualTypeArguments()[0];
@@ -633,17 +729,16 @@ final class DaoUtil {
             }
         } else if (isExists) {
             return (preparedQuery, args) -> (R) (Boolean) preparedQuery.exists();
-        } else if (DataSet.class.isAssignableFrom(returnType)) {
-            return (preparedQuery, args) -> (R) preparedQuery.query();
-        } else if (ClassUtil.isEntity(returnType) || Map.class.isAssignableFrom(returnType)) {
-            return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(returnType)).orNull();
         } else if (isListQuery) {
             final ParameterizedType parameterizedReturnType = (ParameterizedType) method.getGenericReturnType();
+
             final Class<?> eleType = parameterizedReturnType.getActualTypeArguments()[0] instanceof Class
                     ? (Class<?>) parameterizedReturnType.getActualTypeArguments()[0]
                     : (Class<?>) ((ParameterizedType) parameterizedReturnType.getActualTypeArguments()[0]).getRawType();
 
             return (preparedQuery, args) -> (R) preparedQuery.list(eleType);
+        } else if (DataSet.class.isAssignableFrom(returnType)) {
+            return (preparedQuery, args) -> (R) preparedQuery.query();
         } else if (Optional.class.isAssignableFrom(returnType) || Nullable.class.isAssignableFrom(returnType)) {
             final ParameterizedType parameterizedReturnType = (ParameterizedType) method.getGenericReturnType();
 
@@ -651,21 +746,65 @@ final class DaoUtil {
                     ? (Class<?>) parameterizedReturnType.getActualTypeArguments()[0]
                     : (Class<?>) ((ParameterizedType) parameterizedReturnType.getActualTypeArguments()[0]).getRawType();
 
-            if (ClassUtil.isEntity(eleType) || Map.class.isAssignableFrom(eleType) || List.class.isAssignableFrom(eleType)
-                    || Object[].class.isAssignableFrom(eleType)) {
-                if (Nullable.class.isAssignableFrom(returnType)) {
-                    return (preparedQuery, args) -> (R) Nullable.from(preparedQuery.findFirst(BiRowMapper.to(eleType)));
+            if (Nullable.class.isAssignableFrom(returnType)) {
+                if (op == OP.queryForSingle) {
+                    return (preparedQuery, args) -> (R) preparedQuery.queryForSingleResult(eleType);
+                } else if (op == OP.queryForUnique) {
+                    return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueResult(eleType);
                 } else {
-                    return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(eleType));
+                    return (preparedQuery, args) -> (R) preparedQuery.queryForSingleResult(eleType);
                 }
             } else {
-                if (Nullable.class.isAssignableFrom(returnType)) {
-                    return (preparedQuery, args) -> (R) preparedQuery.queryForSingleResult(eleType);
-                } else {
+                if (op == OP.get) {
+                    return (preparedQuery, args) -> (R) preparedQuery.get(BiRowMapper.to(eleType));
+                } else if (op == OP.findFirst) {
+                    return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(eleType));
+                } else if (op == OP.queryForSingle) {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(eleType);
+                } else if (op == OP.queryForUnique) {
+                    return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueNonNull(eleType);
+                } else {
+                    if (ClassUtil.isEntity(eleType) || Map.class.isAssignableFrom(eleType) || List.class.isAssignableFrom(eleType)
+                            || Object[].class.isAssignableFrom(eleType)) {
+                        return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(eleType));
+                    } else {
+                        return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(eleType);
+                    }
                 }
             }
-        } else if (OptionalBoolean.class.isAssignableFrom(returnType)) {
+        } else if (ExceptionalStream.class.isAssignableFrom(returnType) || Stream.class.isAssignableFrom(returnType)) {
+            final ParameterizedType parameterizedReturnType = (ParameterizedType) method.getGenericReturnType();
+
+            final Class<?> eleType = parameterizedReturnType.getActualTypeArguments()[0] instanceof Class
+                    ? (Class<?>) parameterizedReturnType.getActualTypeArguments()[0]
+                    : (Class<?>) ((ParameterizedType) parameterizedReturnType.getActualTypeArguments()[0]).getRawType();
+
+            if (ExceptionalStream.class.isAssignableFrom(returnType)) {
+                return (preparedQuery, args) -> (R) preparedQuery.stream(eleType);
+            } else {
+                return (preparedQuery, args) -> (R) preparedQuery.stream(eleType).unchecked();
+            }
+        } else if (op == OP.get) {
+            return (preparedQuery, args) -> (R) preparedQuery.gett(BiRowMapper.to(returnType));
+        } else if (op == OP.findFirst) {
+            return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(returnType)).orNull();
+        } else if (op == OP.queryForSingle) {
+            return createSingleQueryFunction(returnType);
+        } else if (op == OP.queryForUnique) {
+            return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueResult(returnType).orElse(N.defaultValueOf(returnType));
+        } else {
+            if (ClassUtil.isEntity(returnType) || Map.class.isAssignableFrom(returnType) || List.class.isAssignableFrom(returnType)
+                    || Object[].class.isAssignableFrom(returnType)) {
+                return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(returnType)).orNull();
+            } else {
+                return createSingleQueryFunction(returnType);
+            }
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static <R> Throwables.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createSingleQueryFunction(final Class<?> returnType) {
+        if (OptionalBoolean.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForBoolean();
         } else if (OptionalChar.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForChar();
@@ -681,18 +820,6 @@ final class DaoUtil {
             return (preparedQuery, args) -> (R) preparedQuery.queryForFloat();
         } else if (OptionalDouble.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForDouble();
-        } else if (ExceptionalStream.class.isAssignableFrom(returnType) || Stream.class.isAssignableFrom(returnType)) {
-            final ParameterizedType parameterizedReturnType = (ParameterizedType) method.getGenericReturnType();
-
-            final Class<?> eleType = parameterizedReturnType.getActualTypeArguments()[0] instanceof Class
-                    ? (Class<?>) parameterizedReturnType.getActualTypeArguments()[0]
-                    : (Class<?>) ((ParameterizedType) parameterizedReturnType.getActualTypeArguments()[0]).getRawType();
-
-            if (ExceptionalStream.class.isAssignableFrom(returnType)) {
-                return (preparedQuery, args) -> (R) preparedQuery.stream(eleType);
-            } else {
-                return (preparedQuery, args) -> (R) preparedQuery.stream(eleType).unchecked();
-            }
         } else {
             return (preparedQuery, args) -> (R) preparedQuery.queryForSingleResult(returnType).orElse(N.defaultValueOf(returnType));
         }
@@ -746,13 +873,23 @@ final class DaoUtil {
      * @param method
      * @return true, if is list query
      */
-    private static boolean isListQuery(final Method method) {
+    private static boolean isListQuery(final Method method, final OP op, final String fullClassMethodName) {
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
         final int paramLen = paramTypes.length;
 
-        if (List.class.isAssignableFrom(returnType)) {
+        if (op == OP.list) {
+            if (!(List.class.isAssignableFrom(returnType))) {
+                throw new UnsupportedOperationException(
+                        "The result type of exists OP must be List, can't be: " + returnType + " in method: " + fullClassMethodName);
+            }
 
+            return true;
+        } else if (op != OP.DEFAULT) {
+            return false;
+        }
+
+        if (List.class.isAssignableFrom(returnType)) {
             // Check if return type is generic List type.
             if (method.getGenericReturnType() instanceof ParameterizedType) {
                 final ParameterizedType parameterizedReturnType = (ParameterizedType) method.getGenericReturnType();
@@ -771,15 +908,25 @@ final class DaoUtil {
         }
     }
 
-    private static boolean isExistsQuery(final Method method) {
+    private static boolean isExistsQuery(final Method method, final OP op, final String fullClassMethodName) {
         final String methodName = method.getName();
         final Class<?> returnType = method.getReturnType();
 
-        final boolean isExists = boolean.class.equals(returnType)
+        if (op == OP.exists) {
+            if (!(boolean.class.equals(returnType) || Boolean.class.equals(returnType))) {
+                throw new UnsupportedOperationException(
+                        "The result type of exists OP must be boolean or Boolean, can't be: " + returnType + " in method: " + fullClassMethodName);
+            }
+
+            return true;
+        } else if (op != OP.DEFAULT) {
+            return false;
+        }
+
+        return (boolean.class.equals(returnType) || Boolean.class.equals(returnType))
                 && ((methodName.startsWith("exists") && (methodName.length() == 6 || Character.isUpperCase(methodName.charAt(6))))
                         || (methodName.startsWith("exist") && (methodName.length() == 5 || Character.isUpperCase(methodName.charAt(5))))
                         || (methodName.startsWith("has") && (methodName.length() == 3 || Character.isUpperCase(methodName.charAt(3)))));
-        return isExists;
     }
 
     private static String createCacheKey(final Method method, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
@@ -2530,12 +2677,13 @@ final class DaoUtil {
 
                     final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
 
-                    final Tuple5<String, Integer, Integer, Boolean, Integer> tp = sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno, sqlMapper);
+                    final Tuple6<String, Integer, Integer, Boolean, Integer, OP> tp = sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno, sqlMapper);
                     final String query = N.checkArgNotNullOrEmpty(tp._1, "sql can't be null or empty");
                     final int queryTimeout = tp._2;
                     final int fetchSize = tp._3;
                     final boolean isBatch = tp._4;
                     final int tmpBatchSize = tp._5;
+                    final OP op = tp._6;
 
                     final boolean returnGeneratedKeys = isNoId == false
                             && (sqlAnno.annotationType().equals(Dao.Insert.class) || sqlAnno.annotationType().equals(Dao.NamedInsert.class));
@@ -2583,7 +2731,7 @@ final class DaoUtil {
                                             + fullClassMethodName);
                         }
 
-                        if (StreamEx.of(outParameterList).anyMatch(op -> N.isNullOrEmpty(op.name()) && op.position() < 0)) {
+                        if (StreamEx.of(outParameterList).anyMatch(it -> N.isNullOrEmpty(it.name()) && it.position() < 0)) {
                             throw new UnsupportedOperationException(
                                     "One of the attribute: (name, position) of @OutParameter must be set in method: " + fullClassMethodName);
                         }
@@ -2784,7 +2932,7 @@ final class DaoUtil {
                     if (sqlAnno.annotationType().equals(Dao.Select.class) || sqlAnno.annotationType().equals(Dao.NamedSelect.class)
                             || (isCall && !isUpdateReturnType)) {
                         final Throwables.BiFunction<AbstractPreparedQuery, Object[], T, Exception> queryFunc = createQueryFunctionByMethod(m,
-                                hasRowMapperOrExtractor, hasRowFilter);
+                                hasRowMapperOrExtractor, hasRowFilter, op, fullClassMethodName);
 
                         // Getting ClassCastException. Not sure why query result is being casted Dao. It seems there is a bug in JDk compiler.
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
@@ -2936,7 +3084,8 @@ final class DaoUtil {
                                         : (Integer.class.equals(Primitives.wrap(returnType)) ? updatedRecordCount -> N.toIntExact(updatedRecordCount)
                                                 : LongFunction.identity()));
 
-                        final boolean isLargeUpdate = returnType.equals(long.class) || returnType.equals(Long.class);
+                        final boolean isLargeUpdate = op == OP.largeUpdate
+                                || (op == OP.DEFAULT && (returnType.equals(long.class) || returnType.equals(Long.class)));
 
                         if (isBatch == false) {
                             final boolean idDirtyMarker = stmtParamLen == 1 && ClassUtil.isEntity(paramTypes[stmtParamStartIndex])
@@ -2947,7 +3096,7 @@ final class DaoUtil {
                                         isBatch, -1, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList).settParameters(args,
                                                 finalParametersSetter);
 
-                                final long updatedRecordCount = isLargeUpdate ? preparedQuery.largeUpate() : preparedQuery.update();
+                                final long updatedRecordCount = isLargeUpdate ? preparedQuery.largeUpdate() : preparedQuery.update();
 
                                 if (idDirtyMarker) {
                                     if (isNamedQuery

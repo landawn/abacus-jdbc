@@ -3721,7 +3721,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public long largeUpate() throws SQLException {
+    public long largeUpdate() throws SQLException {
         assertNotClosed();
 
         try {
