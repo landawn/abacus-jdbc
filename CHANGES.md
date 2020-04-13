@@ -1,3 +1,9 @@
+### 1.20.10
+
+* Support `Dao.Define`.
+* Improvements and bug fix.
+
+
 ### 1.20.9
 
 * Improvements and bug fix.
