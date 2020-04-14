@@ -9588,6 +9588,69 @@ public final class JdbcUtil {
 
             return addBatchParameters(Iterators.toList(batchParameters));
         }
+
+        /**
+         * @param <T>
+         * @param batchParameters
+         * @param isSingleParameter
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        public <T> NamedQuery addBatchParameters(final Collection<T> batchParameters, final boolean isSingleParameter) throws SQLException {
+            checkArgNotNull(batchParameters, "batchParameters");
+
+            if (isSingleParameter && parameterCount != 1) {
+                try {
+                    close();
+                } catch (Exception e) {
+                    JdbcUtil.logger.error("Failed to close PreparedQuery", e);
+                }
+
+                throw new IllegalArgumentException("isSingleParameter is true but the count of parameters in query is: " + parameterCount);
+            }
+
+            if (N.isNullOrEmpty(batchParameters)) {
+                return this;
+            }
+
+            if (isSingleParameter) {
+                boolean noException = false;
+
+                try {
+                    for (Object obj : batchParameters) {
+                        setObject(1, obj);
+
+                        stmt.addBatch();
+                    }
+
+                    isBatch = batchParameters.size() > 0;
+
+                    noException = true;
+                } finally {
+                    if (noException == false) {
+                        close();
+                    }
+                }
+
+                return this;
+            } else {
+                return addBatchParameters(batchParameters);
+            }
+        }
+
+        /**
+         *
+         * @param <T>
+         * @param batchParameters
+         * @param isSingleParameter
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        public <T> NamedQuery addBatchParameters(final Iterator<T> batchParameters, final boolean isSingleParameter) throws SQLException {
+            checkArgNotNull(batchParameters, "batchParameters");
+
+            return addBatchParameters(Iterators.toList(batchParameters), isSingleParameter);
+        }
     }
 
     /**
