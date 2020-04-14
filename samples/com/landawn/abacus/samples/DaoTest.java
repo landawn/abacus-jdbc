@@ -62,11 +62,17 @@ public class DaoTest {
         assertNotNull(userDao.selectByIdWithDefine("user", "last_name", ids.get(0)));
         assertEquals(ids.size(), userDao.selectByIdWithDefine_2("user", "id", ids.get(0)).size());
 
+        assertTrue(userDao.exists("user", "last_name", ids.get(0)));
+        assertTrue(userDao.isThere("user", "last_name", ids.get(0)));
+
         assertEquals(1, userDao.deleteByIdWithDefine("user", ids.get(0)));
         assertEquals(ids.size() - 1, userDao.deleteByIdsWithDefine("user", ids));
 
         assertNull(userDao.selectByIdWithDefine("user", "last_name", ids.get(0)));
         assertEquals(0, userDao.selectByIdWithDefine_2("user", "id", ids.get(0)).size());
+
+        assertFalse(userDao.exists("user", "last_name", ids.get(0)));
+        assertFalse(userDao.isThere("user", "last_name", ids.get(0)));
     }
 
     @Test

@@ -112,4 +112,10 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     @Select(sql = "SELECT * FROM {tableName} where id >= ? ORDER BY {whatever -> orderBy{{P}}")
     List<User> selectByIdWithDefine_2(@Define("tableName") String tableName, @Define("{whatever -> orderBy{{P}}") String orderBy, long id) throws SQLException;
 
+    @NamedSelect(sql = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
+    boolean exists(@Define("tableName") String tableName, @Define("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
+
+    @NamedSelect(sql = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}", op = OP.exists)
+    boolean isThere(@Define("tableName") String tableName, @Define("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
+
 }
