@@ -9410,7 +9410,7 @@ public final class JdbcUtil {
          */
         @SuppressWarnings("rawtypes")
         public NamedQuery setParameters(final Object parameters) throws SQLException {
-            checkArgNotNull(parameters, "entity");
+            checkArgNotNull(parameters, "parameters");
 
             if (ClassUtil.isEntity(parameters.getClass())) {
                 final Class<?> cls = parameters.getClass();
@@ -9481,10 +9481,99 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
+        @SuppressWarnings("rawtypes")
         public <T> NamedQuery addBatchParameters(final Collection<T> batchParameters) throws SQLException {
             checkArgNotNull(batchParameters, "batchParameters");
 
-            return addBatchParameters(batchParameters.iterator());
+            if (N.isNullOrEmpty(batchParameters)) {
+                return this;
+            }
+
+            boolean noException = false;
+
+            try {
+                final T first = N.firstNonNull(batchParameters).orNull();
+
+                if (first == null) {
+                    if (parameterCount == 1) {
+                        for (int i = 0, size = batchParameters.size(); i < size; i++) {
+                            stmt.setObject(1, null);
+
+                            stmt.addBatch();
+                        }
+                    } else {
+                        throw new IllegalArgumentException("Unsupported named parameter type: null for named sql: " + namedSql.sql());
+                    }
+                } else {
+                    final Class<?> cls = first.getClass();
+
+                    if (ClassUtil.isEntity(cls)) {
+                        final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+                        PropInfo propInfo = null;
+
+                        for (Object entity : batchParameters) {
+                            for (int i = 0; i < parameterCount; i++) {
+                                propInfo = entityInfo.getPropInfo(parameterNames.get(i));
+
+                                if (propInfo != null) {
+                                    propInfo.dbType.set(stmt, i + 1, propInfo.getPropValue(entity));
+                                }
+                            }
+
+                            stmt.addBatch();
+                        }
+                    } else if (Map.class.isAssignableFrom(cls)) {
+                        for (Object map : batchParameters) {
+                            setParameters((Map<String, ?>) map);
+
+                            stmt.addBatch();
+                        }
+
+                    } else if (first instanceof Collection) {
+                        for (Object parameters : batchParameters) {
+                            setParameters((Collection) parameters);
+
+                            stmt.addBatch();
+                        }
+                    } else if (first instanceof Object[]) {
+                        for (Object parameters : batchParameters) {
+                            setParameters((Object[]) parameters);
+
+                            stmt.addBatch();
+                        }
+                    } else if (first instanceof EntityId) {
+                        for (Object parameters : batchParameters) {
+                            final EntityId entityId = (EntityId) parameters;
+
+                            for (String paramName : parameterNames) {
+                                if (entityId.containsKey(paramName)) {
+                                    setObject(paramName, entityId.get(paramName));
+                                }
+                            }
+
+                            stmt.addBatch();
+                        }
+                    } else if (parameterCount == 1) {
+                        for (Object obj : batchParameters) {
+                            setObject(1, obj);
+
+                            stmt.addBatch();
+                        }
+                    } else {
+                        throw new IllegalArgumentException("Unsupported named parameter type: " + cls + " for named sql: " + namedSql.sql());
+                    }
+                }
+
+                isBatch = batchParameters.size() > 0;
+
+                noException = true;
+            } finally {
+                if (noException == false) {
+                    close();
+                }
+            }
+
+            return this;
         }
 
         /**
@@ -9497,25 +9586,7 @@ public final class JdbcUtil {
         public <T> NamedQuery addBatchParameters(final Iterator<T> batchParameters) throws SQLException {
             checkArgNotNull(batchParameters, "batchParameters");
 
-            boolean noException = false;
-
-            try {
-                final Iterator<T> iter = batchParameters;
-
-                while (iter.hasNext()) {
-                    setParameters(iter.next());
-                    stmt.addBatch();
-                    isBatch = true;
-                }
-
-                noException = true;
-            } finally {
-                if (noException == false) {
-                    close();
-                }
-            }
-
-            return this;
+            return addBatchParameters(Iterators.toList(batchParameters));
         }
     }
 
@@ -11772,7 +11843,7 @@ public final class JdbcUtil {
              * @return
              */
             int queryTimeout() default -1;
-            
+
             OP op() default OP.DEFAULT;
         }
 
@@ -11844,7 +11915,7 @@ public final class JdbcUtil {
              * @return
              */
             int queryTimeout() default -1;
-            
+
             OP op() default OP.DEFAULT;
         }
 
@@ -11881,7 +11952,7 @@ public final class JdbcUtil {
              * @return
              */
             int queryTimeout() default -1;
-            
+
             OP op() default OP.DEFAULT;
         }
 
@@ -11924,7 +11995,7 @@ public final class JdbcUtil {
              * @return
              */
             int queryTimeout() default -1;
-            
+
             OP op() default OP.DEFAULT;
         }
 
@@ -12020,7 +12091,7 @@ public final class JdbcUtil {
              * @return
              */
             int queryTimeout() default -1;
-            
+
             OP op() default OP.DEFAULT;
         }
 
@@ -12069,7 +12140,7 @@ public final class JdbcUtil {
              * @return
              */
             int queryTimeout() default -1;
-            
+
             OP op() default OP.DEFAULT;
         }
 
