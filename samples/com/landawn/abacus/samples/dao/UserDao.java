@@ -77,8 +77,8 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
         }
     }
 
-    @Sqls("DELETE from user where id = ?")
     @Transactional(propagation = Propagation.SUPPORTS)
+    @Sqls("DELETE from user where id = ?")
     default boolean delete_propagation_SUPPORTS(long id, String... sqls) {
         N.sleep(1001);
 
@@ -89,9 +89,9 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
         }
     }
 
-    @Sqls("DELETE from user where id = ?")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Handler(qualifier = "handler2")
+    @Sqls("DELETE from user where id = ?")
     default boolean delete_propagation_REQUIRES_NEW(long id, String... sqls) {
         try {
             return prepareQuery(sqls[0]).setLong(1, id).update() > 0;
