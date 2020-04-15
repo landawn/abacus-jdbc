@@ -3446,23 +3446,22 @@ final class DaoUtil {
                                 "The return type of method: " + simpleClassMethodName + " is not cacheable: " + m.getReturnType());
                     }
 
-                    final String cloneWhenReadFromCacheAttr = cacheResultAnno.cloneWhenReadFromCache();
+                    final String transferAttr = cacheResultAnno.transfer();
 
-                    if (!(N.isNullOrEmpty(cloneWhenReadFromCacheAttr) || N.asSet("none", "kryo").contains(cloneWhenReadFromCacheAttr.toLowerCase()))) {
-                        throw new UnsupportedOperationException("Unsupported 'cloneWhenReadFromCache' : " + cloneWhenReadFromCacheAttr
-                                + " in annotation 'CacheResult' on method: " + simpleClassMethodName);
+                    if (!(N.isNullOrEmpty(transferAttr) || N.asSet("none", "kryo").contains(transferAttr.toLowerCase()))) {
+                        throw new UnsupportedOperationException(
+                                "Unsupported 'cloneWhenReadFromCache' : " + transferAttr + " in annotation 'CacheResult' on method: " + simpleClassMethodName);
                     }
 
-                    final Function<Object, Object> cloneFunc = N.isNullOrEmpty(cloneWhenReadFromCacheAttr)
-                            || "none".equalsIgnoreCase(cloneWhenReadFromCacheAttr) ? Fn.identity() : r -> {
-                                if (r == null) {
-                                    return r;
-                                } else if (isValuePresentMap.getOrDefault(r.getClass(), Fn.alwaysFalse()).test(r) == false) {
-                                    return r;
-                                } else {
-                                    return kryoParser.clone(r);
-                                }
-                            };
+                    final Function<Object, Object> cloneFunc = N.isNullOrEmpty(transferAttr) || "none".equalsIgnoreCase(transferAttr) ? Fn.identity() : r -> {
+                        if (r == null) {
+                            return r;
+                        } else if (isValuePresentMap.getOrDefault(r.getClass(), Fn.alwaysFalse()).test(r) == false) {
+                            return r;
+                        } else {
+                            return kryoParser.clone(r);
+                        }
+                    };
 
                     final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
 
@@ -3482,16 +3481,16 @@ final class DaoUtil {
                                 final DataSet dataSet = (DataSet) result;
 
                                 if (dataSet.size() >= cacheResultAnno.minSize() && dataSet.size() <= cacheResultAnno.maxSize()) {
-                                    cache.put(cachekey, result, cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
+                                    cache.put(cachekey, cloneFunc.apply(result), cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
                                 }
                             } else if (result instanceof Collection) {
                                 final Collection<Object> c = (Collection<Object>) result;
 
                                 if (c.size() >= cacheResultAnno.minSize() && c.size() <= cacheResultAnno.maxSize()) {
-                                    cache.put(cachekey, result, cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
+                                    cache.put(cachekey, cloneFunc.apply(result), cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
                                 }
                             } else {
-                                cache.put(cachekey, result, cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
+                                cache.put(cachekey, cloneFunc.apply(result), cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
                             }
                         }
 

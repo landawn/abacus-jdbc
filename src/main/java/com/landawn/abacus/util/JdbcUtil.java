@@ -12455,12 +12455,13 @@ public final class JdbcUtil {
             int maxSize() default Integer.MAX_VALUE; // for list/DataSet.
 
             /**
-             * It can be {@code "none" and "kryo"}.
+             * It's used to copy/clone the result when save result to cache or fetch result from cache.
+             * It can be set to {@code "none" and "kryo"}.
              * 
              * @return
              * @see https://github.com/EsotericSoftware/kryo
              */
-            String cloneWhenReadFromCache() default "none";
+            String transfer() default "none";
 
             //    /**
             //     * If it's set to true, the cached result won't be removed by method annotated by {@code RefershCache}.
