@@ -86,7 +86,6 @@ import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
-import com.landawn.abacus.util.Tuple.Tuple6;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -119,7 +118,7 @@ final class DaoUtil {
     private static final Map<String, JdbcUtil.Dao> daoPool = new ConcurrentHashMap<>();
 
     /** The Constant sqlAnnoMap. */
-    private static final Map<Class<? extends Annotation>, BiFunction<Annotation, SQLMapper, Tuple6<String, Integer, Integer, Boolean, Integer, OP>>> sqlAnnoMap = new HashMap<>();
+    private static final Map<Class<? extends Annotation>, BiFunction<Annotation, SQLMapper, QueryInfo>> sqlAnnoMap = new HashMap<>();
 
     static {
         sqlAnnoMap.put(Dao.Select.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -162,7 +161,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.Insert.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -201,7 +200,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.Update.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -240,7 +239,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.Delete.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -279,7 +278,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.NamedSelect.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -322,7 +321,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.NamedInsert.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -365,7 +364,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.NamedUpdate.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -408,7 +407,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.NamedDelete.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -451,7 +450,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
 
         sqlAnnoMap.put(Dao.Call.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -490,7 +489,7 @@ final class DaoUtil {
                 }
             }
 
-            return Tuple.of(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
         });
     }
 
@@ -2818,13 +2817,13 @@ final class DaoUtil {
 
                     final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
 
-                    final Tuple6<String, Integer, Integer, Boolean, Integer, OP> tp = sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno, sqlMapper);
-                    final String query = N.checkArgNotNullOrEmpty(tp._1, "sql can't be null or empty");
-                    final int queryTimeout = tp._2;
-                    final int fetchSize = tp._3;
-                    final boolean isBatch = tp._4;
-                    final int tmpBatchSize = tp._5;
-                    final OP op = tp._6;
+                    final QueryInfo queryInfo = sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno, sqlMapper);
+                    final String query = N.checkArgNotNullOrEmpty(queryInfo.sql, "sql can't be null or empty");
+                    final int queryTimeout = queryInfo.queryTimeout;
+                    final int fetchSize = queryInfo.fetchSize;
+                    final boolean isBatch = queryInfo.isBatch;
+                    final int tmpBatchSize = queryInfo.batchSize;
+                    final OP op = queryInfo.op;
 
                     final boolean returnGeneratedKeys = isNoId == false
                             && (sqlAnno.annotationType().equals(Dao.Insert.class) || sqlAnno.annotationType().equals(Dao.NamedInsert.class));
@@ -3591,5 +3590,24 @@ final class DaoUtil {
     @Target(value = { ElementType.METHOD })
     static @interface NonDBOperation {
 
+    }
+
+    static final class QueryInfo {
+
+        final String sql;
+        final int queryTimeout;
+        final int fetchSize;
+        final boolean isBatch;
+        final int batchSize;
+        final OP op;
+
+        QueryInfo(final String sql, final int queryTimeout, final int fetchSize, final boolean isBatch, final int batchSize, final OP op) {
+            this.sql = sql;
+            this.queryTimeout = queryTimeout;
+            this.fetchSize = fetchSize;
+            this.isBatch = isBatch;
+            this.batchSize = batchSize;
+            this.op = op;
+        }
     }
 }
