@@ -128,6 +128,7 @@ final class DaoUtil {
             final boolean isBatch = false;
             final int batchSize = -1;
             final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
+            final boolean isSingleParameter = tmp.isSingleParameter();
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -161,7 +162,7 @@ final class DaoUtil {
                 }
             }
 
-            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
         sqlAnnoMap.put(Dao.Insert.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -171,6 +172,7 @@ final class DaoUtil {
             final boolean isBatch = false;
             final int batchSize = -1;
             final OP op = OP.DEFAULT;
+            final boolean isSingleParameter = tmp.isSingleParameter();
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -200,7 +202,7 @@ final class DaoUtil {
                 }
             }
 
-            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
         sqlAnnoMap.put(Dao.Update.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -210,6 +212,7 @@ final class DaoUtil {
             final boolean isBatch = false;
             final int batchSize = -1;
             final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
+            final boolean isSingleParameter = tmp.isSingleParameter();
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -239,7 +242,7 @@ final class DaoUtil {
                 }
             }
 
-            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
         sqlAnnoMap.put(Dao.Delete.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -249,6 +252,7 @@ final class DaoUtil {
             final boolean isBatch = false;
             final int batchSize = -1;
             final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
+            final boolean isSingleParameter = tmp.isSingleParameter();
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -278,7 +282,7 @@ final class DaoUtil {
                 }
             }
 
-            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
         sqlAnnoMap.put(Dao.NamedSelect.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -288,6 +292,7 @@ final class DaoUtil {
             final boolean isBatch = false;
             final int batchSize = -1;
             final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
+            final boolean isSingleParameter = false;
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -321,7 +326,7 @@ final class DaoUtil {
                 }
             }
 
-            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
         sqlAnnoMap.put(Dao.NamedInsert.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -331,6 +336,7 @@ final class DaoUtil {
             final boolean isBatch = tmp.isBatch();
             int batchSize = tmp.batchSize();
             final OP op = OP.DEFAULT;
+            final boolean isSingleParameter = false;
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -364,7 +370,7 @@ final class DaoUtil {
                 }
             }
 
-            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
         sqlAnnoMap.put(Dao.NamedUpdate.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -374,6 +380,7 @@ final class DaoUtil {
             final boolean isBatch = tmp.isBatch();
             int batchSize = tmp.batchSize();
             final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
+            final boolean isSingleParameter = false;
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -407,7 +414,7 @@ final class DaoUtil {
                 }
             }
 
-            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
         sqlAnnoMap.put(Dao.NamedDelete.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -417,6 +424,7 @@ final class DaoUtil {
             final boolean isBatch = tmp.isBatch();
             int batchSize = tmp.batchSize();
             final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
+            final boolean isSingleParameter = false;
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -450,7 +458,7 @@ final class DaoUtil {
                 }
             }
 
-            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
         sqlAnnoMap.put(Dao.Call.class, (Annotation anno, SQLMapper sqlMapper) -> {
@@ -460,6 +468,7 @@ final class DaoUtil {
             final boolean isBatch = false;
             final int batchSize = -1;
             final OP op = OP.DEFAULT;
+            final boolean isSingleParameter = tmp.isSingleParameter();
 
             String sql = StringUtil.trim(tmp.sql());
 
@@ -489,7 +498,7 @@ final class DaoUtil {
                 }
             }
 
-            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op);
+            return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
     }
 
@@ -888,8 +897,9 @@ final class DaoUtil {
 
     @SuppressWarnings("rawtypes")
     private static JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object[]> createParametersSetter(Method m, final String fullClassMethodName,
-            final Class<?>[] paramTypes, final int paramLen, final boolean isBatch, final boolean isCall, final boolean isNamedQuery, final ParsedSql namedSql,
-            final int defineParamLen, final int stmtParamStartIndex, final int stmtParamEndIndex, final int stmtParamLen) {
+            final Class<?>[] paramTypes, final int paramLen, final boolean isBatch, final boolean isSingleParameter, final boolean isCall,
+            final boolean isNamedQuery, final ParsedSql namedSql, final int defineParamLen, final int stmtParamStartIndex, final int stmtParamEndIndex,
+            final int stmtParamLen) {
 
         JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter = null;
 
@@ -925,6 +935,8 @@ final class DaoUtil {
 
                 if (N.notNullOrEmpty(paramName)) {
                     parametersSetter = (preparedQuery, args) -> ((PreparedCallableQuery) preparedQuery).setObject(paramName, args[stmtParamStartIndex]);
+                } else if (isSingleParameter) {
+                    parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamStartIndex]);
                 } else if (Map.class.isAssignableFrom(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> ((PreparedCallableQuery) preparedQuery)
                             .setParameters((Map<String, ?>) args[stmtParamStartIndex]);
@@ -947,6 +959,8 @@ final class DaoUtil {
 
                 if (N.notNullOrEmpty(paramName)) {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setObject(paramName, args[stmtParamStartIndex]);
+                } else if (isSingleParameter) {
+                    parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamStartIndex]);
                 } else if (ClassUtil.isEntity(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[stmtParamStartIndex]);
                 } else if (Map.class.isAssignableFrom(paramTypeOne)) {
@@ -959,7 +973,9 @@ final class DaoUtil {
                             + ClassUtil.getSimpleClassName(paramTypeOne));
                 }
             } else {
-                if (Collection.class.isAssignableFrom(paramTypeOne)) {
+                if (isSingleParameter) {
+                    parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamStartIndex]);
+                } else if (Collection.class.isAssignableFrom(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Collection) args[stmtParamStartIndex]);
                 } else if (Object[].class.isAssignableFrom(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Object[]) args[stmtParamStartIndex]);
@@ -2824,6 +2840,7 @@ final class DaoUtil {
                     final boolean isBatch = queryInfo.isBatch;
                     final int tmpBatchSize = queryInfo.batchSize;
                     final OP op = queryInfo.op;
+                    final boolean isSingleParameter = queryInfo.isSingleParameter;
 
                     final boolean returnGeneratedKeys = isNoId == false
                             && (sqlAnno.annotationType().equals(Dao.Insert.class) || sqlAnno.annotationType().equals(Dao.NamedInsert.class));
@@ -2902,9 +2919,14 @@ final class DaoUtil {
 
                     if (stmtParamLen == 1 && (ClassUtil.isEntity(paramTypes[stmtParamStartIndex]) || Map.class.isAssignableFrom(paramTypes[stmtParamStartIndex])
                             || EntityId.class.isAssignableFrom(paramTypes[stmtParamStartIndex])) && isNamedQuery == false) {
-                        throw new IllegalArgumentException(
+                        throw new UnsupportedOperationException(
                                 "Using named query: @NamedSelect/NamedUpdate/NamedInsert/NamedDelete when parameter type is Entity/Map/EntityId in method: "
                                         + fullClassMethodName);
+                    }
+
+                    if (isSingleParameter && stmtParamLen != 1) {
+                        throw new UnsupportedOperationException(
+                                "Don't set 'isSingleParameter' to true if the count of statement/query parameter is not one in method: " + fullClassMethodName);
                     }
 
                     if (isBatch) {
@@ -2922,7 +2944,8 @@ final class DaoUtil {
                     }
 
                     final JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter = createParametersSetter(m, fullClassMethodName,
-                            paramTypes, paramLen, isBatch, isCall, isNamedQuery, namedSql, stmtParamLen, stmtParamStartIndex, stmtParamEndIndex, stmtParamLen);
+                            paramTypes, paramLen, isBatch, isSingleParameter, isCall, isNamedQuery, namedSql, stmtParamLen, stmtParamStartIndex,
+                            stmtParamEndIndex, stmtParamLen);
 
                     final boolean isUpdateReturnType = returnType.equals(int.class) || returnType.equals(Integer.class) || returnType.equals(long.class)
                             || returnType.equals(Long.class) || returnType.equals(boolean.class) || returnType.equals(Boolean.class)
@@ -3010,7 +3033,8 @@ final class DaoUtil {
                                     ids = new ArrayList<>(0);
                                 } else if (batchParameters.size() < batchSize) {
                                     ids = ((NamedQuery) prepareQuery(proxy, m, args, defines, isNamedQuery, query, namedSql, fetchSize, isBatch, -1,
-                                            queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)).addBatchParameters(batchParameters)
+                                            queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList))
+                                                    .addBatchParameters(batchParameters, isSingleParameter)
                                                     .batchInsert();
                                 } else {
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
@@ -3022,7 +3046,7 @@ final class DaoUtil {
 
                                             ids = ExceptionalStream.of(batchParameters)
                                                     .splitToList(batchSize) //
-                                                    .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert())
+                                                    .flattMap(bp -> nameQuery.addBatchParameters(bp, isSingleParameter).batchInsert())
                                                     .toList();
                                         }
 
@@ -3098,8 +3122,7 @@ final class DaoUtil {
                                 final long updatedRecordCount = isLargeUpdate ? preparedQuery.largeUpdate() : preparedQuery.update();
 
                                 if (idDirtyMarker) {
-                                    if (isNamedQuery
-                                            && (sqlAnno.annotationType().equals(Dao.Update.class) || sqlAnno.annotationType().equals(Dao.NamedUpdate.class))) {
+                                    if (sqlAnno.annotationType().equals(Dao.NamedUpdate.class)) {
                                         ((DirtyMarker) args[stmtParamStartIndex]).markDirty(namedSql.getNamedParameters(), false);
                                     } else {
                                         ((DirtyMarker) args[stmtParamStartIndex]).markDirty(false);
@@ -3131,7 +3154,7 @@ final class DaoUtil {
                                 } else if (batchParameters.size() < batchSize) {
                                     final NamedQuery preparedQuery = ((NamedQuery) prepareQuery(proxy, m, args, defines, isNamedQuery, query, namedSql,
                                             fetchSize, isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList))
-                                                    .addBatchParameters(batchParameters);
+                                                    .addBatchParameters(batchParameters, isSingleParameter);
 
                                     if (isLargeUpdate) {
                                         updatedRecordCount = N.sum(preparedQuery.largeBatchUpdate());
@@ -3149,7 +3172,7 @@ final class DaoUtil {
                                             updatedRecordCount = ExceptionalStream.of(batchParameters)
                                                     .splitToList(batchSize) //
                                                     .sumLong(bp -> isLargeUpdate ? N.sum(nameQuery.addBatchParameters(bp).largeBatchUpdate())
-                                                            : N.sum(nameQuery.addBatchParameters(bp).batchUpdate()))
+                                                            : N.sum(nameQuery.addBatchParameters(bp, isSingleParameter).batchUpdate()))
                                                     .orZero();
                                         }
 
@@ -3160,9 +3183,7 @@ final class DaoUtil {
                                 }
 
                                 if (N.firstOrNullIfEmpty(batchParameters) instanceof DirtyMarker) {
-                                    if (isNamedQuery
-                                            && (sqlAnno.annotationType().equals(Dao.Update.class) || sqlAnno.annotationType().equals(Dao.NamedUpdate.class))) {
-
+                                    if (sqlAnno.annotationType().equals(Dao.NamedUpdate.class)) {
                                         for (Object e : batchParameters) {
                                             ((DirtyMarker) e).markDirty(namedSql.getNamedParameters(), false);
                                         }
@@ -3600,14 +3621,17 @@ final class DaoUtil {
         final boolean isBatch;
         final int batchSize;
         final OP op;
+        final boolean isSingleParameter;
 
-        QueryInfo(final String sql, final int queryTimeout, final int fetchSize, final boolean isBatch, final int batchSize, final OP op) {
+        QueryInfo(final String sql, final int queryTimeout, final int fetchSize, final boolean isBatch, final int batchSize, final OP op,
+                final boolean isSingleParameter) {
             this.sql = sql;
             this.queryTimeout = queryTimeout;
             this.fetchSize = fetchSize;
             this.isBatch = isBatch;
             this.batchSize = batchSize;
             this.op = op;
+            this.isSingleParameter = isSingleParameter;
         }
     }
 }

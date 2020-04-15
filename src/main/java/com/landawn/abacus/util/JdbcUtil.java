@@ -11908,6 +11908,13 @@ public final class JdbcUtil {
             int queryTimeout() default -1;
 
             OP op() default OP.DEFAULT;
+
+            /**
+             * Set it to true if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
+             * 
+             * @return
+             */
+            boolean isSingleParameter() default false;
         }
 
         /**
@@ -11943,6 +11950,13 @@ public final class JdbcUtil {
              * @return
              */
             int queryTimeout() default -1;
+
+            /**
+             * Set it to true if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
+             * 
+             * @return
+             */
+            boolean isSingleParameter() default false;
         }
 
         /**
@@ -11980,6 +11994,13 @@ public final class JdbcUtil {
             int queryTimeout() default -1;
 
             OP op() default OP.DEFAULT;
+
+            /**
+             * Set it to true if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
+             * 
+             * @return
+             */
+            boolean isSingleParameter() default false;
         }
 
         /**
@@ -12017,6 +12038,13 @@ public final class JdbcUtil {
             int queryTimeout() default -1;
 
             OP op() default OP.DEFAULT;
+
+            /**
+             * Set it to true if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
+             * 
+             * @return
+             */
+            boolean isSingleParameter() default false;
         }
 
         /**
@@ -12240,6 +12268,13 @@ public final class JdbcUtil {
              * @return
              */
             int queryTimeout() default -1;
+
+            /**
+             * Set it to true if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
+             * 
+             * @return
+             */
+            boolean isSingleParameter() default false;
         }
 
         @Retention(RetentionPolicy.RUNTIME)
