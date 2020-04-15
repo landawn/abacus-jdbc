@@ -30,12 +30,12 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     @NamedUpdate("UPDATE user SET first_name = :firstName, last_name = :lastName WHERE id = :id")
     int updateFirstAndLastName(@Bind("firstName") String newFirstName, @Bind("lastName") String newLastName, @Bind("id") long id) throws SQLException;
 
-    @NamedSelect("SELECT first_name, last_name FROM user WHERE id = :id")
     @SqlLogEnabled
+    @NamedSelect("SELECT first_name, last_name FROM user WHERE id = :id")
     User getFirstAndLastNameBy(@Bind("id") long id) throws SQLException;
 
-    @NamedSelect("SELECT id, first_name, last_name, email FROM user")
     @SqlLogEnabled(false)
+    @NamedSelect("SELECT id, first_name, last_name, email FROM user")
     Stream<User> allUsers() throws SQLException;
 
     @NamedInsert(sql = "INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)", isBatch = true)
@@ -66,8 +66,8 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
         }
     }
 
-    @Sqls({ "update user set first_name = ? where id = -1", "SELECT * FROM user where id >= :id" })
     @Transactional
+    @Sqls({ "update user set first_name = ? where id = -1", "SELECT * FROM user where id >= :id" })
     default List<User> listUserByAnnoSql2(String firstName, long id, String... sqls) {
         try {
             prepareQuery(sqls[0]).setString(1, firstName).update();
