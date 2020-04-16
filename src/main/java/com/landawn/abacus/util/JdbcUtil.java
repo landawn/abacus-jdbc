@@ -13536,6 +13536,8 @@ public final class JdbcUtil {
         int delete(final Condition cond) throws SQLException;
 
         /**
+         * Be careful to call asynchronized methods in transaction because Transaction is created on thread level.
+         * If the asynchronized method is called in transaction, it won't be executed under the transaction.
          *
          * @param <R>
          * @param func
@@ -13548,6 +13550,9 @@ public final class JdbcUtil {
         }
 
         /**
+         * Be careful to call asynchronized methods in transaction because Transaction is created on thread level.
+         * If the asynchronized method is called in transaction, it won't be executed under the transaction.
+         *
          *
          * @param <R>
          * @param func
@@ -13566,6 +13571,9 @@ public final class JdbcUtil {
         }
 
         /**
+         * Be careful to call asynchronized methods in transaction because Transaction is created on thread level.
+         * If the asynchronized method is called in transaction, it won't be executed under the transaction.
+         *
          *
          * @param action
          * @return
@@ -13577,6 +13585,9 @@ public final class JdbcUtil {
         }
 
         /**
+         * Be careful to call asynchronized methods in transaction because Transaction is created on thread level.
+         * If the asynchronized method is called in transaction, it won't be executed under the transaction.
+         *
          *
          * @param action
          * @param executor
