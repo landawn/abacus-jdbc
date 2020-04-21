@@ -27,6 +27,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -7936,6 +7937,34 @@ public class SQLExecutor {
          */
         public int update(final T entity, final Collection<String> propNamesToUpdate) {
             return update((Connection) null, entity, propNamesToUpdate);
+        }
+
+        /**
+         *
+         * @param propName
+         * @param propValue
+         * @param id
+         * @return
+         */
+        public int update(final String propName, final Object propValue, final ID id) {
+            final Map<String, Object> updateProps = new HashMap<>();
+            updateProps.put(propName, propValue);
+
+            return update(updateProps, id);
+        }
+
+        /**
+         *
+         * @param propName
+         * @param propValue
+         * @param cond
+         * @return
+         */
+        public int update(final String propName, final Object propValue, final Condition cond) {
+            final Map<String, Object> updateProps = new HashMap<>();
+            updateProps.put(propName, propValue);
+
+            return update(updateProps, cond);
         }
 
         /**

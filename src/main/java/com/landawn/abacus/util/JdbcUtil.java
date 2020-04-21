@@ -12555,7 +12555,10 @@ public final class JdbcUtil {
          *
          */
         public static enum OP {
-            exists, get, findFirst, list,
+            exists,
+            get,
+            findFirst,
+            list,
 
             /**
              * @deprecated generally it's unnecessary to specify the {@code "op = OP.stream"} in {@code Select/NamedSelect}.
@@ -13520,6 +13523,21 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param propName
+         * @param propValue
+         * @param cond
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default int update(final String propName, final Object propValue, final Condition cond) throws SQLException {
+            final Map<String, Object> updateProps = new HashMap<>();
+            updateProps.put(propName, propValue);
+
+            return update(updateProps, cond);
+        }
+
+        /**
+         *
          * @param updateProps
          * @param cond
          * @return
@@ -13942,6 +13960,21 @@ public final class JdbcUtil {
         int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws SQLException;
 
         /**
+        *
+        * @param propName
+        * @param propValue
+        * @param id
+        * @return
+        * @throws SQLException the SQL exception
+        */
+        default int update(final String propName, final Object propValue, final ID id) throws SQLException {
+            final Map<String, Object> updateProps = new HashMap<>();
+            updateProps.put(propName, propValue);
+
+            return update(updateProps, id);
+        }
+
+        /**
          *
          * @param updateProps
          * @param id
@@ -14215,6 +14248,10 @@ public final class JdbcUtil {
             return exists(Long.valueOf(id));
         }
 
+        default int update(final String propName, final Object propValue, final long id) throws SQLException {
+            return update(propName, propValue, Long.valueOf(id));
+        }
+
         default int update(final Map<String, Object> updateProps, final long id) throws SQLException {
             return update(updateProps, Long.valueOf(id));
         }
@@ -14233,6 +14270,21 @@ public final class JdbcUtil {
      */
     @Beta
     public static interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T, SB, TD>> extends Dao<T, SB, TD> {
+
+        /**
+         *
+         * @param propName
+         * @param propValue
+         * @param cond
+         * @return
+         * @throws SQLException the SQL exception
+         * @deprecated unsupported Operation
+         */
+        @Override
+        @Deprecated
+        default int update(final String propName, final Object propValue, final Condition cond) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
 
         /**
          *
@@ -14422,6 +14474,21 @@ public final class JdbcUtil {
         @Deprecated
         @Override
         default int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param propName
+         * @param propValue
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         * @deprecated unsupported Operation
+         */
+        @Override
+        @Deprecated
+        default int update(final String propName, final Object propValue, final ID id) throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
