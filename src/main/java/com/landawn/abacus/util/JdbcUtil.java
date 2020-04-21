@@ -6884,6 +6884,10 @@ public final class JdbcUtil {
             this.namedSql = namedSql;
             this.parameterNames = namedSql.getNamedParameters();
             this.parameterCount = namedSql.getParameterCount();
+
+            if (N.size(namedSql.getNamedParameters()) != parameterCount) {
+                throw new IllegalArgumentException("Invalid named sql: " + namedSql.sql());
+            }
         }
 
         /**
