@@ -8717,6 +8717,14 @@ public class SQLExecutor {
             return queryForUniqueResult(targetValueClass, conn, singleSelectPropName, Long.valueOf(id));
         }
 
+        public int update(final String propName, final Object propValue, final long id) {
+            return update(propName, propValue, Long.valueOf(id));
+        }
+
+        public int update(final Connection conn, final String propName, final Object propValue, final long id) {
+            return update(conn, propName, propValue, Long.valueOf(id));
+        }
+
         public int update(final Map<String, Object> props, final long id) {
             return update(props, Long.valueOf(id));
         }
@@ -9668,6 +9676,14 @@ public class SQLExecutor {
         public <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final Connection conn, final String singleSelectPropName, final long id)
                 throws DuplicatedResultException {
             return queryForUniqueResult(targetValueClass, conn, singleSelectPropName, Long.valueOf(id));
+        }
+
+        public int update(final String propName, final Object propValue, final long id) {
+            return update(propName, propValue, Long.valueOf(id));
+        }
+
+        public int update(final Connection conn, final String propName, final Object propValue, final long id) {
+            return update(conn, propName, propValue, Long.valueOf(id));
         }
 
         public int update(final Map<String, Object> props, final long id) {
