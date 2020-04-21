@@ -8021,6 +8021,36 @@ public class SQLExecutor {
         /**
          *
          * @param conn
+         * @param propName
+         * @param propValue
+         * @param id
+         * @return
+         */
+        public int update(final Connection conn, final String propName, final Object propValue, final ID id) {
+            final Map<String, Object> updateProps = new HashMap<>();
+            updateProps.put(propName, propValue);
+
+            return update(conn, updateProps, id);
+        }
+
+        /**
+         *
+         * @param conn
+         * @param propName
+         * @param propValue
+         * @param cond
+         * @return
+         */
+        public int update(final Connection conn, final String propName, final Object propValue, final Condition cond) {
+            final Map<String, Object> updateProps = new HashMap<>();
+            updateProps.put(propName, propValue);
+
+            return update(conn, updateProps, cond);
+        }
+
+        /**
+         *
+         * @param conn
          * @param props
          * @param id
          * @return
