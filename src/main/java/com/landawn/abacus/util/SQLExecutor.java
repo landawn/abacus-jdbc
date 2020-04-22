@@ -4543,6 +4543,7 @@ public class SQLExecutor {
         final ObjIteratorEx<T> lazyIter = ObjIteratorEx.of(new Supplier<ObjIteratorEx<T>>() {
             private ObjIteratorEx<T> internalIter = null;
 
+            @SuppressWarnings("deprecation")
             @Override
             public ObjIteratorEx<T> get() {
                 if (internalIter == null) {
@@ -4642,7 +4643,7 @@ public class SQLExecutor {
 
                                 return result;
                             }
-
+ 
                             @Override
                             public void close() {
                                 try {

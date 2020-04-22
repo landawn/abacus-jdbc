@@ -783,7 +783,9 @@ public final class JdbcUtil {
      *
      * @param conn
      * @throws UncheckedSQLException the unchecked SQL exception
+     * @deprecated consider using {@link #releaseConnection(Connection, javax.sql.DataSource)}
      */
+    @Deprecated
     public static void close(final Connection conn) throws UncheckedSQLException {
         if (conn != null) {
             try {
@@ -950,7 +952,9 @@ public final class JdbcUtil {
      * This is typically used in finally blocks.
      *
      * @param conn
+     * @deprecated consider using {@link #releaseConnection(Connection, javax.sql.DataSource)}
      */
+    @Deprecated
     public static void closeQuietly(final Connection conn) {
         closeQuietly(null, null, conn);
     }
@@ -2859,7 +2863,7 @@ public final class JdbcUtil {
             try {
                 return executeQuery(conn, sql, parameters);
             } finally {
-                JdbcUtil.closeQuietly(conn);
+                releaseConnection(conn, ds);
             }
         }
     }
@@ -2934,7 +2938,7 @@ public final class JdbcUtil {
             try {
                 return executeUpdate(conn, sql, parameters);
             } finally {
-                JdbcUtil.closeQuietly(conn);
+                releaseConnection(conn, ds);
             }
         }
     }
@@ -3000,7 +3004,7 @@ public final class JdbcUtil {
             try {
                 return executeBatchUpdate(conn, sql, listOfParameters, batchSize);
             } finally {
-                JdbcUtil.closeQuietly(conn);
+                releaseConnection(conn, ds);
             }
         } else {
             final SQLTransaction tran2 = JdbcUtil.beginTransaction(ds);
@@ -3138,7 +3142,7 @@ public final class JdbcUtil {
             try {
                 return executeLargeBatchUpdate(conn, sql, listOfParameters, batchSize);
             } finally {
-                JdbcUtil.closeQuietly(conn);
+                releaseConnection(conn, ds);
             }
         } else {
             final SQLTransaction tran2 = JdbcUtil.beginTransaction(ds);
@@ -3263,7 +3267,7 @@ public final class JdbcUtil {
             try {
                 return execute(conn, sql, parameters);
             } finally {
-                JdbcUtil.closeQuietly(conn);
+                releaseConnection(conn, ds);
             }
         }
     }
