@@ -2862,6 +2862,20 @@ final class DaoUtil {
                             || JdbcUtil.BiResultExtractor.class.isAssignableFrom(it) || JdbcUtil.RowMapper.class.isAssignableFrom(it)
                             || JdbcUtil.BiRowMapper.class.isAssignableFrom(it);
 
+                    if (isNamedQuery) {
+                        // @Bind parameters are not always required for named query. It's not required if parameter is Entity/Map/EnityId/...
+                        //    if (IntStreamEx.range(0, paramLen)
+                        //            .noneMatch(i -> StreamEx.of(m.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(Dao.Bind.class)))) {
+                        //        throw new UnsupportedOperationException(
+                        //                "@Bind parameters are required for named query but none is defined in method: " + fullClassMethodName);
+                        //    }
+                    } else {
+                        if (IntStreamEx.range(0, paramLen)
+                                .anyMatch(i -> StreamEx.of(m.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(Dao.Bind.class)))) {
+                            throw new UnsupportedOperationException("@Bind parameters are defined for non-named query in method: " + fullClassMethodName);
+                        }
+                    }
+
                     final int[] tmp = IntStreamEx.range(0, paramLen).filter(i -> !isRowMapperOrResultExtractor.test(paramTypes[i])).toArray();
 
                     if (N.notNullOrEmpty(tmp) && tmp[tmp.length - 1] != tmp.length - 1) {
