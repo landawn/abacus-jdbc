@@ -12543,12 +12543,10 @@ public final class JdbcUtil {
          * 
          *  @Select("SELECT first_name, last_name FROM {tableName} WHERE id = :id ORDER BY {whatever -> orderBy{{P}}")
          *  <br/>
-         *  User selectByUserId(@Define("tableName") String realTableName, @Define("{whatever -> orderBy{{P}}") String orderBy, @Bind("id") int id) throws SQLException;
+         *  User selectByUserId(@Define("tableName") String realTableName, @Bind("id") int id, @Define("{whatever -> orderBy{{P}}") String orderBy) throws SQLException;
          * 
          * </code>
          * </p>
-         * 
-         * {@code parameters} annotated with <code>@Define</code> must be at the head of the method parameter list.
          * 
          */
         @Retention(RetentionPolicy.RUNTIME)
