@@ -898,8 +898,7 @@ final class DaoUtil {
     @SuppressWarnings("rawtypes")
     private static JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object[]> createParametersSetter(Method m, final String fullClassMethodName,
             final Class<?>[] paramTypes, final int paramLen, final boolean isBatch, final boolean isSingleParameter, final boolean isCall,
-            final boolean isNamedQuery, final ParsedSql namedSql, final int defineParamLen, final int stmtParamStartIndex, final int stmtParamEndIndex,
-            final int stmtParamLen) {
+            final boolean isNamedQuery, final ParsedSql namedSql, final int defineParamLen, final int[] stmtParamIndexes, final int stmtParamLen) {
 
         JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter = null;
 
@@ -924,49 +923,49 @@ final class DaoUtil {
         if (parametersSetter != null || stmtParamLen == 0 || isBatch) {
             // ignore
         } else if (stmtParamLen == 1) {
-            final Class<?> paramTypeOne = paramTypes[stmtParamStartIndex];
+            final Class<?> paramTypeOne = paramTypes[stmtParamIndexes[0]];
 
             if (isCall) {
-                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamStartIndex])
+                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamIndexes[0]])
                         .select(Dao.Bind.class)
                         .map(b -> b.value())
                         .first()
                         .orNull();
 
                 if (N.notNullOrEmpty(paramName)) {
-                    parametersSetter = (preparedQuery, args) -> ((PreparedCallableQuery) preparedQuery).setObject(paramName, args[stmtParamStartIndex]);
+                    parametersSetter = (preparedQuery, args) -> ((PreparedCallableQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
                 } else if (isSingleParameter) {
-                    parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamStartIndex]);
+                    parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
                 } else if (Map.class.isAssignableFrom(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> ((PreparedCallableQuery) preparedQuery)
-                            .setParameters((Map<String, ?>) args[stmtParamStartIndex]);
+                            .setParameters((Map<String, ?>) args[stmtParamIndexes[0]]);
                 } else if (ClassUtil.isEntity(paramTypeOne) || EntityId.class.isAssignableFrom(paramTypeOne)) {
                     throw new UnsupportedOperationException("In method: " + fullClassMethodName
                             + ", parameters for call(procedure) have to be binded with names through annotation @Bind, or Map. Entity/EntityId type parameter are not supported");
                 } else if (Collection.class.isAssignableFrom(paramTypeOne)) {
-                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Collection) args[stmtParamStartIndex]);
+                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Collection) args[stmtParamIndexes[0]]);
                 } else if (Object[].class.isAssignableFrom(paramTypeOne)) {
-                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Object[]) args[stmtParamStartIndex]);
+                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Object[]) args[stmtParamIndexes[0]]);
                 } else {
-                    parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamStartIndex]);
+                    parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
                 }
             } else if (isNamedQuery) {
-                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamStartIndex])
+                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamIndexes[0]])
                         .select(Dao.Bind.class)
                         .map(b -> b.value())
                         .first()
                         .orNull();
 
                 if (N.notNullOrEmpty(paramName)) {
-                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setObject(paramName, args[stmtParamStartIndex]);
+                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
                 } else if (isSingleParameter) {
-                    parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamStartIndex]);
+                    parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
                 } else if (ClassUtil.isEntity(paramTypeOne)) {
-                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[stmtParamStartIndex]);
+                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[stmtParamIndexes[0]]);
                 } else if (Map.class.isAssignableFrom(paramTypeOne)) {
-                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters((Map<String, ?>) args[stmtParamStartIndex]);
+                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters((Map<String, ?>) args[stmtParamIndexes[0]]);
                 } else if (EntityId.class.isAssignableFrom(paramTypeOne)) {
-                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[stmtParamStartIndex]);
+                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[stmtParamIndexes[0]]);
                 } else {
                     throw new UnsupportedOperationException("In method: " + fullClassMethodName
                             + ", parameters for named query have to be binded with names through annotation @Bind, or Map/Entity with getter/setter methods. Can not be: "
@@ -974,18 +973,18 @@ final class DaoUtil {
                 }
             } else {
                 if (isSingleParameter) {
-                    parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamStartIndex]);
+                    parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
                 } else if (Collection.class.isAssignableFrom(paramTypeOne)) {
-                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Collection) args[stmtParamStartIndex]);
+                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Collection) args[stmtParamIndexes[0]]);
                 } else if (Object[].class.isAssignableFrom(paramTypeOne)) {
-                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Object[]) args[stmtParamStartIndex]);
+                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Object[]) args[stmtParamIndexes[0]]);
                 } else {
-                    parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamStartIndex]);
+                    parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
                 }
             }
         } else {
             if (isCall) {
-                final String[] paramNames = IntStreamEx.range(stmtParamStartIndex, stmtParamEndIndex)
+                final String[] paramNames = IntStreamEx.of(stmtParamIndexes)
                         .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).select(Dao.Bind.class).first().orElse(null))
                         .skipNull()
                         .map(b -> b.value())
@@ -995,19 +994,23 @@ final class DaoUtil {
                     parametersSetter = (preparedQuery, args) -> {
                         final PreparedCallableQuery namedQuery = ((PreparedCallableQuery) preparedQuery);
 
-                        for (int i = 0, j = i + stmtParamStartIndex, count = paramNames.length; i < count; i++, j++) {
-                            namedQuery.setObject(paramNames[i], args[j]);
+                        for (int i = 0; i < stmtParamLen; i++) {
+                            namedQuery.setObject(paramNames[i], args[stmtParamIndexes[i]]);
                         }
                     };
                 } else {
                     if (stmtParamLen == paramLen) {
                         parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters(args);
                     } else {
-                        parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters(N.copyOfRange(args, stmtParamStartIndex, stmtParamEndIndex));
+                        parametersSetter = (preparedQuery, args) -> {
+                            for (int i = 0; i < stmtParamLen; i++) {
+                                preparedQuery.setObject(i + 1, args[stmtParamIndexes[i]]);
+                            }
+                        };
                     }
                 }
             } else if (isNamedQuery) {
-                final String[] paramNames = IntStreamEx.range(stmtParamStartIndex, stmtParamEndIndex)
+                final String[] paramNames = IntStreamEx.of(stmtParamIndexes)
                         .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i])
                                 .select(Dao.Bind.class)
                                 .first()
@@ -1017,25 +1020,31 @@ final class DaoUtil {
                         .map(b -> b.value())
                         .toArray(IntFunctions.ofStringArray());
 
-                final List<String> diffParamNames = N.difference(namedSql.getNamedParameters(), N.asList(paramNames));
+                if (namedSql != null) {
+                    final List<String> diffParamNames = N.difference(namedSql.getNamedParameters(), N.asList(paramNames));
 
-                if (N.notNullOrEmpty(diffParamNames)) {
-                    throw new UnsupportedOperationException("In method: " + fullClassMethodName
-                            + ", The named parameters in sql are different from the names binded by method parameters: " + diffParamNames);
+                    if (N.notNullOrEmpty(diffParamNames)) {
+                        throw new UnsupportedOperationException("In method: " + fullClassMethodName
+                                + ", The named parameters in sql are different from the names binded by method parameters: " + diffParamNames);
+                    }
                 }
 
                 parametersSetter = (preparedQuery, args) -> {
                     final NamedQuery namedQuery = ((NamedQuery) preparedQuery);
 
-                    for (int i = 0, j = i + stmtParamStartIndex, count = paramNames.length; i < count; i++, j++) {
-                        namedQuery.setObject(paramNames[i], args[j]);
+                    for (int i = 0; i < stmtParamLen; i++) {
+                        namedQuery.setObject(paramNames[i], args[stmtParamIndexes[i]]);
                     }
                 };
             } else {
                 if (stmtParamLen == paramLen) {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters(args);
                 } else {
-                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters(N.copyOfRange(args, stmtParamStartIndex, stmtParamEndIndex));
+                    parametersSetter = (preparedQuery, args) -> {
+                        for (int i = 0; i < stmtParamLen; i++) {
+                            preparedQuery.setObject(i + 1, args[stmtParamIndexes[i]]);
+                        }
+                    };
                 }
             }
         }
@@ -1044,13 +1053,14 @@ final class DaoUtil {
     }
 
     @SuppressWarnings("rawtypes")
-    private static AbstractPreparedQuery prepareQuery(final Dao proxy, Method method, Object[] args, String[] defines, final boolean isNamedQuery, String query,
-            ParsedSql namedSql, final int fetchSize, final boolean isBatch, final int batchSize, final int queryTimeout, final boolean returnGeneratedKeys,
-            final String[] returnColumnNames, final boolean isCall, final List<OutParameter> outParameterList) throws SQLException, Exception {
+    private static AbstractPreparedQuery prepareQuery(final Dao proxy, final Method method, final Object[] args, final int[] defineParamIndexes,
+            final String[] defines, final boolean isNamedQuery, String query, ParsedSql namedSql, final int fetchSize, final boolean isBatch,
+            final int batchSize, final int queryTimeout, final boolean returnGeneratedKeys, final String[] returnColumnNames, final boolean isCall,
+            final List<OutParameter> outParameterList) throws SQLException, Exception {
 
         if (N.notNullOrEmpty(defines)) {
             for (int i = 0, len = defines.length; i < len; i++) {
-                query = StringUtil.replaceAll(query, defines[i], (String) args[i]);
+                query = StringUtil.replaceAll(query, defines[i], N.stringOf(args[defineParamIndexes[i]]));
             }
 
             if (isNamedQuery) {
@@ -2848,33 +2858,99 @@ final class DaoUtil {
                     final boolean isCall = sqlAnno.annotationType().getSimpleName().endsWith("Call");
                     final boolean isNamedQuery = sqlAnno.annotationType().getSimpleName().startsWith("Named");
 
-                    final int[] defineParamIndexes = IntStreamEx.range(0, paramLen)
+                    final Predicate<Class<?>> isRowMapperOrResultExtractor = it -> JdbcUtil.ResultExtractor.class.isAssignableFrom(it)
+                            || JdbcUtil.BiResultExtractor.class.isAssignableFrom(it) || JdbcUtil.RowMapper.class.isAssignableFrom(it)
+                            || JdbcUtil.BiRowMapper.class.isAssignableFrom(it);
+
+                    final int[] tmp = IntStreamEx.range(0, paramLen).filter(i -> !isRowMapperOrResultExtractor.test(paramTypes[i])).toArray();
+
+                    if (N.notNullOrEmpty(tmp) && tmp[tmp.length - 1] != tmp.length - 1) {
+                        throw new UnsupportedOperationException(
+                                "RowMapper/ResultExtractor must be the last parameter but not in method: " + fullClassMethodName);
+                    }
+
+                    final Predicate<Class<?>> isRowFilter = it -> JdbcUtil.RowFilter.class.isAssignableFrom(it)
+                            || JdbcUtil.BiRowFilter.class.isAssignableFrom(it);
+
+                    final int[] tmp2 = IntStreamEx.of(tmp).filter(i -> !isRowFilter.test(paramTypes[i])).toArray();
+
+                    if (N.notNullOrEmpty(tmp2) && tmp2[tmp2.length - 1] != tmp2.length - 1) {
+                        throw new UnsupportedOperationException(
+                                "RowFilter/BiRowFilter must be the last parameter or just before RowMapper/ResultExtractor but not in method: "
+                                        + fullClassMethodName);
+                    }
+
+                    final Predicate<Class<?>> isParameterSetter = it -> JdbcUtil.ParametersSetter.class.isAssignableFrom(it)
+                            || JdbcUtil.BiParametersSetter.class.isAssignableFrom(it) || JdbcUtil.TriParametersSetter.class.isAssignableFrom(it);
+
+                    final int[] tmp3 = IntStreamEx.of(tmp2).filter(i -> !isParameterSetter.test(paramTypes[i])).toArray();
+
+                    if (N.notNullOrEmpty(tmp3) && tmp3[tmp3.length - 1] != tmp3.length - 1) {
+                        throw new UnsupportedOperationException(
+                                "ParametersSetter/BiParametersSetter/TriParametersSetter must be the last parameter or just before RowFilter/BiRowFilter/RowMapper/ResultExtractor but not in method: "
+                                        + fullClassMethodName);
+                    }
+
+                    final boolean hasRowMapperOrResultExtractor = paramLen > 0 && isRowMapperOrResultExtractor.test(lastParamType);
+
+                    final boolean hasRowFilter = paramLen >= 2 && (JdbcUtil.RowFilter.class.isAssignableFrom(paramTypes[paramLen - 2])
+                            || JdbcUtil.BiRowFilter.class.isAssignableFrom(paramTypes[paramLen - 2]));
+
+                    if (hasRowFilter && !hasRowMapperOrResultExtractor) {
+                        throw new UnsupportedOperationException(
+                                "Parameter 'RowFilter/BiRowFilter' is not supported without last paramere to be 'RowMapper/BiRowMapper' in method: "
+                                        + fullClassMethodName);
+                    }
+
+                    if (hasRowMapperOrResultExtractor) {
+                        throw new UnsupportedOperationException(
+                                "Retrieving result/record by 'ResultExtractor/BiResultExtractor/RowMapper/BiRowMapper' is not enabled at present. Can't use it in method: "
+                                        + fullClassMethodName);
+                    }
+
+                    final int[] defineParamIndexes = IntStreamEx.of(tmp3)
                             .filter(i -> StreamEx.of(m.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(Dao.Define.class)))
                             .toArray();
 
                     final int defineParamLen = N.len(defineParamIndexes);
 
                     if (defineParamLen > 0) {
-                        if (defineParamIndexes[0] != 0 || defineParamIndexes[defineParamLen - 1] - defineParamIndexes[0] + 1 != defineParamLen) {
-                            throw new UnsupportedOperationException(
-                                    "Parameters annotated with @Define must be at the head of the parameter list of method: " + fullClassMethodName);
-                        }
+                        //    if (defineParamIndexes[0] != 0 || defineParamIndexes[defineParamLen - 1] - defineParamIndexes[0] + 1 != defineParamLen) {
+                        //        throw new UnsupportedOperationException(
+                        //                "Parameters annotated with @Define must be at the head of the parameter list of method: " + fullClassMethodName);
+                        //    }
 
-                        for (int i = 0; i < defineParamLen; i++) {
-                            if (!paramTypes[i].equals(String.class)) {
-                                throw new UnsupportedOperationException("The type of parameter[" + i + "] annotated with @Define can't be: " + paramTypes[i]
-                                        + " in method: " + fullClassMethodName + ". It must be String");
-                            }
-                        }
+                        //    for (int i = 0; i < defineParamLen; i++) {
+                        //        if (!paramTypes[defineParamIndexes[i]].equals(String.class)) {
+                        //            throw new UnsupportedOperationException("The type of parameter[" + i + "] annotated with @Define can't be: " + paramTypes[i]
+                        //                    + " in method: " + fullClassMethodName + ". It must be String");
+                        //        }
+                        //    }
                     }
 
                     final String[] defines = defineParamLen == 0 ? N.EMPTY_STRING_ARRAY
-                            : IntStreamEx.range(0, defineParamLen)
+                            : IntStreamEx.of(defineParamIndexes)
                                     .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).select(Dao.Define.class).first().get().value())
                                     .map(it -> it.charAt(0) == '{' && it.charAt(it.length() - 1) == '}' ? it : "{" + it + "}")
                                     .toArray(IntFunctions.ofStringArray());
 
-                    final ParsedSql namedSql = isNamedQuery && defineParamLen == 0 ? ParsedSql.parse(query) : null;
+                    final int[] stmtParamIndexes = IntStreamEx.of(tmp3)
+                            .filter(i -> StreamEx.of(m.getParameterAnnotations()[i]).noneMatch(it -> it.annotationType().equals(Dao.Define.class)))
+                            .toArray();
+
+                    final int stmtParamLen = stmtParamIndexes.length;
+
+                    if (stmtParamLen == 1 && (ClassUtil.isEntity(paramTypes[stmtParamIndexes[0]]) || Map.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])
+                            || EntityId.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])) && isNamedQuery == false) {
+                        throw new UnsupportedOperationException(
+                                "Using named query: @NamedSelect/NamedUpdate/NamedInsert/NamedDelete when parameter type is Entity/Map/EntityId in method: "
+                                        + fullClassMethodName);
+                    }
+
+                    if (isSingleParameter && stmtParamLen != 1) {
+                        throw new UnsupportedOperationException(
+                                "Don't set 'isSingleParameter' to true if the count of statement/query parameter is not one in method: " + fullClassMethodName);
+                    }
 
                     final List<Dao.OutParameter> outParameterList = StreamEx.of(m.getAnnotations())
                             .select(Dao.OutParameter.class)
@@ -2894,45 +2970,9 @@ final class DaoUtil {
                         }
                     }
 
-                    final boolean hasRowMapperOrExtractor = paramLen > 0 && (JdbcUtil.ResultExtractor.class.isAssignableFrom(lastParamType)
-                            || JdbcUtil.BiResultExtractor.class.isAssignableFrom(lastParamType) || JdbcUtil.RowMapper.class.isAssignableFrom(lastParamType)
-                            || JdbcUtil.BiRowMapper.class.isAssignableFrom(lastParamType));
-
-                    final boolean hasRowFilter = paramLen >= 2 && (JdbcUtil.RowFilter.class.isAssignableFrom(paramTypes[paramLen - 2])
-                            || JdbcUtil.BiRowFilter.class.isAssignableFrom(paramTypes[paramLen - 2]));
-
-                    if (hasRowFilter && !hasRowMapperOrExtractor) {
-                        throw new UnsupportedOperationException(
-                                "Parameter 'RowFilter/BiRowFilter' is not supported without last paramere to be 'RowMapper/BiRowMapper' in method: "
-                                        + fullClassMethodName);
-                    }
-
-                    if (hasRowMapperOrExtractor) {
-                        throw new UnsupportedOperationException(
-                                "Retrieving result/record by 'ResultExtractor/BiResultExtractor/RowMapper/BiRowMapper' is not enabled at present. Can't use it in method: "
-                                        + fullClassMethodName);
-                    }
-
-                    final int stmtParamStartIndex = defineParamLen;
-                    final int stmtParamEndIndex = hasRowFilter ? (paramLen - 2) : (hasRowMapperOrExtractor ? paramLen - 1 : paramLen);
-                    final int stmtParamLen = stmtParamEndIndex - stmtParamStartIndex;
-
-                    if (stmtParamLen == 1 && (ClassUtil.isEntity(paramTypes[stmtParamStartIndex]) || Map.class.isAssignableFrom(paramTypes[stmtParamStartIndex])
-                            || EntityId.class.isAssignableFrom(paramTypes[stmtParamStartIndex])) && isNamedQuery == false) {
-                        throw new UnsupportedOperationException(
-                                "Using named query: @NamedSelect/NamedUpdate/NamedInsert/NamedDelete when parameter type is Entity/Map/EntityId in method: "
-                                        + fullClassMethodName);
-                    }
-
-                    if (isSingleParameter && stmtParamLen != 1) {
-                        throw new UnsupportedOperationException(
-                                "Don't set 'isSingleParameter' to true if the count of statement/query parameter is not one in method: " + fullClassMethodName);
-                    }
-
                     if (isBatch) {
-                        if (!((stmtParamLen == 1 && Collection.class.isAssignableFrom(paramTypes[stmtParamStartIndex]))
-                                || (stmtParamLen == 2 && Collection.class.isAssignableFrom(paramTypes[stmtParamStartIndex])
-                                        && int.class.equals(paramTypes[stmtParamStartIndex + 1])))) {
+                        if (!((stmtParamLen == 1 && Collection.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])) || (stmtParamLen == 2
+                                && Collection.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) && int.class.equals(paramTypes[stmtParamIndexes[1]])))) {
                             throw new UnsupportedOperationException("For batch operations(" + fullClassMethodName
                                     + "), the first parameter must be Collection. The second parameter is optional, it only can be int if it's set");
                         }
@@ -2943,9 +2983,10 @@ final class DaoUtil {
                         }
                     }
 
+                    final ParsedSql namedSql = isNamedQuery && defineParamLen == 0 ? ParsedSql.parse(query) : null;
+
                     final JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter = createParametersSetter(m, fullClassMethodName,
-                            paramTypes, paramLen, isBatch, isSingleParameter, isCall, isNamedQuery, namedSql, stmtParamLen, stmtParamStartIndex,
-                            stmtParamEndIndex, stmtParamLen);
+                            paramTypes, paramLen, isBatch, isSingleParameter, isCall, isNamedQuery, namedSql, stmtParamLen, stmtParamIndexes, stmtParamLen);
 
                     final boolean isUpdateReturnType = returnType.equals(int.class) || returnType.equals(Integer.class) || returnType.equals(long.class)
                             || returnType.equals(Long.class) || returnType.equals(boolean.class) || returnType.equals(Boolean.class)
@@ -2956,14 +2997,15 @@ final class DaoUtil {
                     if (sqlAnno.annotationType().equals(Dao.Select.class) || sqlAnno.annotationType().equals(Dao.NamedSelect.class)
                             || (isCall && !isUpdateReturnType)) {
                         final Throwables.BiFunction<AbstractPreparedQuery, Object[], T, Exception> queryFunc = createQueryFunctionByMethod(m,
-                                hasRowMapperOrExtractor, hasRowFilter, op, fullClassMethodName);
+                                hasRowMapperOrResultExtractor, hasRowFilter, op, fullClassMethodName);
 
                         // Getting ClassCastException. Not sure why query result is being casted Dao. It seems there is a bug in JDk compiler.
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
 
                         call = (proxy, args) -> {
-                            Object result = queryFunc.apply(prepareQuery(proxy, m, args, defines, isNamedQuery, query, namedSql, fetchSize, isBatch, -1,
-                                    queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList).settParameters(args, parametersSetter),
+                            Object result = queryFunc.apply(prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
+                                    isBatch, -1, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList).settParameters(args,
+                                            parametersSetter),
                                     args);
 
                             if (idDirtyMarkerReturnType) {
@@ -2988,12 +3030,13 @@ final class DaoUtil {
                             }
 
                             call = (proxy, args) -> {
-                                final boolean isEntity = stmtParamLen == 1 && args[stmtParamStartIndex] != null
-                                        && ClassUtil.isEntity(args[stmtParamStartIndex].getClass());
-                                final Object entity = isEntity ? args[stmtParamStartIndex] : null;
+                                final boolean isEntity = stmtParamLen == 1 && args[stmtParamIndexes[0]] != null
+                                        && ClassUtil.isEntity(args[stmtParamIndexes[0]].getClass());
+                                final Object entity = isEntity ? args[stmtParamIndexes[0]] : null;
 
-                                final Optional<Object> id = prepareQuery(proxy, m, args, defines, isNamedQuery, query, namedSql, fetchSize, isBatch, -1,
-                                        queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList).settParameters(args, parametersSetter)
+                                final Optional<Object> id = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
+                                        isBatch, -1, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                                .settParameters(args, parametersSetter)
                                                 .insert(keyExtractor);
 
                                 if (isEntity && id.isPresent()) {
@@ -3014,11 +3057,11 @@ final class DaoUtil {
                             }
 
                             call = (proxy, args) -> {
-                                final Collection<Object> batchParameters = (Collection) args[stmtParamStartIndex];
+                                final Collection<Object> batchParameters = (Collection) args[stmtParamIndexes[0]];
                                 int batchSize = tmpBatchSize;
 
                                 if (stmtParamLen == 2) {
-                                    batchSize = (Integer) args[stmtParamStartIndex + 1];
+                                    batchSize = (Integer) args[stmtParamIndexes[1]];
                                 }
 
                                 if (batchSize == 0) {
@@ -3032,17 +3075,17 @@ final class DaoUtil {
                                 if (N.isNullOrEmpty(batchParameters)) {
                                     ids = new ArrayList<>(0);
                                 } else if (batchParameters.size() < batchSize) {
-                                    ids = ((NamedQuery) prepareQuery(proxy, m, args, defines, isNamedQuery, query, namedSql, fetchSize, isBatch, -1,
-                                            queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList))
+                                    ids = ((NamedQuery) prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
+                                            isBatch, -1, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList))
                                                     .addBatchParameters(batchParameters, isSingleParameter)
                                                     .batchInsert();
                                 } else {
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
-                                        try (NamedQuery nameQuery = (NamedQuery) prepareQuery(proxy, m, args, defines, isNamedQuery, query, namedSql, fetchSize,
-                                                isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
-                                                        .closeAfterExecution(false)) {
+                                        try (NamedQuery nameQuery = (NamedQuery) prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query,
+                                                namedSql, fetchSize, isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall,
+                                                outParameterList).closeAfterExecution(false)) {
 
                                             ids = ExceptionalStream.of(batchParameters)
                                                     .splitToList(batchSize) //
@@ -3111,21 +3154,21 @@ final class DaoUtil {
                                 || (op == OP.DEFAULT && (returnType.equals(long.class) || returnType.equals(Long.class)));
 
                         if (isBatch == false) {
-                            final boolean idDirtyMarker = stmtParamLen == 1 && ClassUtil.isEntity(paramTypes[stmtParamStartIndex])
-                                    && DirtyMarker.class.isAssignableFrom(paramTypes[stmtParamStartIndex]);
+                            final boolean idDirtyMarker = stmtParamLen == 1 && ClassUtil.isEntity(paramTypes[stmtParamIndexes[0]])
+                                    && DirtyMarker.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]);
 
                             call = (proxy, args) -> {
-                                final AbstractPreparedQuery preparedQuery = prepareQuery(proxy, m, args, defines, isNamedQuery, query, namedSql, fetchSize,
-                                        isBatch, -1, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList).settParameters(args,
-                                                parametersSetter);
+                                final AbstractPreparedQuery preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query,
+                                        namedSql, fetchSize, isBatch, -1, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                                .settParameters(args, parametersSetter);
 
                                 final long updatedRecordCount = isLargeUpdate ? preparedQuery.largeUpdate() : preparedQuery.update();
 
                                 if (idDirtyMarker) {
                                     if (sqlAnno.annotationType().equals(Dao.NamedUpdate.class)) {
-                                        ((DirtyMarker) args[stmtParamStartIndex]).markDirty(namedSql.getNamedParameters(), false);
+                                        ((DirtyMarker) args[stmtParamIndexes[0]]).markDirty(namedSql.getNamedParameters(), false);
                                     } else {
-                                        ((DirtyMarker) args[stmtParamStartIndex]).markDirty(false);
+                                        ((DirtyMarker) args[stmtParamIndexes[0]]).markDirty(false);
                                     }
                                 }
 
@@ -3134,11 +3177,11 @@ final class DaoUtil {
 
                         } else {
                             call = (proxy, args) -> {
-                                final Collection<Object> batchParameters = (Collection) args[stmtParamStartIndex];
+                                final Collection<Object> batchParameters = (Collection) args[stmtParamIndexes[0]];
                                 int batchSize = tmpBatchSize;
 
                                 if (stmtParamLen == 2) {
-                                    batchSize = (Integer) args[stmtParamStartIndex + 1];
+                                    batchSize = (Integer) args[stmtParamIndexes[1]];
                                 }
 
                                 if (batchSize == 0) {
@@ -3152,9 +3195,9 @@ final class DaoUtil {
                                 if (N.isNullOrEmpty(batchParameters)) {
                                     updatedRecordCount = 0;
                                 } else if (batchParameters.size() < batchSize) {
-                                    final NamedQuery preparedQuery = ((NamedQuery) prepareQuery(proxy, m, args, defines, isNamedQuery, query, namedSql,
-                                            fetchSize, isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList))
-                                                    .addBatchParameters(batchParameters, isSingleParameter);
+                                    final NamedQuery preparedQuery = ((NamedQuery) prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery,
+                                            query, namedSql, fetchSize, isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall,
+                                            outParameterList)).addBatchParameters(batchParameters, isSingleParameter);
 
                                     if (isLargeUpdate) {
                                         updatedRecordCount = N.sum(preparedQuery.largeBatchUpdate());
@@ -3165,9 +3208,9 @@ final class DaoUtil {
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
-                                        try (NamedQuery nameQuery = (NamedQuery) prepareQuery(proxy, m, args, defines, isNamedQuery, query, namedSql, fetchSize,
-                                                isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
-                                                        .closeAfterExecution(false)) {
+                                        try (NamedQuery nameQuery = (NamedQuery) prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query,
+                                                namedSql, fetchSize, isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall,
+                                                outParameterList).closeAfterExecution(false)) {
 
                                             updatedRecordCount = ExceptionalStream.of(batchParameters)
                                                     .splitToList(batchSize) //
