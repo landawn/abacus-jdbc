@@ -8,16 +8,17 @@ Hope it will bring you the programming experiences: coding with SQL/DB is just l
 
 ## Features:
 
-[PreparedQuery](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/PreparedQuery_view.html), 
-[Dao/CrudDao](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/Dao_view.html), 
-[SQLExecutor](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/SQLExecutor_view.html), 
-[Mapper](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/Mapper_view.html), 
-[JdbcUtil](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/JdbcUtil_view.html), 
-[DataSet](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/DataSet_view.html), 
-[ConditionFactory(CF)](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/ConditionFactory_view.html), 
-[SQLBuilder](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/SQLBuilder_view.html), 
-[DynamicSQLBuilder](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/DynamicSQLBuilder_view.html),
-[SQLMapper](https://cdn.staticaly.com/gh/landawn/abacus-jdbc/master/docs/SQLMapper_view.html),...
+
+[PreparedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-util/blob/master/docs/PreparedQuery_view.html), 
+[Dao/CrudDao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-util/blob/master/docs/Dao_view.html), 
+[SQLExecutor](https://htmlpreview.github.io/?https://github.com/landawn/abacus-util/blob/master/docs/SQLExecutor_view.html), 
+[Mapper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-util/blob/master/docs/Mapper_view.html), 
+[JdbcUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-util/blob/master/docs/JdbcUtil_view.html), 
+[DataSet](https://htmlpreview.github.io/?https://github.com/landawn/abacus-util/blob/master/docs/DataSet_view.html), 
+[ConditionFactory(CF)](https://htmlpreview.github.io/?https://github.com/landawn/abacus-util/blob/master/docs/ConditionFactory_view.html), 
+[SQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-util/blob/master/docs/SQLBuilder_view.html), 
+[DynamicSQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-util/blob/master/docs/DynamicSQLBuilder_view.html),
+[SQLMapper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-util/blob/master/docs/SQLMapper_view.html),...
 
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
