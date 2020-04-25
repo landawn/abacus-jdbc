@@ -138,7 +138,8 @@ public class Jdbc {
             stmt.setLong(1, 100);
             stmt.setString(2, "Forrest");
             stmt.setString(3, "Gump");
-            stmt.setString(4, "123@email.com");
+            stmt.setString(4, "Forrest");
+            stmt.setString(5, "123@email.com");
             stmt.execute();
         } finally {
             JdbcUtil.closeQuietly(stmt, conn);
@@ -159,8 +160,9 @@ public class Jdbc {
                             .id(rs.getLong(1))
                             .firstName(rs.getString(2))
                             .lastName(rs.getString(3))
-                            .email(rs.getString(4))
-                            .createTime(rs.getTimestamp(5))
+                            .nickName(rs.getString(4))
+                            .email(rs.getString(5))
+                            .createTime(rs.getTimestamp(6))
                             .build();
                 }
             }
@@ -213,7 +215,8 @@ public class Jdbc {
                 .setLong(1, 100)
                 .setString(2, "Forrest")
                 .setString(3, "Gump")
-                .setString(4, "123@email.com")
+                .setString(4, "Forrest")
+                .setString(5, "123@email.com")
                 .insert();
 
         sql = PSC.selectFrom(User.class).where("id = ?").sql();

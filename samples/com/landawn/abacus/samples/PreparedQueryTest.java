@@ -69,7 +69,8 @@ public class PreparedQueryTest {
                 .setLong(1, 100)
                 .setString(2, "Forrest")
                 .setString(3, "Gump")
-                .setString(4, "123@email.com")
+                .setString(4, "Forrest")
+                .setString(5, "123@email.com")
                 .insert();
 
         sql = PSC.selectFrom(User.class).where("id = ?").sql();
@@ -79,13 +80,13 @@ public class PreparedQueryTest {
                 .get(RowMapper.builder()
                         .get(1, (columnIndex, rs) -> rs.getLong(columnIndex))
                         .get(3, (columnIndex, rs) -> rs.getString(columnIndex))
-                        .get(5, (columnIndex, rs) -> rs.getDate(columnIndex))
+                        .get(6, (columnIndex, rs) -> rs.getDate(columnIndex))
                         .toList())
                 .ifPresent(System.out::println);
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .get(RowMapper.builder().getInt(1).get(3, (columnIndex, rs) -> rs.getString(columnIndex)).getTime(5).toArray())
+                .get(RowMapper.builder().getInt(1).get(3, (columnIndex, rs) -> rs.getString(columnIndex)).getTime(6).toArray())
                 .ifPresent(System.out::println);
 
         JdbcUtil.prepareQuery(dataSource, sql) //
