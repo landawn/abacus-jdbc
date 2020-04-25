@@ -3,6 +3,7 @@ package com.landawn.abacus.samples.entity;
 import java.sql.Timestamp;
 import java.util.List;
 
+import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.annotation.ReadOnly;
@@ -20,6 +21,8 @@ import lombok.NoArgsConstructor;
 public class User {
     @Id
     private long id;
+    
+    @Column("FIRST_NAME")
     private String firstName;
     private String lastName;
     private String email;
