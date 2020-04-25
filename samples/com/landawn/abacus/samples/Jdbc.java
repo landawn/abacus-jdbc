@@ -20,6 +20,7 @@ import com.landawn.abacus.samples.dao.NoUpdateUserDao;
 import com.landawn.abacus.samples.dao.ProjectDao;
 import com.landawn.abacus.samples.dao.ReadOnlyUserDao;
 import com.landawn.abacus.samples.dao.UserDao;
+import com.landawn.abacus.samples.dao.UserDaoL;
 import com.landawn.abacus.samples.entity.Address;
 import com.landawn.abacus.samples.entity.Device;
 import com.landawn.abacus.samples.entity.User;
@@ -50,6 +51,7 @@ public class Jdbc {
     static final MapperLEx<Address> addressMapper = sqlExecutor.mapperEx(Address.class);
 
     static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
+    static final UserDaoL userDao2 = JdbcUtil.createDao(UserDaoL.class, dataSource);
     static final NoUpdateUserDao noUpdateUserDao = JdbcUtil.createDao(NoUpdateUserDao.class, dataSource);
     static final ReadOnlyUserDao readOnlyUserDao = JdbcUtil.createDao(ReadOnlyUserDao.class, dataSource);
 

@@ -1183,14 +1183,14 @@ final class DaoUtil {
                 if (idFieldNames.size() == 0) {
                     throw new IllegalArgumentException("To support CRUD operations by extending CrudDao interface, the entity class: " + typeArguments[0]
                             + " must have at least one field annotated with @Id");
-                } else if (idFieldNames.size() == 1) {
+                } else if (idFieldNames.size() == 1 && !SQLBuilder.class.isAssignableFrom((Class) typeArguments[1])) {
                     if (!(Primitives.wrap((Class) typeArguments[1]))
                             .isAssignableFrom(Primitives.wrap(ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType()))) {
                         throw new IllegalArgumentException("The 'ID' type declared in Dao type parameters: " + typeArguments[1]
                                 + " is not assignable from the id property type in the entity class: "
                                 + ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType());
                     }
-                } else if (!EntityId.class.equals(typeArguments[1])) {
+                } else if (idFieldNames.size() > 1 && !EntityId.class.equals(typeArguments[1])) {
                     throw new IllegalArgumentException("To support multiple ids, the 'ID' type type must be EntityId. It can't be: " + typeArguments[1]);
                 }
             }
