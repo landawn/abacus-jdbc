@@ -69,6 +69,7 @@ public class Jdbc {
                 + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
                 + "first_name varchar(32) NOT NULL, " //
                 + "last_name varchar(32) NOT NULL, " //
+                + "prop1 varchar(32), " //
                 + "email varchar(32), " //
                 + "create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)";
 

@@ -21,10 +21,13 @@ import lombok.NoArgsConstructor;
 public class User {
     @Id
     private long id;
-    
+
     @Column("FIRST_NAME")
     private String firstName;
     private String lastName;
+
+    @Column("prop1")
+    private String nickName;
     private String email;
     @ReadOnly
     private Timestamp createTime;

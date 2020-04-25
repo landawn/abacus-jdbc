@@ -54,7 +54,7 @@ public class DaoTest {
     public void test_define() throws Exception {
 
         List<User> users = IntStream.range(1, 1000)
-                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).email("123@email.com" + i).build())
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
         List<Long> ids = userDao.batchInsertWithId(users);
@@ -246,7 +246,7 @@ public class DaoTest {
     public void test_batch() throws SQLException {
 
         List<User> users = IntStream.range(1, 1000)
-                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).email("123@email.com" + i).build())
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
         List<Long> ids = userDao.batchInsertWithId(users);
@@ -287,6 +287,7 @@ public class DaoTest {
 
         assertFalse(userDao.exists(id));
     }
+
     @Test
     public void test_save_insert_2() throws SQLException {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
