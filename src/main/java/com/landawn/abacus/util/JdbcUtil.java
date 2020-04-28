@@ -12340,6 +12340,36 @@ public final class JdbcUtil {
         }
 
         /**
+         * Replace the parts defined with format <code>{part}</code> in the sql annotated to the method.
+         * For example:
+         * <p>
+         * <code>
+         * 
+         *  @Select("SELECT first_name, last_name FROM {tableName} WHERE id = :id")
+         *  <br />
+         *  User selectByUserId(@Define("tableName") String realTableName, @Bind("id") int id) throws SQLException;
+         * 
+         * <br />
+         * <br />
+         * <br />
+         * OR with customized '{whatever}':
+         * <br />
+         * 
+         *  @Select("SELECT first_name, last_name FROM {tableName} WHERE id = :id ORDER BY {whatever -> orderBy{{P}}")
+         *  <br/>
+         *  User selectByUserId(@Define("tableName") String realTableName, @Bind("id") int id, @Define("{whatever -> orderBy{{P}}") String orderBy) throws SQLException;
+         * 
+         * </code>
+         * </p>
+         * 
+         */
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(value = { ElementType.PARAMETER })
+        static @interface Define {
+            String value() default "";
+        }
+
+        /**
          *
          */
         @Retention(RetentionPolicy.RUNTIME)
@@ -12523,36 +12553,6 @@ public final class JdbcUtil {
         @Target(value = { ElementType.TYPE })
         static @interface AllowJoiningByNullOrDefaultValue {
             boolean value() default false;
-        }
-
-        /**
-         * Replace the parts defined with format <code>{part}</code> in the sql annotated to the method.
-         * For example:
-         * <p>
-         * <code>
-         * 
-         *  @Select("SELECT first_name, last_name FROM {tableName} WHERE id = :id")
-         *  <br />
-         *  User selectByUserId(@Define("tableName") String realTableName, @Bind("id") int id) throws SQLException;
-         * 
-         * <br />
-         * <br />
-         * <br />
-         * OR with customized '{whatever}':
-         * <br />
-         * 
-         *  @Select("SELECT first_name, last_name FROM {tableName} WHERE id = :id ORDER BY {whatever -> orderBy{{P}}")
-         *  <br/>
-         *  User selectByUserId(@Define("tableName") String realTableName, @Bind("id") int id, @Define("{whatever -> orderBy{{P}}") String orderBy) throws SQLException;
-         * 
-         * </code>
-         * </p>
-         * 
-         */
-        @Retention(RetentionPolicy.RUNTIME)
-        @Target(value = { ElementType.PARAMETER })
-        static @interface Define {
-            String value() default "";
         }
 
         /**
@@ -12972,6 +12972,31 @@ public final class JdbcUtil {
         /**
          * Insert the specified entities to database by batch.
          *
+         * @param entitiesToSave
+         * @param propNamesToSave
+         * @return
+         * @throws SQLException the SQL exception
+         * @see CrudDao#batchInsert(Collection)
+         */
+        default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave) throws SQLException {
+            batchSave(entitiesToSave, propNamesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         * Insert the specified entities to database by batch.
+         *
+         * @param entitiesToSave
+         * @param propNamesToSave
+         * @param batchSize
+         * @return
+         * @throws SQLException the SQL exception
+         * @see CrudDao#batchInsert(Collection)
+         */
+        void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize) throws SQLException;
+
+        /**
+         * Insert the specified entities to database by batch.
+         *
          * @param namedInsertSQL
          * @param entitiesToSave
          * @return
@@ -13302,32 +13327,6 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param singleSelectPropName
-         * @param cond
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws SQLException {
-            final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
-            final RowMapper<R> rowMapper = propInfo == null ? RowMapper.GET_OBJECT : RowMapper.get((Type<R>) propInfo.dbType);
-
-            return list(singleSelectPropName, cond, rowMapper);
-        }
-
-        /**
-         *
-         * @param singleSelectPropName
-         * @param cond
-         * @param rowMapper
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        default <R> List<R> list(final String singleSelectPropName, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException {
-            return list(N.asList(singleSelectPropName), cond, rowMapper);
-        }
-
-        /**
-         *
          * @param selectPropNames
          * @param cond
          * @return
@@ -13378,6 +13377,32 @@ public final class JdbcUtil {
          */
         <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.BiRowFilter rowFilter,
                 final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+
+        /**
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws SQLException {
+            final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
+            final RowMapper<R> rowMapper = propInfo == null ? RowMapper.GET_OBJECT : RowMapper.get((Type<R>) propInfo.dbType);
+
+            return list(singleSelectPropName, cond, rowMapper);
+        }
+
+        /**
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default <R> List<R> list(final String singleSelectPropName, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException {
+            return list(N.asList(singleSelectPropName), cond, rowMapper);
+        }
 
         // Will it cause confusion if it's called in transaction?
         /**
@@ -13434,33 +13459,6 @@ public final class JdbcUtil {
          */
         <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final JdbcUtil.BiRowFilter rowFilter, final JdbcUtil.BiRowMapper<R> rowMapper)
                 throws SQLException;
-
-        /**
-         *
-         * @param singleSelectPropName
-         * @param cond
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) throws SQLException {
-            final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
-            final RowMapper<R> rowMapper = propInfo == null ? RowMapper.GET_OBJECT : RowMapper.get((Type<R>) propInfo.dbType);
-
-            return stream(singleSelectPropName, cond, rowMapper);
-        }
-
-        /**
-         *
-         * @param singleSelectPropName
-         * @param cond
-         * @param rowMapper
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper)
-                throws SQLException {
-            return stream(N.asList(singleSelectPropName), cond, rowMapper);
-        }
 
         // Will it cause confusion if it's called in transaction?
         /**
@@ -13526,6 +13524,33 @@ public final class JdbcUtil {
          */
         <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.BiRowFilter rowFilter,
                 final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+
+        /**
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) throws SQLException {
+            final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
+            final RowMapper<R> rowMapper = propInfo == null ? RowMapper.GET_OBJECT : RowMapper.get((Type<R>) propInfo.dbType);
+
+            return stream(singleSelectPropName, cond, rowMapper);
+        }
+
+        /**
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper)
+                throws SQLException {
+            return stream(N.asList(singleSelectPropName), cond, rowMapper);
+        }
 
         /**
          *
@@ -13647,29 +13672,29 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param entityToSave
+         * @param entityToInsert
          * @return
          * @throws SQLException the SQL exception
          */
-        ID insert(final T entityToSave) throws SQLException;
+        ID insert(final T entityToInsert) throws SQLException;
 
         /**
          *
-         * @param entityToSave
-         * @param propNamesToSave
+         * @param entityToInsert
+         * @param propNamesToInsert
          * @return
          * @throws SQLException the SQL exception
          */
-        ID insert(final T entityToSave, final Collection<String> propNamesToSave) throws SQLException;
+        ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws SQLException;
 
         /**
          *
          * @param namedInsertSQL
-         * @param entityToSave
+         * @param entityToInsert
          * @return
          * @throws SQLException the SQL exception
          */
-        ID insert(final String namedInsertSQL, final T entityToSave) throws SQLException;
+        ID insert(final String namedInsertSQL, final T entityToInsert) throws SQLException;
 
         /**
          *
@@ -13689,6 +13714,27 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws SQLException;
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToInsert
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws SQLException {
+            return batchInsert(entities, propNamesToInsert, JdbcUtil.DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToInsert
+         * @param batchSize
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize) throws SQLException;
 
         /**
          *
@@ -14410,6 +14456,41 @@ public final class JdbcUtil {
         /**
          * Always throws {@code UnsupportedOperationException}.
          *
+         * @param entitiesToSave
+         * @param propNamesToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave)
+                throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Always throws {@code UnsupportedOperationException}.
+         *
+         * @param entitiesToSave
+         * @param propNamesToSave
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize)
+                throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Always throws {@code UnsupportedOperationException}.
+         *
          * @param namedInsertSQL
          * @param entitiesToSave
          * @return
@@ -14756,7 +14837,7 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param entityToSave
+         * @param entityToInsert
          * @return
          * @throws UnsupportedOperationException
          * @throws SQLException
@@ -14764,14 +14845,14 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default ID insert(final T entityToSave) throws UnsupportedOperationException, SQLException {
+        default ID insert(final T entityToInsert) throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
         /**
          *
-         * @param entityToSave
-         * @param propNamesToSave
+         * @param entityToInsert
+         * @param propNamesToInsert
          * @return
          * @throws UnsupportedOperationException
          * @throws SQLException
@@ -14779,7 +14860,7 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default ID insert(final T entityToSave, final Collection<String> propNamesToSave) throws UnsupportedOperationException, SQLException {
+        default ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -14826,6 +14907,38 @@ public final class JdbcUtil {
         default List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToInsert
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToInsert
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
 
         /**
          *

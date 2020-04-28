@@ -1550,7 +1550,8 @@ final class DaoUtil {
 
                             return null;
                         };
-                    } else if (methodName.equals("batchSave") && paramLen == 2 && int.class.equals(paramTypes[1])) {
+                    } else if (methodName.equals("batchSave") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
+                            && int.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
                             final Collection<?> entities = (Collection<Object>) args[0];
                             final int batchSize = (Integer) args[1];
@@ -1590,7 +1591,51 @@ final class DaoUtil {
 
                             return null;
                         };
-                    } else if (methodName.equals("batchSave") && paramLen == 3 && int.class.equals(paramTypes[2])) {
+                    } else if (methodName.equals("batchSave") && paramLen == 3 && Collection.class.isAssignableFrom(paramTypes[0])
+                            && Collection.class.isAssignableFrom(paramTypes[1]) && int.class.equals(paramTypes[2])) {
+                        call = (proxy, args) -> {
+                            final Collection<?> entities = (Collection<Object>) args[0];
+
+                            final Collection<String> propNamesToSave = (Collection<String>) args[1];
+                            N.checkArgNotNullOrEmpty(propNamesToSave, "propNamesToSave");
+
+                            final int batchSize = (Integer) args[2];
+                            N.checkArgPositive(batchSize, "batchSize");
+
+                            if (N.isNullOrEmpty(entities)) {
+                                return 0;
+                            }
+
+                            final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToSave).sql();
+
+                            if (entities.size() <= batchSize) {
+                                proxy.prepareNamedQuery(namedInsertSQL).addBatchParameters(entities).batchUpdate();
+                            } else {
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+
+                                try {
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
+                                        ExceptionalStream.of(entities)
+                                                .splitToList(batchSize) //
+                                                .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
+                                    }
+
+                                    tran.commit();
+                                } finally {
+                                    tran.rollbackIfNotCommitted();
+                                }
+                            }
+
+                            if (isDirtyMarker) {
+                                for (Object e : entities) {
+                                    DirtyMarkerUtil.markDirty((DirtyMarker) e, false);
+                                }
+                            }
+
+                            return null;
+                        };
+                    } else if (methodName.equals("batchSave") && paramLen == 3 && String.class.equals(paramTypes[0])
+                            && Collection.class.isAssignableFrom(paramTypes[1]) && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
                             final String namedInsertSQL = (String) args[0];
                             final Collection<?> entities = (Collection<Object>) args[1];
@@ -2269,11 +2314,10 @@ final class DaoUtil {
                             ParsedSql namedInsertSQL = null;
 
                             if (isDirtyMarker) {
-                                final Collection<String> propNamesToSave = SQLBuilder.getInsertPropNames(entity, null);
+                                final Collection<String> propNamesToInsert = SQLBuilder.getInsertPropNames(entity, null);
+                                N.checkArgNotNullOrEmpty(propNamesToInsert, "propNamesToInsert");
 
-                                N.checkArgNotNullOrEmpty(propNamesToSave, "propNamesToSave");
-
-                                namedInsertSQL = ParsedSql.parse(namedInsertSQLBuilderFunc.apply(propNamesToSave).sql());
+                                namedInsertSQL = ParsedSql.parse(namedInsertSQLBuilderFunc.apply(propNamesToInsert).sql());
                             } else {
                                 if (isDefaultIdTester.test(idGetter.apply(entity))) {
                                     namedInsertSQL = namedInsertWithoutIdSQL;
@@ -2297,11 +2341,10 @@ final class DaoUtil {
                     } else if (methodName.equals("insert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[1])) {
                         call = (proxy, args) -> {
                             final Object entity = args[0];
-                            final Collection<String> propNamesToSave = (Collection<String>) args[1];
+                            final Collection<String> propNamesToInsert = (Collection<String>) args[1];
+                            N.checkArgNotNullOrEmpty(propNamesToInsert, "propNamesToInsert");
 
-                            N.checkArgNotNullOrEmpty(propNamesToSave, "propNamesToSave");
-
-                            final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToSave).sql();
+                            final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToInsert).sql();
 
                             final Object id = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
                                     .setParameters(entity)
@@ -2310,7 +2353,7 @@ final class DaoUtil {
                                     .orElse(idGetter.apply(entity));
 
                             if (isDirtyMarker) {
-                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propNamesToSave, false);
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propNamesToInsert, false);
                             }
 
                             return id;
@@ -2332,7 +2375,8 @@ final class DaoUtil {
 
                             return id;
                         };
-                    } else if (methodName.equals("batchInsert") && paramLen == 2 && int.class.equals(paramTypes[1])) {
+                    } else if (methodName.equals("batchInsert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
+                            && int.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
                             final Collection<?> entities = (Collection<Object>) args[0];
                             final int batchSize = (Integer) args[1];
@@ -2396,7 +2440,76 @@ final class DaoUtil {
 
                             return ids;
                         };
-                    } else if (methodName.equals("batchInsert") && paramLen == 3 && int.class.equals(paramTypes[2])) {
+                    } else if (methodName.equals("batchInsert") && paramLen == 3 && Collection.class.isAssignableFrom(paramTypes[0])
+                            && Collection.class.isAssignableFrom(paramTypes[1]) && int.class.equals(paramTypes[2])) {
+                        call = (proxy, args) -> {
+                            final Collection<?> entities = (Collection<Object>) args[0];
+
+                            final Collection<String> propNamesToInsert = (Collection<String>) args[1];
+                            N.checkArgNotNullOrEmpty(propNamesToInsert, "propNamesToInsert");
+
+                            final int batchSize = (Integer) args[1];
+                            N.checkArgPositive(batchSize, "batchSize");
+
+                            if (N.isNullOrEmpty(entities)) {
+                                return 0;
+                            }
+
+                            final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToInsert).sql();
+                            List<Object> ids = null;
+
+                            if (entities.size() <= batchSize) {
+                                ids = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).addBatchParameters(entities).batchInsert(keyExtractor);
+                            } else {
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+
+                                try {
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
+                                        ids = ExceptionalStream.of(entities)
+                                                .splitToList(batchSize)
+                                                .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor))
+                                                .toList();
+                                    }
+
+                                    tran.commit();
+                                } finally {
+                                    tran.rollbackIfNotCommitted();
+                                }
+                            }
+
+                            if (N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(Fn.isNull())) {
+                                ids = new ArrayList<>();
+                            }
+
+                            if (N.notNullOrEmpty(ids) && N.notNullOrEmpty(entities) && ids.size() == N.size(entities)) {
+                                int idx = 0;
+
+                                for (Object e : entities) {
+                                    idSetter.accept(ids.get(idx++), e);
+                                }
+                            }
+
+                            if (isDirtyMarker) {
+                                for (Object e : entities) {
+                                    DirtyMarkerUtil.markDirty((DirtyMarker) e, false);
+                                }
+                            }
+
+                            if (N.notNullOrEmpty(ids) && ids.size() != entities.size()) {
+                                if (daoLogger.isWarnEnabled()) {
+                                    daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
+                                            entities.size());
+                                }
+                            }
+
+                            if (N.isNullOrEmpty(ids)) {
+                                ids = Stream.of(entities).map(idGetter).toList();
+                            }
+
+                            return ids;
+                        };
+                    } else if (methodName.equals("batchInsert") && paramLen == 3 && String.class.equals(paramTypes[0])
+                            && Collection.class.isAssignableFrom(paramTypes[1]) && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
                             final String namedInsertSQL = (String) args[0];
                             final Collection<?> entities = (Collection<Object>) args[1];
