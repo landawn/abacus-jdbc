@@ -323,6 +323,16 @@ public class DaoTest {
             e.printStackTrace();
         }
 
+        try {
+            readOnlyUserDao.batchSave(N.asList(user));
+            fail("Should throw UnsupportedOperationException");
+        } catch (UnsupportedOperationException e) {
+            //
+        } catch (Exception e) {
+            //
+            e.printStackTrace();
+        }
+
         noUpdateUserDao.save(user);
 
         User userFromDB = readOnlyUserDao.gett(100L);
