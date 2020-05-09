@@ -13282,6 +13282,45 @@ public final class JdbcUtil {
         /**
          *
          * @param cond
+         * @param resultExtrator
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> R query(final Condition cond, final ResultExtractor<R> resultExtrator) throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param resultExtrator
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> R query(final Collection<String> selectPropNames, final Condition cond, final ResultExtractor<R> resultExtrator) throws SQLException;
+
+
+        /**
+         *
+         * @param cond
+         * @param resultExtrator
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> R query(final Condition cond, final BiResultExtractor<R> resultExtrator) throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param resultExtrator
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> R query(final Collection<String> selectPropNames, final Condition cond, final BiResultExtractor<R> resultExtrator) throws SQLException;
+
+        /**
+         *
+         * @param cond
          * @return
          * @throws SQLException the SQL exception
          */
@@ -14919,7 +14958,8 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws UnsupportedOperationException, SQLException {
+        default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert)
+                throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -14935,10 +14975,10 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize) throws UnsupportedOperationException, SQLException {
+        default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize)
+                throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
-
 
         /**
          *

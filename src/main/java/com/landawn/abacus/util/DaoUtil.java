@@ -1823,6 +1823,30 @@ final class DaoUtil {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
                             return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).query();
                         };
+                    } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                            && paramTypes[1].equals(JdbcUtil.ResultExtractor.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).query((JdbcUtil.ResultExtractor) args[1]);
+                        };
+                    } else if (methodName.equals("query") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                            && paramTypes[2].equals(JdbcUtil.ResultExtractor.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).query((JdbcUtil.ResultExtractor) args[2]);
+                        };
+                    } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                            && paramTypes[1].equals(JdbcUtil.BiResultExtractor.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).query((JdbcUtil.BiResultExtractor) args[1]);
+                        };
+                    } else if (methodName.equals("query") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                            && paramTypes[2].equals(JdbcUtil.BiResultExtractor.class)) {
+                        call = (proxy, args) -> {
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).query((JdbcUtil.BiResultExtractor) args[2]);
+                        };
                     } else if (methodName.equals("list") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
