@@ -10344,8 +10344,8 @@ public class SQLExecutor {
             };
         }
 
-        static <T> ResultExtractor<T> to(final Throwables.Function<DataSet, T, SQLException> resultExtractor) {
-            return (rs, jdbcSettings) -> resultExtractor.apply(TO_DATA_SET.extractData(rs, jdbcSettings));
+        static <R> ResultExtractor<R> to(final Throwables.Function<DataSet, R, SQLException> finisher) {
+            return (rs, jdbcSettings) -> finisher.apply(TO_DATA_SET.extractData(rs, jdbcSettings));
         }
     }
 

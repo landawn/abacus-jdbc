@@ -54,7 +54,7 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     int batchDeleteByIds(List<Long> userIds) throws SQLException;
 
     default int[] batchDeleteByIds2(List<Long> userIds) throws SQLException {
-        return prepareNamedQuery("DELETE FROM user where id = :id").addBatchParameters(userIds).batchUpdate();
+        return prepareNamedQuery("DELETE FROM user where id = :id").addBatchParametters(userIds).batchUpdate();
     }
 
     @Sqls({ "SELECT * FROM user where id >= :id", "SELECT * FROM user where id >= :id" })

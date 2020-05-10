@@ -105,6 +105,7 @@ import com.landawn.abacus.util.DaoUtil.NonDBOperation;
 import com.landawn.abacus.util.ExceptionalStream.StreamE;
 import com.landawn.abacus.util.Fn.BiConsumers;
 import com.landawn.abacus.util.Fn.Suppliers;
+import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.SQLExecutor.StatementSetter;
 import com.landawn.abacus.util.SQLTransaction.CreatedBy;
@@ -9568,7 +9569,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         @SuppressWarnings("rawtypes")
-        public <T> NamedQuery addBatchParameters(final Collection<T> batchParameters) throws SQLException {
+        public <T> NamedQuery addBatchParametters(final Collection<T> batchParameters) throws SQLException {
             checkArgNotNull(batchParameters, "batchParameters");
 
             if (N.isNullOrEmpty(batchParameters)) {
@@ -9669,74 +9670,69 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        public <T> NamedQuery addBatchParameters(final Iterator<T> batchParameters) throws SQLException {
+        public <T> NamedQuery addBatchParametters(final Iterator<T> batchParameters) throws SQLException {
             checkArgNotNull(batchParameters, "batchParameters");
 
-            return addBatchParameters(Iterators.toList(batchParameters));
+            return addBatchParametters(Iterators.toList(batchParameters));
         }
 
-        /**
-         * @param <T>
-         * @param batchParameters
-         * @param isSingleParameter
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        public <T> NamedQuery addBatchParameters(final Collection<T> batchParameters, final boolean isSingleParameter) throws SQLException {
-            checkArgNotNull(batchParameters, "batchParameters");
-
-            if (isSingleParameter && parameterCount != 1) {
-                try {
-                    close();
-                } catch (Exception e) {
-                    JdbcUtil.logger.error("Failed to close PreparedQuery", e);
-                }
-
-                throw new IllegalArgumentException("isSingleParameter is true but the count of parameters in query is: " + parameterCount);
-            }
-
-            if (N.isNullOrEmpty(batchParameters)) {
-                return this;
-            }
-
-            if (isSingleParameter) {
-                boolean noException = false;
-
-                try {
-                    for (Object obj : batchParameters) {
-                        setObject(1, obj);
-
-                        stmt.addBatch();
-                    }
-
-                    isBatch = batchParameters.size() > 0;
-
-                    noException = true;
-                } finally {
-                    if (noException == false) {
-                        close();
-                    }
-                }
-
-                return this;
-            } else {
-                return addBatchParameters(batchParameters);
-            }
-        }
-
-        /**
-         *
-         * @param <T>
-         * @param batchParameters
-         * @param isSingleParameter
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        public <T> NamedQuery addBatchParameters(final Iterator<T> batchParameters, final boolean isSingleParameter) throws SQLException {
-            checkArgNotNull(batchParameters, "batchParameters");
-
-            return addBatchParameters(Iterators.toList(batchParameters), isSingleParameter);
-        }
+        //        /**
+        //         * 
+        //         * @param batchParameters
+        //         * @return
+        //         * @throws SQLException the SQL exception
+        //         */
+        //        @Override
+        //        public NamedQuery addSingleBatchParameters(final Collection<?> batchParameters) throws SQLException {
+        //            checkArgNotNull(batchParameters, "batchParameters");
+        //
+        //            if (parameterCount != 1) {
+        //                try {
+        //                    close();
+        //                } catch (Exception e) {
+        //                    JdbcUtil.logger.error("Failed to close PreparedQuery", e);
+        //                }
+        //
+        //                throw new IllegalArgumentException("isSingleParameter is true but the count of parameters in query is: " + parameterCount);
+        //            }
+        //
+        //            if (N.isNullOrEmpty(batchParameters)) {
+        //                return this;
+        //            }
+        //
+        //            boolean noException = false;
+        //
+        //            try {
+        //                for (Object obj : batchParameters) {
+        //                    setObject(1, obj);
+        //
+        //                    stmt.addBatch();
+        //                }
+        //
+        //                isBatch = batchParameters.size() > 0;
+        //
+        //                noException = true;
+        //            } finally {
+        //                if (noException == false) {
+        //                    close();
+        //                }
+        //            }
+        //
+        //            return this;
+        //        }
+        //
+        //        /**
+        //         *
+        //         * @param batchParameters
+        //         * @return
+        //         * @throws SQLException the SQL exception
+        //         */
+        //        @Override
+        //        public NamedQuery addSingleBatchParameters(final Iterator<?> batchParameters) throws SQLException {
+        //            checkArgNotNull(batchParameters, "batchParameters");
+        //
+        //            return addSingleBatchParameters(Iterators.toList(batchParameters));
+        //        }
     }
 
     /**
@@ -9774,6 +9770,22 @@ public final class JdbcUtil {
             @Override
             public void accept(Object preparedQuery, Object param) throws SQLException {
                 // Do nothing.
+            }
+        };
+
+        @SuppressWarnings("rawtypes")
+        public static final BiParametersSetter<AbstractPreparedQuery, String> SET_FIRST_STRING = new BiParametersSetter<AbstractPreparedQuery, String>() {
+            @Override
+            public void accept(AbstractPreparedQuery preparedQuery, String param) throws SQLException {
+                preparedQuery.setString(1, param);
+            }
+        };
+
+        @SuppressWarnings("rawtypes")
+        public static final BiParametersSetter<AbstractPreparedQuery, Object> SET_FIRST_OBJECT = new BiParametersSetter<AbstractPreparedQuery, Object>() {
+            @Override
+            public void accept(AbstractPreparedQuery preparedQuery, Object param) throws SQLException {
+                preparedQuery.setObject(1, param);
             }
         };
 
@@ -10110,8 +10122,8 @@ public final class JdbcUtil {
             };
         }
 
-        static <T> ResultExtractor<T> to(final Throwables.Function<DataSet, T, SQLException> resultExtractor) {
-            return rs -> resultExtractor.apply(TO_DATA_SET.apply(rs));
+        static <R> ResultExtractor<R> to(final Throwables.Function<DataSet, R, SQLException> finisher) {
+            return rs -> finisher.apply(TO_DATA_SET.apply(rs));
         }
     }
 
@@ -10928,32 +10940,6 @@ public final class JdbcUtil {
                 };
             }
 
-            public RowMapper<Object[]> toArray(final Object[] output) {
-                // setDefaultColumnGetter();
-
-                return new RowMapper<Object[]>() {
-                    private volatile int rsColumnCount = -1;
-                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
-
-                    @Override
-                    public Object[] apply(ResultSet rs) throws SQLException {
-                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
-
-                        if (rsColumnGetters == null) {
-                            rsColumnGetters = initColumnGetter(rs);
-                            rsColumnCount = rsColumnGetters.length - 1;
-                            this.rsColumnGetters = rsColumnGetters;
-                        }
-
-                        for (int i = 0; i < rsColumnCount;) {
-                            output[i] = rsColumnGetters[++i].apply(i, rs);
-                        }
-
-                        return output;
-                    }
-                };
-            }
-
             /**
              * Don't cache or reuse the returned {@code RowMapper} instance.
              *
@@ -10983,6 +10969,34 @@ public final class JdbcUtil {
                         }
 
                         return row;
+                    }
+                };
+            }
+
+            public <R> RowMapper<R> to(final Throwables.Function<DisposableObjArray, R, SQLException> finisher) {
+                return new RowMapper<R>() {
+                    private volatile int rsColumnCount = -1;
+                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                    private Object[] outputRow = null;
+                    private DisposableObjArray output;
+
+                    @Override
+                    public R apply(ResultSet rs) throws SQLException {
+                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+
+                        if (rsColumnGetters == null) {
+                            rsColumnGetters = initColumnGetter(rs);
+                            this.rsColumnCount = rsColumnGetters.length - 1;
+                            this.rsColumnGetters = rsColumnGetters;
+                            this.outputRow = new Object[rsColumnCount];
+                            this.output = DisposableObjArray.wrap(outputRow);
+                        }
+
+                        for (int i = 0; i < rsColumnCount;) {
+                            outputRow[i] = rsColumnGetters[++i].apply(i, rs);
+                        }
+
+                        return finisher.apply(output);
                     }
                 };
             }

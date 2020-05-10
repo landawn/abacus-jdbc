@@ -1575,6 +1575,110 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
     //        return (Q) this;
     //    }
 
+    @Beta
+    public Q addBatchParameters(final List<? extends Object[]> batchParameters) throws SQLException {
+        checkArgNotNull(batchParameters, "batchParameters");
+
+        boolean noException = false;
+
+        try {
+            final int parameterCount = N.isNullOrEmpty(batchParameters) ? 0 : N.firstOrNullIfEmpty(batchParameters).length;
+
+            for (Object[] parameters : batchParameters) {
+                for (int i = 0; i < parameterCount; i++) {
+                    setObject(i + 1, parameters[i]);
+
+                    stmt.addBatch();
+                }
+            }
+
+            isBatch = batchParameters.size() > 0;
+
+            noException = true;
+        } finally {
+            if (noException == false) {
+                close();
+            }
+        }
+
+        return (Q) this;
+    }
+
+    @Beta
+    public Q addBatchParameters(final Collection<? extends List<?>> batchParameters) throws SQLException {
+        checkArgNotNull(batchParameters, "batchParameters");
+
+        boolean noException = false;
+
+        try {
+            final int parameterCount = N.isNullOrEmpty(batchParameters) ? 0 : N.firstOrNullIfEmpty(batchParameters).size();
+
+            for (List<?> parameters : batchParameters) {
+                for (int i = 0; i < parameterCount; i++) {
+                    setObject(i + 1, parameters.get(i));
+
+                    stmt.addBatch();
+                }
+            }
+
+            isBatch = batchParameters.size() > 0;
+
+            noException = true;
+        } finally {
+            if (noException == false) {
+                close();
+            }
+        }
+
+        return (Q) this;
+    }
+
+    //    /**
+    //     * 
+    //     * @param batchParameters
+    //     * @return
+    //     * @throws SQLException the SQL exception
+    //     */
+    //    public Q addSingleBatchParameters(final Collection<?> batchParameters) throws SQLException {
+    //        checkArgNotNull(batchParameters, "batchParameters");
+    //
+    //        if (N.isNullOrEmpty(batchParameters)) {
+    //            return (Q) this;
+    //        }
+    //
+    //        boolean noException = false;
+    //
+    //        try {
+    //            for (Object obj : batchParameters) {
+    //                setObject(1, obj);
+    //
+    //                stmt.addBatch();
+    //            }
+    //
+    //            isBatch = batchParameters.size() > 0;
+    //
+    //            noException = true;
+    //        } finally {
+    //            if (noException == false) {
+    //                close();
+    //            }
+    //        }
+    //
+    //        return (Q) this;
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param batchParameters
+    //     * @return
+    //     * @throws SQLException the SQL exception
+    //     */
+    //    public Q addSingleBatchParameters(final Iterator<?> batchParameters) throws SQLException {
+    //        checkArgNotNull(batchParameters, "batchParameters");
+    //
+    //        return addSingleBatchParameters(Iterators.toList(batchParameters));
+    //    }
+
     /**
      * @param <T>
      * @param batchParameters
@@ -1724,34 +1828,34 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         return (Q) this;
     }
 
-    /**
-     * @param <T>
-     * @param batchParameters
-     * @param parametersSetter
-     * @return
-     * @throws SQLException the SQL exception
-     * @deprecated replaced by {@code addBatchParametters}
-     */
-    @Deprecated
-    @Beta
-    public <T> Q addBatchParameters2(final Collection<T> batchParameters, BiParametersSetter<? super S, ? super T> parametersSetter) throws SQLException {
-        return addBatchParametters(batchParameters, parametersSetter);
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param batchParameters
-     * @param parametersSetter
-     * @return
-     * @throws SQLException the SQL exception
-     * @deprecated replaced by {@code addBatchParametters}
-     */
-    @Deprecated
-    @Beta
-    public <T> Q addBatchParameters2(final Iterator<T> batchParameters, BiParametersSetter<? super S, ? super T> parametersSetter) throws SQLException {
-        return addBatchParametters(batchParameters, parametersSetter);
-    }
+    //    /**
+    //     * @param <T>
+    //     * @param batchParameters
+    //     * @param parametersSetter
+    //     * @return
+    //     * @throws SQLException the SQL exception
+    //     * @deprecated replaced by {@code addBatchParametters}
+    //     */
+    //    @Deprecated
+    //    @Beta
+    //    public <T> Q addBatchParameters2(final Collection<T> batchParameters, BiParametersSetter<? super S, ? super T> parametersSetter) throws SQLException {
+    //        return addBatchParametters(batchParameters, parametersSetter);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param <T>
+    //     * @param batchParameters
+    //     * @param parametersSetter
+    //     * @return
+    //     * @throws SQLException the SQL exception
+    //     * @deprecated replaced by {@code addBatchParametters}
+    //     */
+    //    @Deprecated
+    //    @Beta
+    //    public <T> Q addBatchParameters2(final Iterator<T> batchParameters, BiParametersSetter<? super S, ? super T> parametersSetter) throws SQLException {
+    //        return addBatchParametters(batchParameters, parametersSetter);
+    //    }
 
     /**
      * Adds the batch.
