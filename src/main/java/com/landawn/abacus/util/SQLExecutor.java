@@ -4335,7 +4335,7 @@ public class SQLExecutor {
                 }
             }).toList();
 
-            return DataSetUtil.merge(resultList);
+            return merge(resultList);
         } else {
             final JdbcSettings newJdbcSettings = jdbcSettings.copy();
             newJdbcSettings.setQueryWithDataSources(null);
@@ -4347,7 +4347,7 @@ public class SQLExecutor {
                 resultList.add(query(sql, statementSetter, newJdbcSettings, parameters));
             }
 
-            return DataSetUtil.merge(resultList);
+            return merge(resultList);
         }
     }
 
@@ -4391,7 +4391,7 @@ public class SQLExecutor {
                 }
             }).toList();
 
-            return DataSetUtil.merge(resultList);
+            return merge(resultList);
         } else {
             final List<DataSet> resultList = new ArrayList<>(sqls.size());
 
@@ -4399,7 +4399,21 @@ public class SQLExecutor {
                 resultList.add(queryAll(sql, statementSetter, jdbcSettings, parameters));
             }
 
-            return DataSetUtil.merge(resultList);
+            return merge(resultList);
+        }
+    }
+
+    private DataSet merge(List<DataSet> resultList) {
+        if (N.isNullOrEmpty(resultList)) {
+            return N.newEmptyDataSet();
+        } else if (resultList.size() == 1) {
+            return resultList.get(0);
+        } else if (resultList.size() == 2) {
+            return resultList.get(0).merge(resultList.get(1));
+        } else if (resultList.size() == 3) {
+            return resultList.get(0).merge(resultList.get(1), resultList.get(2));
+        } else {
+            return resultList.get(0).merge(resultList.subList(1, resultList.size()));
         }
     }
 
