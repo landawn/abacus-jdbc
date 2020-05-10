@@ -6,9 +6,12 @@ import java.math.BigDecimal;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Date;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
 
+import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 
@@ -338,6 +341,76 @@ public final class Columns {
 
         private ColumnThree() {
             // singleton for utility class
+        }
+    }
+
+    public interface ColumnGetter<V> {
+
+        ColumnGetter<Boolean> GET_BOOLEAN = (columnIndex, rs) -> rs.getBoolean(columnIndex);
+
+        ColumnGetter<Byte> GET_BYTE = (columnIndex, rs) -> rs.getByte(columnIndex);
+
+        ColumnGetter<Short> GET_SHORT = (columnIndex, rs) -> rs.getShort(columnIndex);
+
+        ColumnGetter<Integer> GET_INT = (columnIndex, rs) -> rs.getInt(columnIndex);
+
+        ColumnGetter<Long> GET_LONG = (columnIndex, rs) -> rs.getLong(columnIndex);
+
+        ColumnGetter<Float> GET_FLOAT = (columnIndex, rs) -> rs.getFloat(columnIndex);
+
+        ColumnGetter<Double> GET_DOUBLE = (columnIndex, rs) -> rs.getDouble(columnIndex);
+
+        ColumnGetter<BigDecimal> GET_BIG_DECIMAL = (columnIndex, rs) -> rs.getBigDecimal(columnIndex);
+
+        ColumnGetter<String> GET_STRING = (columnIndex, rs) -> rs.getString(columnIndex);
+
+        ColumnGetter<Date> GET_DATE = (columnIndex, rs) -> rs.getDate(columnIndex);
+
+        ColumnGetter<Time> GET_TIME = (columnIndex, rs) -> rs.getTime(columnIndex);
+
+        ColumnGetter<Timestamp> GET_TIMESTAMP = (columnIndex, rs) -> rs.getTimestamp(columnIndex);
+
+        ColumnGetter<byte[]> GET_BYTES = (columnIndex, rs) -> rs.getBytes(columnIndex);
+
+        ColumnGetter<InputStream> GET_BINARY_STREAM = (columnIndex, rs) -> rs.getBinaryStream(columnIndex);
+
+        ColumnGetter<Reader> GET_CHARACTER_STREAM = (columnIndex, rs) -> rs.getCharacterStream(columnIndex);
+
+        ColumnGetter<Blob> GET_BLOB = (columnIndex, rs) -> rs.getBlob(columnIndex);
+
+        ColumnGetter<Clob> GET_CLOB = (columnIndex, rs) -> rs.getClob(columnIndex);
+
+        @SuppressWarnings("rawtypes")
+        public static final ColumnGetter GET_OBJECT = (columnIndex, rs) -> rs.getObject(columnIndex);
+
+        /**
+         *
+         * @param columnIndex start from 1
+         * @param rs
+         * @return
+         * @throws SQLException
+         */
+        V apply(int columnIndex, ResultSet rs) throws SQLException;
+
+        static <T> ColumnGetter<T> get(final Class<? extends T> cls) {
+            return get(N.typeOf(cls));
+        }
+
+        static <T> ColumnGetter<T> get(final Type<? extends T> type) {
+            ColumnGetter<?> columnGetter = JdbcUtil.COLUMN_GETTER_POOL.get(type);
+
+            if (columnGetter == null) {
+                columnGetter = new ColumnGetter<T>() {
+                    @Override
+                    public T apply(int columnIndex, ResultSet rs) throws SQLException {
+                        return type.get(rs, columnIndex);
+                    }
+                };
+
+                JdbcUtil.COLUMN_GETTER_POOL.put(type, columnGetter);
+            }
+
+            return (ColumnGetter<T>) columnGetter;
         }
     }
 

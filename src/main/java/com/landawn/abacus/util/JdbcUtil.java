@@ -98,6 +98,7 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
+import com.landawn.abacus.util.Columns.ColumnGetter;
 import com.landawn.abacus.util.Columns.ColumnOne;
 import com.landawn.abacus.util.DaoUtil.NonDBOperation;
 import com.landawn.abacus.util.ExceptionalStream.StreamE;
@@ -9758,7 +9759,7 @@ public final class JdbcUtil {
                 // Do nothing.
             }
         };
-  
+
         /**
          *
          * @param preparedQuery
@@ -10483,10 +10484,10 @@ public final class JdbcUtil {
         }
 
         static RowMapperBuilder builder() {
-            return builder(ColumnGetter.GET_OBJECT);
+            return builder(Columns.ColumnGetter.GET_OBJECT);
         }
 
-        static RowMapperBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
+        static RowMapperBuilder builder(final Columns.ColumnGetter<?> defaultColumnGetter) {
             return new RowMapperBuilder(defaultColumnGetter);
         }
 
@@ -10495,9 +10496,9 @@ public final class JdbcUtil {
         //    }
 
         public static class RowMapperBuilder {
-            private final Map<Integer, ColumnGetter<?>> columnGetterMap;
+            private final Map<Integer, Columns.ColumnGetter<?>> columnGetterMap;
 
-            RowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
+            RowMapperBuilder(final Columns.ColumnGetter<?> defaultColumnGetter) {
                 N.checkArgNotNull(defaultColumnGetter, "defaultColumnGetter");
 
                 columnGetterMap = new HashMap<>(9);
@@ -10505,54 +10506,54 @@ public final class JdbcUtil {
             }
 
             public RowMapperBuilder getBoolean(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_BOOLEAN);
+                return get(columnIndex, Columns.ColumnGetter.GET_BOOLEAN);
             }
 
             public RowMapperBuilder getByte(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_BYTE);
+                return get(columnIndex, Columns.ColumnGetter.GET_BYTE);
             }
 
             public RowMapperBuilder getShort(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_SHORT);
+                return get(columnIndex, Columns.ColumnGetter.GET_SHORT);
             }
 
             public RowMapperBuilder getInt(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_INT);
+                return get(columnIndex, Columns.ColumnGetter.GET_INT);
             }
 
             public RowMapperBuilder getLong(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_LONG);
+                return get(columnIndex, Columns.ColumnGetter.GET_LONG);
             }
 
             public RowMapperBuilder getFloat(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_FLOAT);
+                return get(columnIndex, Columns.ColumnGetter.GET_FLOAT);
             }
 
             public RowMapperBuilder getDouble(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_DOUBLE);
+                return get(columnIndex, Columns.ColumnGetter.GET_DOUBLE);
             }
 
             public RowMapperBuilder getBigDecimal(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_BIG_DECIMAL);
+                return get(columnIndex, Columns.ColumnGetter.GET_BIG_DECIMAL);
             }
 
             public RowMapperBuilder getString(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_STRING);
+                return get(columnIndex, Columns.ColumnGetter.GET_STRING);
             }
 
             public RowMapperBuilder getDate(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_DATE);
+                return get(columnIndex, Columns.ColumnGetter.GET_DATE);
             }
 
             public RowMapperBuilder getTime(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_TIME);
+                return get(columnIndex, Columns.ColumnGetter.GET_TIME);
             }
 
             public RowMapperBuilder getTimestamp(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_TIMESTAMP);
+                return get(columnIndex, Columns.ColumnGetter.GET_TIMESTAMP);
             }
 
-            public RowMapperBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) {
+            public RowMapperBuilder get(final int columnIndex, final Columns.ColumnGetter<?> columnGetter) {
                 N.checkArgPositive(columnIndex, "columnIndex");
                 N.checkArgNotNull(columnGetter, "columnGetter");
 
@@ -10576,7 +10577,7 @@ public final class JdbcUtil {
              * @deprecated replaced by {@link #get(int, ColumnGetter)}
              */
             @Deprecated
-            public RowMapperBuilder column(final int columnIndex, final ColumnGetter<?> columnGetter) {
+            public RowMapperBuilder column(final int columnIndex, final Columns.ColumnGetter<?> columnGetter) {
                 return get(columnIndex, columnGetter);
             }
 
@@ -10776,12 +10777,12 @@ public final class JdbcUtil {
             //        }
             //    }
 
-            ColumnGetter<?>[] initColumnGetter(ResultSet rs) throws SQLException {
+            Columns.ColumnGetter<?>[] initColumnGetter(ResultSet rs) throws SQLException {
                 return initColumnGetter(rs.getMetaData().getColumnCount());
             }
 
-            ColumnGetter<?>[] initColumnGetter(final int columnCount) throws SQLException {
-                final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[columnCount + 1];
+            Columns.ColumnGetter<?>[] initColumnGetter(final int columnCount) throws SQLException {
+                final Columns.ColumnGetter<?>[] rsColumnGetters = new Columns.ColumnGetter<?>[columnCount + 1];
                 rsColumnGetters[0] = columnGetterMap.get(0);
 
                 for (int i = 1, len = rsColumnGetters.length; i < len; i++) {
@@ -10801,11 +10802,11 @@ public final class JdbcUtil {
 
                 return new RowMapper<Object[]>() {
                     private volatile int rsColumnCount = -1;
-                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                    private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
 
                     @Override
                     public Object[] apply(ResultSet rs) throws SQLException {
-                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+                        Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
 
                         if (rsColumnGetters == null) {
                             rsColumnGetters = initColumnGetter(rs);
@@ -10834,11 +10835,11 @@ public final class JdbcUtil {
 
                 return new RowMapper<List<Object>>() {
                     private volatile int rsColumnCount = -1;
-                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                    private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
 
                     @Override
                     public List<Object> apply(ResultSet rs) throws SQLException {
-                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+                        Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
 
                         if (rsColumnGetters == null) {
                             rsColumnGetters = initColumnGetter(rs);
@@ -10860,13 +10861,13 @@ public final class JdbcUtil {
             public <R> RowMapper<R> to(final Throwables.Function<DisposableObjArray, R, SQLException> finisher) {
                 return new RowMapper<R>() {
                     private volatile int rsColumnCount = -1;
-                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                    private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
                     private Object[] outputRow = null;
                     private DisposableObjArray output;
 
                     @Override
                     public R apply(ResultSet rs) throws SQLException {
-                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+                        Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
 
                         if (rsColumnGetters == null) {
                             rsColumnGetters = initColumnGetter(rs);
@@ -11021,10 +11022,10 @@ public final class JdbcUtil {
         }
 
         static BiRowMapperBuilder builder() {
-            return builder(ColumnGetter.GET_OBJECT);
+            return builder(Columns.ColumnGetter.GET_OBJECT);
         }
 
-        static BiRowMapperBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
+        static BiRowMapperBuilder builder(final Columns.ColumnGetter<?> defaultColumnGetter) {
             return new BiRowMapperBuilder(defaultColumnGetter);
         }
 
@@ -11033,64 +11034,64 @@ public final class JdbcUtil {
         //    }
 
         public static class BiRowMapperBuilder {
-            private final ColumnGetter<?> defaultColumnGetter;
-            private final Map<String, ColumnGetter<?>> columnGetterMap;
+            private final Columns.ColumnGetter<?> defaultColumnGetter;
+            private final Map<String, Columns.ColumnGetter<?>> columnGetterMap;
 
-            BiRowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
+            BiRowMapperBuilder(final Columns.ColumnGetter<?> defaultColumnGetter) {
                 this.defaultColumnGetter = defaultColumnGetter;
 
                 columnGetterMap = new HashMap<>(9);
             }
 
             public BiRowMapperBuilder getBoolean(final String columnName) {
-                return get(columnName, ColumnGetter.GET_BOOLEAN);
+                return get(columnName, Columns.ColumnGetter.GET_BOOLEAN);
             }
 
             public BiRowMapperBuilder getByte(final String columnName) {
-                return get(columnName, ColumnGetter.GET_BYTE);
+                return get(columnName, Columns.ColumnGetter.GET_BYTE);
             }
 
             public BiRowMapperBuilder getShort(final String columnName) {
-                return get(columnName, ColumnGetter.GET_SHORT);
+                return get(columnName, Columns.ColumnGetter.GET_SHORT);
             }
 
             public BiRowMapperBuilder getInt(final String columnName) {
-                return get(columnName, ColumnGetter.GET_INT);
+                return get(columnName, Columns.ColumnGetter.GET_INT);
             }
 
             public BiRowMapperBuilder getLong(final String columnName) {
-                return get(columnName, ColumnGetter.GET_LONG);
+                return get(columnName, Columns.ColumnGetter.GET_LONG);
             }
 
             public BiRowMapperBuilder getFloat(final String columnName) {
-                return get(columnName, ColumnGetter.GET_FLOAT);
+                return get(columnName, Columns.ColumnGetter.GET_FLOAT);
             }
 
             public BiRowMapperBuilder getDouble(final String columnName) {
-                return get(columnName, ColumnGetter.GET_DOUBLE);
+                return get(columnName, Columns.ColumnGetter.GET_DOUBLE);
             }
 
             public BiRowMapperBuilder getBigDecimal(final String columnName) {
-                return get(columnName, ColumnGetter.GET_BIG_DECIMAL);
+                return get(columnName, Columns.ColumnGetter.GET_BIG_DECIMAL);
             }
 
             public BiRowMapperBuilder getString(final String columnName) {
-                return get(columnName, ColumnGetter.GET_STRING);
+                return get(columnName, Columns.ColumnGetter.GET_STRING);
             }
 
             public BiRowMapperBuilder getDate(final String columnName) {
-                return get(columnName, ColumnGetter.GET_DATE);
+                return get(columnName, Columns.ColumnGetter.GET_DATE);
             }
 
             public BiRowMapperBuilder getTime(final String columnName) {
-                return get(columnName, ColumnGetter.GET_TIME);
+                return get(columnName, Columns.ColumnGetter.GET_TIME);
             }
 
             public BiRowMapperBuilder getTimestamp(final String columnName) {
-                return get(columnName, ColumnGetter.GET_TIMESTAMP);
+                return get(columnName, Columns.ColumnGetter.GET_TIMESTAMP);
             }
 
-            public BiRowMapperBuilder get(final String columnName, final ColumnGetter<?> columnGetter) {
+            public BiRowMapperBuilder get(final String columnName, final Columns.ColumnGetter<?> columnGetter) {
                 N.checkArgNotNull(columnName, "columnName");
                 N.checkArgNotNull(columnGetter, "columnGetter");
 
@@ -11107,7 +11108,7 @@ public final class JdbcUtil {
              * @deprecated replaced by {@link #get(String, ColumnGetter)}
              */
             @Deprecated
-            public BiRowMapperBuilder column(final String columnName, final ColumnGetter<?> columnGetter) {
+            public BiRowMapperBuilder column(final String columnName, final Columns.ColumnGetter<?> columnGetter) {
                 return get(columnName, columnGetter);
             }
 
@@ -11135,13 +11136,13 @@ public final class JdbcUtil {
             //        return this;
             //    }
 
-            ColumnGetter<?>[] initColumnGetter(final List<String> columnLabelList) {
+            Columns.ColumnGetter<?>[] initColumnGetter(final List<String> columnLabelList) {
                 final int rsColumnCount = columnLabelList.size();
-                final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[rsColumnCount + 1];
+                final Columns.ColumnGetter<?>[] rsColumnGetters = new Columns.ColumnGetter<?>[rsColumnCount + 1];
                 rsColumnGetters[0] = defaultColumnGetter;
 
                 int cnt = 0;
-                ColumnGetter<?> columnGetter = null;
+                Columns.ColumnGetter<?> columnGetter = null;
 
                 for (int i = 0; i < rsColumnCount; i++) {
                     columnGetter = columnGetterMap.get(columnLabelList.get(i));
@@ -11170,11 +11171,11 @@ public final class JdbcUtil {
                 if (Object[].class.isAssignableFrom(targetClass)) {
                     return new BiRowMapper<T>() {
                         private volatile int rsColumnCount = -1;
-                        private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                        private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
 
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+                            Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
 
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
@@ -11196,11 +11197,11 @@ public final class JdbcUtil {
                         private final boolean isListOrArrayList = targetClass.equals(List.class) || targetClass.equals(ArrayList.class);
 
                         private volatile int rsColumnCount = -1;
-                        private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                        private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
 
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+                            Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
 
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
@@ -11223,12 +11224,12 @@ public final class JdbcUtil {
                         private final boolean isLinkedHashMap = targetClass.equals(LinkedHashMap.class);
 
                         private volatile int rsColumnCount = -1;
-                        private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                        private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
                         private String[] columnLabels = null;
 
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+                            Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
 
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
@@ -11254,13 +11255,13 @@ public final class JdbcUtil {
                         private final EntityInfo entityInfo = ParserUtil.getEntityInfo(targetClass);
 
                         private volatile int rsColumnCount = -1;
-                        private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                        private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
                         private volatile String[] columnLabels = null;
                         private volatile PropInfo[] propInfos;
 
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+                            Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
 
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
@@ -11296,8 +11297,8 @@ public final class JdbcUtil {
                                                     + " mapping to column: " + columnLabels[i]);
                                         }
                                     } else {
-                                        if (rsColumnGetters[i + 1] == ColumnGetter.GET_OBJECT) {
-                                            rsColumnGetters[i + 1] = ColumnGetter.get(entityInfo.getPropInfo(columnLabels[i]).dbType);
+                                        if (rsColumnGetters[i + 1] == Columns.ColumnGetter.GET_OBJECT) {
+                                            rsColumnGetters[i + 1] = Columns.ColumnGetter.get(entityInfo.getPropInfo(columnLabels[i]).dbType);
                                         }
                                     }
                                 }
@@ -11325,18 +11326,18 @@ public final class JdbcUtil {
                 } else {
                     return new BiRowMapper<T>() {
                         private volatile int rsColumnCount = -1;
-                        private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                        private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
 
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+                            Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
 
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
                                 rsColumnGetters = initColumnGetter(columnLabelList);
 
-                                if (rsColumnGetters[1] == ColumnGetter.GET_OBJECT) {
-                                    rsColumnGetters[1] = ColumnGetter.get(N.typeOf(targetClass));
+                                if (rsColumnGetters[1] == Columns.ColumnGetter.GET_OBJECT) {
+                                    rsColumnGetters[1] = Columns.ColumnGetter.get(N.typeOf(targetClass));
                                 }
 
                                 this.rsColumnGetters = rsColumnGetters;
@@ -11460,29 +11461,29 @@ public final class JdbcUtil {
         boolean test(ResultSet rs, List<String> columnLabels) throws SQLException;
     }
 
-    private static final ObjectPool<Type<?>, ColumnGetter<?>> COLUMN_GETTER_POOL = new ObjectPool<>(1024);
+    static final ObjectPool<Type<?>, Columns.ColumnGetter<?>> COLUMN_GETTER_POOL = new ObjectPool<>(1024);
 
     static {
-        COLUMN_GETTER_POOL.put(N.typeOf(boolean.class), ColumnGetter.GET_BOOLEAN);
-        COLUMN_GETTER_POOL.put(N.typeOf(Boolean.class), ColumnGetter.GET_BOOLEAN);
-        COLUMN_GETTER_POOL.put(N.typeOf(byte.class), ColumnGetter.GET_BYTE);
-        COLUMN_GETTER_POOL.put(N.typeOf(Byte.class), ColumnGetter.GET_BYTE);
-        COLUMN_GETTER_POOL.put(N.typeOf(short.class), ColumnGetter.GET_SHORT);
-        COLUMN_GETTER_POOL.put(N.typeOf(Short.class), ColumnGetter.GET_SHORT);
-        COLUMN_GETTER_POOL.put(N.typeOf(int.class), ColumnGetter.GET_INT);
-        COLUMN_GETTER_POOL.put(N.typeOf(Integer.class), ColumnGetter.GET_INT);
-        COLUMN_GETTER_POOL.put(N.typeOf(long.class), ColumnGetter.GET_LONG);
-        COLUMN_GETTER_POOL.put(N.typeOf(Long.class), ColumnGetter.GET_LONG);
-        COLUMN_GETTER_POOL.put(N.typeOf(float.class), ColumnGetter.GET_FLOAT);
-        COLUMN_GETTER_POOL.put(N.typeOf(Float.class), ColumnGetter.GET_FLOAT);
-        COLUMN_GETTER_POOL.put(N.typeOf(double.class), ColumnGetter.GET_DOUBLE);
-        COLUMN_GETTER_POOL.put(N.typeOf(Double.class), ColumnGetter.GET_DOUBLE);
-        COLUMN_GETTER_POOL.put(N.typeOf(BigDecimal.class), ColumnGetter.GET_BIG_DECIMAL);
-        COLUMN_GETTER_POOL.put(N.typeOf(String.class), ColumnGetter.GET_STRING);
-        COLUMN_GETTER_POOL.put(N.typeOf(java.sql.Date.class), ColumnGetter.GET_DATE);
-        COLUMN_GETTER_POOL.put(N.typeOf(java.sql.Time.class), ColumnGetter.GET_TIME);
-        COLUMN_GETTER_POOL.put(N.typeOf(java.sql.Timestamp.class), ColumnGetter.GET_TIMESTAMP);
-        COLUMN_GETTER_POOL.put(N.typeOf(Object.class), ColumnGetter.GET_OBJECT);
+        COLUMN_GETTER_POOL.put(N.typeOf(boolean.class), Columns.ColumnGetter.GET_BOOLEAN);
+        COLUMN_GETTER_POOL.put(N.typeOf(Boolean.class), Columns.ColumnGetter.GET_BOOLEAN);
+        COLUMN_GETTER_POOL.put(N.typeOf(byte.class), Columns.ColumnGetter.GET_BYTE);
+        COLUMN_GETTER_POOL.put(N.typeOf(Byte.class), Columns.ColumnGetter.GET_BYTE);
+        COLUMN_GETTER_POOL.put(N.typeOf(short.class), Columns.ColumnGetter.GET_SHORT);
+        COLUMN_GETTER_POOL.put(N.typeOf(Short.class), Columns.ColumnGetter.GET_SHORT);
+        COLUMN_GETTER_POOL.put(N.typeOf(int.class), Columns.ColumnGetter.GET_INT);
+        COLUMN_GETTER_POOL.put(N.typeOf(Integer.class), Columns.ColumnGetter.GET_INT);
+        COLUMN_GETTER_POOL.put(N.typeOf(long.class), Columns.ColumnGetter.GET_LONG);
+        COLUMN_GETTER_POOL.put(N.typeOf(Long.class), Columns.ColumnGetter.GET_LONG);
+        COLUMN_GETTER_POOL.put(N.typeOf(float.class), Columns.ColumnGetter.GET_FLOAT);
+        COLUMN_GETTER_POOL.put(N.typeOf(Float.class), Columns.ColumnGetter.GET_FLOAT);
+        COLUMN_GETTER_POOL.put(N.typeOf(double.class), Columns.ColumnGetter.GET_DOUBLE);
+        COLUMN_GETTER_POOL.put(N.typeOf(Double.class), Columns.ColumnGetter.GET_DOUBLE);
+        COLUMN_GETTER_POOL.put(N.typeOf(BigDecimal.class), Columns.ColumnGetter.GET_BIG_DECIMAL);
+        COLUMN_GETTER_POOL.put(N.typeOf(String.class), Columns.ColumnGetter.GET_STRING);
+        COLUMN_GETTER_POOL.put(N.typeOf(java.sql.Date.class), Columns.ColumnGetter.GET_DATE);
+        COLUMN_GETTER_POOL.put(N.typeOf(java.sql.Time.class), Columns.ColumnGetter.GET_TIME);
+        COLUMN_GETTER_POOL.put(N.typeOf(java.sql.Timestamp.class), Columns.ColumnGetter.GET_TIMESTAMP);
+        COLUMN_GETTER_POOL.put(N.typeOf(Object.class), Columns.ColumnGetter.GET_OBJECT);
     }
 
     public interface RowExtractor extends Throwables.BiConsumer<ResultSet, Object[], SQLException> {
@@ -11490,17 +11491,17 @@ public final class JdbcUtil {
         void accept(final ResultSet rs, final Object[] outputRow) throws SQLException;
 
         static RowExtractorBuilder builder() {
-            return builder(ColumnGetter.GET_OBJECT);
+            return builder(Columns.ColumnGetter.GET_OBJECT);
         }
 
-        static RowExtractorBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
+        static RowExtractorBuilder builder(final Columns.ColumnGetter<?> defaultColumnGetter) {
             return new RowExtractorBuilder(defaultColumnGetter);
         }
 
         public static class RowExtractorBuilder {
-            private final Map<Integer, ColumnGetter<?>> columnGetterMap;
+            private final Map<Integer, Columns.ColumnGetter<?>> columnGetterMap;
 
-            RowExtractorBuilder(final ColumnGetter<?> defaultColumnGetter) {
+            RowExtractorBuilder(final Columns.ColumnGetter<?> defaultColumnGetter) {
                 N.checkArgNotNull(defaultColumnGetter, "defaultColumnGetter");
 
                 columnGetterMap = new HashMap<>(9);
@@ -11508,54 +11509,54 @@ public final class JdbcUtil {
             }
 
             public RowExtractorBuilder getBoolean(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_BOOLEAN);
+                return get(columnIndex, Columns.ColumnGetter.GET_BOOLEAN);
             }
 
             public RowExtractorBuilder getByte(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_BYTE);
+                return get(columnIndex, Columns.ColumnGetter.GET_BYTE);
             }
 
             public RowExtractorBuilder getShort(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_SHORT);
+                return get(columnIndex, Columns.ColumnGetter.GET_SHORT);
             }
 
             public RowExtractorBuilder getInt(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_INT);
+                return get(columnIndex, Columns.ColumnGetter.GET_INT);
             }
 
             public RowExtractorBuilder getLong(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_LONG);
+                return get(columnIndex, Columns.ColumnGetter.GET_LONG);
             }
 
             public RowExtractorBuilder getFloat(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_FLOAT);
+                return get(columnIndex, Columns.ColumnGetter.GET_FLOAT);
             }
 
             public RowExtractorBuilder getDouble(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_DOUBLE);
+                return get(columnIndex, Columns.ColumnGetter.GET_DOUBLE);
             }
 
             public RowExtractorBuilder getBigDecimal(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_BIG_DECIMAL);
+                return get(columnIndex, Columns.ColumnGetter.GET_BIG_DECIMAL);
             }
 
             public RowExtractorBuilder getString(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_STRING);
+                return get(columnIndex, Columns.ColumnGetter.GET_STRING);
             }
 
             public RowExtractorBuilder getDate(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_DATE);
+                return get(columnIndex, Columns.ColumnGetter.GET_DATE);
             }
 
             public RowExtractorBuilder getTime(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_TIME);
+                return get(columnIndex, Columns.ColumnGetter.GET_TIME);
             }
 
             public RowExtractorBuilder getTimestamp(final int columnIndex) {
-                return get(columnIndex, ColumnGetter.GET_TIMESTAMP);
+                return get(columnIndex, Columns.ColumnGetter.GET_TIMESTAMP);
             }
 
-            public RowExtractorBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) {
+            public RowExtractorBuilder get(final int columnIndex, final Columns.ColumnGetter<?> columnGetter) {
                 N.checkArgPositive(columnIndex, "columnIndex");
                 N.checkArgNotNull(columnGetter, "columnGetter");
 
@@ -11569,12 +11570,12 @@ public final class JdbcUtil {
                 return this;
             }
 
-            ColumnGetter<?>[] initColumnGetter(ResultSet rs) throws SQLException {
+            Columns.ColumnGetter<?>[] initColumnGetter(ResultSet rs) throws SQLException {
                 return initColumnGetter(rs.getMetaData().getColumnCount());
             }
 
-            ColumnGetter<?>[] initColumnGetter(final int columnCount) throws SQLException {
-                final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[columnCount + 1];
+            Columns.ColumnGetter<?>[] initColumnGetter(final int columnCount) throws SQLException {
+                final Columns.ColumnGetter<?>[] rsColumnGetters = new Columns.ColumnGetter<?>[columnCount + 1];
                 rsColumnGetters[0] = columnGetterMap.get(0);
 
                 for (int i = 1, len = rsColumnGetters.length; i < len; i++) {
@@ -11592,11 +11593,11 @@ public final class JdbcUtil {
             public RowExtractor build() {
                 return new RowExtractor() {
                     private volatile int rsColumnCount = -1;
-                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                    private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
 
                     @Override
                     public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
-                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+                        Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
 
                         if (rsColumnGetters == null) {
                             rsColumnGetters = initColumnGetter(outputRow.length);
@@ -11610,131 +11611,6 @@ public final class JdbcUtil {
                     }
                 };
             }
-        }
-    }
-
-    public interface ColumnGetter<V> {
-
-        ColumnGetter<Object> GET_OBJECT = new ColumnGetter<Object>() {
-            @Override
-            @SuppressWarnings("deprecation")
-            public Object apply(final int columnIndex, final ResultSet rs) throws SQLException {
-                return InternalUtil.getColumnValue(rs, columnIndex);
-            }
-        };
-
-        ColumnGetter<Boolean> GET_BOOLEAN = new ColumnGetter<Boolean>() {
-            @Override
-            public Boolean apply(final int columnIndex, final ResultSet rs) throws SQLException {
-                return rs.getBoolean(columnIndex);
-            }
-        };
-
-        ColumnGetter<Byte> GET_BYTE = new ColumnGetter<Byte>() {
-            @Override
-            public Byte apply(final int columnIndex, final ResultSet rs) throws SQLException {
-                return rs.getByte(columnIndex);
-            }
-        };
-
-        ColumnGetter<Short> GET_SHORT = new ColumnGetter<Short>() {
-            @Override
-            public Short apply(final int columnIndex, final ResultSet rs) throws SQLException {
-                return rs.getShort(columnIndex);
-            }
-        };
-
-        ColumnGetter<Integer> GET_INT = new ColumnGetter<Integer>() {
-            @Override
-            public Integer apply(final int columnIndex, final ResultSet rs) throws SQLException {
-                return rs.getInt(columnIndex);
-            }
-        };
-
-        ColumnGetter<Long> GET_LONG = new ColumnGetter<Long>() {
-            @Override
-            public Long apply(final int columnIndex, final ResultSet rs) throws SQLException {
-                return rs.getLong(columnIndex);
-            }
-        };
-
-        ColumnGetter<Float> GET_FLOAT = new ColumnGetter<Float>() {
-            @Override
-            public Float apply(final int columnIndex, final ResultSet rs) throws SQLException {
-                return rs.getFloat(columnIndex);
-            }
-        };
-
-        ColumnGetter<Double> GET_DOUBLE = new ColumnGetter<Double>() {
-            @Override
-            public Double apply(final int columnIndex, final ResultSet rs) throws SQLException {
-                return rs.getDouble(columnIndex);
-            }
-        };
-
-        ColumnGetter<BigDecimal> GET_BIG_DECIMAL = new ColumnGetter<BigDecimal>() {
-            @Override
-            public BigDecimal apply(final int columnIndex, final ResultSet rs) throws SQLException {
-                return rs.getBigDecimal(columnIndex);
-            }
-        };
-
-        ColumnGetter<String> GET_STRING = new ColumnGetter<String>() {
-            @Override
-            public String apply(final int columnIndex, final ResultSet rs) throws SQLException {
-                return rs.getString(columnIndex);
-            }
-        };
-
-        ColumnGetter<java.sql.Date> GET_DATE = new ColumnGetter<java.sql.Date>() {
-            @Override
-            public java.sql.Date apply(final int columnIndex, final ResultSet rs) throws SQLException {
-                return rs.getDate(columnIndex);
-            }
-        };
-
-        ColumnGetter<java.sql.Time> GET_TIME = new ColumnGetter<java.sql.Time>() {
-            @Override
-            public java.sql.Time apply(final int columnIndex, final ResultSet rs) throws SQLException {
-                return rs.getTime(columnIndex);
-            }
-        };
-
-        ColumnGetter<java.sql.Timestamp> GET_TIMESTAMP = new ColumnGetter<java.sql.Timestamp>() {
-            @Override
-            public java.sql.Timestamp apply(final int columnIndex, final ResultSet rs) throws SQLException {
-                return rs.getTimestamp(columnIndex);
-            }
-        };
-
-        /**
-         *
-         * @param columnIndex start from 1
-         * @param rs
-         * @return
-         * @throws SQLException
-         */
-        V apply(int columnIndex, ResultSet rs) throws SQLException;
-
-        static <T> ColumnGetter<T> get(final Class<? extends T> cls) {
-            return get(N.typeOf(cls));
-        }
-
-        static <T> ColumnGetter<T> get(final Type<? extends T> type) {
-            ColumnGetter<?> columnGetter = COLUMN_GETTER_POOL.get(type);
-
-            if (columnGetter == null) {
-                columnGetter = new ColumnGetter<T>() {
-                    @Override
-                    public T apply(int columnIndex, ResultSet rs) throws SQLException {
-                        return type.get(rs, columnIndex);
-                    }
-                };
-
-                COLUMN_GETTER_POOL.put(type, columnGetter);
-            }
-
-            return (ColumnGetter<T>) columnGetter;
         }
     }
 
