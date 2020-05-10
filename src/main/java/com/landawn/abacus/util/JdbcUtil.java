@@ -9562,14 +9562,9 @@ public final class JdbcUtil {
             return this;
         }
 
-        /**
-         * @param <T>
-         * @param batchParameters
-         * @return
-         * @throws SQLException the SQL exception
-         */
+        @Override
         @SuppressWarnings("rawtypes")
-        public <T> NamedQuery addBatchParametters(final Collection<T> batchParameters) throws SQLException {
+        public <T> NamedQuery addBatchParameters(final Collection<T> batchParameters) throws SQLException {
             checkArgNotNull(batchParameters, "batchParameters");
 
             if (N.isNullOrEmpty(batchParameters)) {
@@ -9661,19 +9656,6 @@ public final class JdbcUtil {
             }
 
             return this;
-        }
-
-        /**
-         *
-         * @param <T>
-         * @param batchParameters
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        public <T> NamedQuery addBatchParametters(final Iterator<T> batchParameters) throws SQLException {
-            checkArgNotNull(batchParameters, "batchParameters");
-
-            return addBatchParametters(Iterators.toList(batchParameters));
         }
 
         //        /**
@@ -12205,6 +12187,18 @@ public final class JdbcUtil {
             String sql() default "";
 
             /**
+             *
+             * @return
+             */
+            boolean isBatch() default false;
+
+            /**
+             *
+             * @return
+             */
+            int batchSize() default 0;
+
+            /**
              * Unit is seconds.
              *
              * @return
@@ -12245,6 +12239,18 @@ public final class JdbcUtil {
              * @return
              */
             String sql() default "";
+
+            /**
+             *
+             * @return
+             */
+            boolean isBatch() default false;
+
+            /**
+             *
+             * @return
+             */
+            int batchSize() default 0;
 
             /**
              * Unit is seconds.
@@ -12289,6 +12295,18 @@ public final class JdbcUtil {
              * @return
              */
             String sql() default "";
+
+            /**
+             *
+             * @return
+             */
+            boolean isBatch() default false;
+
+            /**
+             *
+             * @return
+             */
+            int batchSize() default 0;
 
             /**
              * Unit is seconds.

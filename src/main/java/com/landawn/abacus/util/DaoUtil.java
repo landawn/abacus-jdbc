@@ -170,8 +170,8 @@ final class DaoUtil {
             final Dao.Insert tmp = (Dao.Insert) anno;
             int queryTimeout = tmp.queryTimeout();
             final int fetchSize = -1;
-            final boolean isBatch = false;
-            final int batchSize = -1;
+            final boolean isBatch = tmp.isBatch();
+            int batchSize = tmp.batchSize();
             final OP op = OP.DEFAULT;
             final boolean isSingleParameter = tmp.isSingleParameter();
 
@@ -210,8 +210,8 @@ final class DaoUtil {
             final Dao.Update tmp = (Dao.Update) anno;
             int queryTimeout = tmp.queryTimeout();
             final int fetchSize = -1;
-            final boolean isBatch = false;
-            final int batchSize = -1;
+            final boolean isBatch = tmp.isBatch();
+            int batchSize = tmp.batchSize();
             final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
             final boolean isSingleParameter = tmp.isSingleParameter();
 
@@ -250,8 +250,8 @@ final class DaoUtil {
             final Dao.Delete tmp = (Dao.Delete) anno;
             int queryTimeout = tmp.queryTimeout();
             final int fetchSize = -1;
-            final boolean isBatch = false;
-            final int batchSize = -1;
+            final boolean isBatch = tmp.isBatch();
+            int batchSize = tmp.batchSize();
             final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
             final boolean isSingleParameter = tmp.isSingleParameter();
 
@@ -1567,7 +1567,7 @@ final class DaoUtil {
                                     : namedInsertWithIdSQL;
 
                             if (entities.size() <= batchSize) {
-                                proxy.prepareNamedQuery(namedInsertSQL).addBatchParametters(entities).batchUpdate();
+                                proxy.prepareNamedQuery(namedInsertSQL).addBatchParameters(entities).batchUpdate();
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
@@ -1575,7 +1575,7 @@ final class DaoUtil {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
                                         ExceptionalStream.of(entities)
                                                 .splitToList(batchSize) //
-                                                .forEach(bp -> nameQuery.addBatchParametters(bp).batchUpdate());
+                                                .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
                                     }
 
                                     tran.commit();
@@ -1610,7 +1610,7 @@ final class DaoUtil {
                             final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToSave).sql();
 
                             if (entities.size() <= batchSize) {
-                                proxy.prepareNamedQuery(namedInsertSQL).addBatchParametters(entities).batchUpdate();
+                                proxy.prepareNamedQuery(namedInsertSQL).addBatchParameters(entities).batchUpdate();
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
@@ -1618,7 +1618,7 @@ final class DaoUtil {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
                                         ExceptionalStream.of(entities)
                                                 .splitToList(batchSize) //
-                                                .forEach(bp -> nameQuery.addBatchParametters(bp).batchUpdate());
+                                                .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
                                     }
 
                                     tran.commit();
@@ -1648,7 +1648,7 @@ final class DaoUtil {
                             }
 
                             if (entities.size() <= batchSize) {
-                                proxy.prepareNamedQuery(namedInsertSQL).addBatchParametters(entities).batchUpdate();
+                                proxy.prepareNamedQuery(namedInsertSQL).addBatchParameters(entities).batchUpdate();
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
@@ -1656,7 +1656,7 @@ final class DaoUtil {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
                                         ExceptionalStream.of(entities)
                                                 .splitToList(batchSize) //
-                                                .forEach(bp -> nameQuery.addBatchParametters(bp).batchUpdate());
+                                                .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
                                     }
 
                                     tran.commit();
@@ -2416,7 +2416,7 @@ final class DaoUtil {
                             List<Object> ids = null;
 
                             if (entities.size() <= batchSize) {
-                                ids = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).addBatchParametters(entities).batchInsert(keyExtractor);
+                                ids = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).addBatchParameters(entities).batchInsert(keyExtractor);
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
@@ -2424,7 +2424,7 @@ final class DaoUtil {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
                                         ids = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize)
-                                                .flattMap(bp -> nameQuery.addBatchParametters(bp).batchInsert(keyExtractor))
+                                                .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor))
                                                 .toList();
                                     }
 
@@ -2484,7 +2484,7 @@ final class DaoUtil {
                             List<Object> ids = null;
 
                             if (entities.size() <= batchSize) {
-                                ids = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).addBatchParametters(entities).batchInsert(keyExtractor);
+                                ids = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).addBatchParameters(entities).batchInsert(keyExtractor);
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
@@ -2492,7 +2492,7 @@ final class DaoUtil {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
                                         ids = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize)
-                                                .flattMap(bp -> nameQuery.addBatchParametters(bp).batchInsert(keyExtractor))
+                                                .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor))
                                                 .toList();
                                     }
 
@@ -2548,7 +2548,7 @@ final class DaoUtil {
                             List<Object> ids = null;
 
                             if (entities.size() <= batchSize) {
-                                ids = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).addBatchParametters(entities).batchInsert(keyExtractor);
+                                ids = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).addBatchParameters(entities).batchInsert(keyExtractor);
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
@@ -2556,7 +2556,7 @@ final class DaoUtil {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
                                         ids = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize)
-                                                .flattMap(bp -> nameQuery.addBatchParametters(bp).batchInsert(keyExtractor))
+                                                .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor))
                                                 .toList();
                                     }
 
@@ -2759,7 +2759,7 @@ final class DaoUtil {
                             long result = 0;
 
                             if (entities.size() <= batchSize) {
-                                result = N.sum(proxy.prepareNamedQuery(namedUpdateByIdSQL).addBatchParametters(entities).batchUpdate());
+                                result = N.sum(proxy.prepareNamedQuery(namedUpdateByIdSQL).addBatchParameters(entities).batchUpdate());
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
@@ -2767,7 +2767,7 @@ final class DaoUtil {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedUpdateByIdSQL).closeAfterExecution(false)) {
                                         result = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize) //
-                                                .sumInt(bp -> N.sum(nameQuery.addBatchParametters(bp).batchUpdate()))
+                                                .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp).batchUpdate()))
                                                 .orZero();
                                     }
 
@@ -2802,7 +2802,7 @@ final class DaoUtil {
                             long result = 0;
 
                             if (entities.size() <= batchSize) {
-                                result = N.sum(proxy.prepareNamedQuery(query).addBatchParametters(entities).batchUpdate());
+                                result = N.sum(proxy.prepareNamedQuery(query).addBatchParameters(entities).batchUpdate());
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
@@ -2810,7 +2810,7 @@ final class DaoUtil {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(query).closeAfterExecution(false)) {
                                         result = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize) //
-                                                .sumInt(bp -> N.sum(nameQuery.addBatchParametters(bp).batchUpdate()))
+                                                .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp).batchUpdate()))
                                                 .orZero();
                                     }
 
@@ -3129,10 +3129,28 @@ final class DaoUtil {
                                     + "), the first parameter must be Collection. The second parameter is optional, it only can be int if it's set");
                         }
 
-                        if (isNamedQuery == false) {
-                            throw new UnsupportedOperationException(
-                                    "Only named query/sql is supported for batch operations(" + fullClassMethodName + ") at present");
-                        }
+                        //    if (isNamedQuery == false) {
+                        //        throw new UnsupportedOperationException(
+                        //                "Only named query/sql is supported for batch operations(" + fullClassMethodName + ") at present");
+                        //    }
+
+                        //    if (isNamedQuery == false) {
+                        //        final java.lang.reflect.Type[] genericParameterTypes = m.getGenericParameterTypes();
+                        //        final java.lang.reflect.Type genericBatchParametersType = genericParameterTypes[stmtParamIndexes[0]];
+                        //
+                        //        boolean isArrayBatchParameters = List.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])
+                        //                && genericBatchParametersType instanceof ParameterizedType
+                        //                && Object[].class.isAssignableFrom((Class) ((ParameterizedType) genericBatchParametersType).getActualTypeArguments()[0]);
+                        //
+                        //        final boolean isListBatchParameters = Collection.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])
+                        //                && genericBatchParametersType instanceof ParameterizedType
+                        //                && List.class.isAssignableFrom((Class) ((ParameterizedType) genericBatchParametersType).getActualTypeArguments()[0]);
+                        //
+                        //        if (!(isArrayBatchParameters || isListBatchParameters)) {
+                        //            throw new UnsupportedOperationException("For non-named batch operations(" + fullClassMethodName
+                        //                    + "), the batch parameter type must be: List<? extends Object[]) or Collection<? extends List<?>>. The second parameter is optional, it only can be int if it's set");
+                        //        }
+                        //    }
                     }
 
                     final ParsedSql namedSql = isNamedQuery && defineParamLen == 0 ? ParsedSql.parse(query) : null;
@@ -3227,30 +3245,36 @@ final class DaoUtil {
                                 if (N.isNullOrEmpty(batchParameters)) {
                                     ids = new ArrayList<>(0);
                                 } else if (batchParameters.size() < batchSize) {
-                                    ids = (isSingleParameter
-                                            ? ((NamedQuery) prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
-                                                    isBatch, -1, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList))
-                                                            .addBatchParameters(batchParameters, BiParametersSetter.SET_FIRST_OBJECT)
-                                            : ((NamedQuery) prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
-                                                    isBatch, -1, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList))
-                                                            .addBatchParametters(batchParameters)).batchInsert();
+                                    AbstractPreparedQuery preparedQuery = null;
+
+                                    if (isSingleParameter) {
+                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
+                                                isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                                        .addBatchParameters(batchParameters, BiParametersSetter.SET_FIRST_OBJECT);
+                                    } else {
+                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
+                                                isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                                        .addBatchParameters(batchParameters);
+                                    }
+
+                                    ids = preparedQuery.batchInsert();
                                 } else {
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
-                                        try (NamedQuery nameQuery = (NamedQuery) prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query,
-                                                namedSql, fetchSize, isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall,
+                                        try (AbstractPreparedQuery preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery,
+                                                query, namedSql, fetchSize, isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall,
                                                 outParameterList).closeAfterExecution(false)) {
 
                                             if (isSingleParameter) {
                                                 ids = ExceptionalStream.of(batchParameters)
                                                         .splitToList(batchSize) //
-                                                        .flattMap(bp -> nameQuery.addBatchParameters(bp, BiParametersSetter.SET_FIRST_OBJECT).batchInsert())
+                                                        .flattMap(bp -> preparedQuery.addBatchParameters(bp, BiParametersSetter.SET_FIRST_OBJECT).batchInsert())
                                                         .toList();
                                             } else {
-                                                ids = ExceptionalStream.of(batchParameters)
+                                                ids = ExceptionalStream.of((Collection<List<?>>) (Collection) batchParameters)
                                                         .splitToList(batchSize) //
-                                                        .flattMap(bp -> nameQuery.addBatchParametters(bp).batchInsert())
+                                                        .flattMap(bp -> preparedQuery.addBatchParameters(bp).batchInsert())
                                                         .toList();
                                             }
                                         }
@@ -3357,13 +3381,17 @@ final class DaoUtil {
                                 if (N.isNullOrEmpty(batchParameters)) {
                                     updatedRecordCount = 0;
                                 } else if (batchParameters.size() < batchSize) {
-                                    final NamedQuery preparedQuery = isSingleParameter
-                                            ? ((NamedQuery) prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
-                                                    isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList))
-                                                            .addBatchParameters(batchParameters, BiParametersSetter.SET_FIRST_OBJECT)
-                                            : ((NamedQuery) prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
-                                                    isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList))
-                                                            .addBatchParametters(batchParameters);
+                                    AbstractPreparedQuery preparedQuery = null;
+
+                                    if (isSingleParameter) {
+                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
+                                                isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                                        .addBatchParameters(batchParameters, BiParametersSetter.SET_FIRST_OBJECT);
+                                    } else {
+                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
+                                                isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                                        .addBatchParameters(batchParameters);
+                                    }
 
                                     if (isLargeUpdate) {
                                         updatedRecordCount = N.sum(preparedQuery.largeBatchUpdate());
@@ -3374,23 +3402,25 @@ final class DaoUtil {
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
-                                        try (NamedQuery nameQuery = (NamedQuery) prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query,
-                                                namedSql, fetchSize, isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall,
+                                        try (AbstractPreparedQuery preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery,
+                                                query, namedSql, fetchSize, isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall,
                                                 outParameterList).closeAfterExecution(false)) {
 
                                             if (isSingleParameter) {
                                                 updatedRecordCount = ExceptionalStream.of(batchParameters)
                                                         .splitToList(batchSize) //
                                                         .sumLong(bp -> isLargeUpdate
-                                                                ? N.sum(nameQuery.addBatchParameters(bp, BiParametersSetter.SET_FIRST_OBJECT).largeBatchUpdate())
-                                                                : N.sum(nameQuery.addBatchParameters(bp, BiParametersSetter.SET_FIRST_OBJECT).batchUpdate()))
+                                                                ? N.sum(preparedQuery.addBatchParameters(bp, BiParametersSetter.SET_FIRST_OBJECT)
+                                                                        .largeBatchUpdate())
+                                                                : N.sum(preparedQuery.addBatchParameters(bp, BiParametersSetter.SET_FIRST_OBJECT)
+                                                                        .batchUpdate()))
                                                         .orZero();
                                             } else {
-                                                updatedRecordCount = ExceptionalStream.of(batchParameters)
+                                                updatedRecordCount = ExceptionalStream.of((Collection<List<?>>) (Collection) batchParameters)
                                                         .splitToList(batchSize) //
                                                         .sumLong(bp -> isLargeUpdate //
-                                                                ? N.sum(nameQuery.addBatchParametters(bp).largeBatchUpdate())
-                                                                : N.sum(nameQuery.addBatchParametters(bp).batchUpdate()))
+                                                                ? N.sum(preparedQuery.addBatchParameters(bp).largeBatchUpdate())
+                                                                : N.sum(preparedQuery.addBatchParameters(bp).batchUpdate()))
                                                         .orZero();
                                             }
                                         }

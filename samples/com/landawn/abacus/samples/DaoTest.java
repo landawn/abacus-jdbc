@@ -265,7 +265,7 @@ public class DaoTest {
 
         assertEquals(users.size(), userDao.batchDeleteByIds(ids));
 
-        assertEquals(0, N.sum(userDao.batchDeleteByIds2(ids)));
+        assertEquals(0, N.sum(userDao.batchDeleteByIds_2(ids)));
     }
 
     @Test
@@ -396,9 +396,9 @@ public class DaoTest {
 
         assertEquals(1, userDao.batchDeleteByIds(N.repeat(100L, 1)));
         assertEquals(0, userDao.batchDeleteByIds(N.repeat(100L, 99)));
-        assertEquals(0, userDao.batchDeleteByIds(N.repeat(100L, 199)));
+        assertEquals(0, userDao.batchDeleteByIds_1(N.repeat(100L, 199)));
         assertEquals(0, userDao.batchDeleteByIds(N.repeat(100L, 299)));
-        assertEquals(0, userDao.batchDeleteByIds(N.repeat(100L, 399)));
+        assertEquals(0, userDao.batchDeleteByIds_1(N.repeat(100L, 399)));
         assertEquals(0, userDao.batchDeleteByIds(N.repeat(100L, 999)));
 
         user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();

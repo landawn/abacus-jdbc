@@ -1575,20 +1575,52 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
     //        return (Q) this;
     //    }
 
+    /**
+     * 
+     * @param <T>
+     * @param batchParameters
+     * @return
+     * @throws SQLException
+     */
+    @SuppressWarnings("rawtypes")
     @Beta
-    public Q addBatchParameters(final List<? extends Object[]> batchParameters) throws SQLException {
+    public <T> Q addBatchParameters(final Collection<T> batchParameters) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
+
+        if (N.isNullOrEmpty(batchParameters)) {
+            return (Q) this;
+        }
 
         boolean noException = false;
 
         try {
-            final int parameterCount = N.isNullOrEmpty(batchParameters) ? 0 : N.firstOrNullIfEmpty(batchParameters).length;
+            final T first = N.firstNonNull(batchParameters).orNull();
 
-            for (Object[] parameters : batchParameters) {
-                for (int i = 0; i < parameterCount; i++) {
-                    setObject(i + 1, parameters[i]);
+            if (first == null) {
+                for (int i = 0, size = batchParameters.size(); i < size; i++) {
+                    stmt.setObject(1, null);
 
                     stmt.addBatch();
+                }
+            } else {
+                if (first instanceof Collection) {
+                    for (Object parameters : batchParameters) {
+                        setParameters((Collection) parameters);
+
+                        stmt.addBatch();
+                    }
+                } else if (first instanceof Object[]) {
+                    for (Object parameters : batchParameters) {
+                        setParameters((Object[]) parameters);
+
+                        stmt.addBatch();
+                    }
+                } else {
+                    for (Object obj : batchParameters) {
+                        setObject(1, obj);
+
+                        stmt.addBatch();
+                    }
                 }
             }
 
@@ -1604,21 +1636,40 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         return (Q) this;
     }
 
+    /**
+     * 
+     * @param <T>
+     * @param batchParameters
+     * @return
+     * @throws SQLException
+     */
     @Beta
-    public Q addBatchParameters(final Collection<? extends List<?>> batchParameters) throws SQLException {
+    public <T> Q addBatchParameters(final Iterator<T> batchParameters) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
 
+        return addBatchParameters(Iterators.toList(batchParameters));
+    }
+
+    /**
+     * 
+     * @param <T>
+     * @param batchParameters single batch parameters.
+     * @param type
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public <T> Q addBatchParameters(final Collection<? extends T> batchParameters, final Class<T> type) throws SQLException {
+        checkArgNotNull(batchParameters, "batchParameters");
+        checkArgNotNull(type, "type");
+
         boolean noException = false;
+        final Type<T> setter = N.typeOf(type);
 
         try {
-            final int parameterCount = N.isNullOrEmpty(batchParameters) ? 0 : N.firstOrNullIfEmpty(batchParameters).size();
-
-            for (List<?> parameters : batchParameters) {
-                for (int i = 0; i < parameterCount; i++) {
-                    setObject(i + 1, parameters.get(i));
-
-                    stmt.addBatch();
-                }
+            for (T parameter : batchParameters) {
+                setter.set(stmt, 1, parameter);
+                stmt.addBatch();
             }
 
             isBatch = batchParameters.size() > 0;
