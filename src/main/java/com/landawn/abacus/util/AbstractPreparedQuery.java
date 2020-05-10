@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.Executor;
@@ -39,7 +38,6 @@ import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
-import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowConsumer;
@@ -61,9 +59,6 @@ import com.landawn.abacus.util.u.OptionalFloat;
 import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
-import com.landawn.abacus.util.function.BiFunction;
-import com.landawn.abacus.util.function.BinaryOperator;
-import com.landawn.abacus.util.function.Supplier;
 import com.landawn.abacus.util.stream.Stream;
 
 /**
@@ -2622,144 +2617,6 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             closeAfterExecutionIfAllowed();
         }
     }
-
-    /**
-     *
-     * @param <K>
-     * @param <V>
-     * @param keyMapper
-     * @param valueMapper
-     * @return
-     * @throws DuplicatedResultException
-     * @throws SQLException the SQL exception
-     * @see ResultExtractor#toMap(RowMapper, RowMapper)
-     */
-    public <K, V> Map<K, V> listToMap(final RowMapper<K> keyMapper, final RowMapper<V> valueMapper) throws DuplicatedResultException, SQLException {
-        return listToMap(keyMapper, valueMapper, Fn.<V> throwingMerger());
-    }
-
-    /**
-     *
-     * @param <K>
-     * @param <V>
-     * @param keyMapper
-     * @param valueMapper
-     * @param mergeFunction
-     * @return
-     * @throws SQLException the SQL exception
-     * @see ResultExtractor#toMap(RowMapper, RowMapper, BinaryOperator)
-     */
-    public <K, V> Map<K, V> listToMap(final RowMapper<K> keyMapper, final RowMapper<V> valueMapper, final BinaryOperator<V> mergeFunction) throws SQLException {
-        return listToMap(keyMapper, valueMapper, mergeFunction, Suppliers.<K, V> ofMap());
-    }
-
-    /**
-     *
-     * @param <K>
-     * @param <V>
-     * @param <M>
-     * @param keyMapper
-     * @param valueMapper
-     * @param mapSupplier
-     * @return
-     * @throws DuplicatedResultException
-     * @throws SQLException the SQL exception
-     * @see ResultExtractor#toMap(RowMapper, RowMapper, Supplier)
-     */
-    public <K, V, M extends Map<K, V>> M listToMap(final RowMapper<K> keyMapper, final RowMapper<V> valueMapper, final Supplier<? extends M> mapSupplier)
-            throws DuplicatedResultException, SQLException {
-        return listToMap(keyMapper, valueMapper, Fn.<V> throwingMerger(), mapSupplier);
-    }
-
-    /**
-     *
-     * @param <K>
-     * @param <V>
-     * @param <M>
-     * @param keyMapper
-     * @param valueMapper
-     * @param mergeFunction
-     * @param mapSupplier
-     * @return
-     * @throws SQLException the SQL exception
-     * @see ResultExtractor#toMap(RowMapper, RowMapper, BinaryOperator, Supplier)
-     */
-    public <K, V, M extends Map<K, V>> M listToMap(final RowMapper<K> keyMapper, final RowMapper<V> valueMapper, final BinaryOperator<V> mergeFunction,
-            final Supplier<? extends M> mapSupplier) throws SQLException {
-        checkArgNotNull(keyMapper, "keyMapper");
-        checkArgNotNull(valueMapper, "valueMapper");
-        checkArgNotNull(mergeFunction, "mergeFunction");
-        checkArgNotNull(mapSupplier, "mapSupplier");
-        assertNotClosed();
-
-        try (ResultSet rs = executeQuery()) {
-            final M result = mapSupplier.get();
-
-            while (rs.next()) {
-                merge(result, keyMapper.apply(rs), valueMapper.apply(rs), mergeFunction);
-            }
-
-            return result;
-        } finally {
-            closeAfterExecutionIfAllowed();
-        }
-    }
-
-    static <K, V> void merge(Map<K, V> map, K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
-        final V oldValue = map.get(key);
-
-        if (oldValue == null && map.containsKey(key) == false) {
-            map.put(key, value);
-        } else {
-            map.put(key, remappingFunction.apply(oldValue, value));
-        }
-    }
-
-    //    /**
-    //     *
-    //     * @param <K>
-    //     * @param <V>
-    //     * @param keyMapper
-    //     * @param valueMapper
-    //     * @return
-    //     * @throws SQLException the SQL exception
-    //     */
-    //    public <K, V> ListMultimap<K, V> listToMultimap(final RowMapper<K> keyMapper, final RowMapper<V> valueMapper) throws SQLException {
-    //        return listToMultimap(keyMapper, valueMapper, Suppliers.<K, V> ofListMultimap());
-    //    }
-    //
-    //    /**
-    //     *
-    //     * @param <K>
-    //     * @param <V>
-    //     * @param <C>
-    //     * @param <M>
-    //     * @param keyMapper
-    //     * @param valueMapper
-    //     * @param mergeFunction
-    //     * @param multimapSupplier
-    //     * @return
-    //     * @throws SQLException the SQL exception
-    //     */
-    //    public <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> M listToMultimap(final RowMapper<K> keyMapper, final RowMapper<V> valueMapper,
-    //            final Supplier<? extends M> multimapSupplier) throws SQLException {
-    //        checkArgNotNull(keyMapper, "keyMapper");
-    //        checkArgNotNull(valueMapper, "valueMapper");
-    //        checkArgNotNull(multimapSupplier, "multimapSupplier");
-    //        assertNotClosed();
-    //
-    //        try (ResultSet rs = executeQuery()) {
-    //            final M result = multimapSupplier.get();
-    //
-    //            while (rs.next()) {
-    //                result.put(keyMapper.apply(rs), valueMapper.apply(rs));
-    //            }
-    //
-    //            return result;
-    //        } finally {
-    //            closeAfterExecutionIfAllowed();
-    //        }
-    //    }
 
     /**
      * lazy-execution, lazy-fetch.

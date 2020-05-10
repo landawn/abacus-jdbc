@@ -15,6 +15,7 @@ import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
+import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.PSC;
@@ -38,13 +39,13 @@ public class PreparedQueryTest {
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, minId)
-                .listToMap(rs -> rs.getLong(1), rs -> rs.getString(2))
+                .query(ResultExtractor.toMap(rs -> rs.getLong(1), rs -> rs.getString(2)))
                 .forEach(Fn.println("="));
 
         try {
             JdbcUtil.prepareQuery(dataSource, sql) //
                     .setLong(1, minId)
-                    .listToMap(rs -> rs.getString("lastName"), rs -> rs.getLong(1))
+                    .query(ResultExtractor.toMap(rs -> rs.getString("lastName"), rs -> rs.getLong(1)))
                     .forEach(Fn.println("="));
             fail("Should throw IllegalStateException");
         } catch (IllegalStateException e) {
@@ -52,7 +53,7 @@ public class PreparedQueryTest {
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, minId)
-                .listToMap(rs -> rs.getString("lastName"), rs -> rs.getLong(1), Fn.replacingMerger())
+                .query(ResultExtractor.toMap(rs -> rs.getString("lastName"), rs -> rs.getLong(1), Fn.replacingMerger()))
                 .forEach(Fn.println("="));
 
         sql = PSC.deleteFrom(User.class).where("id >= ?").sql();
