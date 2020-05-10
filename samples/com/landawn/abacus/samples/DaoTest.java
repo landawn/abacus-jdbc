@@ -513,7 +513,7 @@ public class DaoTest {
         }
 
         userDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null,
-                RowMapper.builder().get(1, (i, rs) -> rs.getString(i)).toList()).forEach(Fn.println());
+                JdbcUtil.RowMapper.builder().get(1, (i, rs) -> rs.getString(i)).toList()).forEach(Fn.println());
 
         userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
                 BiRowMapper.builder().get("firstName", (i, rs) -> rs.getString(i)).to(List.class)).forEach(Fn.println());

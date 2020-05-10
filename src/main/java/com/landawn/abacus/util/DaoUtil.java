@@ -64,9 +64,9 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
+import com.landawn.abacus.util.Columns.ColumnOne;
 import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
 import com.landawn.abacus.util.Fn.IntFunctions;
-import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
@@ -77,7 +77,6 @@ import com.landawn.abacus.util.JdbcUtil.NamedQuery;
 import com.landawn.abacus.util.JdbcUtil.PreparedCallableQuery;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
-import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.SQLBuilder.NAC;
 import com.landawn.abacus.util.SQLBuilder.NLC;
 import com.landawn.abacus.util.SQLBuilder.NSC;
@@ -588,7 +587,8 @@ final class DaoUtil {
             if (method.getGenericReturnType() instanceof ParameterizedType) {
                 final ParameterizedType parameterizedReturnType = (ParameterizedType) method.getGenericReturnType();
 
-                if (paramLen > 0 && (RowMapper.class.isAssignableFrom(paramTypes[paramLen - 1]) || BiRowMapper.class.isAssignableFrom(paramTypes[paramLen - 1]))
+                if (paramLen > 0
+                        && (JdbcUtil.RowMapper.class.isAssignableFrom(paramTypes[paramLen - 1]) || BiRowMapper.class.isAssignableFrom(paramTypes[paramLen - 1]))
                         && method.getGenericParameterTypes()[paramLen - 1] instanceof ParameterizedType) {
 
                     // if the return type of the method is same as the return type of RowMapper/BiRowMapper parameter, return false;
@@ -705,34 +705,36 @@ final class DaoUtil {
                 throw new UnsupportedOperationException("RowFilter is not supported by OP: " + op + " in method: " + fullClassMethodName);
             }
 
-            if (RowMapper.class.isAssignableFrom(lastParamType)) {
+            if (JdbcUtil.RowMapper.class.isAssignableFrom(lastParamType)) {
                 if (isListQuery) {
                     if (hasRowFilter) {
-                        return (preparedQuery, args) -> (R) preparedQuery.list((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]);
+                        return (preparedQuery, args) -> (R) preparedQuery.list((RowFilter) args[paramLen - 2], (JdbcUtil.RowMapper) args[paramLen - 1]);
                     } else {
-                        return (preparedQuery, args) -> (R) preparedQuery.list((RowMapper) args[paramLen - 1]);
+                        return (preparedQuery, args) -> (R) preparedQuery.list((JdbcUtil.RowMapper) args[paramLen - 1]);
                     }
                 } else if (Optional.class.isAssignableFrom(returnType)) {
                     if (op == OP.get) {
-                        return (preparedQuery, args) -> (R) preparedQuery.get((RowMapper) args[paramLen - 1]);
+                        return (preparedQuery, args) -> (R) preparedQuery.get((JdbcUtil.RowMapper) args[paramLen - 1]);
                     } else {
                         if (hasRowFilter) {
-                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]);
+                            return (preparedQuery,
+                                    args) -> (R) preparedQuery.findFirst((RowFilter) args[paramLen - 2], (JdbcUtil.RowMapper) args[paramLen - 1]);
                         } else {
-                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowMapper) args[paramLen - 1]);
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((JdbcUtil.RowMapper) args[paramLen - 1]);
                         }
                     }
                 } else if (ExceptionalStream.class.isAssignableFrom(returnType)) {
                     if (hasRowFilter) {
-                        return (preparedQuery, args) -> (R) preparedQuery.stream((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]);
+                        return (preparedQuery, args) -> (R) preparedQuery.stream((RowFilter) args[paramLen - 2], (JdbcUtil.RowMapper) args[paramLen - 1]);
                     } else {
-                        return (preparedQuery, args) -> (R) preparedQuery.stream((RowMapper) args[paramLen - 1]);
+                        return (preparedQuery, args) -> (R) preparedQuery.stream((JdbcUtil.RowMapper) args[paramLen - 1]);
                     }
                 } else if (Stream.class.isAssignableFrom(returnType)) {
                     if (hasRowFilter) {
-                        return (preparedQuery, args) -> (R) preparedQuery.stream((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]).unchecked();
+                        return (preparedQuery,
+                                args) -> (R) preparedQuery.stream((RowFilter) args[paramLen - 2], (JdbcUtil.RowMapper) args[paramLen - 1]).unchecked();
                     } else {
-                        return (preparedQuery, args) -> (R) preparedQuery.stream((RowMapper) args[paramLen - 1]).unchecked();
+                        return (preparedQuery, args) -> (R) preparedQuery.stream((JdbcUtil.RowMapper) args[paramLen - 1]).unchecked();
                     }
                 } else {
                     if (Nullable.class.isAssignableFrom(returnType)) {
@@ -741,13 +743,14 @@ final class DaoUtil {
                     }
 
                     if (op == OP.get) {
-                        return (preparedQuery, args) -> (R) preparedQuery.gett((RowMapper) args[paramLen - 1]);
+                        return (preparedQuery, args) -> (R) preparedQuery.gett((JdbcUtil.RowMapper) args[paramLen - 1]);
                     } else {
                         if (hasRowFilter) {
-                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1])
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowFilter) args[paramLen - 2], (JdbcUtil.RowMapper) args[paramLen - 1])
                                     .orElse(N.defaultValueOf(returnType));
                         } else {
-                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                            return (preparedQuery,
+                                    args) -> (R) preparedQuery.findFirst((JdbcUtil.RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
                         }
                     }
                 }
@@ -3258,7 +3261,7 @@ final class DaoUtil {
                                     if (isSingleParameter) {
                                         preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
                                                 isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
-                                                        .addBatchParameters(batchParameters, BiParametersSetter.SET_FIRST_OBJECT);
+                                                        .addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
                                     } else {
                                         preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
                                                 isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
@@ -3277,7 +3280,7 @@ final class DaoUtil {
                                             if (isSingleParameter) {
                                                 ids = ExceptionalStream.of(batchParameters)
                                                         .splitToList(batchSize) //
-                                                        .flattMap(bp -> preparedQuery.addBatchParameters(bp, BiParametersSetter.SET_FIRST_OBJECT).batchInsert())
+                                                        .flattMap(bp -> preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).batchInsert())
                                                         .toList();
                                             } else {
                                                 ids = ExceptionalStream.of((Collection<List<?>>) (Collection) batchParameters)
@@ -3394,7 +3397,7 @@ final class DaoUtil {
                                     if (isSingleParameter) {
                                         preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
                                                 isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
-                                                        .addBatchParameters(batchParameters, BiParametersSetter.SET_FIRST_OBJECT);
+                                                        .addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
                                     } else {
                                         preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
                                                 isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
@@ -3418,10 +3421,8 @@ final class DaoUtil {
                                                 updatedRecordCount = ExceptionalStream.of(batchParameters)
                                                         .splitToList(batchSize) //
                                                         .sumLong(bp -> isLargeUpdate
-                                                                ? N.sum(preparedQuery.addBatchParameters(bp, BiParametersSetter.SET_FIRST_OBJECT)
-                                                                        .largeBatchUpdate())
-                                                                : N.sum(preparedQuery.addBatchParameters(bp, BiParametersSetter.SET_FIRST_OBJECT)
-                                                                        .batchUpdate()))
+                                                                ? N.sum(preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).largeBatchUpdate())
+                                                                : N.sum(preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).batchUpdate()))
                                                         .orZero();
                                             } else {
                                                 updatedRecordCount = ExceptionalStream.of((Collection<List<?>>) (Collection) batchParameters)

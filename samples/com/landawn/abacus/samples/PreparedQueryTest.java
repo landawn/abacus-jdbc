@@ -78,7 +78,7 @@ public class PreparedQueryTest {
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .get(RowMapper.builder()
+                .get(JdbcUtil.RowMapper.builder()
                         .get(1, (columnIndex, rs) -> rs.getLong(columnIndex))
                         .get(3, (columnIndex, rs) -> rs.getString(columnIndex))
                         .get(6, (columnIndex, rs) -> rs.getDate(columnIndex))
@@ -87,7 +87,7 @@ public class PreparedQueryTest {
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .get(RowMapper.builder().getInt(1).get(3, (columnIndex, rs) -> rs.getString(columnIndex)).getTime(6).toArray())
+                .get(JdbcUtil.RowMapper.builder().getInt(1).get(3, (columnIndex, rs) -> rs.getString(columnIndex)).getTime(6).toArray())
                 .ifPresent(System.out::println);
 
         JdbcUtil.prepareQuery(dataSource, sql) //

@@ -59,6 +59,7 @@ import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
+import com.landawn.abacus.util.Columns.ColumnOne;
 import com.landawn.abacus.util.ExceptionalStream.StreamE;
 import com.landawn.abacus.util.Fn.IntFunctions;
 import com.landawn.abacus.util.Fn.Suppliers;
@@ -67,7 +68,6 @@ import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.NamedQuery;
 import com.landawn.abacus.util.JdbcUtil.RowExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
-import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.SQLBuilder.NAC;
 import com.landawn.abacus.util.SQLBuilder.NLC;
 import com.landawn.abacus.util.SQLBuilder.NSC;
@@ -6517,7 +6517,7 @@ public class SQLExecutor {
          */
         public <R> List<R> list(final Connection conn, final String singleSelectPropName, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final PropInfo propInfo = entityInfo.getPropInfo(singleSelectPropName);
-            final RowMapper<R> rowMapper = propInfo == null ? RowMapper.GET_OBJECT : RowMapper.get((Type<R>) propInfo.dbType);
+            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.GET_OBJECT : JdbcUtil.RowMapper.get((Type<R>) propInfo.dbType);
 
             return list(conn, singleSelectPropName, rowMapper, whereCause, jdbcSettings);
         }
@@ -6717,7 +6717,7 @@ public class SQLExecutor {
          */
         public <R> List<R> listAll(final String singleSelectPropName, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final PropInfo propInfo = entityInfo.getPropInfo(singleSelectPropName);
-            final RowMapper<R> rowMapper = propInfo == null ? RowMapper.GET_OBJECT : RowMapper.get((Type<R>) propInfo.dbType);
+            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.GET_OBJECT : JdbcUtil.RowMapper.get((Type<R>) propInfo.dbType);
 
             return listAll(singleSelectPropName, rowMapper, whereCause, jdbcSettings);
         }
@@ -6848,7 +6848,7 @@ public class SQLExecutor {
          */
         public <R> Stream<R> stream(final String singleSelectPropName, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final PropInfo propInfo = entityInfo.getPropInfo(singleSelectPropName);
-            final RowMapper<R> rowMapper = propInfo == null ? RowMapper.GET_OBJECT : RowMapper.get((Type<R>) propInfo.dbType);
+            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.GET_OBJECT : JdbcUtil.RowMapper.get((Type<R>) propInfo.dbType);
 
             return stream(singleSelectPropName, rowMapper, whereCause, jdbcSettings);
         }
@@ -6968,7 +6968,7 @@ public class SQLExecutor {
          */
         public <R> Stream<R> streamAll(final String singleSelectPropName, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final PropInfo propInfo = entityInfo.getPropInfo(singleSelectPropName);
-            final RowMapper<R> rowMapper = propInfo == null ? RowMapper.GET_OBJECT : RowMapper.get((Type<R>) propInfo.dbType);
+            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.GET_OBJECT : JdbcUtil.RowMapper.get((Type<R>) propInfo.dbType);
 
             return streamAll(singleSelectPropName, rowMapper, whereCause, jdbcSettings);
         }
@@ -9714,7 +9714,6 @@ public class SQLExecutor {
      */
     public interface StatementSetter extends Throwables.TriConsumer<ParsedSql, PreparedStatement, Object[], SQLException> {
 
-
         /** The Constant DEFAULT. */
         StatementSetter DEFAULT = new AbstractStatementSetter() {
             @SuppressWarnings("rawtypes")
@@ -9809,7 +9808,7 @@ public class SQLExecutor {
          * @param valueExtractor
          * @return
          */
-        static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor) {
+        static <K, V> ResultExtractor<Map<K, V>> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor) {
             return toMap(keyExtractor, valueExtractor, Suppliers.<K, V> ofMap());
         }
 
@@ -9823,7 +9822,7 @@ public class SQLExecutor {
          * @param supplier
          * @return
          */
-        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
                 final Supplier<? extends M> supplier) {
             return toMap(keyExtractor, valueExtractor, Fn.<V> throwingMerger(), supplier);
         }
@@ -9840,7 +9839,7 @@ public class SQLExecutor {
          * @see {@link Fn.replacingMerger()}
          * @see {@link Fn.ignoringMerger()}
          */
-        static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+        static <K, V> ResultExtractor<Map<K, V>> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
                 final BinaryOperator<V> mergeFunction) {
             return toMap(keyExtractor, valueExtractor, mergeFunction, Suppliers.<K, V> ofMap());
         }
@@ -9859,7 +9858,7 @@ public class SQLExecutor {
          * @see {@link Fn.replacingMerger()}
          * @see {@link Fn.ignoringMerger()}
          */
-        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
                 final BinaryOperator<V> mergeFunction, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
@@ -9896,7 +9895,7 @@ public class SQLExecutor {
          * @param downstream
          * @return
          */
-        static <K, V, A, D> ResultExtractor<Map<K, D>> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+        static <K, V, A, D> ResultExtractor<Map<K, D>> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
                 final Collector<? super V, A, D> downstream) {
             return toMap(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
         }
@@ -9914,7 +9913,7 @@ public class SQLExecutor {
          * @param supplier
          * @return
          */
-        static <K, V, A, D, M extends Map<K, D>> ResultExtractor<M> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+        static <K, V, A, D, M extends Map<K, D>> ResultExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
                 final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
@@ -10127,7 +10126,7 @@ public class SQLExecutor {
          * @param valueExtractor
          * @return
          */
-        static <K, V> ResultExtractor<ListMultimap<K, V>> toMultimap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor) {
+        static <K, V> ResultExtractor<ListMultimap<K, V>> toMultimap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor) {
             return toMultimap(keyExtractor, valueExtractor, Suppliers.<K, V> ofListMultimap());
         }
 
@@ -10142,8 +10141,8 @@ public class SQLExecutor {
          * @param multimapSupplier
          * @return
          */
-        static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> ResultExtractor<M> toMultimap(final RowMapper<K> keyExtractor,
-                final RowMapper<V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
+        static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> ResultExtractor<M> toMultimap(final JdbcUtil.RowMapper<K> keyExtractor,
+                final JdbcUtil.RowMapper<V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(multimapSupplier, "multimapSupplier");
@@ -10224,7 +10223,7 @@ public class SQLExecutor {
          * @param valueExtractor
          * @return
          */
-        static <K, V> ResultExtractor<Map<K, List<V>>> groupTo(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor) {
+        static <K, V> ResultExtractor<Map<K, List<V>>> groupTo(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor) {
             return groupTo(keyExtractor, valueExtractor, Suppliers.<K, List<V>> ofMap());
         }
 
@@ -10238,8 +10237,8 @@ public class SQLExecutor {
          * @param supplier
          * @return
          */
-        static <K, V, M extends Map<K, List<V>>> ResultExtractor<M> groupTo(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
-                final Supplier<? extends M> supplier) {
+        static <K, V, M extends Map<K, List<V>>> ResultExtractor<M> groupTo(final JdbcUtil.RowMapper<K> keyExtractor,
+                final JdbcUtil.RowMapper<V> valueExtractor, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(supplier, "supplier");

@@ -39,7 +39,6 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.CallableStatement;
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -48,8 +47,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLType;
 import java.sql.Statement;
-import java.sql.Time;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
@@ -101,6 +98,7 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
+import com.landawn.abacus.util.Columns.ColumnOne;
 import com.landawn.abacus.util.DaoUtil.NonDBOperation;
 import com.landawn.abacus.util.ExceptionalStream.StreamE;
 import com.landawn.abacus.util.Fn.BiConsumers;
@@ -3072,7 +3070,7 @@ public final class JdbcUtil {
 
             for (Object parameter : listOfParameters) {
                 parameters[0] = parameter;
-                
+
                 StatementSetter.DEFAULT.accept(parsedSql, stmt, parameters);
                 stmt.addBatch();
 
@@ -3214,7 +3212,7 @@ public final class JdbcUtil {
 
             for (Object parameter : listOfParameters) {
                 parameters[0] = parameter;
-                
+
                 StatementSetter.DEFAULT.accept(parsedSql, stmt, parameters);
                 stmt.addBatch();
 
@@ -6654,14 +6652,14 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        public <T> PreparedCallableQuery registerOutParameters(final T parameter, final BiParametersSetter<? super T, ? super CallableStatement> register)
+        public <T> PreparedCallableQuery registerOutParameters(final T parameter, final BiParametersSetter<? super CallableStatement, ? super T> register)
                 throws SQLException {
             checkArgNotNull(register, "register");
 
             boolean noException = false;
 
             try {
-                register.accept(parameter, stmt);
+                register.accept(stmt, parameter);
 
                 noException = true;
             } finally {
@@ -9550,7 +9548,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        public <T> NamedQuery setParameters(final T paramaters, TriParametersSetter<NamedQuery, T> parametersSetter) throws SQLException {
+        public <T> NamedQuery setParameters(final T paramaters, TriParametersSetter<? super NamedQuery, ? super T> parametersSetter) throws SQLException {
             checkArgNotNull(parametersSetter, "parametersSetter");
 
             boolean noException = false;
@@ -9760,23 +9758,7 @@ public final class JdbcUtil {
                 // Do nothing.
             }
         };
-
-        @SuppressWarnings("rawtypes")
-        public static final BiParametersSetter<AbstractPreparedQuery, String> SET_FIRST_STRING = new BiParametersSetter<AbstractPreparedQuery, String>() {
-            @Override
-            public void accept(AbstractPreparedQuery preparedQuery, String param) throws SQLException {
-                preparedQuery.setString(1, param);
-            }
-        };
-
-        @SuppressWarnings("rawtypes")
-        public static final BiParametersSetter<AbstractPreparedQuery, Object> SET_FIRST_OBJECT = new BiParametersSetter<AbstractPreparedQuery, Object>() {
-            @Override
-            public void accept(AbstractPreparedQuery preparedQuery, Object param) throws SQLException {
-                preparedQuery.setObject(1, param);
-            }
-        };
-
+  
         /**
          *
          * @param preparedQuery
@@ -9851,7 +9833,7 @@ public final class JdbcUtil {
          * @param valueExtractor
          * @return
          */
-        static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor) {
+        static <K, V> ResultExtractor<Map<K, V>> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor) {
             return toMap(keyExtractor, valueExtractor, Suppliers.<K, V> ofMap());
         }
 
@@ -9865,7 +9847,7 @@ public final class JdbcUtil {
          * @param supplier
          * @return
          */
-        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
                 final Supplier<? extends M> supplier) {
             return toMap(keyExtractor, valueExtractor, Fn.<V> throwingMerger(), supplier);
         }
@@ -9882,7 +9864,7 @@ public final class JdbcUtil {
          * @see {@link Fn.replacingMerger()}
          * @see {@link Fn.ignoringMerger()}
          */
-        static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+        static <K, V> ResultExtractor<Map<K, V>> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
                 final BinaryOperator<V> mergeFunction) {
             return toMap(keyExtractor, valueExtractor, mergeFunction, Suppliers.<K, V> ofMap());
         }
@@ -9901,7 +9883,7 @@ public final class JdbcUtil {
          * @see {@link Fn.replacingMerger()}
          * @see {@link Fn.ignoringMerger()}
          */
-        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
                 final BinaryOperator<V> mergeFunction, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
@@ -9933,7 +9915,7 @@ public final class JdbcUtil {
          * @param downstream
          * @return
          */
-        static <K, V, A, D> ResultExtractor<Map<K, D>> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+        static <K, V, A, D> ResultExtractor<Map<K, D>> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
                 final Collector<? super V, A, D> downstream) {
             return toMap(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
         }
@@ -9951,7 +9933,7 @@ public final class JdbcUtil {
          * @param supplier
          * @return
          */
-        static <K, V, A, D, M extends Map<K, D>> ResultExtractor<M> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+        static <K, V, A, D, M extends Map<K, D>> ResultExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
                 final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
@@ -10000,7 +9982,7 @@ public final class JdbcUtil {
          * @param valueExtractor
          * @return
          */
-        static <K, V> ResultExtractor<ListMultimap<K, V>> toMultimap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor) {
+        static <K, V> ResultExtractor<ListMultimap<K, V>> toMultimap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor) {
             return toMultimap(keyExtractor, valueExtractor, Suppliers.<K, V> ofListMultimap());
         }
 
@@ -10015,8 +9997,8 @@ public final class JdbcUtil {
          * @param multimapSupplier
          * @return
          */
-        static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> ResultExtractor<M> toMultimap(final RowMapper<K> keyExtractor,
-                final RowMapper<V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
+        static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> ResultExtractor<M> toMultimap(final JdbcUtil.RowMapper<K> keyExtractor,
+                final JdbcUtil.RowMapper<V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(multimapSupplier, "multimapSupplier");
@@ -10044,7 +10026,8 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        static <K, V> ResultExtractor<Map<K, List<V>>> groupTo(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor) throws SQLException {
+        static <K, V> ResultExtractor<Map<K, List<V>>> groupTo(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor)
+                throws SQLException {
             return groupTo(keyExtractor, valueExtractor, Suppliers.<K, List<V>> ofMap());
         }
 
@@ -10058,8 +10041,8 @@ public final class JdbcUtil {
          * @param supplier
          * @return
          */
-        static <K, V, M extends Map<K, List<V>>> ResultExtractor<M> groupTo(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
-                final Supplier<? extends M> supplier) {
+        static <K, V, M extends Map<K, List<V>>> ResultExtractor<M> groupTo(final JdbcUtil.RowMapper<K> keyExtractor,
+                final JdbcUtil.RowMapper<V> valueExtractor, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(supplier, "supplier");
@@ -10391,14 +10374,14 @@ public final class JdbcUtil {
     }
 
     /** The Constant NO_GENERATED_KEY_EXTRACTOR. */
-    static final RowMapper<Object> NO_GENERATED_KEY_EXTRACTOR = rs -> null;
+    static final JdbcUtil.RowMapper<Object> NO_GENERATED_KEY_EXTRACTOR = rs -> null;
 
     /** The Constant SINGLE_GENERATED_KEY_EXTRACTOR. */
-    static final RowMapper<Object> SINGLE_GENERATED_KEY_EXTRACTOR = rs -> getColumnValue(rs, 1);
+    static final JdbcUtil.RowMapper<Object> SINGLE_GENERATED_KEY_EXTRACTOR = rs -> getColumnValue(rs, 1);
 
     /** The Constant MULTI_GENERATED_KEY_EXTRACTOR. */
     @SuppressWarnings("deprecation")
-    static final RowMapper<Object> MULTI_GENERATED_KEY_EXTRACTOR = rs -> {
+    static final JdbcUtil.RowMapper<Object> MULTI_GENERATED_KEY_EXTRACTOR = rs -> {
         final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
         if (columnLabels.size() == 1) {
@@ -10439,7 +10422,7 @@ public final class JdbcUtil {
     };
 
     @SuppressWarnings("rawtypes")
-    private static final Map<Type<?>, RowMapper> singleGetRowMapperPool = new ObjectPool<>(1024);
+    static final Map<Type<?>, JdbcUtil.RowMapper> singleGetRowMapperPool = new ObjectPool<>(1024);
 
     /**
      * Don't use {@code RowMapper} in {@link PreparedQuery#list(RowMapper)} or any place where multiple records will be retrieved by it, if column labels/count are used in {@link RowMapper#apply(ResultSet)}.
@@ -10448,111 +10431,6 @@ public final class JdbcUtil {
      * @param <T>
      */
     public interface RowMapper<T> extends Throwables.Function<ResultSet, T, SQLException> {
-
-        /** The Constant GET_BOOLEAN. */
-        RowMapper<Boolean> GET_BOOLEAN = new RowMapper<Boolean>() {
-            @Override
-            public Boolean apply(final ResultSet rs) throws SQLException {
-                return rs.getBoolean(1);
-            }
-        };
-
-        /** The Constant GET_BYTE. */
-        RowMapper<Byte> GET_BYTE = new RowMapper<Byte>() {
-            @Override
-            public Byte apply(final ResultSet rs) throws SQLException {
-                return rs.getByte(1);
-            }
-        };
-
-        /** The Constant GET_SHORT. */
-        RowMapper<Short> GET_SHORT = new RowMapper<Short>() {
-            @Override
-            public Short apply(final ResultSet rs) throws SQLException {
-                return rs.getShort(1);
-            }
-        };
-
-        /** The Constant GET_INT. */
-        RowMapper<Integer> GET_INT = new RowMapper<Integer>() {
-            @Override
-            public Integer apply(final ResultSet rs) throws SQLException {
-                return rs.getInt(1);
-            }
-        };
-
-        /** The Constant GET_LONG. */
-        RowMapper<Long> GET_LONG = new RowMapper<Long>() {
-            @Override
-            public Long apply(final ResultSet rs) throws SQLException {
-                return rs.getLong(1);
-            }
-        };
-
-        /** The Constant GET_FLOAT. */
-        RowMapper<Float> GET_FLOAT = new RowMapper<Float>() {
-            @Override
-            public Float apply(final ResultSet rs) throws SQLException {
-                return rs.getFloat(1);
-            }
-        };
-
-        /** The Constant GET_DOUBLE. */
-        RowMapper<Double> GET_DOUBLE = new RowMapper<Double>() {
-            @Override
-            public Double apply(final ResultSet rs) throws SQLException {
-                return rs.getDouble(1);
-            }
-        };
-
-        /** The Constant GET_BIG_DECIMAL. */
-        RowMapper<BigDecimal> GET_BIG_DECIMAL = new RowMapper<BigDecimal>() {
-            @Override
-            public BigDecimal apply(final ResultSet rs) throws SQLException {
-                return rs.getBigDecimal(1);
-            }
-        };
-
-        /** The Constant GET_STRING. */
-        RowMapper<String> GET_STRING = new RowMapper<String>() {
-            @Override
-            public String apply(final ResultSet rs) throws SQLException {
-                return rs.getString(1);
-            }
-        };
-
-        /** The Constant GET_DATE. */
-        RowMapper<Date> GET_DATE = new RowMapper<Date>() {
-            @Override
-            public Date apply(final ResultSet rs) throws SQLException {
-                return rs.getDate(1);
-            }
-        };
-
-        /** The Constant GET_TIME. */
-        RowMapper<Time> GET_TIME = new RowMapper<Time>() {
-            @Override
-            public Time apply(final ResultSet rs) throws SQLException {
-                return rs.getTime(1);
-            }
-        };
-
-        /** The Constant GET_TIMESTAMP. */
-        RowMapper<Timestamp> GET_TIMESTAMP = new RowMapper<Timestamp>() {
-            @Override
-            public Timestamp apply(final ResultSet rs) throws SQLException {
-                return rs.getTimestamp(1);
-            }
-        };
-
-        /** The Constant GET_OBJECT. */
-        @SuppressWarnings("rawtypes")
-        RowMapper GET_OBJECT = new RowMapper<Object>() {
-            @Override
-            public Object apply(final ResultSet rs) throws SQLException {
-                return rs.getObject(1);
-            }
-        };
 
         /**
          *
@@ -11015,102 +10893,6 @@ public final class JdbcUtil {
      * @param <T>
      */
     public interface BiRowMapper<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
-
-        /** The Constant GET_BOOLEAN. */
-        BiRowMapper<Boolean> GET_BOOLEAN = new BiRowMapper<Boolean>() {
-            @Override
-            public Boolean apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                return rs.getBoolean(1);
-            }
-        };
-
-        /** The Constant GET_BYTE. */
-        BiRowMapper<Byte> GET_BYTE = new BiRowMapper<Byte>() {
-            @Override
-            public Byte apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                return rs.getByte(1);
-            }
-        };
-
-        /** The Constant GET_SHORT. */
-        BiRowMapper<Short> GET_SHORT = new BiRowMapper<Short>() {
-            @Override
-            public Short apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                return rs.getShort(1);
-            }
-        };
-
-        /** The Constant GET_INT. */
-        BiRowMapper<Integer> GET_INT = new BiRowMapper<Integer>() {
-            @Override
-            public Integer apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                return rs.getInt(1);
-            }
-        };
-
-        /** The Constant GET_LONG. */
-        BiRowMapper<Long> GET_LONG = new BiRowMapper<Long>() {
-            @Override
-            public Long apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                return rs.getLong(1);
-            }
-        };
-
-        /** The Constant GET_FLOAT. */
-        BiRowMapper<Float> GET_FLOAT = new BiRowMapper<Float>() {
-            @Override
-            public Float apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                return rs.getFloat(1);
-            }
-        };
-
-        /** The Constant GET_DOUBLE. */
-        BiRowMapper<Double> GET_DOUBLE = new BiRowMapper<Double>() {
-            @Override
-            public Double apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                return rs.getDouble(1);
-            }
-        };
-
-        /** The Constant GET_BIG_DECIMAL. */
-        BiRowMapper<BigDecimal> GET_BIG_DECIMAL = new BiRowMapper<BigDecimal>() {
-            @Override
-            public BigDecimal apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                return rs.getBigDecimal(1);
-            }
-        };
-
-        /** The Constant GET_STRING. */
-        BiRowMapper<String> GET_STRING = new BiRowMapper<String>() {
-            @Override
-            public String apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                return rs.getString(1);
-            }
-        };
-
-        /** The Constant GET_DATE. */
-        BiRowMapper<Date> GET_DATE = new BiRowMapper<Date>() {
-            @Override
-            public Date apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                return rs.getDate(1);
-            }
-        };
-
-        /** The Constant GET_TIME. */
-        BiRowMapper<Time> GET_TIME = new BiRowMapper<Time>() {
-            @Override
-            public Time apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                return rs.getTime(1);
-            }
-        };
-
-        /** The Constant GET_TIMESTAMP. */
-        BiRowMapper<Timestamp> GET_TIMESTAMP = new BiRowMapper<Timestamp>() {
-            @Override
-            public Timestamp apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                return rs.getTimestamp(1);
-            }
-        };
 
         /** The Constant TO_ARRAY. */
         BiRowMapper<Object[]> TO_ARRAY = new BiRowMapper<Object[]>() {
@@ -13731,7 +13513,7 @@ public final class JdbcUtil {
          */
         default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws SQLException {
             final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
-            final RowMapper<R> rowMapper = propInfo == null ? RowMapper.GET_OBJECT : RowMapper.get((Type<R>) propInfo.dbType);
+            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.GET_OBJECT : JdbcUtil.RowMapper.get((Type<R>) propInfo.dbType);
 
             return list(singleSelectPropName, cond, rowMapper);
         }
@@ -13878,7 +13660,7 @@ public final class JdbcUtil {
          */
         default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) throws SQLException {
             final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
-            final RowMapper<R> rowMapper = propInfo == null ? RowMapper.GET_OBJECT : RowMapper.get((Type<R>) propInfo.dbType);
+            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.GET_OBJECT : JdbcUtil.RowMapper.get((Type<R>) propInfo.dbType);
 
             return stream(singleSelectPropName, cond, rowMapper);
         }
@@ -15322,7 +15104,7 @@ public final class JdbcUtil {
         return N.isNullOrEmpty(sp.parameters) ? N.EMPTY_OBJECT_ARRAY : sp.parameters.toArray();
     }
 
-    static <R> BiRowMapper<R> toBiRowMapper(final RowMapper<R> rowMapper) {
+    static <R> BiRowMapper<R> toBiRowMapper(final JdbcUtil.RowMapper<R> rowMapper) {
         return (rs, columnLabels) -> rowMapper.apply(rs);
     }
 
