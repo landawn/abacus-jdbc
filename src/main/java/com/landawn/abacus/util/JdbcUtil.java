@@ -9750,6 +9750,9 @@ public final class JdbcUtil {
      *
      * @param <QS>
      * @param <T>
+     * @see Columns.ColumnOne
+     * @see Columns.ColumnTwo
+     * @see Columns.ColumnThree
      */
     public interface BiParametersSetter<QS, T> extends Throwables.BiConsumer<QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
@@ -10430,6 +10433,9 @@ public final class JdbcUtil {
      * Consider using {@code BiRowMapper} instead because it's more efficient to retrieve multiple records when column labels/count are used.
      *
      * @param <T>
+     * @see Columns.ColumnOne
+     * @see Columns.ColumnTwo
+     * @see Columns.ColumnThree
      */
     public interface RowMapper<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
