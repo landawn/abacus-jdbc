@@ -38,7 +38,6 @@ import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
-import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Profiler;
 import com.landawn.abacus.util.SQLBuilder.NSC;
