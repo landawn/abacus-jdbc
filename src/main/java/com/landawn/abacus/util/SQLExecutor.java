@@ -215,7 +215,7 @@ public class SQLExecutor {
     /** The Constant EXISTS_RESULT_SET_EXTRACTOR. */
     private static final ResultExtractor<Boolean> EXISTS_RESULT_SET_EXTRACTOR = new ResultExtractor<Boolean>() {
         @Override
-        public Boolean extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+        public Boolean apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
             JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
             return rs.next();
@@ -225,7 +225,7 @@ public class SQLExecutor {
     /** The Constant COUNT_RESULT_SET_EXTRACTOR. */
     private static final ResultExtractor<Integer> COUNT_RESULT_SET_EXTRACTOR = new ResultExtractor<Integer>() {
         @Override
-        public Integer extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+        public Integer apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
             JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
             int cnt = 0;
@@ -241,7 +241,7 @@ public class SQLExecutor {
     /** The Constant SINGLE_BOOLEAN_EXTRACTOR. */
     private static final ResultExtractor<OptionalBoolean> SINGLE_BOOLEAN_EXTRACTOR = new ResultExtractor<OptionalBoolean>() {
         @Override
-        public OptionalBoolean extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+        public OptionalBoolean apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
             JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
             if (rs.next()) {
@@ -258,7 +258,7 @@ public class SQLExecutor {
     /** The Constant SINGLE_CHAR_EXTRACTOR. */
     private static final ResultExtractor<OptionalChar> SINGLE_CHAR_EXTRACTOR = new ResultExtractor<OptionalChar>() {
         @Override
-        public OptionalChar extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+        public OptionalChar apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
             JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
             if (rs.next()) {
@@ -272,7 +272,7 @@ public class SQLExecutor {
     /** The Constant SINGLE_BYTE_EXTRACTOR. */
     private static final ResultExtractor<OptionalByte> SINGLE_BYTE_EXTRACTOR = new ResultExtractor<OptionalByte>() {
         @Override
-        public OptionalByte extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+        public OptionalByte apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
             JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
             if (rs.next()) {
@@ -286,7 +286,7 @@ public class SQLExecutor {
     /** The Constant SINGLE_SHORT_EXTRACTOR. */
     private static final ResultExtractor<OptionalShort> SINGLE_SHORT_EXTRACTOR = new ResultExtractor<OptionalShort>() {
         @Override
-        public OptionalShort extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+        public OptionalShort apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
             JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
             if (rs.next()) {
@@ -300,7 +300,7 @@ public class SQLExecutor {
     /** The Constant SINGLE_INT_EXTRACTOR. */
     private static final ResultExtractor<OptionalInt> SINGLE_INT_EXTRACTOR = new ResultExtractor<OptionalInt>() {
         @Override
-        public OptionalInt extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+        public OptionalInt apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
             JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
             if (rs.next()) {
@@ -314,7 +314,7 @@ public class SQLExecutor {
     /** The Constant SINGLE_LONG_EXTRACTOR. */
     private static final ResultExtractor<OptionalLong> SINGLE_LONG_EXTRACTOR = new ResultExtractor<OptionalLong>() {
         @Override
-        public OptionalLong extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+        public OptionalLong apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
             JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
             if (rs.next()) {
@@ -328,7 +328,7 @@ public class SQLExecutor {
     /** The Constant SINGLE_FLOAT_EXTRACTOR. */
     private static final ResultExtractor<OptionalFloat> SINGLE_FLOAT_EXTRACTOR = new ResultExtractor<OptionalFloat>() {
         @Override
-        public OptionalFloat extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+        public OptionalFloat apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
             JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
             if (rs.next()) {
@@ -342,7 +342,7 @@ public class SQLExecutor {
     /** The Constant SINGLE_DOUBLE_EXTRACTOR. */
     private static final ResultExtractor<OptionalDouble> SINGLE_DOUBLE_EXTRACTOR = new ResultExtractor<OptionalDouble>() {
         @Override
-        public OptionalDouble extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+        public OptionalDouble apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
             JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
             if (rs.next()) {
@@ -356,7 +356,7 @@ public class SQLExecutor {
     /** The Constant SINGLE_BIG_DECIMAL_EXTRACTOR. */
     private static final ResultExtractor<Nullable<BigDecimal>> SINGLE_BIG_DECIMAL_EXTRACTOR = new ResultExtractor<Nullable<BigDecimal>>() {
         @Override
-        public Nullable<BigDecimal> extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+        public Nullable<BigDecimal> apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
             JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
             if (rs.next()) {
@@ -370,7 +370,7 @@ public class SQLExecutor {
     /** The Constant SINGLE_STRING_EXTRACTOR. */
     private static final ResultExtractor<Nullable<String>> SINGLE_STRING_EXTRACTOR = new ResultExtractor<Nullable<String>>() {
         @Override
-        public Nullable<String> extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+        public Nullable<String> apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
             JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
             if (rs.next()) {
@@ -384,7 +384,7 @@ public class SQLExecutor {
     /** The Constant SINGLE_DATE_EXTRACTOR. */
     private static final ResultExtractor<Nullable<Date>> SINGLE_DATE_EXTRACTOR = new ResultExtractor<Nullable<Date>>() {
         @Override
-        public Nullable<Date> extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+        public Nullable<Date> apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
             JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
             if (rs.next()) {
@@ -398,7 +398,7 @@ public class SQLExecutor {
     /** The Constant SINGLE_TIME_EXTRACTOR. */
     private static final ResultExtractor<Nullable<Time>> SINGLE_TIME_EXTRACTOR = new ResultExtractor<Nullable<Time>>() {
         @Override
-        public Nullable<Time> extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+        public Nullable<Time> apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
             JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
             if (rs.next()) {
@@ -412,7 +412,7 @@ public class SQLExecutor {
     /** The Constant SINGLE_TIMESTAMP_EXTRACTOR. */
     private static final ResultExtractor<Nullable<Timestamp>> SINGLE_TIMESTAMP_EXTRACTOR = new ResultExtractor<Nullable<Timestamp>>() {
         @Override
-        public Nullable<Timestamp> extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+        public Nullable<Timestamp> apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
             JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
             if (rs.next()) {
@@ -1341,7 +1341,7 @@ public class SQLExecutor {
                 for (int i = 0; i < len; i++) {
                     parameters[0] = parametersList.get(i);
 
-                    statementSetter.setParameters(parsedSql, stmt, parameters);
+                    statementSetter.accept(parsedSql, stmt, parameters);
                     stmt.addBatch();
                 }
 
@@ -1352,7 +1352,7 @@ public class SQLExecutor {
                 for (int i = 0; i < len; i++) {
                     parameters[0] = parametersList.get(i);
 
-                    statementSetter.setParameters(parsedSql, stmt, parameters);
+                    statementSetter.accept(parsedSql, stmt, parameters);
                     stmt.addBatch();
                     num++;
 
@@ -1804,7 +1804,7 @@ public class SQLExecutor {
                 for (int i = 0; i < len; i++) {
                     parameters[0] = parametersList.get(i);
 
-                    statementSetter.setParameters(parsedSql, stmt, parameters);
+                    statementSetter.accept(parsedSql, stmt, parameters);
                     stmt.addBatch();
                 }
 
@@ -1815,7 +1815,7 @@ public class SQLExecutor {
                 for (int i = 0; i < len; i++) {
                     parameters[0] = parametersList.get(i);
 
-                    statementSetter.setParameters(parsedSql, stmt, parameters);
+                    statementSetter.accept(parsedSql, stmt, parameters);
                     stmt.addBatch();
                     num++;
 
@@ -2625,7 +2625,7 @@ public class SQLExecutor {
 
         final ResultExtractor<T> resultExtractor = new ResultExtractor<T>() {
             @Override
-            public T extractData(ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+            public T apply(ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                 int offset = jdbcSettings.getOffset();
 
                 if (offset > 0) {
@@ -2909,7 +2909,7 @@ public class SQLExecutor {
 
         final ResultExtractor<T> resultExtractor = new ResultExtractor<T>() {
             @Override
-            public T extractData(ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+            public T apply(ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                 int offset = jdbcSettings.getOffset();
 
                 if (offset > 0) {
@@ -3165,7 +3165,7 @@ public class SQLExecutor {
 
         final ResultExtractor<List<T>> resultExtractor = new ResultExtractor<List<T>>() {
             @Override
-            public List<T> extractData(ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+            public List<T> apply(ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                 int offset = jdbcSettings.getOffset();
                 int count = jdbcSettings.getCount();
 
@@ -3723,7 +3723,7 @@ public class SQLExecutor {
         if (result == null) {
             result = new ResultExtractor<Nullable<V>>() {
                 @Override
-                public Nullable<V> extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                public Nullable<V> apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                     JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
                     if (rs.next()) {
@@ -3913,7 +3913,7 @@ public class SQLExecutor {
         if (result == null) {
             result = new ResultExtractor<Nullable<V>>() {
                 @Override
-                public Nullable<V> extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                public Nullable<V> apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                     JdbcUtil.skip(rs, jdbcSettings.getOffset());
 
                     if (rs.next()) {
@@ -4204,7 +4204,7 @@ public class SQLExecutor {
         return query(null, conn, sql, statementSetter, new ResultSetExtractor<T>() {
             @Override
             public T extractData(Class<?> targetClass, ParsedSql parsedSql, ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-                return resultExtractor.extractData(rs, jdbcSettings);
+                return resultExtractor.apply(rs, jdbcSettings);
             }
 
         }, jdbcSettings, parameters);
@@ -5461,7 +5461,7 @@ public class SQLExecutor {
         if (isBatch || (N.isNullOrEmpty(parameters) && statementSetter == StatementSetter.DEFAULT)) {
             // ignore
         } else {
-            statementSetter.setParameters(parsedSql, stmt, parameters);
+            statementSetter.accept(parsedSql, stmt, parameters);
         }
     }
 
@@ -6392,7 +6392,7 @@ public class SQLExecutor {
 
             final ResultExtractor<R> resultExtractor = new ResultExtractor<R>() {
                 @Override
-                public R extractData(ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                public R apply(ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                     int offset = jdbcSettings.getOffset();
 
                     if (offset > 0) {
@@ -9712,7 +9712,8 @@ public class SQLExecutor {
      * @author Haiyang Li
      *
      */
-    public interface StatementSetter {
+    public interface StatementSetter extends Throwables.TriConsumer<ParsedSql, PreparedStatement, Object[], SQLException> {
+
 
         /** The Constant DEFAULT. */
         StatementSetter DEFAULT = new AbstractStatementSetter() {
@@ -9744,7 +9745,8 @@ public class SQLExecutor {
          * @param parameters
          * @throws SQLException the SQL exception
          */
-        void setParameters(final ParsedSql parsedSql, final PreparedStatement stmt, final Object... parameters) throws SQLException;
+        @Override
+        void accept(final ParsedSql parsedSql, final PreparedStatement stmt, final Object[] parameters) throws SQLException;
 
         static StatementSetter create(Throwables.Consumer<PreparedStatement, SQLException> stmtSetter) {
             return (parsedSql, stmt, parameters) -> stmtSetter.accept(stmt);
@@ -9761,10 +9763,15 @@ public class SQLExecutor {
      * @author Haiyang Li
      * @param <T>
      */
-    public interface ResultExtractor<T> {
+    public interface ResultExtractor<T> extends Throwables.BiFunction<ResultSet, JdbcSettings, T, SQLException> {
 
-        /** The Constant DATA_SET. */
         ResultExtractor<DataSet> TO_DATA_SET = (rs, jdbcSettings) -> JdbcUtil.extractData(rs, jdbcSettings.getOffset(), jdbcSettings.getCount(), false);
+
+        /**
+         * @deprecated please use {@code TO_DATA_SET}
+         */
+        @Deprecated
+        ResultExtractor<DataSet> DATA_SET = TO_DATA_SET;
 
         /**
          *
@@ -9773,7 +9780,14 @@ public class SQLExecutor {
          * @return
          * @throws SQLException the SQL exception
          */
-        T extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException;
+        @Override
+        T apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException;
+
+        default <R> ResultExtractor<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
+            N.checkArgNotNull(after);
+
+            return (rs, jdbcSettings) -> after.apply(apply(rs, jdbcSettings));
+        }
 
         static <T> ResultExtractor<T> create(Throwables.Function<ResultSet, T, SQLException> resultExtractor) {
             return (rs, jdbcSettings) -> resultExtractor.apply(rs);
@@ -9854,7 +9868,7 @@ public class SQLExecutor {
 
             return new ResultExtractor<M>() {
                 @Override
-                public M extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                     final int offset = jdbcSettings.getOffset();
                     int count = jdbcSettings.getCount();
 
@@ -9909,7 +9923,7 @@ public class SQLExecutor {
 
             return new ResultExtractor<M>() {
                 @Override
-                public M extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                     final int offset = jdbcSettings.getOffset();
                     int count = jdbcSettings.getCount();
 
@@ -10012,7 +10026,7 @@ public class SQLExecutor {
 
             return new ResultExtractor<M>() {
                 @Override
-                public M extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                     final int offset = jdbcSettings.getOffset();
                     int count = jdbcSettings.getCount();
 
@@ -10068,7 +10082,7 @@ public class SQLExecutor {
 
             return new ResultExtractor<M>() {
                 @Override
-                public M extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                     final int offset = jdbcSettings.getOffset();
                     int count = jdbcSettings.getCount();
 
@@ -10136,7 +10150,7 @@ public class SQLExecutor {
 
             return new ResultExtractor<M>() {
                 @Override
-                public M extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                     final int offset = jdbcSettings.getOffset();
                     int count = jdbcSettings.getCount();
 
@@ -10184,7 +10198,7 @@ public class SQLExecutor {
 
             return new ResultExtractor<M>() {
                 @Override
-                public M extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                     final int offset = jdbcSettings.getOffset();
                     int count = jdbcSettings.getCount();
 
@@ -10232,7 +10246,7 @@ public class SQLExecutor {
 
             return new ResultExtractor<M>() {
                 @Override
-                public M extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                     final int offset = jdbcSettings.getOffset();
                     int count = jdbcSettings.getCount();
 
@@ -10289,7 +10303,7 @@ public class SQLExecutor {
 
             return new ResultExtractor<M>() {
                 @Override
-                public M extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                     final int offset = jdbcSettings.getOffset();
                     int count = jdbcSettings.getCount();
 
@@ -10320,7 +10334,7 @@ public class SQLExecutor {
         static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter) {
             return new ResultExtractor<DataSet>() {
                 @Override
-                public DataSet extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                public DataSet apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                     return JdbcUtil.extractData(rs, jdbcSettings.getOffset(), jdbcSettings.getCount(), rowFilter, false);
                 }
             };
@@ -10329,7 +10343,7 @@ public class SQLExecutor {
         static ResultExtractor<DataSet> toDataSet(final RowExtractor rowExtractor) {
             return new ResultExtractor<DataSet>() {
                 @Override
-                public DataSet extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                public DataSet apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                     return JdbcUtil.extractData(rs, jdbcSettings.getOffset(), jdbcSettings.getCount(), rowExtractor, false);
                 }
             };
@@ -10338,14 +10352,14 @@ public class SQLExecutor {
         static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter, final RowExtractor rowExtractor) {
             return new ResultExtractor<DataSet>() {
                 @Override
-                public DataSet extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                public DataSet apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
                     return JdbcUtil.extractData(rs, jdbcSettings.getOffset(), jdbcSettings.getCount(), rowFilter, rowExtractor, false);
                 }
             };
         }
 
-        static <R> ResultExtractor<R> to(final Throwables.Function<DataSet, R, SQLException> finisher) {
-            return (rs, jdbcSettings) -> finisher.apply(TO_DATA_SET.extractData(rs, jdbcSettings));
+        static <R> ResultExtractor<R> to(final Throwables.Function<DataSet, R, SQLException> after) {
+            return (rs, jdbcSettings) -> after.apply(TO_DATA_SET.apply(rs, jdbcSettings));
         }
     }
 
@@ -10384,7 +10398,7 @@ public class SQLExecutor {
          */
         @SuppressWarnings("rawtypes")
         @Override
-        public void setParameters(final ParsedSql parsedSql, final PreparedStatement stmt, final Object... parameters) throws SQLException {
+        public void accept(final ParsedSql parsedSql, final PreparedStatement stmt, final Object[] parameters) throws SQLException {
             final int parameterCount = parsedSql.getParameterCount();
 
             if (parameterCount == 0) {

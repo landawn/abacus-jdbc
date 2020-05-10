@@ -2732,7 +2732,7 @@ public final class JdbcUtil {
         final PreparedStatement stmt = prepareStatement(conn, parsedSql);
 
         if (N.notNullOrEmpty(parameters)) {
-            StatementSetter.DEFAULT.setParameters(parsedSql, stmt, parameters);
+            StatementSetter.DEFAULT.accept(parsedSql, stmt, parameters);
         }
 
         return stmt;
@@ -2755,7 +2755,7 @@ public final class JdbcUtil {
         final CallableStatement stmt = prepareCallable(conn, parsedSql);
 
         if (N.notNullOrEmpty(parameters)) {
-            StatementSetter.DEFAULT.setParameters(parsedSql, stmt, parameters);
+            StatementSetter.DEFAULT.accept(parsedSql, stmt, parameters);
         }
 
         return stmt;
@@ -2778,7 +2778,7 @@ public final class JdbcUtil {
         final PreparedStatement stmt = prepareStatement(conn, parsedSql);
 
         for (Object parameters : parametersList) {
-            StatementSetter.DEFAULT.setParameters(parsedSql, stmt, N.asArray(parameters));
+            StatementSetter.DEFAULT.accept(parsedSql, stmt, N.asArray(parameters));
             stmt.addBatch();
         }
 
@@ -2801,7 +2801,7 @@ public final class JdbcUtil {
         final CallableStatement stmt = prepareCallable(conn, parsedSql);
 
         for (Object parameters : parametersList) {
-            StatementSetter.DEFAULT.setParameters(parsedSql, stmt, N.asArray(parameters));
+            StatementSetter.DEFAULT.accept(parsedSql, stmt, N.asArray(parameters));
             stmt.addBatch();
         }
 
@@ -3066,11 +3066,14 @@ public final class JdbcUtil {
 
             stmt = prepareStatement(conn, parsedSql);
 
+            final Object[] parameters = new Object[1];
             int res = 0;
             int idx = 0;
 
-            for (Object parameters : listOfParameters) {
-                StatementSetter.DEFAULT.setParameters(parsedSql, stmt, parameters);
+            for (Object parameter : listOfParameters) {
+                parameters[0] = parameter;
+                
+                StatementSetter.DEFAULT.accept(parsedSql, stmt, parameters);
                 stmt.addBatch();
 
                 if (++idx % batchSize == 0) {
@@ -3205,11 +3208,14 @@ public final class JdbcUtil {
 
             stmt = prepareStatement(conn, parsedSql);
 
+            final Object[] parameters = new Object[1];
             long res = 0;
             int idx = 0;
 
-            for (Object parameters : listOfParameters) {
-                StatementSetter.DEFAULT.setParameters(parsedSql, stmt, parameters);
+            for (Object parameter : listOfParameters) {
+                parameters[0] = parameter;
+                
+                StatementSetter.DEFAULT.accept(parsedSql, stmt, parameters);
                 stmt.addBatch();
 
                 if (++idx % batchSize == 0) {
@@ -9831,6 +9837,12 @@ public final class JdbcUtil {
         @Override
         T apply(ResultSet rs) throws SQLException;
 
+        default <R> ResultExtractor<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
+            N.checkArgNotNull(after);
+
+            return rs -> after.apply(apply(rs));
+        }
+
         /**
          *
          * @param <K> the key type
@@ -10104,8 +10116,8 @@ public final class JdbcUtil {
             };
         }
 
-        static <R> ResultExtractor<R> to(final Throwables.Function<DataSet, R, SQLException> finisher) {
-            return rs -> finisher.apply(TO_DATA_SET.apply(rs));
+        static <R> ResultExtractor<R> to(final Throwables.Function<DataSet, R, SQLException> after) {
+            return rs -> after.apply(TO_DATA_SET.apply(rs));
         }
     }
 
@@ -10125,6 +10137,12 @@ public final class JdbcUtil {
          */
         @Override
         T apply(ResultSet rs, List<String> columnLabels) throws SQLException;
+
+        default <R> BiResultExtractor<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
+            N.checkArgNotNull(after);
+
+            return (rs, columnLabels) -> after.apply(apply(rs, columnLabels));
+        }
 
         /**
          *
@@ -10544,6 +10562,12 @@ public final class JdbcUtil {
          */
         @Override
         T apply(ResultSet rs) throws SQLException;
+
+        default <R> RowMapper<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
+            N.checkArgNotNull(after);
+
+            return rs -> after.apply(apply(rs));
+        }
 
         /**
          * Gets the values from the first column.
@@ -11172,6 +11196,12 @@ public final class JdbcUtil {
          */
         @Override
         T apply(ResultSet rs, List<String> columnLabels) throws SQLException;
+
+        default <R> BiRowMapper<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
+            N.checkArgNotNull(after);
+
+            return (rs, columnLabels) -> after.apply(apply(rs, columnLabels));
+        }
 
         /**
          * Don't cache or reuse the returned {@code BiRowMapper} instance. It's stateful.
