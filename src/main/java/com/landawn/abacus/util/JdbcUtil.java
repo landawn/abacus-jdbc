@@ -2976,7 +2976,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static int executeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters) throws SQLException {
-        return executeBatchUpdate(ds, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
+        return executeBatchUpdate(ds, sql, listOfParameters, DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -3031,7 +3031,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static int executeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters) throws SQLException {
-        return executeBatchUpdate(conn, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
+        return executeBatchUpdate(conn, sql, listOfParameters, DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -3117,7 +3117,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static long executeLargeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters) throws SQLException {
-        return executeLargeBatchUpdate(ds, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
+        return executeLargeBatchUpdate(ds, sql, listOfParameters, DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -3172,7 +3172,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static long executeLargeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters) throws SQLException {
-        return executeLargeBatchUpdate(conn, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
+        return executeLargeBatchUpdate(conn, sql, listOfParameters, DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -5295,7 +5295,7 @@ public final class JdbcUtil {
             throws UncheckedSQLException, E, E2 {
 
         final Iterator<Object[]> iter = new ObjIterator<Object[]>() {
-            private final JdbcUtil.BiRowMapper<Object[]> biFunc = BiRowMapper.TO_ARRAY;
+            private final BiRowMapper<Object[]> biFunc = BiRowMapper.TO_ARRAY;
             private List<String> columnLabels = null;
             private boolean hasNext;
 
@@ -9837,7 +9837,7 @@ public final class JdbcUtil {
          * @param valueExtractor
          * @return
          */
-        static <K, V> ResultExtractor<Map<K, V>> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor) {
+        static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor) {
             return toMap(keyExtractor, valueExtractor, Suppliers.<K, V> ofMap());
         }
 
@@ -9851,7 +9851,7 @@ public final class JdbcUtil {
          * @param supplier
          * @return
          */
-        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
+        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
                 final Supplier<? extends M> supplier) {
             return toMap(keyExtractor, valueExtractor, Fn.<V> throwingMerger(), supplier);
         }
@@ -9868,7 +9868,7 @@ public final class JdbcUtil {
          * @see {@link Fn.replacingMerger()}
          * @see {@link Fn.ignoringMerger()}
          */
-        static <K, V> ResultExtractor<Map<K, V>> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
+        static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
                 final BinaryOperator<V> mergeFunction) {
             return toMap(keyExtractor, valueExtractor, mergeFunction, Suppliers.<K, V> ofMap());
         }
@@ -9887,7 +9887,7 @@ public final class JdbcUtil {
          * @see {@link Fn.replacingMerger()}
          * @see {@link Fn.ignoringMerger()}
          */
-        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
+        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
                 final BinaryOperator<V> mergeFunction, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
@@ -9919,7 +9919,7 @@ public final class JdbcUtil {
          * @param downstream
          * @return
          */
-        static <K, V, A, D> ResultExtractor<Map<K, D>> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
+        static <K, V, A, D> ResultExtractor<Map<K, D>> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
                 final Collector<? super V, A, D> downstream) {
             return toMap(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
         }
@@ -9937,7 +9937,7 @@ public final class JdbcUtil {
          * @param supplier
          * @return
          */
-        static <K, V, A, D, M extends Map<K, D>> ResultExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
+        static <K, V, A, D, M extends Map<K, D>> ResultExtractor<M> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
                 final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
@@ -9986,7 +9986,7 @@ public final class JdbcUtil {
          * @param valueExtractor
          * @return
          */
-        static <K, V> ResultExtractor<ListMultimap<K, V>> toMultimap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor) {
+        static <K, V> ResultExtractor<ListMultimap<K, V>> toMultimap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor) {
             return toMultimap(keyExtractor, valueExtractor, Suppliers.<K, V> ofListMultimap());
         }
 
@@ -10001,8 +10001,8 @@ public final class JdbcUtil {
          * @param multimapSupplier
          * @return
          */
-        static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> ResultExtractor<M> toMultimap(final JdbcUtil.RowMapper<K> keyExtractor,
-                final JdbcUtil.RowMapper<V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
+        static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> ResultExtractor<M> toMultimap(final RowMapper<K> keyExtractor,
+                final RowMapper<V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(multimapSupplier, "multimapSupplier");
@@ -10030,8 +10030,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        static <K, V> ResultExtractor<Map<K, List<V>>> groupTo(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor)
-                throws SQLException {
+        static <K, V> ResultExtractor<Map<K, List<V>>> groupTo(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor) throws SQLException {
             return groupTo(keyExtractor, valueExtractor, Suppliers.<K, List<V>> ofMap());
         }
 
@@ -10045,8 +10044,8 @@ public final class JdbcUtil {
          * @param supplier
          * @return
          */
-        static <K, V, M extends Map<K, List<V>>> ResultExtractor<M> groupTo(final JdbcUtil.RowMapper<K> keyExtractor,
-                final JdbcUtil.RowMapper<V> valueExtractor, final Supplier<? extends M> supplier) {
+        static <K, V, M extends Map<K, List<V>>> ResultExtractor<M> groupTo(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+                final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(supplier, "supplier");
@@ -10378,14 +10377,14 @@ public final class JdbcUtil {
     }
 
     /** The Constant NO_GENERATED_KEY_EXTRACTOR. */
-    static final JdbcUtil.RowMapper<Object> NO_GENERATED_KEY_EXTRACTOR = rs -> null;
+    static final RowMapper<Object> NO_GENERATED_KEY_EXTRACTOR = rs -> null;
 
     /** The Constant SINGLE_GENERATED_KEY_EXTRACTOR. */
-    static final JdbcUtil.RowMapper<Object> SINGLE_GENERATED_KEY_EXTRACTOR = rs -> getColumnValue(rs, 1);
+    static final RowMapper<Object> SINGLE_GENERATED_KEY_EXTRACTOR = rs -> getColumnValue(rs, 1);
 
     /** The Constant MULTI_GENERATED_KEY_EXTRACTOR. */
     @SuppressWarnings("deprecation")
-    static final JdbcUtil.RowMapper<Object> MULTI_GENERATED_KEY_EXTRACTOR = rs -> {
+    static final RowMapper<Object> MULTI_GENERATED_KEY_EXTRACTOR = rs -> {
         final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
         if (columnLabels.size() == 1) {
@@ -10424,7 +10423,7 @@ public final class JdbcUtil {
             return id;
         }
     };
-    
+
     /**
      * Don't use {@code RowMapper} in {@link PreparedQuery#list(RowMapper)} or any place where multiple records will be retrieved by it, if column labels/count are used in {@link RowMapper#apply(ResultSet)}.
      * Consider using {@code BiRowMapper} instead because it's more efficient to retrieve multiple records when column labels/count are used.
@@ -12887,7 +12886,7 @@ public final class JdbcUtil {
          * @see CrudDao#batchInsert(Collection)
          */
         default void batchSave(final Collection<? extends T> entitiesToSave) throws SQLException {
-            batchSave(entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+            batchSave(entitiesToSave, DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -12911,7 +12910,7 @@ public final class JdbcUtil {
          * @see CrudDao#batchInsert(Collection)
          */
         default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave) throws SQLException {
-            batchSave(entitiesToSave, propNamesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+            batchSave(entitiesToSave, propNamesToSave, DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -12937,7 +12936,7 @@ public final class JdbcUtil {
          */
         @Beta
         default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws SQLException {
-            batchSave(namedInsertSQL, entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+            batchSave(namedInsertSQL, entitiesToSave, DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -12983,7 +12982,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> Optional<R> findFirst(final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        <R> Optional<R> findFirst(final Condition cond, final RowMapper<R> rowMapper) throws SQLException;
 
         /**
          * @param cond
@@ -12991,7 +12990,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> Optional<R> findFirst(final Condition cond, final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+        <R> Optional<R> findFirst(final Condition cond, final BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -13010,7 +13009,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final RowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -13020,7 +13019,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+        <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          * Query for boolean.
@@ -13264,7 +13263,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> List<R> list(final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        <R> List<R> list(final Condition cond, final RowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -13273,17 +13272,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> List<R> list(final Condition cond, final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
-
-        /**
-         *
-         * @param cond
-         * @param rowFilter
-         * @param rowMapper
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        <R> List<R> list(final Condition cond, final JdbcUtil.RowFilter rowFilter, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        <R> List<R> list(final Condition cond, final BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -13293,7 +13282,17 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> List<R> list(final Condition cond, final JdbcUtil.BiRowFilter rowFilter, final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+        <R> List<R> list(final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper) throws SQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowFilter
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> List<R> list(final Condition cond, final BiRowFilter rowFilter, final BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -13312,7 +13311,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final RowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -13322,19 +13321,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
-
-        /**
-         *
-         * @param selectPropNames
-         * @param cond
-         * @param rowFilter
-         * @param rowMapper
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.RowFilter rowFilter,
-                final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -13345,8 +13332,20 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.BiRowFilter rowFilter,
-                final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper)
+                throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowFilter
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter, final BiRowMapper<R> rowMapper)
+                throws SQLException;
 
         /**
          *
@@ -13357,7 +13356,7 @@ public final class JdbcUtil {
          */
         default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws SQLException {
             final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
-            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
+            final RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
             return list(singleSelectPropName, cond, rowMapper);
         }
@@ -13370,7 +13369,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        default <R> List<R> list(final String singleSelectPropName, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException {
+        default <R> List<R> list(final String singleSelectPropName, final Condition cond, final RowMapper<R> rowMapper) throws SQLException {
             return list(N.asList(singleSelectPropName), cond, rowMapper);
         }
 
@@ -13393,7 +13392,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final RowMapper<R> rowMapper) throws SQLException;
 
         // Will it cause confusion if it's called in transaction?
         /**
@@ -13404,7 +13403,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          * lazy-execution, lazy-fetch.
@@ -13415,8 +13414,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final JdbcUtil.RowFilter rowFilter, final JdbcUtil.RowMapper<R> rowMapper)
-                throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper) throws SQLException;
 
         /**
          * lazy-execution, lazy-fetch.
@@ -13427,8 +13425,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final JdbcUtil.BiRowFilter rowFilter, final JdbcUtil.BiRowMapper<R> rowMapper)
-                throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final BiRowFilter rowFilter, final BiRowMapper<R> rowMapper) throws SQLException;
 
         // Will it cause confusion if it's called in transaction?
         /**
@@ -13451,7 +13448,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper)
+        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final RowMapper<R> rowMapper)
                 throws SQLException;
 
         // Will it cause confusion if it's called in transaction?
@@ -13464,7 +13461,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.BiRowMapper<R> rowMapper)
+        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper)
                 throws SQLException;
 
         // Will it cause confusion if it's called in transaction?
@@ -13478,8 +13475,8 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, JdbcUtil.RowFilter rowFilter,
-                final JdbcUtil.RowMapper<R> rowMapper) throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, RowFilter rowFilter,
+                final RowMapper<R> rowMapper) throws SQLException;
 
         // Will it cause confusion if it's called in transaction?
         /**
@@ -13492,8 +13489,8 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final JdbcUtil.BiRowFilter rowFilter,
-                final JdbcUtil.BiRowMapper<R> rowMapper) throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter,
+                final BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
          *
@@ -13504,7 +13501,7 @@ public final class JdbcUtil {
          */
         default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) throws SQLException {
             final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
-            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
+            final RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
             return stream(singleSelectPropName, cond, rowMapper);
         }
@@ -13517,7 +13514,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
-        default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final JdbcUtil.RowMapper<R> rowMapper)
+        default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final RowMapper<R> rowMapper)
                 throws SQLException {
             return stream(N.asList(singleSelectPropName), cond, rowMapper);
         }
@@ -13673,7 +13670,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default List<ID> batchInsert(final Collection<? extends T> entities) throws SQLException {
-            return batchInsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+            return batchInsert(entities, DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -13693,7 +13690,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws SQLException {
-            return batchInsert(entities, propNamesToInsert, JdbcUtil.DEFAULT_BATCH_SIZE);
+            return batchInsert(entities, propNamesToInsert, DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -13715,7 +13712,7 @@ public final class JdbcUtil {
          */
         @Beta
         default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities) throws SQLException {
-            return batchInsert(namedInsertSQL, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+            return batchInsert(namedInsertSQL, entities, DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -13941,7 +13938,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws DuplicatedResultException, SQLException {
-            return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
+            return batchGet(ids, selectPropNames, DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -14012,7 +14009,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default int batchUpdate(final Collection<? extends T> entities) throws SQLException {
-            return batchUpdate(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+            return batchUpdate(entities, DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -14032,7 +14029,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws SQLException {
-            return batchUpdate(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+            return batchUpdate(entities, DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -14185,7 +14182,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default int batchDelete(final Collection<? extends T> entities) throws SQLException {
-            return batchDelete(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+            return batchDelete(entities, DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -14206,7 +14203,7 @@ public final class JdbcUtil {
         //     */
         //    @Beta
         //    default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction) throws SQLException {
-        //        return batchDelete(entities, onDeleteAction, JdbcUtil.DEFAULT_BATCH_SIZE);
+        //        return batchDelete(entities, onDeleteAction, DEFAULT_BATCH_SIZE);
         //    }
         //
         //    /**
@@ -14227,7 +14224,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default int batchDeleteByIds(final Collection<? extends ID> ids) throws SQLException {
-            return batchDeleteByIds(ids, JdbcUtil.DEFAULT_BATCH_SIZE);
+            return batchDeleteByIds(ids, DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -14948,7 +14945,7 @@ public final class JdbcUtil {
         return N.isNullOrEmpty(sp.parameters) ? N.EMPTY_OBJECT_ARRAY : sp.parameters.toArray();
     }
 
-    static <R> BiRowMapper<R> toBiRowMapper(final JdbcUtil.RowMapper<R> rowMapper) {
+    static <R> BiRowMapper<R> toBiRowMapper(final RowMapper<R> rowMapper) {
         return (rs, columnLabels) -> rowMapper.apply(rs);
     }
 
