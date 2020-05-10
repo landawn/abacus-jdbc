@@ -10424,10 +10424,7 @@ public final class JdbcUtil {
             return id;
         }
     };
-
-    @SuppressWarnings("rawtypes")
-    static final Map<Type<?>, JdbcUtil.RowMapper> singleGetRowMapperPool = new ObjectPool<>(1024);
-
+    
     /**
      * Don't use {@code RowMapper} in {@link PreparedQuery#list(RowMapper)} or any place where multiple records will be retrieved by it, if column labels/count are used in {@link RowMapper#apply(ResultSet)}.
      * Consider using {@code BiRowMapper} instead because it's more efficient to retrieve multiple records when column labels/count are used.
@@ -10452,41 +10449,6 @@ public final class JdbcUtil {
             N.checkArgNotNull(after);
 
             return rs -> after.apply(apply(rs));
-        }
-
-        /**
-         * Gets the values from the first column.
-         *
-         * @param <T>
-         * @param firstColumnType
-         * @return
-         */
-        static <T> RowMapper<T> get(final Class<? extends T> firstColumnType) {
-            return get(N.typeOf(firstColumnType));
-        }
-
-        /**
-         * Gets the values from the first column.
-         *
-         * @param <T>
-         * @param firstColumnType
-         * @return
-         */
-        static <T> RowMapper<T> get(final Type<? extends T> firstColumnType) {
-            RowMapper<T> result = singleGetRowMapperPool.get(firstColumnType);
-
-            if (result == null) {
-                result = new RowMapper<T>() {
-                    @Override
-                    public T apply(final ResultSet rs) throws SQLException {
-                        return firstColumnType.get(rs, 1);
-                    }
-                };
-
-                singleGetRowMapperPool.put(firstColumnType, result);
-            }
-
-            return result;
         }
 
         static RowMapperBuilder builder() {
@@ -13395,7 +13357,7 @@ public final class JdbcUtil {
          */
         default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws SQLException {
             final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
-            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.GET_OBJECT : JdbcUtil.RowMapper.get((Type<R>) propInfo.dbType);
+            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
             return list(singleSelectPropName, cond, rowMapper);
         }
@@ -13542,7 +13504,7 @@ public final class JdbcUtil {
          */
         default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) throws SQLException {
             final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
-            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.GET_OBJECT : JdbcUtil.RowMapper.get((Type<R>) propInfo.dbType);
+            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
             return stream(singleSelectPropName, cond, rowMapper);
         }

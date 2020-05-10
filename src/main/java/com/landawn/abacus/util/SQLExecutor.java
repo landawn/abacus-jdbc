@@ -6531,7 +6531,7 @@ public class SQLExecutor {
          */
         public <R> List<R> list(final Connection conn, final String singleSelectPropName, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final PropInfo propInfo = entityInfo.getPropInfo(singleSelectPropName);
-            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.GET_OBJECT : JdbcUtil.RowMapper.get((Type<R>) propInfo.dbType);
+            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
             return list(conn, singleSelectPropName, rowMapper, whereCause, jdbcSettings);
         }
@@ -6731,7 +6731,7 @@ public class SQLExecutor {
          */
         public <R> List<R> listAll(final String singleSelectPropName, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final PropInfo propInfo = entityInfo.getPropInfo(singleSelectPropName);
-            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.GET_OBJECT : JdbcUtil.RowMapper.get((Type<R>) propInfo.dbType);
+            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
             return listAll(singleSelectPropName, rowMapper, whereCause, jdbcSettings);
         }
@@ -6862,7 +6862,7 @@ public class SQLExecutor {
          */
         public <R> Stream<R> stream(final String singleSelectPropName, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final PropInfo propInfo = entityInfo.getPropInfo(singleSelectPropName);
-            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.GET_OBJECT : JdbcUtil.RowMapper.get((Type<R>) propInfo.dbType);
+            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
             return stream(singleSelectPropName, rowMapper, whereCause, jdbcSettings);
         }
@@ -6982,7 +6982,7 @@ public class SQLExecutor {
          */
         public <R> Stream<R> streamAll(final String singleSelectPropName, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final PropInfo propInfo = entityInfo.getPropInfo(singleSelectPropName);
-            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.GET_OBJECT : JdbcUtil.RowMapper.get((Type<R>) propInfo.dbType);
+            final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
             return streamAll(singleSelectPropName, rowMapper, whereCause, jdbcSettings);
         }

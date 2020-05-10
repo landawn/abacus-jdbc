@@ -10,6 +10,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.util.Map;
 
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
@@ -116,15 +117,9 @@ public final class Columns {
         //        [ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
 
         //    @SuppressWarnings("rawtypes")
-        //    public static final RowMapper GET_OBJECT = rs -> rs.getObject(1);
+        //    public static final RowMapper<Object> GET_OBJECT = rs -> rs.getObject(1);
 
-        @SuppressWarnings("rawtypes")
-        public static final RowMapper GET_OBJECT = new RowMapper<Object>() {
-            @Override
-            public Object apply(ResultSet rs) throws SQLException {
-                return rs.getObject(1);
-            }
-        };
+        public static final RowMapper<Object> GET_OBJECT = rs -> rs.getObject(1);
 
         @SuppressWarnings("rawtypes")
         public static final BiParametersSetter<AbstractPreparedQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(1, x);
@@ -195,12 +190,41 @@ public final class Columns {
             // singleton for utility class
         }
 
-        public static <T> RowMapper<T> get(final Class<T> type) {
-            return get(N.typeOf(type));
+        @SuppressWarnings("rawtypes")
+        static final Map<Type<?>, JdbcUtil.RowMapper> rowMapperPool = new ObjectPool<>(1024);
+
+        public static <T> RowMapper<T> getObject() {
+            return (RowMapper<T>) GET_OBJECT;
         }
 
-        public static <T> RowMapper<T> get(final Type<T> type) {
-            return rs -> type.get(rs, 1);
+        /**
+         * Gets the values from the first column.
+         *
+         * @param <T>
+         * @param firstColumnType
+         * @return
+         */
+        public static <T> RowMapper<T> get(final Class<? extends T> firstColumnType) {
+            return get(N.typeOf(firstColumnType));
+        }
+
+        /**
+         * Gets the values from the first column.
+         *
+         * @param <T>
+         * @param type
+         * @return
+         */
+        public static <T> RowMapper<T> get(final Type<? extends T> type) {
+            RowMapper<T> result = rowMapperPool.get(type);
+
+            if (result == null) {
+                result = rs -> type.get(rs, 1);
+
+                rowMapperPool.put(type, result);
+            }
+
+            return result;
         }
 
         @SuppressWarnings("rawtypes")
@@ -250,13 +274,7 @@ public final class Columns {
 
         public static final RowMapper<Clob> GET_CLOB = rs -> rs.getClob(2);
 
-        @SuppressWarnings("rawtypes")
-        public static final RowMapper GET_OBJECT = new RowMapper<Object>() {
-            @Override
-            public Object apply(ResultSet rs) throws SQLException {
-                return rs.getObject(2);
-            }
-        };
+        public static final RowMapper<Object> GET_OBJECT = rs -> rs.getObject(2);
 
         @SuppressWarnings("rawtypes")
         public static final BiParametersSetter<AbstractPreparedQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(2, x);
@@ -327,12 +345,41 @@ public final class Columns {
             // singleton for utility class
         }
 
-        public static <T> RowMapper<T> get(final Class<T> type) {
-            return get(N.typeOf(type));
+        @SuppressWarnings("rawtypes")
+        static final Map<Type<?>, JdbcUtil.RowMapper> rowMapperPool = new ObjectPool<>(1024);
+
+        public static <T> RowMapper<T> getObject() {
+            return (RowMapper<T>) GET_OBJECT;
         }
 
-        public static <T> RowMapper<T> get(final Type<T> type) {
-            return rs -> type.get(rs, 2);
+        /**
+         * Gets the values from the first column.
+         *
+         * @param <T>
+         * @param firstColumnType
+         * @return
+         */
+        public static <T> RowMapper<T> get(final Class<? extends T> firstColumnType) {
+            return get(N.typeOf(firstColumnType));
+        }
+
+        /**
+         * Gets the values from the first column.
+         *
+         * @param <T>
+         * @param type
+         * @return
+         */
+        public static <T> RowMapper<T> get(final Type<? extends T> type) {
+            RowMapper<T> result = rowMapperPool.get(type);
+
+            if (result == null) {
+                result = rs -> type.get(rs, 2);
+
+                rowMapperPool.put(type, result);
+            }
+
+            return result;
         }
 
         @SuppressWarnings("rawtypes")
@@ -381,13 +428,7 @@ public final class Columns {
 
         public static final RowMapper<Clob> GET_CLOB = rs -> rs.getClob(3);
 
-        @SuppressWarnings("rawtypes")
-        public static final RowMapper GET_OBJECT = new RowMapper<Object>() {
-            @Override
-            public Object apply(ResultSet rs) throws SQLException {
-                return rs.getObject(3);
-            }
-        };
+        public static final RowMapper<Object> GET_OBJECT = rs -> rs.getObject(3);
 
         @SuppressWarnings("rawtypes")
         public static final BiParametersSetter<AbstractPreparedQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(3, x);
@@ -458,12 +499,41 @@ public final class Columns {
             // singleton for utility class
         }
 
-        public static <T> RowMapper<T> get(final Class<T> type) {
-            return get(N.typeOf(type));
+        @SuppressWarnings("rawtypes")
+        static final Map<Type<?>, JdbcUtil.RowMapper> rowMapperPool = new ObjectPool<>(1024);
+
+        public static <T> RowMapper<T> getObject() {
+            return (RowMapper<T>) GET_OBJECT;
         }
 
-        public static <T> RowMapper<T> get(final Type<T> type) {
-            return rs -> type.get(rs, 3);
+        /**
+         * Gets the values from the first column.
+         *
+         * @param <T>
+         * @param firstColumnType
+         * @return
+         */
+        public static <T> RowMapper<T> get(final Class<? extends T> firstColumnType) {
+            return get(N.typeOf(firstColumnType));
+        }
+
+        /**
+         * Gets the values from the first column.
+         *
+         * @param <T>
+         * @param type
+         * @return
+         */
+        public static <T> RowMapper<T> get(final Type<? extends T> type) {
+            RowMapper<T> result = rowMapperPool.get(type);
+
+            if (result == null) {
+                result = rs -> type.get(rs, 3);
+
+                rowMapperPool.put(type, result);
+            }
+
+            return result;
         }
 
         @SuppressWarnings("rawtypes")
