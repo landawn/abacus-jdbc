@@ -3458,7 +3458,7 @@ public final class JdbcUtil {
 
     static final RowFilter INTERNAL_DUMMY_ROW_FILTER = RowFilter.ALWAYS_TRUE;
 
-    static final Throwables.BiConsumer<ResultSet, Object[], SQLException> INTERNAL_DUMMY_ROW_EXTRACTOR = (rs, output) -> {
+    static final RowExtractor INTERNAL_DUMMY_ROW_EXTRACTOR = (rs, outputRow) -> {
         throw new UnsupportedOperationException("DO NOT CALL ME.");
     };
 
@@ -3532,8 +3532,8 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException the SQL exception
      */
-    public static DataSet extractData(final ResultSet rs, int offset, int count, final Throwables.BiConsumer<ResultSet, Object[], SQLException> rowExtractor,
-            final boolean closeResultSet) throws SQLException {
+    public static DataSet extractData(final ResultSet rs, int offset, int count, final RowExtractor rowExtractor, final boolean closeResultSet)
+            throws SQLException {
         return extractData(rs, offset, count, INTERNAL_DUMMY_ROW_FILTER, rowExtractor, closeResultSet);
     }
 
@@ -3548,8 +3548,8 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException the SQL exception
      */
-    public static DataSet extractData(final ResultSet rs, int offset, int count, final RowFilter filter,
-            final Throwables.BiConsumer<ResultSet, Object[], SQLException> rowExtractor, final boolean closeResultSet) throws SQLException {
+    public static DataSet extractData(final ResultSet rs, int offset, int count, final RowFilter filter, final RowExtractor rowExtractor,
+            final boolean closeResultSet) throws SQLException {
         N.checkArgNotNull(rs, "ResultSet");
         N.checkArgNotNegative(offset, "offset");
         N.checkArgNotNegative(count, "count");
@@ -10092,7 +10092,7 @@ public final class JdbcUtil {
             };
         }
 
-        static ResultExtractor<DataSet> toDataSet(final Throwables.BiConsumer<ResultSet, Object[], SQLException> rowExtractor) {
+        static ResultExtractor<DataSet> toDataSet(final RowExtractor rowExtractor) {
             return new ResultExtractor<DataSet>() {
                 @Override
                 public DataSet apply(final ResultSet rs) throws SQLException {
@@ -10101,13 +10101,17 @@ public final class JdbcUtil {
             };
         }
 
-        static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter, final Throwables.BiConsumer<ResultSet, Object[], SQLException> rowExtractor) {
+        static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter, final RowExtractor rowExtractor) {
             return new ResultExtractor<DataSet>() {
                 @Override
                 public DataSet apply(final ResultSet rs) throws SQLException {
                     return JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowFilter, rowExtractor, false);
                 }
             };
+        }
+
+        static <T> ResultExtractor<T> to(final Throwables.Function<DataSet, T, SQLException> resultExtractor) {
+            return rs -> resultExtractor.apply(TO_DATA_SET.apply(rs));
         }
     }
 
@@ -10583,7 +10587,11 @@ public final class JdbcUtil {
         }
 
         static RowMapperBuilder builder() {
-            return new RowMapperBuilder();
+            return builder(ColumnGetter.GET_OBJECT);
+        }
+
+        static RowMapperBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
+            return new RowMapperBuilder(defaultColumnGetter);
         }
 
         //    static RowMapperBuilder builder(final int columnCount) {
@@ -10591,36 +10599,13 @@ public final class JdbcUtil {
         //    }
 
         public static class RowMapperBuilder {
-            //    private int columnCount = -1;
-            //    private ColumnGetter<?>[] columnGetters;
-            private Map<Integer, ColumnGetter<?>> columnGetterMap;
+            private final Map<Integer, ColumnGetter<?>> columnGetterMap;
 
-            RowMapperBuilder() {
+            RowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
+                N.checkArgNotNull(defaultColumnGetter, "defaultColumnGetter");
+
                 columnGetterMap = new HashMap<>(9);
-                columnGetterMap.put(0, ColumnGetter.GET_OBJECT);
-            }
-
-            //        RowMapperBuilder(final int columnCount) {
-            //            this.columnCount = columnCount;
-            //            columnGetters = new ColumnGetter[columnCount + 1];
-            //            columnGetters[0] = ColumnGetter.DEFAULT;
-            //        }
-
-            /**
-             * Set default column getter function.
-             *
-             * @param columnGetter
-             * @return
-             */
-            public RowMapperBuilder defauLt(final ColumnGetter<?> columnGetter) {
-                //        if (columnGetters == null) {
-                //            columnGetterMap.put(0, columnGetter);
-                //        } else {
-                //            columnGetters[0] = columnGetter;
-                //        }
-
-                columnGetterMap.put(0, columnGetter);
-                return this;
+                columnGetterMap.put(0, defaultColumnGetter);
             }
 
             public RowMapperBuilder getBoolean(final int columnIndex) {
@@ -11001,33 +10986,6 @@ public final class JdbcUtil {
                     }
                 };
             }
-
-            /**
-             * Don't cache or reuse the returned {@code RowMapper} instance.
-             *
-             * @return
-             */
-            public Throwables.BiConsumer<ResultSet, Object[], SQLException> rowExtractor() {
-                return new Throwables.BiConsumer<ResultSet, Object[], SQLException>() {
-                    private volatile int rsColumnCount = -1;
-                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
-
-                    @Override
-                    public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
-                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
-
-                        if (rsColumnGetters == null) {
-                            rsColumnGetters = initColumnGetter(outputRow.length);
-                            rsColumnCount = rsColumnGetters.length - 1;
-                            this.rsColumnGetters = rsColumnGetters;
-                        }
-
-                        for (int i = 0; i < rsColumnCount;) {
-                            outputRow[i] = rsColumnGetters[++i].apply(i, rs);
-                        }
-                    }
-                };
-            }
         }
     }
 
@@ -11255,7 +11213,11 @@ public final class JdbcUtil {
         }
 
         static BiRowMapperBuilder builder() {
-            return new BiRowMapperBuilder();
+            return builder(ColumnGetter.GET_OBJECT);
+        }
+
+        static BiRowMapperBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
+            return new BiRowMapperBuilder(defaultColumnGetter);
         }
 
         //    static BiRowMapperBuilder builder(final int columnCount) {
@@ -11263,27 +11225,13 @@ public final class JdbcUtil {
         //    }
 
         public static class BiRowMapperBuilder {
-            private ColumnGetter<?> defaultColumnGetter = ColumnGetter.GET_OBJECT;
+            private final ColumnGetter<?> defaultColumnGetter;
             private final Map<String, ColumnGetter<?>> columnGetterMap;
 
-            BiRowMapperBuilder() {
+            BiRowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
+                this.defaultColumnGetter = defaultColumnGetter;
+
                 columnGetterMap = new HashMap<>(9);
-            }
-
-            //    BiRowMapperBuilder(final int columnCount) {
-            //        columnGetterMap = new HashMap<>(Math.min(9, columnCount));
-            //    }
-
-            /**
-             * Set default column getter function.
-             *
-             * @param columnGetter
-             * @return
-             */
-            public BiRowMapperBuilder defauLt(final ColumnGetter<?> columnGetter) {
-                defaultColumnGetter = columnGetter;
-
-                return this;
             }
 
             public BiRowMapperBuilder getBoolean(final String columnName) {
@@ -11727,6 +11675,134 @@ public final class JdbcUtil {
         COLUMN_GETTER_POOL.put(N.typeOf(java.sql.Time.class), ColumnGetter.GET_TIME);
         COLUMN_GETTER_POOL.put(N.typeOf(java.sql.Timestamp.class), ColumnGetter.GET_TIMESTAMP);
         COLUMN_GETTER_POOL.put(N.typeOf(Object.class), ColumnGetter.GET_OBJECT);
+    }
+
+    public interface RowExtractor extends Throwables.BiConsumer<ResultSet, Object[], SQLException> {
+        @Override
+        void accept(final ResultSet rs, final Object[] outputRow) throws SQLException;
+
+        static RowExtractorBuilder builder() {
+            return builder(ColumnGetter.GET_OBJECT);
+        }
+
+        static RowExtractorBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
+            return new RowExtractorBuilder(defaultColumnGetter);
+        }
+
+        public static class RowExtractorBuilder {
+            private final Map<Integer, ColumnGetter<?>> columnGetterMap;
+
+            RowExtractorBuilder(final ColumnGetter<?> defaultColumnGetter) {
+                N.checkArgNotNull(defaultColumnGetter, "defaultColumnGetter");
+
+                columnGetterMap = new HashMap<>(9);
+                columnGetterMap.put(0, defaultColumnGetter);
+            }
+
+            public RowExtractorBuilder getBoolean(final int columnIndex) {
+                return get(columnIndex, ColumnGetter.GET_BOOLEAN);
+            }
+
+            public RowExtractorBuilder getByte(final int columnIndex) {
+                return get(columnIndex, ColumnGetter.GET_BYTE);
+            }
+
+            public RowExtractorBuilder getShort(final int columnIndex) {
+                return get(columnIndex, ColumnGetter.GET_SHORT);
+            }
+
+            public RowExtractorBuilder getInt(final int columnIndex) {
+                return get(columnIndex, ColumnGetter.GET_INT);
+            }
+
+            public RowExtractorBuilder getLong(final int columnIndex) {
+                return get(columnIndex, ColumnGetter.GET_LONG);
+            }
+
+            public RowExtractorBuilder getFloat(final int columnIndex) {
+                return get(columnIndex, ColumnGetter.GET_FLOAT);
+            }
+
+            public RowExtractorBuilder getDouble(final int columnIndex) {
+                return get(columnIndex, ColumnGetter.GET_DOUBLE);
+            }
+
+            public RowExtractorBuilder getBigDecimal(final int columnIndex) {
+                return get(columnIndex, ColumnGetter.GET_BIG_DECIMAL);
+            }
+
+            public RowExtractorBuilder getString(final int columnIndex) {
+                return get(columnIndex, ColumnGetter.GET_STRING);
+            }
+
+            public RowExtractorBuilder getDate(final int columnIndex) {
+                return get(columnIndex, ColumnGetter.GET_DATE);
+            }
+
+            public RowExtractorBuilder getTime(final int columnIndex) {
+                return get(columnIndex, ColumnGetter.GET_TIME);
+            }
+
+            public RowExtractorBuilder getTimestamp(final int columnIndex) {
+                return get(columnIndex, ColumnGetter.GET_TIMESTAMP);
+            }
+
+            public RowExtractorBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) {
+                N.checkArgPositive(columnIndex, "columnIndex");
+                N.checkArgNotNull(columnGetter, "columnGetter");
+
+                //        if (columnGetters == null) {
+                //            columnGetterMap.put(columnIndex, columnGetter);
+                //        } else {
+                //            columnGetters[columnIndex] = columnGetter;
+                //        }
+
+                columnGetterMap.put(columnIndex, columnGetter);
+                return this;
+            }
+
+            ColumnGetter<?>[] initColumnGetter(ResultSet rs) throws SQLException {
+                return initColumnGetter(rs.getMetaData().getColumnCount());
+            }
+
+            ColumnGetter<?>[] initColumnGetter(final int columnCount) throws SQLException {
+                final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[columnCount + 1];
+                rsColumnGetters[0] = columnGetterMap.get(0);
+
+                for (int i = 1, len = rsColumnGetters.length; i < len; i++) {
+                    rsColumnGetters[i] = columnGetterMap.getOrDefault(i, rsColumnGetters[0]);
+                }
+
+                return rsColumnGetters;
+            }
+
+            /**
+             * Don't cache or reuse the returned {@code RowExtractor} instance.
+             *
+             * @return
+             */
+            public RowExtractor build() {
+                return new RowExtractor() {
+                    private volatile int rsColumnCount = -1;
+                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
+
+                    @Override
+                    public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
+                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+
+                        if (rsColumnGetters == null) {
+                            rsColumnGetters = initColumnGetter(outputRow.length);
+                            rsColumnCount = rsColumnGetters.length - 1;
+                            this.rsColumnGetters = rsColumnGetters;
+                        }
+
+                        for (int i = 0; i < rsColumnCount;) {
+                            outputRow[i] = rsColumnGetters[++i].apply(i, rs);
+                        }
+                    }
+                };
+            }
+        }
     }
 
     public interface ColumnGetter<V> {

@@ -65,6 +65,8 @@ import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.NamedQuery;
+import com.landawn.abacus.util.JdbcUtil.RowExtractor;
+import com.landawn.abacus.util.JdbcUtil.RowFilter;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.SQLBuilder.NAC;
 import com.landawn.abacus.util.SQLBuilder.NLC;
@@ -3980,7 +3982,7 @@ public class SQLExecutor {
      */
     @SafeVarargs
     public final DataSet query(final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings, final Object... parameters) {
-        return query(sql, statementSetter, ResultExtractor.DATA_SET, jdbcSettings, parameters);
+        return query(sql, statementSetter, ResultExtractor.TO_DATA_SET, jdbcSettings, parameters);
     }
 
     /**
@@ -4113,7 +4115,7 @@ public class SQLExecutor {
     @SafeVarargs
     public final DataSet query(final Connection conn, final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings,
             final Object... parameters) {
-        return query(conn, sql, statementSetter, ResultExtractor.DATA_SET, jdbcSettings, parameters);
+        return query(conn, sql, statementSetter, ResultExtractor.TO_DATA_SET, jdbcSettings, parameters);
     }
 
     /**
@@ -4643,7 +4645,7 @@ public class SQLExecutor {
 
                                 return result;
                             }
- 
+
                             @Override
                             public void close() {
                                 try {
@@ -5584,7 +5586,7 @@ public class SQLExecutor {
     @SuppressWarnings("unchecked")
     protected <T> ResultSetExtractor<T> checkResultSetExtractor(final ParsedSql parsedSql, ResultSetExtractor<T> resultExtractor) {
         if (resultExtractor == null) {
-            resultExtractor = (ResultSetExtractor<T>) ResultExtractor.DATA_SET;
+            resultExtractor = (ResultSetExtractor<T>) ResultExtractor.TO_DATA_SET;
         }
 
         return resultExtractor;
@@ -9762,12 +9764,7 @@ public class SQLExecutor {
     public interface ResultExtractor<T> {
 
         /** The Constant DATA_SET. */
-        ResultExtractor<DataSet> DATA_SET = new AbstractResultExtractor<DataSet>() {
-            @Override
-            protected DataSet convert(DataSet dataSet) {
-                return dataSet;
-            }
-        };
+        ResultExtractor<DataSet> TO_DATA_SET = (rs, jdbcSettings) -> JdbcUtil.extractData(rs, jdbcSettings.getOffset(), jdbcSettings.getCount(), false);
 
         /**
          *
@@ -10319,6 +10316,37 @@ public class SQLExecutor {
                 }
             };
         }
+
+        static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter) {
+            return new ResultExtractor<DataSet>() {
+                @Override
+                public DataSet extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                    return JdbcUtil.extractData(rs, jdbcSettings.getOffset(), jdbcSettings.getCount(), rowFilter, false);
+                }
+            };
+        }
+
+        static ResultExtractor<DataSet> toDataSet(final RowExtractor rowExtractor) {
+            return new ResultExtractor<DataSet>() {
+                @Override
+                public DataSet extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                    return JdbcUtil.extractData(rs, jdbcSettings.getOffset(), jdbcSettings.getCount(), rowExtractor, false);
+                }
+            };
+        }
+
+        static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter, final RowExtractor rowExtractor) {
+            return new ResultExtractor<DataSet>() {
+                @Override
+                public DataSet extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
+                    return JdbcUtil.extractData(rs, jdbcSettings.getOffset(), jdbcSettings.getCount(), rowFilter, rowExtractor, false);
+                }
+            };
+        }
+
+        static <T> ResultExtractor<T> to(final Throwables.Function<DataSet, T, SQLException> resultExtractor) {
+            return (rs, jdbcSettings) -> resultExtractor.apply(TO_DATA_SET.extractData(rs, jdbcSettings));
+        }
     }
 
     /**
@@ -10452,32 +10480,5 @@ public class SQLExecutor {
 
             return parameters;
         }
-    }
-
-    /**
-     * The Class AbstractResultExtractor.
-     *
-     * @param <T>
-     */
-    public static abstract class AbstractResultExtractor<T> implements ResultExtractor<T> {
-
-        /**
-         *
-         * @param rs
-         * @param jdbcSettings
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        @Override
-        public T extractData(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            return convert(JdbcUtil.extractData(rs, jdbcSettings.getOffset(), jdbcSettings.getCount(), false));
-        }
-
-        /**
-         *
-         * @param dataSet
-         * @return
-         */
-        protected abstract T convert(final DataSet dataSet);
     }
 }
