@@ -99,6 +99,7 @@ import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.function.LongFunction;
 import com.landawn.abacus.util.function.Predicate;
+import com.landawn.abacus.util.function.TriFunction;
 import com.landawn.abacus.util.stream.BaseStream;
 import com.landawn.abacus.util.stream.EntryStream;
 import com.landawn.abacus.util.stream.IntStream.IntStreamEx;
@@ -3158,8 +3159,11 @@ final class DaoUtil {
                     final JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter = createParametersSetter(m, fullClassMethodName,
                             paramTypes, paramLen, isBatch, isSingleParameter, isCall, isNamedQuery, namedSql, stmtParamLen, stmtParamIndexes, stmtParamLen);
 
-                    final boolean isUpdateReturnType = returnType.equals(int.class) || returnType.equals(Integer.class) || returnType.equals(long.class)
-                            || returnType.equals(Long.class) || returnType.equals(boolean.class) || returnType.equals(Boolean.class)
+                    //    final boolean isUpdateReturnType = returnType.equals(int.class) || returnType.equals(Integer.class) || returnType.equals(long.class)
+                    //            || returnType.equals(Long.class) || returnType.equals(boolean.class) || returnType.equals(Boolean.class)
+                    //            || returnType.equals(void.class);
+
+                    final boolean isUpdateReturnType = returnType.equals(int.class) || returnType.equals(long.class) || returnType.equals(boolean.class)
                             || returnType.equals(void.class);
 
                     final boolean idDirtyMarkerReturnType = ClassUtil.isEntity(returnType) && DirtyMarker.class.isAssignableFrom(returnType);
@@ -3192,6 +3196,11 @@ final class DaoUtil {
                             }
                         }
 
+                        final TriFunction<Optional<Object>, Object, Boolean, ?> insertResultConvertor = void.class.equals(returnType)
+                                ? (ret, entity, isEntity) -> null
+                                : (Optional.class.equals(returnType) ? (ret, entity, isEntity) -> ret
+                                        : (ret, entity, isEntity) -> ret.orElse(isEntity ? idGetter.apply(entity) : N.defaultValueOf(returnType)));
+
                         if (isBatch == false) {
                             if (!(returnType.isAssignableFrom(void.class) || idClass == null
                                     || Primitives.wrap(idClass).isAssignableFrom(Primitives.wrap(returnType)) || returnType.isAssignableFrom(Optional.class))) {
@@ -3217,8 +3226,7 @@ final class DaoUtil {
                                     DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
                                 }
 
-                                return void.class.equals(returnType) ? null
-                                        : Optional.class.equals(returnType) ? id : id.orElse(isEntity ? idGetter.apply(entity) : N.defaultValueOf(returnType));
+                                return insertResultConvertor.apply(id, entity, isEntity);
                             };
                         } else {
                             if (!(returnType.equals(void.class) || returnType.isAssignableFrom(List.class))) {
