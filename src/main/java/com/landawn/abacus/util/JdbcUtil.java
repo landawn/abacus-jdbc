@@ -3456,6 +3456,12 @@ public final class JdbcUtil {
         }
     }
 
+    static final RowFilter INTERNAL_DUMMY_ROW_FILTER = RowFilter.ALWAYS_TRUE;
+
+    static final Throwables.BiConsumer<ResultSet, Object[], SQLException> INTERNAL_DUMMY_ROW_EXTRACTOR = (rs, output) -> {
+        throw new UnsupportedOperationException("DO NOT CALL ME.");
+    };
+
     /**
      *
      * @param rs
@@ -3499,7 +3505,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static DataSet extractData(final ResultSet rs, final int offset, final int count, final boolean closeResultSet) throws SQLException {
-        return extractData(rs, offset, count, RowFilter.ALWAYS_TRUE, closeResultSet);
+        return extractData(rs, offset, count, INTERNAL_DUMMY_ROW_FILTER, INTERNAL_DUMMY_ROW_EXTRACTOR, closeResultSet);
     }
 
     /**
@@ -3513,10 +3519,42 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      */
     public static DataSet extractData(final ResultSet rs, int offset, int count, final RowFilter filter, final boolean closeResultSet) throws SQLException {
+        return extractData(rs, offset, count, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, closeResultSet);
+    }
+
+    /**
+     *
+     * @param rs
+     * @param offset
+     * @param count
+     * @param rowExtractor
+     * @param closeResultSet
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public static DataSet extractData(final ResultSet rs, int offset, int count, final Throwables.BiConsumer<ResultSet, Object[], SQLException> rowExtractor,
+            final boolean closeResultSet) throws SQLException {
+        return extractData(rs, offset, count, INTERNAL_DUMMY_ROW_FILTER, rowExtractor, closeResultSet);
+    }
+
+    /**
+     *
+     * @param rs
+     * @param offset
+     * @param count
+     * @param filter
+     * @param rowExtractor
+     * @param closeResultSet
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public static DataSet extractData(final ResultSet rs, int offset, int count, final RowFilter filter,
+            final Throwables.BiConsumer<ResultSet, Object[], SQLException> rowExtractor, final boolean closeResultSet) throws SQLException {
         N.checkArgNotNull(rs, "ResultSet");
         N.checkArgNotNegative(offset, "offset");
         N.checkArgNotNegative(count, "count");
         N.checkArgNotNull(filter, "filter");
+        N.checkArgNotNull(rowExtractor, "rowExtractor");
 
         try {
             // TODO [performance improvement]. it will improve performance a lot if MetaData is cached.
@@ -3532,13 +3570,53 @@ public final class JdbcUtil {
 
             JdbcUtil.skip(rs, offset);
 
-            while (count > 0 && rs.next()) {
-                if (filter == null || filter.test(rs)) {
-                    for (int i = 0; i < columnCount;) {
-                        columnList.get(i).add(JdbcUtil.getColumnValue(rs, ++i));
-                    }
+            if (filter == INTERNAL_DUMMY_ROW_FILTER) {
+                if (rowExtractor == INTERNAL_DUMMY_ROW_EXTRACTOR) {
+                    while (count > 0 && rs.next()) {
+                        for (int i = 0; i < columnCount;) {
+                            columnList.get(i).add(JdbcUtil.getColumnValue(rs, ++i));
+                        }
 
-                    count--;
+                        count--;
+                    }
+                } else {
+                    final Object[] outputRow = new Object[columnCount];
+
+                    while (count > 0 && rs.next()) {
+                        rowExtractor.accept(rs, outputRow);
+
+                        for (int i = 0; i < columnCount; i++) {
+                            columnList.get(i).add(outputRow[i]);
+                        }
+
+                        count--;
+                    }
+                }
+            } else {
+                if (rowExtractor == INTERNAL_DUMMY_ROW_EXTRACTOR) {
+                    while (count > 0 && rs.next()) {
+                        if (filter.test(rs)) {
+                            for (int i = 0; i < columnCount;) {
+                                columnList.get(i).add(JdbcUtil.getColumnValue(rs, ++i));
+                            }
+
+                            count--;
+                        }
+                    }
+                } else {
+                    final Object[] outputRow = new Object[columnCount];
+
+                    while (count > 0 && rs.next()) {
+                        if (filter.test(rs)) {
+                            rowExtractor.accept(rs, outputRow);
+
+                            for (int i = 0; i < columnCount; i++) {
+                                columnList.get(i).add(outputRow[i]);
+                            }
+
+                            count--;
+                        }
+                    }
                 }
             }
 
@@ -10004,6 +10082,33 @@ public final class JdbcUtil {
                 }
             };
         }
+
+        static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter) {
+            return new ResultExtractor<DataSet>() {
+                @Override
+                public DataSet apply(final ResultSet rs) throws SQLException {
+                    return JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowFilter, false);
+                }
+            };
+        }
+
+        static ResultExtractor<DataSet> toDataSet(final Throwables.BiConsumer<ResultSet, Object[], SQLException> rowExtractor) {
+            return new ResultExtractor<DataSet>() {
+                @Override
+                public DataSet apply(final ResultSet rs) throws SQLException {
+                    return JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowExtractor, false);
+                }
+            };
+        }
+
+        static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter, final Throwables.BiConsumer<ResultSet, Object[], SQLException> rowExtractor) {
+            return new ResultExtractor<DataSet>() {
+                @Override
+                public DataSet apply(final ResultSet rs) throws SQLException {
+                    return JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowFilter, rowExtractor, false);
+                }
+            };
+        }
     }
 
     /**
@@ -10791,7 +10896,11 @@ public final class JdbcUtil {
             //    }
 
             ColumnGetter<?>[] initColumnGetter(ResultSet rs) throws SQLException {
-                final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[rs.getMetaData().getColumnCount() + 1];
+                return initColumnGetter(rs.getMetaData().getColumnCount());
+            }
+
+            ColumnGetter<?>[] initColumnGetter(final int columnCount) throws SQLException {
+                final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[columnCount + 1];
                 rsColumnGetters[0] = columnGetterMap.get(0);
 
                 for (int i = 1, len = rsColumnGetters.length; i < len; i++) {
@@ -10834,6 +10943,32 @@ public final class JdbcUtil {
                 };
             }
 
+            public RowMapper<Object[]> toArray(final Object[] output) {
+                // setDefaultColumnGetter();
+
+                return new RowMapper<Object[]>() {
+                    private volatile int rsColumnCount = -1;
+                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
+
+                    @Override
+                    public Object[] apply(ResultSet rs) throws SQLException {
+                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+
+                        if (rsColumnGetters == null) {
+                            rsColumnGetters = initColumnGetter(rs);
+                            rsColumnCount = rsColumnGetters.length - 1;
+                            this.rsColumnGetters = rsColumnGetters;
+                        }
+
+                        for (int i = 0; i < rsColumnCount;) {
+                            output[i] = rsColumnGetters[++i].apply(i, rs);
+                        }
+
+                        return output;
+                    }
+                };
+            }
+
             /**
              * Don't cache or reuse the returned {@code RowMapper} instance.
              *
@@ -10863,6 +10998,33 @@ public final class JdbcUtil {
                         }
 
                         return row;
+                    }
+                };
+            }
+
+            /**
+             * Don't cache or reuse the returned {@code RowMapper} instance.
+             *
+             * @return
+             */
+            public Throwables.BiConsumer<ResultSet, Object[], SQLException> rowExtractor() {
+                return new Throwables.BiConsumer<ResultSet, Object[], SQLException>() {
+                    private volatile int rsColumnCount = -1;
+                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
+
+                    @Override
+                    public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
+                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
+
+                        if (rsColumnGetters == null) {
+                            rsColumnGetters = initColumnGetter(outputRow.length);
+                            rsColumnCount = rsColumnGetters.length - 1;
+                            this.rsColumnGetters = rsColumnGetters;
+                        }
+
+                        for (int i = 0; i < rsColumnCount;) {
+                            outputRow[i] = rsColumnGetters[++i].apply(i, rs);
+                        }
                     }
                 };
             }
@@ -13297,7 +13459,6 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         <R> R query(final Collection<String> selectPropNames, final Condition cond, final ResultExtractor<R> resultExtrator) throws SQLException;
-
 
         /**
          *
