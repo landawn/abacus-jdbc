@@ -12149,14 +12149,14 @@ public final class JdbcUtil {
              */
             int queryTimeout() default -1;
 
-            OP op() default OP.DEFAULT;
-
             /**
              * Set it to true if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
              * 
              * @return
              */
             boolean isSingleParameter() default false;
+
+            OP op() default OP.DEFAULT;
         }
 
         /**
@@ -12259,14 +12259,14 @@ public final class JdbcUtil {
              */
             int queryTimeout() default -1;
 
-            OP op() default OP.DEFAULT;
-
             /**
              * Set it to true if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
              * 
              * @return
              */
             boolean isSingleParameter() default false;
+
+            OP op() default OP.DEFAULT;
         }
 
         /**
@@ -12315,14 +12315,14 @@ public final class JdbcUtil {
              */
             int queryTimeout() default -1;
 
-            OP op() default OP.DEFAULT;
-
             /**
              * Set it to true if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
              * 
              * @return
              */
             boolean isSingleParameter() default false;
+
+            OP op() default OP.DEFAULT;
         }
 
         /**
@@ -12539,6 +12539,12 @@ public final class JdbcUtil {
              * @return
              */
             String sql() default "";
+
+            /**
+             *
+             * @return
+             */
+            int fetchSize() default -1;
 
             /**
              * Unit is seconds.
