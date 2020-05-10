@@ -55,8 +55,76 @@ public final class Columns {
 
         public static final RowMapper<Clob> GET_CLOB = rs -> rs.getClob(1);
 
+        //        [INFO] Compiling 42 source files to C:\Users\haiyangl\Landawn\abacus-jdbc\trunk\target\classes
+        //        An exception has occurred in the compiler (1.8.0_231). Please file a bug against the Java compiler via the Java bug reporting page (http://bugreport.java.com) a
+        //        fter checking the Bug Database (http://bugs.java.com) for duplicates. Include your program and the following diagnostic in your report. Thank you.
+        //        java.lang.AssertionError
+        //                at com.sun.tools.javac.util.Assert.error(Assert.java:126)
+        //                at com.sun.tools.javac.util.Assert.check(Assert.java:45)
+        //                at com.sun.tools.javac.code.Types.functionalInterfaceBridges(Types.java:659)
+        //                at com.sun.tools.javac.comp.LambdaToMethod$LambdaAnalyzerPreprocessor$TranslationContext.<init>(LambdaToMethod.java:1770)
+        //                at com.sun.tools.javac.comp.LambdaToMethod$LambdaAnalyzerPreprocessor$LambdaTranslationContext.<init>(LambdaToMethod.java:1853)
+        //                at com.sun.tools.javac.comp.LambdaToMethod$LambdaAnalyzerPreprocessor.analyzeLambda(LambdaToMethod.java:1337)
+        //                at com.sun.tools.javac.comp.LambdaToMethod$LambdaAnalyzerPreprocessor.visitLambda(LambdaToMethod.java:1322)
+        //                at com.sun.tools.javac.tree.JCTree$JCLambda.accept(JCTree.java:1624)
+        //        .............
+        //                at org.apache.maven.plugin.compiler.AbstractCompilerMojo.execute(AbstractCompilerMojo.java:785)
+        //                at org.apache.maven.plugin.compiler.CompilerMojo.execute(CompilerMojo.java:129)
+        //                at org.apache.maven.plugin.DefaultBuildPluginManager.executeMojo(DefaultBuildPluginManager.java:137)
+        //                at org.apache.maven.lifecycle.internal.MojoExecutor.execute(MojoExecutor.java:210)
+        //                at org.apache.maven.lifecycle.internal.MojoExecutor.execute(MojoExecutor.java:156)
+        //                at org.apache.maven.lifecycle.internal.MojoExecutor.execute(MojoExecutor.java:148)
+        //                at org.apache.maven.lifecycle.internal.LifecycleModuleBuilder.buildProject(LifecycleModuleBuilder.java:117)
+        //                at org.apache.maven.lifecycle.internal.LifecycleModuleBuilder.buildProject(LifecycleModuleBuilder.java:81)
+        //                at org.apache.maven.lifecycle.internal.builder.singlethreaded.SingleThreadedBuilder.build(SingleThreadedBuilder.java:56)
+        //                at org.apache.maven.lifecycle.internal.LifecycleStarter.execute(LifecycleStarter.java:128)
+        //                at org.apache.maven.DefaultMaven.doExecute(DefaultMaven.java:305)
+        //                at org.apache.maven.DefaultMaven.doExecute(DefaultMaven.java:192)
+        //                at org.apache.maven.DefaultMaven.execute(DefaultMaven.java:105)
+        //                at org.apache.maven.cli.MavenCli.execute(MavenCli.java:957)
+        //                at org.apache.maven.cli.MavenCli.doMain(MavenCli.java:289)
+        //                at org.apache.maven.cli.MavenCli.main(MavenCli.java:193)
+        //                at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+        //                at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+        //                at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+        //                at java.lang.reflect.Method.invoke(Method.java:498)
+        //                at org.codehaus.plexus.classworlds.launcher.Launcher.launchEnhanced(Launcher.java:282)
+        //                at org.codehaus.plexus.classworlds.launcher.Launcher.launch(Launcher.java:225)
+        //                at org.codehaus.plexus.classworlds.launcher.Launcher.mainWithExitCode(Launcher.java:406)
+        //                at org.codehaus.plexus.classworlds.launcher.Launcher.main(Launcher.java:347)
+        //        [INFO] -------------------------------------------------------------
+        //        [ERROR] COMPILATION ERROR :
+        //        [INFO] -------------------------------------------------------------
+        //        [ERROR] An unknown compilation problem occurred
+        //        [INFO] 1 error
+        //        [INFO] -------------------------------------------------------------
+        //        [INFO] ------------------------------------------------------------------------
+        //        [INFO] BUILD FAILURE
+        //        [INFO] ------------------------------------------------------------------------
+        //        [INFO] Total time:  12.852 s
+        //        [INFO] Finished at: 2020-05-10T15:12:38-07:00
+        //        [INFO] ------------------------------------------------------------------------
+        //        [ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.1:compile (default-compile) on project abacus-jdbc: Compilation failure
+        //        [ERROR] An unknown compilation problem occurred
+        //        [ERROR]
+        //        [ERROR] -> [Help 1]
+        //        [ERROR]
+        //        [ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+        //        [ERROR] Re-run Maven using the -X switch to enable full debug logging.
+        //        [ERROR]
+        //        [ERROR] For more information about the errors and possible solutions, please read the following articles:
+        //        [ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+
+        //    @SuppressWarnings("rawtypes")
+        //    public static final RowMapper GET_OBJECT = rs -> rs.getObject(1);
+
         @SuppressWarnings("rawtypes")
-        public static final RowMapper GET_OBJECT = rs -> rs.getObject(1);
+        public static final RowMapper GET_OBJECT = new RowMapper<Object>() {
+            @Override
+            public Object apply(ResultSet rs) throws SQLException {
+                return rs.getObject(1);
+            }
+        };
 
         @SuppressWarnings("rawtypes")
         public static final BiParametersSetter<AbstractPreparedQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(1, x);
@@ -126,6 +194,25 @@ public final class Columns {
         private ColumnOne() {
             // singleton for utility class
         }
+
+        public static <T> RowMapper<T> get(final Class<T> type) {
+            return get(N.typeOf(type));
+        }
+
+        public static <T> RowMapper<T> get(final Type<T> type) {
+            return rs -> type.get(rs, 1);
+        }
+
+        @SuppressWarnings("rawtypes")
+        public static <T> BiParametersSetter<AbstractPreparedQuery, T> set(final Class<T> type) {
+            return set(N.typeOf(type));
+        }
+
+        @SuppressWarnings("rawtypes")
+        public static <T> BiParametersSetter<AbstractPreparedQuery, T> set(final Type<T> type) {
+            return (preparedQuery, x) -> type.set(preparedQuery.stmt, 1, x);
+        }
+
     }
 
     public static final class ColumnTwo {
@@ -164,7 +251,12 @@ public final class Columns {
         public static final RowMapper<Clob> GET_CLOB = rs -> rs.getClob(2);
 
         @SuppressWarnings("rawtypes")
-        public static final RowMapper GET_OBJECT = rs -> rs.getObject(2);
+        public static final RowMapper GET_OBJECT = new RowMapper<Object>() {
+            @Override
+            public Object apply(ResultSet rs) throws SQLException {
+                return rs.getObject(2);
+            }
+        };
 
         @SuppressWarnings("rawtypes")
         public static final BiParametersSetter<AbstractPreparedQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(2, x);
@@ -234,6 +326,24 @@ public final class Columns {
         private ColumnTwo() {
             // singleton for utility class
         }
+
+        public static <T> RowMapper<T> get(final Class<T> type) {
+            return get(N.typeOf(type));
+        }
+
+        public static <T> RowMapper<T> get(final Type<T> type) {
+            return rs -> type.get(rs, 2);
+        }
+
+        @SuppressWarnings("rawtypes")
+        public static <T> BiParametersSetter<AbstractPreparedQuery, T> set(final Class<T> type) {
+            return set(N.typeOf(type));
+        }
+
+        @SuppressWarnings("rawtypes")
+        public static <T> BiParametersSetter<AbstractPreparedQuery, T> set(final Type<T> type) {
+            return (preparedQuery, x) -> type.set(preparedQuery.stmt, 2, x);
+        }
     }
 
     public static final class ColumnThree {
@@ -272,7 +382,12 @@ public final class Columns {
         public static final RowMapper<Clob> GET_CLOB = rs -> rs.getClob(3);
 
         @SuppressWarnings("rawtypes")
-        public static final RowMapper GET_OBJECT = rs -> rs.getObject(3);
+        public static final RowMapper GET_OBJECT = new RowMapper<Object>() {
+            @Override
+            public Object apply(ResultSet rs) throws SQLException {
+                return rs.getObject(3);
+            }
+        };
 
         @SuppressWarnings("rawtypes")
         public static final BiParametersSetter<AbstractPreparedQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(3, x);
@@ -342,6 +457,24 @@ public final class Columns {
         private ColumnThree() {
             // singleton for utility class
         }
+
+        public static <T> RowMapper<T> get(final Class<T> type) {
+            return get(N.typeOf(type));
+        }
+
+        public static <T> RowMapper<T> get(final Type<T> type) {
+            return rs -> type.get(rs, 3);
+        }
+
+        @SuppressWarnings("rawtypes")
+        public static <T> BiParametersSetter<AbstractPreparedQuery, T> set(final Class<T> type) {
+            return set(N.typeOf(type));
+        }
+
+        @SuppressWarnings("rawtypes")
+        public static <T> BiParametersSetter<AbstractPreparedQuery, T> set(final Type<T> type) {
+            return (preparedQuery, x) -> type.set(preparedQuery.stmt, 3, x);
+        }
     }
 
     public interface ColumnGetter<V> {
@@ -381,7 +514,12 @@ public final class Columns {
         ColumnGetter<Clob> GET_CLOB = (columnIndex, rs) -> rs.getClob(columnIndex);
 
         @SuppressWarnings("rawtypes")
-        public static final ColumnGetter GET_OBJECT = (columnIndex, rs) -> rs.getObject(columnIndex);
+        public static final ColumnGetter GET_OBJECT = new ColumnGetter<Object>() {
+            @Override
+            public Object apply(int columnIndex, ResultSet rs) throws SQLException {
+                return rs.getObject(columnIndex);
+            }
+        };
 
         /**
          *
