@@ -511,17 +511,17 @@ public class DaoTest {
             userDao.stream(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fnn.println());
         }
 
-        userDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null,
-                JdbcUtil.RowMapper.builder().get(1, (i, rs) -> rs.getString(i)).toList()).forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null, JdbcUtil.RowMapper.builder().get(1, (i, rs) -> rs.getString(i)).toList())
+                .forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
-                BiRowMapper.builder().get("firstName", (i, rs) -> rs.getString(i)).to(List.class)).forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.builder().get("firstName", (i, rs) -> rs.getString(i)).to(List.class))
+                .forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
-                BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class)).forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
+                .forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
-                BiRowMapper.builder().get("firstName", (i, rs) -> rs.getString(i)).to(User.class)).forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.builder().get("firstName", (i, rs) -> rs.getString(i)).to(User.class))
+                .forEach(Fn.println());
 
         userMapper.get(100L).ifPresent(Fn.println());
 
@@ -537,7 +537,12 @@ public class DaoTest {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void crud_joinedBy() throws SQLException {
+        N.println(userDao.targetEntityClass());
+        N.println(userDao.targetDaoInterface());
+        N.println(userDao.executor());
+
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 

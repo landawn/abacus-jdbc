@@ -1468,6 +1468,8 @@ final class DaoUtil {
                     return methodHandle.bindTo(proxy).invokeWithArguments(args);
                 };
 
+            } else if (methodName.equals("executor") && Executor.class.isAssignableFrom(returnType) && paramLen == 0) {
+                call = (proxy, args) -> nonNullExecutor;
             } else if (m.getName().equals("targetEntityClass") && Class.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> entityClass;
             } else if (m.getName().equals("targetDaoInterface") && Class.class.isAssignableFrom(returnType) && paramLen == 0) {
@@ -1478,8 +1480,6 @@ final class DaoUtil {
                 call = (proxy, args) -> sqlExecutor;
             } else if (methodName.equals("sqlMapper") && SQLMapper.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> nonNullSQLMapper;
-            } else if (methodName.equals("executor") && Executor.class.isAssignableFrom(returnType) && paramLen == 0) {
-                call = (proxy, args) -> nonNullExecutor;
             } else if (methodName.equals("cacheSql") && void.class.isAssignableFrom(returnType) && paramLen == 2 && paramTypes[0].equals(String.class)
                     && paramTypes[1].equals(String.class)) {
                 call = (proxy, args) -> {

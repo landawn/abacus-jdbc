@@ -15085,7 +15085,7 @@ public final class JdbcUtil {
         return (Tuple3) map.get(namingPolicy);
     }
 
-    public static interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> extends Dao<T, SB, TD> {
+    public static interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
         /**
          *
@@ -15095,7 +15095,27 @@ public final class JdbcUtil {
         @Deprecated
         @Internal
         @NonDBOperation
-        Class<T> targetDaoInterface();
+        Class<T> targetEntityClass();
+
+        /**
+         *
+         * @return
+         * @deprecated internal only
+         */
+        @Deprecated
+        @Internal
+        @NonDBOperation
+        Class<TD> targetDaoInterface();
+
+        /**
+         *
+         * @return
+         * @deprecated internal only
+         */
+        @Deprecated
+        @Internal
+        @NonDBOperation
+        Executor executor();
 
         /**
          *
@@ -15928,8 +15948,7 @@ public final class JdbcUtil {
         }
     }
 
-    public static interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends ReadOnlyJoinEntityHelper<T, SB, TD>>
-            extends JoinEntityHelper<T, SB, TD> {
+    public static interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
 
         /**
          * 
