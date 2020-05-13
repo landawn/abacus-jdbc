@@ -1,3 +1,8 @@
+### 1.20.18
+
+* Improvements and bug fix.
+
+
 ### 1.20.17
 
 * Remove `PreparedQuery.listToMap`.
