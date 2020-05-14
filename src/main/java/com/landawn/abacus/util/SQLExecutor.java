@@ -5066,40 +5066,6 @@ public class SQLExecutor {
     }
 
     /**
-     * Gets the DB sequence.
-     *
-     * @param tableName
-     * @param seqName
-     * @return
-     */
-    public DBSequence getDBSequence(final String tableName, final String seqName) {
-        return new DBSequence(this, tableName, seqName, 0, 1000);
-    }
-
-    /**
-     * Supports global sequence by db table.
-     *
-     * @param tableName
-     * @param seqName
-     * @param startVal
-     * @param seqBufferSize the numbers to allocate/reserve from database table when cached numbers are used up.
-     * @return
-     */
-    public DBSequence getDBSequence(final String tableName, final String seqName, final long startVal, final int seqBufferSize) {
-        return new DBSequence(this, tableName, seqName, startVal, seqBufferSize);
-    }
-
-    /**
-     * Supports global lock by db table.
-     *
-     * @param tableName
-     * @return
-     */
-    public DBLock getDBLock(final String tableName) {
-        return new DBLock(this, tableName);
-    }
-
-    /**
      * Does table exist.
      *
      * @param tableName
@@ -9715,26 +9681,7 @@ public class SQLExecutor {
     public interface StatementSetter extends Throwables.TriConsumer<ParsedSql, PreparedStatement, Object[], SQLException> {
 
         /** The Constant DEFAULT. */
-        StatementSetter DEFAULT = new AbstractStatementSetter() {
-            @SuppressWarnings("rawtypes")
-            @Override
-            protected void setParameters(final PreparedStatement stmt, final int parameterCount, final Object[] parameters, final Type[] parameterTypes)
-                    throws SQLException {
-                if (N.notNullOrEmpty(parameterTypes) && parameterTypes.length >= parameterCount) {
-                    for (int i = 0; i < parameterCount; i++) {
-                        parameterTypes[i].set(stmt, i + 1, parameters[i]);
-                    }
-                } else if (N.notNullOrEmpty(parameters) && parameters.length >= parameterCount) {
-                    for (int i = 0; i < parameterCount; i++) {
-                        if (parameters[i] == null) {
-                            stmt.setObject(i + 1, parameters[i]);
-                        } else {
-                            N.typeOf(parameters[i].getClass()).set(stmt, i + 1, parameters[i]);
-                        }
-                    }
-                }
-            }
-        };
+        StatementSetter DEFAULT = (parsedSql, stmt, parameters) -> JdbcUtil.setParameters(parsedSql, stmt, parameters);
 
         /**
          * Sets the parameters.
@@ -10380,118 +10327,5 @@ public class SQLExecutor {
          * @throws SQLException the SQL exception
          */
         T extractData(final Class<?> targetClass, final ParsedSql parsedSql, final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException;
-    }
-
-    /**
-     * The Class AbstractStatementSetter.
-     */
-    public static abstract class AbstractStatementSetter implements StatementSetter {
-
-        /**
-         * Sets the parameters.
-         *
-         * @param parsedSql
-         * @param stmt
-         * @param parameters
-         * @throws SQLException the SQL exception
-         */
-        @SuppressWarnings("rawtypes")
-        @Override
-        public void accept(final ParsedSql parsedSql, final PreparedStatement stmt, final Object[] parameters) throws SQLException {
-            final int parameterCount = parsedSql.getParameterCount();
-
-            if (parameterCount == 0) {
-                return;
-            } else if (N.isNullOrEmpty(parameters)) {
-                throw new IllegalArgumentException(
-                        "The count of parameter in sql is: " + parsedSql.getParameterCount() + ". But the specified parameters is null or empty");
-            }
-
-            Object[] parameterValues = null;
-            Type[] parameterTypes = null;
-
-            if (isEntityOrMapParameter(parsedSql, parameters)) {
-                final List<String> namedParameters = parsedSql.getNamedParameters();
-                final Object parameter_0 = parameters[0];
-
-                parameterValues = new Object[parameterCount];
-
-                if (ClassUtil.isEntity(parameter_0.getClass())) {
-                    final Object entity = parameter_0;
-                    final Class<?> cls = entity.getClass();
-                    final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
-                    parameterTypes = new Type[parameterCount];
-                    PropInfo propInfo = null;
-
-                    for (int i = 0; i < parameterCount; i++) {
-                        propInfo = entityInfo.getPropInfo(namedParameters.get(i));
-
-                        if (propInfo == null) {
-                            throw new IllegalArgumentException("Parameter for property '" + namedParameters.get(i) + "' is missed");
-                        }
-
-                        parameterValues[i] = propInfo.getPropValue(entity);
-                        parameterTypes[i] = propInfo.dbType;
-                    }
-                } else if (parameter_0 instanceof Map) {
-                    @SuppressWarnings("unchecked")
-                    final Map<String, Object> m = (Map<String, Object>) parameter_0;
-
-                    for (int i = 0; i < parameterCount; i++) {
-                        parameterValues[i] = m.get(namedParameters.get(i));
-
-                        if ((parameterValues[i] == null) && !m.containsKey(namedParameters.get(i))) {
-                            throw new IllegalArgumentException("Parameter for property '" + namedParameters.get(i) + "' is missed");
-                        }
-                    }
-                } else {
-                    final EntityId entityId = (EntityId) parameter_0;
-
-                    for (int i = 0; i < parameterCount; i++) {
-                        parameterValues[i] = entityId.get(namedParameters.get(i));
-
-                        if ((parameterValues[i] == null) && !entityId.containsKey(namedParameters.get(i))) {
-                            throw new IllegalArgumentException("Parameter for property '" + namedParameters.get(i) + "' is missed");
-                        }
-                    }
-                }
-            } else {
-                parameterValues = getParameterValues(parsedSql, parameters);
-            }
-
-            setParameters(stmt, parameterCount, parameterValues, parameterTypes);
-        }
-
-        /**
-         * Sets the parameters.
-         *
-         * @param stmt
-         * @param parameterCount
-         * @param parameters
-         * @param parameterTypes
-         * @throws SQLException the SQL exception
-         */
-        @SuppressWarnings("rawtypes")
-        protected abstract void setParameters(PreparedStatement stmt, int parameterCount, Object[] parameters, Type[] parameterTypes) throws SQLException;
-
-        /**
-         * Gets the parameter values.
-         *
-         * @param parsedSql
-         * @param parameters
-         * @return
-         */
-        protected Object[] getParameterValues(final ParsedSql parsedSql, final Object... parameters) {
-            if ((parameters.length == 1) && (parameters[0] != null)) {
-                if (parameters[0] instanceof Object[] && ((((Object[]) parameters[0]).length) >= parsedSql.getParameterCount())) {
-                    return (Object[]) parameters[0];
-                } else if (parameters[0] instanceof List && (((List<?>) parameters[0]).size() >= parsedSql.getParameterCount())) {
-                    final Collection<?> c = (Collection<?>) parameters[0];
-                    return c.toArray(new Object[c.size()]);
-                }
-            }
-
-            return parameters;
-        }
     }
 }

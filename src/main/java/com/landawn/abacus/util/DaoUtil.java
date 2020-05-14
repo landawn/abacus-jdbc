@@ -1155,9 +1155,7 @@ final class DaoUtil {
         final javax.sql.DataSource primaryDataSource = ds != null ? ds : dsm.getPrimaryDataSource();
         final SQLMapper nonNullSQLMapper = sqlMapper == null ? new SQLMapper() : sqlMapper;
         final Executor nonNullExecutor = executor == null ? JdbcUtil.asyncExecutor.getExecutor() : executor;
-        final AsyncExecutor nonNullAsyncExecutor = new AsyncExecutor(nonNullExecutor);
-        final SQLExecutor sqlExecutor = ds != null ? new SQLExecutor(ds, null, nonNullSQLMapper, null, nonNullAsyncExecutor)
-                : new SQLExecutor(dsm, null, nonNullSQLMapper, null, nonNullAsyncExecutor);
+        new AsyncExecutor(nonNullExecutor);
 
         java.lang.reflect.Type[] typeArguments = null;
 
@@ -1476,8 +1474,6 @@ final class DaoUtil {
                 call = (proxy, args) -> daoInterface;
             } else if (methodName.equals("dataSource") && javax.sql.DataSource.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> primaryDataSource;
-            } else if (methodName.equals("sqlExecutor") && SQLExecutor.class.isAssignableFrom(returnType) && paramLen == 0) {
-                call = (proxy, args) -> sqlExecutor;
             } else if (methodName.equals("sqlMapper") && SQLMapper.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> nonNullSQLMapper;
             } else if (methodName.equals("cacheSql") && void.class.isAssignableFrom(returnType) && paramLen == 2 && paramTypes[0].equals(String.class)

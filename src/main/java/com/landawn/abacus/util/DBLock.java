@@ -15,6 +15,8 @@
 package com.landawn.abacus.util;
 
 import java.lang.management.ManagementFactory;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,6 +25,9 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import javax.sql.DataSource;
+
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 
@@ -63,14 +68,13 @@ public final class DBLock {
         scheduledExecutor = MoreExecutors.getExitingScheduledExecutorService(executor);
     }
 
+    private final DataSource ds;
+
     /** The scheduled future. */
     private final ScheduledFuture<?> scheduledFuture;
 
     /** The target code pool. */
     private final Map<String, String> targetCodePool = new ConcurrentHashMap<>();
-
-    /** The sql executor. */
-    private final SQLExecutor sqlExecutor;
 
     /** The remove expired lock SQL. */
     private final String removeExpiredLockSQL;
@@ -93,8 +97,8 @@ public final class DBLock {
      * @param sqlExecutor
      * @param tableName
      */
-    DBLock(SQLExecutor sqlExecutor, String tableName) {
-        this.sqlExecutor = sqlExecutor;
+    DBLock(final DataSource ds, final String tableName) {
+        this.ds = ds;
         // ...
         removeExpiredLockSQL = "DELETE FROM " + tableName + " WHERE target = ? AND (expiry_time < ? OR update_time < ?)";
         // ...
@@ -107,14 +111,23 @@ public final class DBLock {
         String schema = "CREATE TABLE " + tableName + "(host_name VARCHAR(64), target VARCHAR(255) NOT NULL, code VARCHAR(64), status VARCHAR(16) NOT NULL, "
                 + "expiry_time TIMESTAMP NOT NULL, update_time TIMESTAMP NOT NULL, create_time TIMESTAMP NOT NULL, UNIQUE (target))";
 
-        sqlExecutor.createTableIfNotExists(tableName, schema);
+        final Connection conn = JdbcUtil.getConnection(ds);
 
-        if (!sqlExecutor.doesTableExist(tableName)) {
-            throw new RuntimeException("Failed to create table: " + tableName);
+        try {
+            JdbcUtil.createTableIfNotExists(conn, tableName, schema);
+
+            if (!JdbcUtil.doesTableExist(conn, tableName)) {
+                throw new RuntimeException("Failed to create table: " + tableName);
+            }
+
+            String removeDeadLockSQL = "DELETE FROM " + tableName + " WHERE host_name = ? and create_time < ?";
+
+            JdbcUtil.executeUpdate(conn, removeDeadLockSQL, IOUtil.HOST_NAME, DateUtil.createTimestamp(ManagementFactory.getRuntimeMXBean().getStartTime()));
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        } finally {
+            JdbcUtil.releaseConnection(conn, ds);
         }
-
-        String removeDeadLockSQL = "DELETE FROM " + tableName + " WHERE host_name = ? and create_time < ?";
-        sqlExecutor.update(removeDeadLockSQL, IOUtil.HOST_NAME, DateUtil.createTimestamp(ManagementFactory.getRuntimeMXBean().getStartTime()));
 
         final Runnable refreshTask = new Runnable() {
             @Override
@@ -125,8 +138,14 @@ public final class DBLock {
                     try {
                         m.putAll(targetCodePool);
 
-                        for (String target : m.keySet()) {
-                            DBLock.this.sqlExecutor.update(refreshSQL, DateUtil.currentTimestamp(), target, m.get(target));
+                        try {
+                            for (String target : m.keySet()) {
+                                JdbcUtil.executeUpdate(conn, refreshSQL, DateUtil.currentTimestamp(), target, m.get(target));
+                            }
+                        } catch (SQLException e) {
+                            throw new UncheckedSQLException(e);
+                        } finally {
+                            JdbcUtil.releaseConnection(conn, ds);
                         }
                     } finally {
                         Objectory.recycle(m);
@@ -180,7 +199,7 @@ public final class DBLock {
         assertNotClosed();
 
         try {
-            if (sqlExecutor.update(removeExpiredLockSQL, target, DateUtil.currentTimestamp(),
+            if (JdbcUtil.executeUpdate(ds, removeExpiredLockSQL, target, DateUtil.currentTimestamp(),
                     DateUtil.addMilliseconds(DateUtil.currentTimestamp(), -MAX_IDLE_TIME)) > 0) {
                 if (logger.isWarnEnabled()) {
                     logger.warn("Succeeded to remove expired lock for target: " + target);
@@ -199,7 +218,8 @@ public final class DBLock {
 
         do {
             try {
-                if (sqlExecutor.update(lockSQL, IOUtil.HOST_NAME, target, code, LOCKED, DateUtil.createTimestamp(now.getTime() + liveTime), now, now) > 0) {
+                if (JdbcUtil.executeUpdate(ds, lockSQL, IOUtil.HOST_NAME, target, code, LOCKED, DateUtil.createTimestamp(now.getTime() + liveTime), now,
+                        now) > 0) {
                     targetCodePool.put(target, code);
 
                     return code;
@@ -231,7 +251,11 @@ public final class DBLock {
             targetCodePool.remove(target);
         }
 
-        return sqlExecutor.update(unlockSQL, target, code) > 0;
+        try {
+            return JdbcUtil.executeUpdate(ds, unlockSQL, target, code) > 0;
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
     }
 
     /**
@@ -249,10 +273,7 @@ public final class DBLock {
         }
     }
 
-    /**
-     * Assert not closed.
-     */
-    protected void assertNotClosed() {
+    private void assertNotClosed() {
         if (isClosed) {
             throw new RuntimeException("This object pool has been closed");
         }
