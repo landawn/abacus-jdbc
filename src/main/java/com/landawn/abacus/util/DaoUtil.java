@@ -47,7 +47,6 @@ import java.util.concurrent.Executor;
 import java.util.regex.Pattern;
 
 import com.landawn.abacus.DataSet;
-import com.landawn.abacus.DataSourceManager;
 import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.EntityId;
 import com.landawn.abacus.cache.Cache;
@@ -1137,7 +1136,7 @@ final class DaoUtil {
 
     @SuppressWarnings({ "rawtypes" })
     static <T, SB extends SQLBuilder, TD extends JdbcUtil.Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
-            final DataSourceManager dsm, final SQLMapper sqlMapper, final Cache<String, Object> daoCache, final Executor executor) {
+              final SQLMapper sqlMapper, final Cache<String, Object> daoCache, final Executor executor) {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(ds, "dataSource");
 
@@ -1152,7 +1151,7 @@ final class DaoUtil {
 
         final Logger daoLogger = LoggerFactory.getLogger(daoInterface);
 
-        final javax.sql.DataSource primaryDataSource = ds != null ? ds : dsm.getPrimaryDataSource();
+        final javax.sql.DataSource primaryDataSource = ds;
         final SQLMapper nonNullSQLMapper = sqlMapper == null ? new SQLMapper() : sqlMapper;
         final Executor nonNullExecutor = executor == null ? JdbcUtil.asyncExecutor.getExecutor() : executor;
         new AsyncExecutor(nonNullExecutor);

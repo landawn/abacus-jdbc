@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Device {
     @Id
-    private long id;
+    private int id;
     private long userId;
     private String manufacture;
     private String model;

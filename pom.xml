@@ -4,7 +4,7 @@
 
 	<groupId>com.landawn</groupId>
 	<artifactId>abacus-jdbc</artifactId>
-	<version>1.20.19</version>
+	<version>2.0</version>
 	<packaging>jar</packaging>
 
 	<name>abacus-jdbc</name>
@@ -98,7 +98,7 @@
 		<dependency>
 			<groupId>com.zaxxer</groupId>
 			<artifactId>HikariCP</artifactId>
-			<version>3.3.1</version>
+			<version>3.4.5</version>
 			<scope>provided</scope>
 		</dependency>
 

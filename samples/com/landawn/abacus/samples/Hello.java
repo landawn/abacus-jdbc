@@ -1,7 +1,5 @@
 package com.landawn.abacus.samples;
 
-import static org.junit.Assert.assertEquals;
-
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.condition.ConditionFactory.CF;
@@ -20,7 +18,5 @@ public class Hello {
                 .sql();
 
         N.println(sql);
-        
-        assertEquals("UPDATE user SET first_name = first_name + 'abc' WHERE first_name = first_name + 'abc'", sql);
     }
 }

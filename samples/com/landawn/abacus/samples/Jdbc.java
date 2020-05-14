@@ -14,6 +14,9 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.condition.ConditionFactory.CF;
+import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.samples.dao.AddressDao;
+import com.landawn.abacus.samples.dao.DeviceDao;
 import com.landawn.abacus.samples.dao.EmployeeDao;
 import com.landawn.abacus.samples.dao.EmployeeProjectDao;
 import com.landawn.abacus.samples.dao.NoUpdateUserDao;
@@ -21,18 +24,15 @@ import com.landawn.abacus.samples.dao.ProjectDao;
 import com.landawn.abacus.samples.dao.ReadOnlyUserDao;
 import com.landawn.abacus.samples.dao.UserDao;
 import com.landawn.abacus.samples.dao.UserDaoL;
-import com.landawn.abacus.samples.entity.Address;
-import com.landawn.abacus.samples.entity.Device;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.HandlerFactory;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
-import com.landawn.abacus.util.SQLExecutor;
-import com.landawn.abacus.util.SQLExecutor.MapperLEx;
 import com.landawn.abacus.util.SQLTransaction;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 /**
  * CRUD: insert -> read -> update -> delete a record in DB table.
@@ -44,11 +44,16 @@ public class Jdbc {
                 HandlerFactory.create((result, obj, args, tp) -> N.println("calling: " + tp._1.getName() + " by Handler2.afterInvoke")));
     }
 
-    static final DataSource dataSource = JdbcUtil.createDataSource("jdbc:h2:~/test", "sa", "");
-    static final SQLExecutor sqlExecutor = new SQLExecutor(dataSource);
-    static final MapperLEx<User> userMapper = sqlExecutor.mapperEx(User.class);
-    static final MapperLEx<Device> deviceMapper = sqlExecutor.mapperEx(Device.class);
-    static final MapperLEx<Address> addressMapper = sqlExecutor.mapperEx(Address.class);
+    static final DataSource dataSource;
+
+    static {
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl("jdbc:h2:~/test");
+        config.setUsername("sa");
+        config.setPassword("");
+
+        dataSource = new HikariDataSource(config);
+    }
 
     static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
     static final UserDaoL userDao2 = JdbcUtil.createDao(UserDaoL.class, dataSource);
@@ -59,71 +64,79 @@ public class Jdbc {
     static final ProjectDao projectDao = JdbcUtil.createDao(ProjectDao.class, dataSource);
     static final EmployeeProjectDao employeeProjectDao = JdbcUtil.createDao(EmployeeProjectDao.class, dataSource);
 
+    static final DeviceDao deviceDao = JdbcUtil.createDao(DeviceDao.class, dataSource);
+    static final AddressDao addressDao = JdbcUtil.createDao(AddressDao.class, dataSource);
+
     // initialize DB schema.
     static {
-        JdbcUtil.enableSQLLog(true);
-        JdbcUtil.setMinExecutionTimeForSQLPerfLog(10);
+        try {
+            JdbcUtil.enableSQLLog(true);
+            JdbcUtil.setMinExecutionTimeForSQLPerfLog(10);
 
-        final String sql_user_drop_table = "DROP TABLE IF EXISTS user";
-        final String sql_user_creat_table = "CREATE TABLE IF NOT EXISTS user (" //
-                + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
-                + "first_name varchar(32) NOT NULL, " //
-                + "last_name varchar(32) NOT NULL, " //
-                + "prop1 varchar(32), " //
-                + "email varchar(32), " //
-                + "create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)";
+            final String sql_user_drop_table = "DROP TABLE IF EXISTS user";
+            final String sql_user_creat_table = "CREATE TABLE IF NOT EXISTS user (" //
+                    + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
+                    + "first_name varchar(32) NOT NULL, " //
+                    + "last_name varchar(32) NOT NULL, " //
+                    + "prop1 varchar(32), " //
+                    + "email varchar(32), " //
+                    + "create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)";
 
-        sqlExecutor.execute(sql_user_drop_table);
-        sqlExecutor.execute(sql_user_creat_table);
+            JdbcUtil.executeUpdate(dataSource, sql_user_drop_table);
+            JdbcUtil.executeUpdate(dataSource, sql_user_creat_table);
 
-        final String sql_device_drop_table = "DROP TABLE IF EXISTS device";
-        final String sql_device_creat_table = "CREATE TABLE IF NOT EXISTS device (" //
-                + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
-                + "manufacture varchar(64) NOT NULL, " //
-                + "model varchar(32) NOT NULL, " //
-                + "user_id bigint(20), " //
-                + "FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE)";
+            final String sql_device_drop_table = "DROP TABLE IF EXISTS device";
+            final String sql_device_creat_table = "CREATE TABLE IF NOT EXISTS device (" //
+                    + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
+                    + "manufacture varchar(64) NOT NULL, " //
+                    + "model varchar(32) NOT NULL, " //
+                    + "user_id bigint(20), " //
+                    + "FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE)";
 
-        sqlExecutor.execute(sql_device_drop_table);
-        sqlExecutor.execute(sql_device_creat_table);
+            JdbcUtil.executeUpdate(dataSource, sql_device_drop_table);
+            JdbcUtil.executeUpdate(dataSource, sql_device_creat_table);
 
-        final String sql_address_drop_table = "DROP TABLE IF EXISTS address";
-        final String sql_address_creat_table = "CREATE TABLE IF NOT EXISTS address (" //
-                + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
-                + "street varchar(64) NOT NULL, " //
-                + "city varchar(32) NOT NULL, " //
-                + "user_id bigint(20), " //
-                + "FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE)";
+            final String sql_address_drop_table = "DROP TABLE IF EXISTS address";
+            final String sql_address_creat_table = "CREATE TABLE IF NOT EXISTS address (" //
+                    + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
+                    + "street varchar(64) NOT NULL, " //
+                    + "city varchar(32) NOT NULL, " //
+                    + "user_id bigint(20), " //
+                    + "FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE)";
 
-        sqlExecutor.execute(sql_address_drop_table);
-        sqlExecutor.execute(sql_address_creat_table);
+            JdbcUtil.executeUpdate(dataSource, sql_address_drop_table);
+            JdbcUtil.executeUpdate(dataSource, sql_address_creat_table);
 
-        // this code is copied from: https://www.baeldung.com/hibernate-many-to-many
+            // this code is copied from: https://www.baeldung.com/hibernate-many-to-many
 
-        final String sql_employee_drop_table = "DROP TABLE IF EXISTS employee";
-        final String sql_employee_creat_table = "CREATE TABLE IF NOT EXISTS employee (" //
-                + "employee_id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
-                + "first_name varchar(50) DEFAULT NULL, " //
-                + "last_name varchar(50) DEFAULT NULL)";
+            final String sql_employee_drop_table = "DROP TABLE IF EXISTS employee";
+            final String sql_employee_creat_table = "CREATE TABLE IF NOT EXISTS employee (" //
+                    + "employee_id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
+                    + "first_name varchar(50) DEFAULT NULL, " //
+                    + "last_name varchar(50) DEFAULT NULL)";
 
-        sqlExecutor.execute(sql_employee_drop_table);
-        sqlExecutor.execute(sql_employee_creat_table);
+            JdbcUtil.executeUpdate(dataSource, sql_employee_drop_table);
+            JdbcUtil.executeUpdate(dataSource, sql_employee_creat_table);
 
-        final String sql_project_drop_table = "DROP TABLE IF EXISTS project";
-        final String sql_project_creat_table = "CREATE TABLE IF NOT EXISTS project (" //
-                + "project_id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY, " // 
-                + "title varchar(50) DEFAULT NULL)";
+            final String sql_project_drop_table = "DROP TABLE IF EXISTS project";
+            final String sql_project_creat_table = "CREATE TABLE IF NOT EXISTS project (" //
+                    + "project_id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY, " // 
+                    + "title varchar(50) DEFAULT NULL)";
 
-        sqlExecutor.execute(sql_project_drop_table);
-        sqlExecutor.execute(sql_project_creat_table);
+            JdbcUtil.executeUpdate(dataSource, sql_project_drop_table);
+            JdbcUtil.executeUpdate(dataSource, sql_project_creat_table);
 
-        final String sql_employee_dept_relationship_drop_table = "DROP TABLE IF EXISTS employee_project";
-        final String sql_employee_dept_relationship_creat_table = "CREATE TABLE IF NOT EXISTS employee_project (" //
-                + "employee_id int(11) NOT NULL, " //
-                + "project_id int(11) NOT NULL)";
+            final String sql_employee_dept_relationship_drop_table = "DROP TABLE IF EXISTS employee_project";
+            final String sql_employee_dept_relationship_creat_table = "CREATE TABLE IF NOT EXISTS employee_project (" //
+                    + "employee_id int(11) NOT NULL, " //
+                    + "project_id int(11) NOT NULL)";
 
-        sqlExecutor.execute(sql_employee_dept_relationship_drop_table);
-        sqlExecutor.execute(sql_employee_dept_relationship_creat_table);
+            JdbcUtil.executeUpdate(dataSource, sql_employee_dept_relationship_drop_table);
+            JdbcUtil.executeUpdate(dataSource, sql_employee_dept_relationship_creat_table);
+
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
     }
 
     @Test
@@ -245,59 +258,6 @@ public class Jdbc {
     }
 
     @Test
-    public void crud_by_SQLExecutor() {
-        String sql = NSC.insertInto(User.class).sql();
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-        sqlExecutor.insert(sql, user);
-
-        sql = NSC.selectFrom(User.class).where("id = :id").sql();
-        User userFromDB = sqlExecutor.get(User.class, sql, 100).orNull();
-        System.out.println(userFromDB);
-
-        sql = NSC.update(User.class).set("firstName", "lastName").where("id = :id").sql();
-        sqlExecutor.update(sql, N.asList("Tom", "Hanks", 100));
-
-        sql = NSC.deleteFrom(User.class).where("id = :id").sql();
-        sqlExecutor.update(sql, 100);
-
-        // Improvements:
-        // 1, No need to manually create/open and close Connection/Statement/ResultSet.
-        // 2, No need to manually read records from ResultSet.
-        // 3, No need to manually set parameters to Statement.
-        // 4, Flexible/fluent APIs
-        // But how to manage/maintain/reuse the tens/hundreds/thousands of SQL scripts?
-        // see below samples by Mapper:
-    }
-
-    @Test
-    public void crud_by_Mapper() {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-        userMapper.insert(user);
-
-        User userFromDB = userMapper.gett(100L);
-        System.out.println(userFromDB);
-
-        // There are so much more can be done by findFirst/list/stream/
-        // userMapper.stream(CF.eq("firstName", "Forrest")).filter(u -> u.getId() > 10).map(e -> e).groupBy(keyMapper);
-
-        userMapper.update(N.asProps("firstName", "Tom", "lastName", "Hanks"), CF.eq("id", 100));
-
-        userMapper.deleteById(100L);
-
-        // Improvements:
-        // 1, No need to manually create/open and close Connection/Statement/ResultSet.
-        // 2, No need to manually read records from ResultSet.
-        // 3, No need to manually set parameters to Statement.
-        // 4, Flexible/fluent APIs
-        // 5, SQL scripts are managed/mapped with static type info, without any implementation required.
-        // But:
-        //   a), Compositing sqls by parameters/conditions has some minor performance impact, although it really doesn't mater most of time.
-        //       It's still kind of waste and you may want to avoid it. After all, if better can be pursued, why not?
-        //   b), Not all the queries can be auto-composited by parameters/conditions and you may want to customized some queries.
-        // Try Dao, see below sample:
-    }
-
-    @Test
     public void crud_by_Dao() throws SQLException {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
@@ -350,51 +310,5 @@ public class Jdbc {
 
         // In you're in Spring and want to use Spring transaction management,
         // then don't need to call beginTransaction because Spring transaction is integrated and supported.
-    }
-
-    @Test
-    public void crud_joinedBy() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-        userDao.insertWithId(user);
-
-        User userFromDB = userDao.gett(100L);
-        System.out.println(userFromDB);
-
-        Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
-        deviceMapper.insert(device);
-
-        Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
-        addressMapper.insert(address);
-
-        User userFromDB2 = N.copy(userFromDB);
-        userDao.loadAllJoinEntities(userFromDB);
-        System.out.println(userFromDB);
-
-        userMapper.loadAllJoinEntities(userFromDB2);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
-        userFromDB = userDao.gett(100L);
-        userFromDB2 = N.copy(userFromDB);
-        userDao.loadJoinEntitiesIfNull(userFromDB);
-        System.out.println(userFromDB);
-
-        userMapper.loadJoinEntitiesIfNull(userFromDB2);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
-        userFromDB = userDao.gett(100L);
-        userFromDB2 = N.copy(userFromDB);
-        userDao.loadAllJoinEntities(userFromDB, true);
-        System.out.println(userFromDB);
-
-        userMapper.loadJoinEntitiesIfNull(userFromDB2, true);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
-        userDao.deleteById(100L);
     }
 }

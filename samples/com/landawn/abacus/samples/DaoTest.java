@@ -1,17 +1,15 @@
 package com.landawn.abacus.samples;
 
-import static com.landawn.abacus.samples.Jdbc.addressMapper;
+import static com.landawn.abacus.samples.Jdbc.addressDao;
 import static com.landawn.abacus.samples.Jdbc.dataSource;
-import static com.landawn.abacus.samples.Jdbc.deviceMapper;
+import static com.landawn.abacus.samples.Jdbc.deviceDao;
 import static com.landawn.abacus.samples.Jdbc.employeeDao;
 import static com.landawn.abacus.samples.Jdbc.employeeProjectDao;
 import static com.landawn.abacus.samples.Jdbc.noUpdateUserDao;
 import static com.landawn.abacus.samples.Jdbc.projectDao;
 import static com.landawn.abacus.samples.Jdbc.readOnlyUserDao;
-import static com.landawn.abacus.samples.Jdbc.sqlExecutor;
 import static com.landawn.abacus.samples.Jdbc.userDao;
 import static com.landawn.abacus.samples.Jdbc.userDao2;
-import static com.landawn.abacus.samples.Jdbc.userMapper;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -523,8 +521,6 @@ public class DaoTest {
         userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.builder().get("firstName", (i, rs) -> rs.getString(i)).to(User.class))
                 .forEach(Fn.println());
 
-        userMapper.get(100L).ifPresent(Fn.println());
-
         userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.to(User.class)).forEach(Fn.println());
 
         userDao.updateFirstAndLastName("Tom", "Hanks", 100);
@@ -533,7 +529,7 @@ public class DaoTest {
 
         userDao.deleteById(100L);
 
-        assertEquals(1, sqlExecutor.update("delete from user where id = ? ", 101));
+        assertEquals(1, JdbcUtil.executeUpdate(dataSource, "delete from user where id = ? ", 101));
     }
 
     @Test
@@ -550,65 +546,37 @@ public class DaoTest {
         System.out.println(userFromDB);
 
         Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
-        deviceMapper.insert(device);
+        deviceDao.insert(device);
 
         Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
-        addressMapper.insert(address);
+        addressDao.insert(address);
 
-        User userFromDB2 = N.copy(userFromDB);
+        N.copy(userFromDB);
         userDao.loadAllJoinEntities(userFromDB);
         System.out.println(userFromDB);
 
-        userMapper.loadAllJoinEntities(userFromDB2);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
         userFromDB = userDao.gett(100L);
-        userFromDB2 = N.copy(userFromDB);
+        N.copy(userFromDB);
         userDao.loadJoinEntitiesIfNull(userFromDB);
         System.out.println(userFromDB);
 
-        userMapper.loadJoinEntitiesIfNull(userFromDB2);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
         userFromDB = userDao.gett(100L);
-        userFromDB2 = N.copy(userFromDB);
+        N.copy(userFromDB);
         userDao.loadJoinEntities(userFromDB, Device.class);
         System.out.println(userFromDB);
 
-        userMapper.loadJoinEntities(userFromDB2, Device.class);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
         userFromDB = userDao.gett(100L);
-        userFromDB2 = N.copy(userFromDB);
+        N.copy(userFromDB);
         userDao.loadJoinEntitiesIfNull(userFromDB, Address.class);
         System.out.println(userFromDB);
 
-        userMapper.loadJoinEntitiesIfNull(userFromDB2, Address.class);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
         userFromDB = userDao.gett(100L);
-        userFromDB2 = N.copy(userFromDB);
+        N.copy(userFromDB);
         userDao.loadAllJoinEntities(userFromDB, true);
         System.out.println(userFromDB);
 
-        userMapper.loadJoinEntitiesIfNull(userFromDB2, true);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
         userDao.deleteJoinEntities(userFromDB, Address.class);
         userDao.deleteJoinEntities(N.asList(userFromDB, userFromDB, userFromDB), Device.class);
-
-        userMapper.deleteJoinEntities(userFromDB, Address.class);
-        userMapper.deleteJoinEntities(N.asList(userFromDB, userFromDB, userFromDB), Device.class);
 
         userDao.deleteById(100L);
     }
@@ -626,10 +594,10 @@ public class DaoTest {
             users.add(userFromDB);
 
             Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
-            deviceMapper.insert(device);
+            deviceDao.insert(device);
 
             Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
-            addressMapper.insert(address);
+            addressDao.insert(address);
         }
 
         List<User> users2 = Stream.of(users).map(N::copy).toList();
@@ -638,21 +606,11 @@ public class DaoTest {
         userDao.loadAllJoinEntities(users2);
         System.out.println(users2);
 
-        userMapper.loadAllJoinEntities(users3);
-        System.out.println(users3);
-
-        assertEquals(users2, users3);
-
         users2 = Stream.of(users).map(N::copy).toList();
         users3 = Stream.of(users).map(N::copy).toList();
 
         userDao.loadJoinEntitiesIfNull(users2);
         System.out.println(users2);
-
-        userMapper.loadJoinEntitiesIfNull(users3);
-        System.out.println(users3);
-
-        assertEquals(users2, users3);
 
         users2 = Stream.of(users).map(N::copy).toList();
         users3 = Stream.of(users).map(N::copy).toList();
@@ -660,21 +618,11 @@ public class DaoTest {
         userDao.loadJoinEntities(users2, Device.class);
         System.out.println(users2);
 
-        userMapper.loadJoinEntities(users3, Device.class);
-        System.out.println(users3);
-
-        assertEquals(users2, users3);
-
         users2 = Stream.of(users).map(N::copy).toList();
         users3 = Stream.of(users).map(N::copy).toList();
 
         userDao.loadJoinEntitiesIfNull(users2, Address.class);
         System.out.println(users2);
-
-        userMapper.loadJoinEntitiesIfNull(users3, Address.class);
-        System.out.println(users3);
-
-        assertEquals(users2, users3);
 
         users2 = Stream.of(users).map(N::copy).toList();
         users3 = Stream.of(users).map(N::copy).toList();
@@ -682,16 +630,8 @@ public class DaoTest {
         userDao.loadAllJoinEntities(users2, true);
         System.out.println(users2);
 
-        userMapper.loadAllJoinEntities(users3, true);
-        System.out.println(users3);
-
-        assertEquals(users2, users3);
-
         userDao.deleteJoinEntities(users3, Address.class);
         userDao.deleteJoinEntities(users, Device.class);
-
-        userMapper.deleteJoinEntities(users2, Address.class);
-        userMapper.deleteJoinEntities(users, Device.class);
 
         userDao.batchDelete(users);
     }

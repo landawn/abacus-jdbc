@@ -1,3 +1,10 @@
+### 2.0
+
+* Remove `SQLExecutor/Mapper`.
+* Remove `DataSource` and the package.
+* Improvements and bug fix.
+
+
 ### 1.20.18
 
 * Improvements and bug fix.
