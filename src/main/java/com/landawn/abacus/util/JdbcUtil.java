@@ -7165,6 +7165,14 @@ public final class JdbcUtil {
             return this;
         }
 
+        public NamedQuery setInt(String parameterName, char x) throws SQLException {
+            return setInt(parameterName, (int) x);
+        }
+
+        public NamedQuery setInt(String parameterName, Character x) throws SQLException {
+            return setInt(parameterName, x == null ? 0 : (int) x.charValue());
+        }
+
         /**
          * Sets the long.
          *
@@ -7475,6 +7483,10 @@ public final class JdbcUtil {
             }
 
             return this;
+        }
+
+        public NamedQuery setString(String parameterName, CharSequence x) throws SQLException {
+            return setString(parameterName, x == null ? (String) null : x.toString());
         }
 
         /**
