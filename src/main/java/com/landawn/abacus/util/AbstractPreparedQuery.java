@@ -300,6 +300,34 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
     }
 
     /**
+     * Sets the int.
+     *
+     * @param parameterIndex starts from 1, not 0.
+     * @param x
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public Q setInt(int parameterIndex, char x) throws SQLException {
+        stmt.setInt(parameterIndex, x);
+
+        return (Q) this;
+    }
+
+    /**
+     * Sets the int.
+     *
+     * @param parameterIndex
+     * @param x
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public Q setInt(int parameterIndex, Character x) throws SQLException {
+        stmt.setInt(parameterIndex, N.defaultIfNull(x));
+
+        return (Q) this;
+    }
+
+    /**
      * Sets the long.
      *
      * @param parameterIndex starts from 1, not 0.
@@ -407,6 +435,20 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      */
     public Q setString(int parameterIndex, String x) throws SQLException {
         stmt.setString(parameterIndex, x);
+
+        return (Q) this;
+    }
+
+    /**
+     * Sets the string.
+     *
+     * @param parameterIndex starts from 1, not 0.
+     * @param x
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public Q setString(int parameterIndex, CharSequence x) throws SQLException {
+        stmt.setString(parameterIndex, x == null ? null : x.toString());
 
         return (Q) this;
     }

@@ -128,6 +128,7 @@ import com.landawn.abacus.util.function.Supplier;
 import com.landawn.abacus.util.stream.Collector;
 import com.landawn.abacus.util.stream.EntryStream;
 import com.landawn.abacus.util.stream.Stream;
+import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
  * The Class JdbcUtil.
@@ -7069,7 +7070,6 @@ public final class JdbcUtil {
 
             return Tuple.of(result1, result2, result3, result4, result5);
         }
-
     }
 
     /**
@@ -7532,6 +7532,14 @@ public final class JdbcUtil {
             return this;
         }
 
+        public NamedQuery setInt(String parameterName, char x) throws SQLException {
+            return setInt(parameterName, (int) x);
+        }
+
+        public NamedQuery setInt(String parameterName, Character x) throws SQLException {
+            return setInt(parameterName, x == null ? 0 : (int) x.charValue());
+        }
+
         /**
          * Sets the long.
          *
@@ -7842,6 +7850,10 @@ public final class JdbcUtil {
             }
 
             return this;
+        }
+
+        public NamedQuery setString(String parameterName, CharSequence x) throws SQLException {
+            return setString(parameterName, x == null ? (String) null : x.toString());
         }
 
         /**
@@ -15137,7 +15149,7 @@ public final class JdbcUtil {
     }
 
     @SuppressWarnings("rawtypes")
-    private static final Map<Class<?>, Map<NamingPolicy, Tuple3<BiRowMapper, Function, BiConsumer>>> idGeneratorGetterSetterPool = new ConcurrentHashMap<>();
+    private static final Map<Tuple2<Class<?>, Class<?>>, Map<NamingPolicy, Tuple3<BiRowMapper, Function, BiConsumer>>> idGeneratorGetterSetterPool = new ConcurrentHashMap<>();
 
     @SuppressWarnings("rawtypes")
     private static final Tuple3<BiRowMapper, Function, BiConsumer> noIdGeneratorGetterSetter = Tuple.of(NO_BI_GENERATED_KEY_EXTRACTOR, entity -> null,
@@ -15145,12 +15157,14 @@ public final class JdbcUtil {
 
     @SuppressWarnings({ "rawtypes", "deprecation" })
     static <ID> Tuple3<BiRowMapper<ID>, Function<Object, ID>, BiConsumer<ID, Object>> getIdGeneratorGetterSetter(final Class<?> entityClass,
-            final NamingPolicy namingPolicy) {
+            final NamingPolicy namingPolicy, final Class<?> idType) {
         if (entityClass == null || !ClassUtil.isEntity(entityClass)) {
             return (Tuple3) noIdGeneratorGetterSetter;
         }
 
-        Map<NamingPolicy, Tuple3<BiRowMapper, Function, BiConsumer>> map = idGeneratorGetterSetterPool.get(entityClass);
+        final Tuple2<Class<?>, Class<?>> key = Tuple.of(entityClass, idType);
+
+        Map<NamingPolicy, Tuple3<BiRowMapper, Function, BiConsumer>> map = idGeneratorGetterSetterPool.get(key);
 
         if (map == null) {
             final List<String> idPropNameList = ClassUtil.getIdFieldNames(entityClass);
@@ -15160,22 +15174,31 @@ public final class JdbcUtil {
             final List<PropInfo> idPropInfoList = isNoId ? null : Stream.of(idPropNameList).map(entityInfo::getPropInfo).toList();
             final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
             final boolean isOneId = isNoId ? false : idPropNameList.size() == 1;
+            final boolean isEntityId = idType != null && EntityId.class.isAssignableFrom(idType);
 
             final Function<Object, ID> idGetter = isNoId ? noIdGeneratorGetterSetter._2 //
                     : (isOneId ? entity -> idPropInfo.getPropValue(entity) //
-                            : entity -> {
-                                final Seid seid = Seid.of(ClassUtil.getSimpleClassName(entityClass));
+                            : (isEntityId ? entity -> {
+                                final Seid ret = Seid.of(ClassUtil.getSimpleClassName(entityClass));
 
                                 for (PropInfo propInfo : idPropInfoList) {
-                                    seid.set(propInfo.name, propInfo.getPropValue(entity));
+                                    ret.set(propInfo.name, propInfo.getPropValue(entity));
                                 }
 
-                                return (ID) seid;
-                            });
+                                return (ID) ret;
+                            } : entity -> {
+                                final Object ret = N.newInstance(idType);
+
+                                for (PropInfo propInfo : idPropInfoList) {
+                                    ClassUtil.setPropValue(ret, propInfo.name, propInfo.getPropValue(entity));
+                                }
+
+                                return (ID) ret;
+                            }));
 
             final BiConsumer<ID, Object> idSetter = isNoId ? noIdGeneratorGetterSetter._3 //
                     : (isOneId ? (id, entity) -> idPropInfo.setPropValue(entity, id) //
-                            : (id, entity) -> {
+                            : (isEntityId ? (id, entity) -> {
                                 if (id instanceof EntityId) {
                                     final EntityId entityId = (EntityId) id;
                                     PropInfo propInfo = null;
@@ -15190,7 +15213,17 @@ public final class JdbcUtil {
                                 } else {
                                     logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
                                 }
-                            });
+                            } : (id, entity) -> {
+                                if (id != null && ClassUtil.isEntity(id.getClass())) {
+                                    final Object entityId = id;
+
+                                    for (PropInfo propInfo : idPropInfoList) {
+                                        propInfo.setPropValue(entity, ClassUtil.getPropValue(entityId, propInfo.name));
+                                    }
+                                } else {
+                                    logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
+                                }
+                            }));
 
             map = new EnumMap<>(NamingPolicy.class);
 
@@ -15208,7 +15241,7 @@ public final class JdbcUtil {
                                 : (rs, columnLabels) -> {
                                     if (columnLabels.size() == 1) {
                                         return idPropInfo.dbType.get(rs, 1);
-                                    } else {
+                                    } else if (isEntityId) {
                                         final int columnCount = columnLabels.size();
                                         final Seid id = Seid.of(ClassUtil.getSimpleClassName(entityClass));
                                         String columnName = null;
@@ -15227,13 +15260,26 @@ public final class JdbcUtil {
                                         }
 
                                         return id;
+                                    } else {
+                                        final EntityInfo idEntityInfo = ParserUtil.getEntityInfo(idType);
+                                        final List<Tuple2<String, PropInfo>> tpList = StreamEx.of(columnLabels)
+                                                .filter(it -> idEntityInfo.getPropInfo(it) != null)
+                                                .map(it -> Tuple.of(it, idEntityInfo.getPropInfo(it)))
+                                                .toList();
+                                        final Object id = N.newInstance(idType);
+
+                                        for (Tuple2<String, PropInfo> tp : tpList) {
+                                            tp._2.setPropValue(id, getColumnValue(rs, tp._1));
+                                        }
+
+                                        return id;
                                     }
                                 });
 
                 map.put(np, Tuple.of(keyExtractor, idGetter, idSetter));
             }
 
-            idGeneratorGetterSetterPool.put(entityClass, map);
+            idGeneratorGetterSetterPool.put(key, map);
         }
 
         return (Tuple3) map.get(namingPolicy);
@@ -16464,6 +16510,6 @@ public final class JdbcUtil {
     @Deprecated
     public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
             final SQLMapper sqlMapper, final Cache<String, Object> cache, final Executor executor) {
-        return DaoUtil.createDao(daoInterface, ds, null, sqlMapper, cache, executor);
+        return DaoUtil.createDao(daoInterface, ds, sqlMapper, cache, executor);
     }
 }
