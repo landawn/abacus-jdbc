@@ -5,6 +5,7 @@ import static com.landawn.abacus.samples.Jdbc.dataSource;
 import static com.landawn.abacus.samples.Jdbc.deviceDao;
 import static com.landawn.abacus.samples.Jdbc.employeeDao;
 import static com.landawn.abacus.samples.Jdbc.employeeProjectDao;
+import static com.landawn.abacus.samples.Jdbc.employeeProjectDao2;
 import static com.landawn.abacus.samples.Jdbc.noUpdateUserDao;
 import static com.landawn.abacus.samples.Jdbc.projectDao;
 import static com.landawn.abacus.samples.Jdbc.readOnlyUserDao;
@@ -686,8 +687,8 @@ public class DaoTest {
         N.println(entityId);
 
         employeeProject = EmployeeProject.builder().employeeId(100).projectId(project.getProjectId()).build();
-        entityId = employeeProjectDao.insert(employeeProject);
-        N.println(entityId);
+        EmployeeProject entityId2 = employeeProjectDao2.insert(employeeProject);
+        N.println(entityId2);
 
         List<Employee> employees = employeeDao.list(CF.alwaysTrue());
         employeeDao.loadAllJoinEntities(employees);
@@ -703,9 +704,17 @@ public class DaoTest {
         projectDao.loadJoinEntities(projects, Employee.class, N.asList("firstName"));
         System.out.println(projects);
 
+        assertTrue(employeeProjectDao.exists(entityId));
+        assertNotNull(employeeProjectDao.gett(entityId));
+
+        assertTrue(employeeProjectDao2.exists(entityId2));
+        assertNotNull(employeeProjectDao2.gett(entityId2));
+
         employeeDao.delete(CF.alwaysTrue());
         projectDao.delete(CF.alwaysTrue());
-        employeeProjectDao.delete(CF.alwaysTrue());
+        employeeProjectDao.deleteById(entityId);
+        employeeProjectDao2.deleteById(entityId2);
+
         assertFalse(employeeProjectDao.exists(entityId));
         assertNull(employeeProjectDao.gett(entityId));
     }

@@ -1136,7 +1136,7 @@ final class DaoUtil {
 
     @SuppressWarnings({ "rawtypes" })
     static <T, SB extends SQLBuilder, TD extends JdbcUtil.Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
-              final SQLMapper sqlMapper, final Cache<String, Object> daoCache, final Executor executor) {
+            final SQLMapper sqlMapper, final Cache<String, Object> daoCache, final Executor executor) {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(ds, "dataSource");
 
@@ -1154,7 +1154,6 @@ final class DaoUtil {
         final javax.sql.DataSource primaryDataSource = ds;
         final SQLMapper nonNullSQLMapper = sqlMapper == null ? new SQLMapper() : sqlMapper;
         final Executor nonNullExecutor = executor == null ? JdbcUtil.asyncExecutor.getExecutor() : executor;
-        new AsyncExecutor(nonNullExecutor);
 
         java.lang.reflect.Type[] typeArguments = null;
 
@@ -1192,7 +1191,7 @@ final class DaoUtil {
                                 + " is not assignable from the id property type in the entity class: "
                                 + ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType());
                     }
-                } else if (idFieldNames.size() > 1 && !EntityId.class.equals(typeArguments[1])) {
+                } else if (idFieldNames.size() > 1 && !(EntityId.class.equals(typeArguments[1]) || ClassUtil.isEntity((Class) typeArguments[1]))) {
                     throw new IllegalArgumentException("To support multiple ids, the 'ID' type type must be EntityId. It can't be: " + typeArguments[1]);
                 }
             }
@@ -1209,9 +1208,11 @@ final class DaoUtil {
                 .toList();
 
         final Class<T> entityClass = N.isNullOrEmpty(typeArguments) ? null : (Class) typeArguments[0];
-        final Class<?> idClass = JdbcUtil.CrudDao.class.isAssignableFrom(daoInterface) ? (Class) typeArguments[1] : null;
-
         final boolean isDirtyMarker = entityClass == null ? false : ClassUtil.isDirtyMarker(entityClass);
+        final Class<?> idClass = JdbcUtil.CrudDao.class.isAssignableFrom(daoInterface)
+                ? (JdbcUtil.CrudDaoL.class.isAssignableFrom(daoInterface) ? Long.class : (Class) typeArguments[1])
+                : null;
+        final boolean isEntityId = idClass != null && EntityId.class.isAssignableFrom(idClass);
 
         final Class<? extends SQLBuilder> sbc = N.isNullOrEmpty(typeArguments) ? PSC.class
                 : (typeArguments.length >= 2 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[1]) ? (Class) typeArguments[1]
@@ -1319,31 +1320,36 @@ final class DaoUtil {
                         : Stream.of(idPropNameList).map(idName -> propColumnNameMap.get(idName)).toArray(IntFunctions.ofStringArray()));
 
         final Tuple3<JdbcUtil.BiRowMapper<Object>, Function<Object, Object>, BiConsumer<Object, Object>> tp3 = JdbcUtil.getIdGeneratorGetterSetter(entityClass,
-                namingPolicy);
+                namingPolicy, idClass);
 
         final JdbcUtil.BiRowMapper<Object> keyExtractor = tp3._1;
         final Function<Object, Object> idGetter = tp3._2;
         final BiConsumer<Object, Object> idSetter = tp3._3;
 
+        final EntityInfo idEntityInfo = idClass != null && ClassUtil.isEntity(idClass) ? ParserUtil.getEntityInfo(idClass) : null;
+
         final Predicate<Object> isDefaultIdTester = isNoId ? id -> true
                 : (isOneId ? id -> JdbcUtil.isDefaultIdPropValue(id)
-                        : id -> Stream.of(((EntityId) id).entrySet()).allMatch(e -> JdbcUtil.isDefaultIdPropValue(e.getValue())));
+                        : (isEntityId ? id -> Stream.of(((EntityId) id).entrySet()).allMatch(it -> JdbcUtil.isDefaultIdPropValue(it.getValue()))
+                                : id -> Stream.of(idPropNameList).allMatch(idName -> JdbcUtil.isDefaultIdPropValue(idEntityInfo.getPropValue(id, idName)))));
 
         final JdbcUtil.BiParametersSetter<NamedQuery, Object> idParamSetter = isOneId ? (pq, id) -> pq.setObject(oneIdPropName, id, idPropInfo.dbType)
-                : (pq, id) -> {
+                : (isEntityId ? (pq, id) -> {
                     final EntityId entityId = (EntityId) id;
                     PropInfo propInfo = null;
 
-                    for (String idName : entityId.keySet()) {
+                    for (String idName : idPropNameList) {
                         propInfo = entityInfo.getPropInfo(idName);
-
-                        if (propInfo == null) {
-                            pq.setObject(idName, entityId.get(idName));
-                        } else {
-                            pq.setObject(idName, entityId.get(idName), propInfo.dbType);
-                        }
+                        pq.setObject(idName, entityId.get(idName), propInfo.dbType);
                     }
-                };
+                } : (pq, id) -> {
+                    PropInfo propInfo = null;
+
+                    for (String idName : idPropNameList) {
+                        propInfo = idEntityInfo.getPropInfo(idName);
+                        pq.setObject(idName, propInfo.getPropValue(id), propInfo.dbType);
+                    }
+                });
 
         final JdbcUtil.BiParametersSetter<NamedQuery, Object> idParamSetterByEntity = isOneId
                 ? (pq, entity) -> pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity), idPropInfo.dbType)
@@ -2629,7 +2635,6 @@ final class DaoUtil {
                             final Object firstId = N.first(ids).get();
                             final boolean isMap = firstId instanceof Map;
                             final boolean isEntity = firstId != null && ClassUtil.isEntity(firstId.getClass());
-                            final boolean isEntityId = firstId instanceof EntityId;
 
                             N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId),
                                     "Input 'ids' can not be EntityIds/Maps or entities for single id ");

@@ -19,6 +19,7 @@ import com.landawn.abacus.samples.dao.AddressDao;
 import com.landawn.abacus.samples.dao.DeviceDao;
 import com.landawn.abacus.samples.dao.EmployeeDao;
 import com.landawn.abacus.samples.dao.EmployeeProjectDao;
+import com.landawn.abacus.samples.dao.EmployeeProjectDao2;
 import com.landawn.abacus.samples.dao.NoUpdateUserDao;
 import com.landawn.abacus.samples.dao.ProjectDao;
 import com.landawn.abacus.samples.dao.ReadOnlyUserDao;
@@ -63,6 +64,7 @@ public class Jdbc {
     static final EmployeeDao employeeDao = JdbcUtil.createDao(EmployeeDao.class, dataSource);
     static final ProjectDao projectDao = JdbcUtil.createDao(ProjectDao.class, dataSource);
     static final EmployeeProjectDao employeeProjectDao = JdbcUtil.createDao(EmployeeProjectDao.class, dataSource);
+    static final EmployeeProjectDao2 employeeProjectDao2 = JdbcUtil.createDao(EmployeeProjectDao2.class, dataSource);
 
     static final DeviceDao deviceDao = JdbcUtil.createDao(DeviceDao.class, dataSource);
     static final AddressDao addressDao = JdbcUtil.createDao(AddressDao.class, dataSource);
