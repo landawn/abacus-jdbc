@@ -1,6 +1,6 @@
 # abacus-jdbc
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc/1.20.19.svg)](https://search.maven.org/artifact/com.landawn/abacus-jdbc/1.20.19)
+[![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc/1.20.19.svg)](https://search.maven.org/artifact/com.landawn/abacus-jdbc/1.20.19/jar)
 [![Javadocs](https://img.shields.io/badge/javadoc-1.20.19-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/1.20.19/index.html)
 
 Hope it will bring you the programming experiences: coding with SQL/DB is just like coding with Collections.
