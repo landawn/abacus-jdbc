@@ -171,6 +171,48 @@ public final class JdbcUtil {
     }
 
     /**
+     * Creates the DataSource.
+     *
+     * @param url
+     * @param user
+     * @param password
+     * @return 
+     */
+    public static javax.sql.DataSource createHikariDataSource(final String url, final String user, final String password) {
+        try {
+            final com.zaxxer.hikari.HikariConfig config = new com.zaxxer.hikari.HikariConfig();
+            config.setJdbcUrl(url);
+            config.setUsername(user);
+            config.setPassword(password);
+
+            return new com.zaxxer.hikari.HikariDataSource(config);
+        } catch (Throwable e) {
+            throw N.toRuntimeException(e);
+        }
+    }
+
+    /**
+     * Creates the DataSource.
+     *
+     * @param url
+     * @param user
+     * @param password
+     * @return 
+     */
+    public static javax.sql.DataSource createC3p0DataSource(final String url, final String user, final String password) {
+        try {
+            final com.mchange.v2.c3p0.ComboPooledDataSource cpds = new com.mchange.v2.c3p0.ComboPooledDataSource();
+            cpds.setJdbcUrl(url);
+            cpds.setUser(user);
+            cpds.setPassword(password);
+
+            return cpds;
+        } catch (Throwable e) {
+            throw N.toRuntimeException(e);
+        }
+    }
+
+    /**
      * Creates the connection.
      *
      * @param url
@@ -181,6 +223,44 @@ public final class JdbcUtil {
      */
     public static Connection createConnection(final String url, final String user, final String password) throws UncheckedSQLException {
         return createConnection(getDriverClasssByUrl(url), url, user, password);
+    }
+
+    /**
+     * Creates the connection.
+     *
+     * @param driverClass
+     * @param url
+     * @param user
+     * @param password
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    public static Connection createConnection(final String driverClass, final String url, final String user, final String password)
+            throws UncheckedSQLException {
+        final Class<? extends Driver> cls = ClassUtil.forClass(driverClass);
+
+        return createConnection(cls, url, user, password);
+    }
+
+    /**
+     * Creates the connection.
+     *
+     * @param driverClass
+     * @param url
+     * @param user
+     * @param password
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    public static Connection createConnection(final Class<? extends Driver> driverClass, final String url, final String user, final String password)
+            throws UncheckedSQLException {
+        try {
+            DriverManager.registerDriver(N.newInstance(driverClass));
+
+            return DriverManager.getConnection(url, user, password);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException("Failed to close create connection", e);
+        }
     }
 
     /**
@@ -219,43 +299,6 @@ public final class JdbcUtil {
                     "Can not identity the driver class by url: " + url + ". Only mysql, postgresql, hsqldb, sqlserver, oracle and db2 are supported currently");
         }
         return driverClass;
-    }
-
-    /**
-     * Creates the connection.
-     *
-     * @param driverClass
-     * @param url
-     * @param user
-     * @param password
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     */
-    public static Connection createConnection(final String driverClass, final String url, final String user, final String password)
-            throws UncheckedSQLException {
-        Class<? extends Driver> cls = ClassUtil.forClass(driverClass);
-        return createConnection(cls, url, user, password);
-    }
-
-    /**
-     * Creates the connection.
-     *
-     * @param driverClass
-     * @param url
-     * @param user
-     * @param password
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     */
-    public static Connection createConnection(final Class<? extends Driver> driverClass, final String url, final String user, final String password)
-            throws UncheckedSQLException {
-        try {
-            DriverManager.registerDriver(N.newInstance(driverClass));
-
-            return DriverManager.getConnection(url, user, password);
-        } catch (SQLException e) {
-            throw new UncheckedSQLException("Failed to close create connection", e);
-        }
     }
 
     /** The is in spring. */
@@ -5396,22 +5439,120 @@ public final class JdbcUtil {
         return (propValue == null) || (propValue instanceof Number && (((Number) propValue).longValue() == 0));
     }
 
-    /**
-     *
-     * @param sqlAction 
-     */
+    @Beta
+    public static void run(final Throwables.Runnable<Exception> sqlAction) {
+        try {
+            sqlAction.run();
+        } catch (Exception e) {
+            throw N.toRuntimeException(e);
+        }
+    }
+
+    @Beta
+    public static <T> void run(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) {
+        try {
+            sqlAction.accept(t);
+        } catch (Exception e) {
+            throw N.toRuntimeException(e);
+        }
+    }
+
+    @Beta
+    public static <T, U> void run(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) {
+        try {
+            sqlAction.accept(t, u);
+        } catch (Exception e) {
+            throw N.toRuntimeException(e);
+        }
+    }
+
+    @Beta
+    public static <A, B, C> void run(final A a, final B b, final C c, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) {
+        try {
+            sqlAction.accept(a, b, c);
+        } catch (Exception e) {
+            throw N.toRuntimeException(e);
+        }
+    }
+
+    @Beta
+    public static <R> R call(final Callable<R> sqlAction) {
+        try {
+            return sqlAction.call();
+        } catch (Exception e) {
+            throw N.toRuntimeException(e);
+        }
+    }
+
+    @Beta
+    public static <T, R> R call(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) {
+        try {
+            return sqlAction.apply(t);
+        } catch (Exception e) {
+            throw N.toRuntimeException(e);
+        }
+    }
+
+    @Beta
+    public static <T, U, R> R call(final T t, final U u, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) {
+        try {
+            return sqlAction.apply(t, u);
+        } catch (Exception e) {
+            throw N.toRuntimeException(e);
+        }
+    }
+
+    @Beta
+    public static <A, B, C, R> R call(final A a, final B b, final C c,
+            final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) {
+        try {
+            return sqlAction.apply(a, b, c);
+        } catch (Exception e) {
+            throw N.toRuntimeException(e);
+        }
+    }
+
     @Beta
     public static ContinuableFuture<Void> asyncRun(final Throwables.Runnable<Exception> sqlAction) {
         return asyncExecutor.execute(sqlAction);
     }
 
-    /**
-     *
-     * @param sqlAction
-     */
+    @Beta
+    public static <T> ContinuableFuture<Void> asyncRun(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) {
+        return asyncExecutor.execute(() -> sqlAction.accept(t));
+    }
+
+    @Beta
+    public static <T, U> ContinuableFuture<Void> asyncRun(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) {
+        return asyncExecutor.execute(() -> sqlAction.accept(t, u));
+    }
+
+    @Beta
+    public static <A, B, C> ContinuableFuture<Void> asyncRun(final A a, final B b, final C c,
+            final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) {
+        return asyncExecutor.execute(() -> sqlAction.accept(a, b, c));
+    }
+
     @Beta
     public static <R> ContinuableFuture<R> asyncCall(final Callable<R> sqlAction) {
         return asyncExecutor.execute(sqlAction);
+    }
+
+    @Beta
+    public static <T, R> ContinuableFuture<R> asyncCall(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) {
+        return asyncExecutor.execute(() -> sqlAction.apply(t));
+    }
+
+    @Beta
+    public static <T, U, R> ContinuableFuture<R> asyncCall(final T t, final U u,
+            final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) {
+        return asyncExecutor.execute(() -> sqlAction.apply(t, u));
+    }
+
+    @Beta
+    public static <A, B, C, R> ContinuableFuture<R> asyncCall(final A a, final B b, final C c,
+            final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) {
+        return asyncExecutor.execute(() -> sqlAction.apply(a, b, c));
     }
 
     /**
@@ -9527,7 +9668,7 @@ public final class JdbcUtil {
      *
      * @param <QS>
      */
-    public interface ParametersSetter<QS> extends Throwables.Consumer<QS, SQLException> {
+    public static interface ParametersSetter<QS> extends Throwables.Consumer<QS, SQLException> {
         @SuppressWarnings("rawtypes")
         public static final ParametersSetter DO_NOTHING = new ParametersSetter<Object>() {
             @Override
@@ -9554,7 +9695,7 @@ public final class JdbcUtil {
      * @see Columns.ColumnTwo
      * @see Columns.ColumnThree
      */
-    public interface BiParametersSetter<QS, T> extends Throwables.BiConsumer<QS, T, SQLException> {
+    public static interface BiParametersSetter<QS, T> extends Throwables.BiConsumer<QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
         public static final BiParametersSetter DO_NOTHING = new BiParametersSetter<Object, Object>() {
             @Override
@@ -9579,7 +9720,7 @@ public final class JdbcUtil {
      * @param <QS>
      * @param <T>
      */
-    public interface TriParametersSetter<QS, T> extends Throwables.TriConsumer<ParsedSql, QS, T, SQLException> {
+    public static interface TriParametersSetter<QS, T> extends Throwables.TriConsumer<ParsedSql, QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
         public static final TriParametersSetter DO_NOTHING = new TriParametersSetter<Object, Object>() {
             @Override
@@ -9604,7 +9745,7 @@ public final class JdbcUtil {
      *
      * @param <T>
      */
-    public interface ResultExtractor<T> extends Throwables.Function<ResultSet, T, SQLException> {
+    public static interface ResultExtractor<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
         /** The Constant TO_DATA_SET. */
         ResultExtractor<DataSet> TO_DATA_SET = new ResultExtractor<DataSet>() {
@@ -9912,7 +10053,7 @@ public final class JdbcUtil {
      *
      * @param <T>
      */
-    public interface BiResultExtractor<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
+    public static interface BiResultExtractor<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
 
         /**
          *
@@ -10233,7 +10374,7 @@ public final class JdbcUtil {
      * @see Columns.ColumnTwo
      * @see Columns.ColumnThree
      */
-    public interface RowMapper<T> extends Throwables.Function<ResultSet, T, SQLException> {
+    public static interface RowMapper<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
         /**
          *
@@ -10660,7 +10801,7 @@ public final class JdbcUtil {
      *
      * @param <T>
      */
-    public interface BiRowMapper<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
+    public static interface BiRowMapper<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
 
         /** The Constant TO_ARRAY. */
         BiRowMapper<Object[]> TO_ARRAY = new BiRowMapper<Object[]>() {
@@ -11128,7 +11269,7 @@ public final class JdbcUtil {
      * Consider using {@code BiRowConsumer} instead because it's more efficient to consume multiple records when column labels/count are used.
      *
      */
-    public interface RowConsumer extends Throwables.Consumer<ResultSet, SQLException> {
+    public static interface RowConsumer extends Throwables.Consumer<ResultSet, SQLException> {
 
         static final RowConsumer DO_NOTHING = rs -> {
         };
@@ -11145,7 +11286,7 @@ public final class JdbcUtil {
     /**
      * The Interface BiRowConsumer.
      */
-    public interface BiRowConsumer extends Throwables.BiConsumer<ResultSet, List<String>, SQLException> {
+    public static interface BiRowConsumer extends Throwables.BiConsumer<ResultSet, List<String>, SQLException> {
 
         static final BiRowConsumer DO_NOTHING = (rs, cls) -> {
         };
@@ -11166,7 +11307,7 @@ public final class JdbcUtil {
      * Consider using {@code BiRowConsumer} instead because it's more efficient to test multiple records when column labels/count are used.
      *
      */
-    public interface RowFilter extends Throwables.Predicate<ResultSet, SQLException> {
+    public static interface RowFilter extends Throwables.Predicate<ResultSet, SQLException> {
 
         /** The Constant ALWAYS_TRUE. */
         RowFilter ALWAYS_TRUE = new RowFilter() {
@@ -11199,7 +11340,7 @@ public final class JdbcUtil {
      * Only user {@code RowFilter/BiRowFilter} if there is a specific reason or the filter can't be done by SQL scripts in database server side.
      *
      */
-    public interface BiRowFilter extends Throwables.BiPredicate<ResultSet, List<String>, SQLException> {
+    public static interface BiRowFilter extends Throwables.BiPredicate<ResultSet, List<String>, SQLException> {
 
         /** The Constant ALWAYS_TRUE. */
         BiRowFilter ALWAYS_TRUE = new BiRowFilter() {
@@ -11253,7 +11394,7 @@ public final class JdbcUtil {
         COLUMN_GETTER_POOL.put(N.typeOf(Object.class), Columns.ColumnGetter.GET_OBJECT);
     }
 
-    public interface RowExtractor extends Throwables.BiConsumer<ResultSet, Object[], SQLException> {
+    public static interface RowExtractor extends Throwables.BiConsumer<ResultSet, Object[], SQLException> {
         @Override
         void accept(final ResultSet rs, final Object[] outputRow) throws SQLException;
 
@@ -11563,7 +11704,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.condition.ConditionFactory
      * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
-    public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
+    public static interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
         /**
          * The Interface Select.
          */
@@ -13179,9 +13320,8 @@ public final class JdbcUtil {
          *
          * @param cond
          * @return
-         * @throws SQLException the SQL exception
          */
-        ExceptionalStream<T, SQLException> stream(final Condition cond) throws SQLException;
+        ExceptionalStream<T, SQLException> stream(final Condition cond);
 
         // Will it cause confusion if it's called in transaction?
         /**
@@ -13190,9 +13330,8 @@ public final class JdbcUtil {
          * @param cond
          * @param rowMapper
          * @return
-         * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final RowMapper<R> rowMapper) throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final RowMapper<R> rowMapper);
 
         // Will it cause confusion if it's called in transaction?
         /**
@@ -13201,9 +13340,8 @@ public final class JdbcUtil {
          * @param cond
          * @param rowMapper
          * @return
-         * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final BiRowMapper<R> rowMapper) throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final BiRowMapper<R> rowMapper);
 
         /**
          * lazy-execution, lazy-fetch.
@@ -13212,9 +13350,8 @@ public final class JdbcUtil {
          * @param rowFilter
          * @param rowMapper
          * @return
-         * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper) throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper);
 
         /**
          * lazy-execution, lazy-fetch.
@@ -13223,9 +13360,8 @@ public final class JdbcUtil {
          * @param rowFilter
          * @param rowMapper
          * @return
-         * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final BiRowFilter rowFilter, final BiRowMapper<R> rowMapper) throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final BiRowFilter rowFilter, final BiRowMapper<R> rowMapper);
 
         // Will it cause confusion if it's called in transaction?
         /**
@@ -13234,22 +13370,8 @@ public final class JdbcUtil {
          * @param selectPropNames
          * @param cond
          * @return
-         * @throws SQLException the SQL exception
          */
-        ExceptionalStream<T, SQLException> stream(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
-
-        // Will it cause confusion if it's called in transaction?
-        /**
-         * lazy-execution, lazy-fetch.
-         *
-         * @param selectPropNames
-         * @param cond
-         * @param rowMapper
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final RowMapper<R> rowMapper)
-                throws SQLException;
+        ExceptionalStream<T, SQLException> stream(final Collection<String> selectPropNames, final Condition cond);
 
         // Will it cause confusion if it's called in transaction?
         /**
@@ -13259,10 +13381,19 @@ public final class JdbcUtil {
          * @param cond
          * @param rowMapper
          * @return
-         * @throws SQLException the SQL exception
          */
-        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper)
-                throws SQLException;
+        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final RowMapper<R> rowMapper);
+
+        // Will it cause confusion if it's called in transaction?
+        /**
+         * lazy-execution, lazy-fetch.
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowMapper
+         * @return
+         */
+        <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper);
 
         // Will it cause confusion if it's called in transaction?
         /**
@@ -13273,10 +13404,9 @@ public final class JdbcUtil {
          * @param rowFilter
          * @param rowMapper
          * @return
-         * @throws SQLException the SQL exception
          */
         <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, RowFilter rowFilter,
-                final RowMapper<R> rowMapper) throws SQLException;
+                final RowMapper<R> rowMapper);
 
         // Will it cause confusion if it's called in transaction?
         /**
@@ -13287,19 +13417,17 @@ public final class JdbcUtil {
          * @param rowFilter
          * @param rowMapper
          * @return
-         * @throws SQLException the SQL exception
          */
         <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter,
-                final BiRowMapper<R> rowMapper) throws SQLException;
+                final BiRowMapper<R> rowMapper);
 
         /**
          *
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws SQLException the SQL exception
          */
-        default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) throws SQLException {
+        default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) {
             final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
             final RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
@@ -13312,10 +13440,8 @@ public final class JdbcUtil {
          * @param cond
          * @param rowMapper
          * @return
-         * @throws SQLException the SQL exception
          */
-        default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final RowMapper<R> rowMapper)
-                throws SQLException {
+        default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final RowMapper<R> rowMapper) {
             return stream(N.asList(singleSelectPropName), cond, rowMapper);
         }
 
@@ -13435,7 +13561,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.condition.ConditionFactory
      * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
-    public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
+    public static interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
 
         /**
          *
@@ -13635,7 +13761,7 @@ public final class JdbcUtil {
             final T result = gett(id);
 
             if (result != null && includeAllJoinEntities) {
-                checkJoinEntityHelper(this).loadAllJoinEntities(result);
+                getJoinEntityHelper(this).loadAllJoinEntities(result);
             }
 
             return result;
@@ -13653,7 +13779,7 @@ public final class JdbcUtil {
             final T result = gett(id, selectPropNames);
 
             if (result != null && includeAllJoinEntities) {
-                checkJoinEntityHelper(this).loadAllJoinEntities(result);
+                getJoinEntityHelper(this).loadAllJoinEntities(result);
             }
 
             return result;
@@ -13670,7 +13796,7 @@ public final class JdbcUtil {
             final T result = gett(id);
 
             if (result != null) {
-                checkJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+                getJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
             }
 
             return result;
@@ -13688,7 +13814,7 @@ public final class JdbcUtil {
             final T result = gett(id, selectPropNames);
 
             if (result != null) {
-                checkJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+                getJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
             }
 
             return result;
@@ -13706,7 +13832,7 @@ public final class JdbcUtil {
             final T result = gett(id, selectPropNames);
 
             if (result != null) {
-                final JoinEntityHelper<T, SB, TD> joinEntityHelper = checkJoinEntityHelper(this);
+                final JoinEntityHelper<T, SB, TD> joinEntityHelper = getJoinEntityHelper(this);
 
                 for (Class<?> joinEntityClass : joinEntitiesToLoad) {
                     joinEntityHelper.loadJoinEntities(result, joinEntityClass);
@@ -14739,184 +14865,6 @@ public final class JdbcUtil {
                 throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
-    }
-
-    static Object[] getParameterArray(final SP sp) {
-        return N.isNullOrEmpty(sp.parameters) ? N.EMPTY_OBJECT_ARRAY : sp.parameters.toArray();
-    }
-
-    static <R> BiRowMapper<R> toBiRowMapper(final RowMapper<R> rowMapper) {
-        return (rs, columnLabels) -> rowMapper.apply(rs);
-    }
-
-    static final Throwables.Consumer<? super Exception, SQLException> throwSQLExceptionAction = e -> {
-        if (e instanceof SQLException) {
-            throw (SQLException) e;
-        } else if (e.getCause() != null && e.getCause() instanceof SQLException) {
-            throw (SQLException) e.getCause();
-        } else {
-            throw N.toRuntimeException(e);
-        }
-    };
-
-    static void complete(final List<ContinuableFuture<Void>> futures) throws SQLException {
-        for (ContinuableFuture<Void> f : futures) {
-            f.gett().ifFailure(throwSQLExceptionAction);
-        }
-    }
-
-    static int completeSum(final List<ContinuableFuture<Integer>> futures) throws SQLException {
-        int result = 0;
-        Result<Integer, Exception> ret = null;
-
-        for (ContinuableFuture<Integer> f : futures) {
-            ret = f.gett();
-
-            if (ret.isFailure()) {
-                throwSQLExceptionAction.accept(ret.getExceptionIfPresent());
-            }
-
-            result += ret.orElse(0);
-        }
-
-        return result;
-    }
-
-    @SuppressWarnings("rawtypes")
-    private static final Map<Tuple2<Class<?>, Class<?>>, Map<NamingPolicy, Tuple3<BiRowMapper, Function, BiConsumer>>> idGeneratorGetterSetterPool = new ConcurrentHashMap<>();
-
-    @SuppressWarnings("rawtypes")
-    private static final Tuple3<BiRowMapper, Function, BiConsumer> noIdGeneratorGetterSetter = Tuple.of(NO_BI_GENERATED_KEY_EXTRACTOR, entity -> null,
-            BiConsumers.doNothing());
-
-    @SuppressWarnings({ "rawtypes", "deprecation" })
-    static <ID> Tuple3<BiRowMapper<ID>, Function<Object, ID>, BiConsumer<ID, Object>> getIdGeneratorGetterSetter(final Class<?> entityClass,
-            final NamingPolicy namingPolicy, final Class<?> idType) {
-        if (entityClass == null || !ClassUtil.isEntity(entityClass)) {
-            return (Tuple3) noIdGeneratorGetterSetter;
-        }
-
-        final Tuple2<Class<?>, Class<?>> key = Tuple.of(entityClass, idType);
-
-        Map<NamingPolicy, Tuple3<BiRowMapper, Function, BiConsumer>> map = idGeneratorGetterSetterPool.get(key);
-
-        if (map == null) {
-            final List<String> idPropNameList = ClassUtil.getIdFieldNames(entityClass);
-            final boolean isNoId = N.isNullOrEmpty(idPropNameList) || ClassUtil.isFakeId(idPropNameList);
-            final String oneIdPropName = isNoId ? null : idPropNameList.get(0);
-            final EntityInfo entityInfo = isNoId ? null : ParserUtil.getEntityInfo(entityClass);
-            final List<PropInfo> idPropInfoList = isNoId ? null : Stream.of(idPropNameList).map(entityInfo::getPropInfo).toList();
-            final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
-            final boolean isOneId = isNoId ? false : idPropNameList.size() == 1;
-            final boolean isEntityId = idType != null && EntityId.class.isAssignableFrom(idType);
-
-            final Function<Object, ID> idGetter = isNoId ? noIdGeneratorGetterSetter._2 //
-                    : (isOneId ? entity -> idPropInfo.getPropValue(entity) //
-                            : (isEntityId ? entity -> {
-                                final Seid ret = Seid.of(ClassUtil.getSimpleClassName(entityClass));
-
-                                for (PropInfo propInfo : idPropInfoList) {
-                                    ret.set(propInfo.name, propInfo.getPropValue(entity));
-                                }
-
-                                return (ID) ret;
-                            } : entity -> {
-                                final Object ret = N.newInstance(idType);
-
-                                for (PropInfo propInfo : idPropInfoList) {
-                                    ClassUtil.setPropValue(ret, propInfo.name, propInfo.getPropValue(entity));
-                                }
-
-                                return (ID) ret;
-                            }));
-
-            final BiConsumer<ID, Object> idSetter = isNoId ? noIdGeneratorGetterSetter._3 //
-                    : (isOneId ? (id, entity) -> idPropInfo.setPropValue(entity, id) //
-                            : (isEntityId ? (id, entity) -> {
-                                if (id instanceof EntityId) {
-                                    final EntityId entityId = (EntityId) id;
-                                    PropInfo propInfo = null;
-
-                                    for (String propName : entityId.keySet()) {
-                                        propInfo = entityInfo.getPropInfo(propName);
-
-                                        if ((propInfo = entityInfo.getPropInfo(propName)) != null) {
-                                            propInfo.setPropValue(entity, entityId.get(propName));
-                                        }
-                                    }
-                                } else {
-                                    logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
-                                }
-                            } : (id, entity) -> {
-                                if (id != null && ClassUtil.isEntity(id.getClass())) {
-                                    final Object entityId = id;
-
-                                    for (PropInfo propInfo : idPropInfoList) {
-                                        propInfo.setPropValue(entity, ClassUtil.getPropValue(entityId, propInfo.name));
-                                    }
-                                } else {
-                                    logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
-                                }
-                            }));
-
-            map = new EnumMap<>(NamingPolicy.class);
-
-            for (NamingPolicy np : NamingPolicy.values()) {
-                final ImmutableMap<String, String> propColumnNameMap = SQLBuilder.getPropColumnNameMap(entityClass, namingPolicy);
-
-                final ImmutableMap<String, String> columnPropNameMap = EntryStream.of(propColumnNameMap)
-                        .inversed()
-                        .flattMapKey(e -> N.asList(e, e.toLowerCase(), e.toUpperCase()))
-                        .distinctByKey()
-                        .toImmutableMap();
-
-                final BiRowMapper<Object> keyExtractor = isNoId ? noIdGeneratorGetterSetter._1 //
-                        : (isOneId ? (rs, columnLabels) -> idPropInfo.dbType.get(rs, 1) //
-                                : (rs, columnLabels) -> {
-                                    if (columnLabels.size() == 1) {
-                                        return idPropInfo.dbType.get(rs, 1);
-                                    } else if (isEntityId) {
-                                        final int columnCount = columnLabels.size();
-                                        final Seid id = Seid.of(ClassUtil.getSimpleClassName(entityClass));
-                                        String columnName = null;
-                                        String propName = null;
-                                        PropInfo propInfo = null;
-
-                                        for (int i = 1; i <= columnCount; i++) {
-                                            columnName = columnLabels.get(i - 1);
-
-                                            if ((propName = columnPropNameMap.get(columnName)) == null
-                                                    || (propInfo = entityInfo.getPropInfo(propName)) == null) {
-                                                id.set(columnName, getColumnValue(rs, i));
-                                            } else {
-                                                id.set(propInfo.name, propInfo.dbType.get(rs, i));
-                                            }
-                                        }
-
-                                        return id;
-                                    } else {
-                                        final EntityInfo idEntityInfo = ParserUtil.getEntityInfo(idType);
-                                        final List<Tuple2<String, PropInfo>> tpList = StreamEx.of(columnLabels)
-                                                .filter(it -> idEntityInfo.getPropInfo(it) != null)
-                                                .map(it -> Tuple.of(it, idEntityInfo.getPropInfo(it)))
-                                                .toList();
-                                        final Object id = N.newInstance(idType);
-
-                                        for (Tuple2<String, PropInfo> tp : tpList) {
-                                            tp._2.setPropValue(id, getColumnValue(rs, tp._1));
-                                        }
-
-                                        return id;
-                                    }
-                                });
-
-                map.put(np, Tuple.of(keyExtractor, idGetter, idSetter));
-            }
-
-            idGeneratorGetterSetterPool.put(key, map);
-        }
-
-        return (Tuple3) map.get(namingPolicy);
     }
 
     public static interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
@@ -16034,11 +15982,3377 @@ public final class JdbcUtil {
         }
     }
 
-    private static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> JoinEntityHelper<T, SB, TD> checkJoinEntityHelper(final Dao<T, SB, TD> dao) {
+    public static interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends Dao<T, SB, TD> {
+        /**
+         *
+         * @param entityToSave
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        void save(final T entityToSave) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param entityToSave
+         * @param propNamesToSave
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        void save(final T entityToSave, final Collection<String> propNamesToSave) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param namedInsertSQL
+         * @param entityToSave
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        void save(final String namedInsertSQL, final T entityToSave) throws UncheckedSQLException;
+
+        /**
+         * Insert the specified entities to database by batch.
+         *
+         * @param entitiesToSave
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see CrudDao#batchInsert(Collection)
+         */
+        @Override
+        default void batchSave(final Collection<? extends T> entitiesToSave) throws UncheckedSQLException {
+            batchSave(entitiesToSave, DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         * Insert the specified entities to database by batch.
+         *
+         * @param entitiesToSave
+         * @param batchSize
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see CrudDao#batchInsert(Collection)
+         */
+        @Override
+        void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws UncheckedSQLException;
+
+        /**
+         * Insert the specified entities to database by batch.
+         *
+         * @param entitiesToSave
+         * @param propNamesToSave
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see CrudDao#batchInsert(Collection)
+         */
+        @Override
+        default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave) throws UncheckedSQLException {
+            batchSave(entitiesToSave, propNamesToSave, DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         * Insert the specified entities to database by batch.
+         *
+         * @param entitiesToSave
+         * @param propNamesToSave
+         * @param batchSize
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see CrudDao#batchInsert(Collection)
+         */
+        @Override
+        void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize)
+                throws UncheckedSQLException;
+
+        /**
+         * Insert the specified entities to database by batch.
+         *
+         * @param namedInsertSQL
+         * @param entitiesToSave
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see CrudDao#batchInsert(Collection)
+         */
+        @Override
+        @Beta
+        default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws UncheckedSQLException {
+            batchSave(namedInsertSQL, entitiesToSave, DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         * Insert the specified entities to database by batch.
+         *
+         * @param namedInsertSQL
+         * @param entitiesToSave
+         * @param batchSize
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see CrudDao#batchInsert(Collection)
+         */
+        @Override
+        @Beta
+        void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave, final int batchSize) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @return true, if successful
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        boolean exists(final Condition cond) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        int count(final Condition cond) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        Optional<T> findFirst(final Condition cond) throws UncheckedSQLException;
+
+        /**
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> Optional<R> findFirst(final Condition cond, final RowMapper<R> rowMapper) throws UncheckedSQLException;
+
+        /**
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> Optional<R> findFirst(final Condition cond, final BiRowMapper<R> rowMapper) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final RowMapper<R> rowMapper) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper) throws UncheckedSQLException;
+
+        /**
+         * Query for boolean.
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         * Query for char.
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         * Query for byte.
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         * Query for short.
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         * Query for int.
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         * Query for long.
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         * Query for float.
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         * Query for double.
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         * Query for string.
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        Nullable<String> queryForString(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         * Query for date.
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         * Query for time.
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         * Query for timestamp.
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         * Query for single result.
+         *
+         * @param <V> the value type
+         * @param targetValueClass
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
+                throws UncheckedSQLException;
+
+        /**
+         * Query for single non null.
+         *
+         * @param <V> the value type
+         * @param targetValueClass
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws DuplicatedResultException if more than one record found.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
+                throws UncheckedSQLException;
+
+        /**
+         * Query for unique result.
+         *
+         * @param <V> the value type
+         * @param targetValueClass
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws DuplicatedResultException if more than one record found.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
+                throws DuplicatedResultException, UncheckedSQLException;
+
+        /**
+         * Query for unique non null.
+         *
+         * @param <V> the value type
+         * @param targetValueClass
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
+                throws DuplicatedResultException, UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        DataSet query(final Condition cond) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        DataSet query(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @param resultExtrator
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> R query(final Condition cond, final ResultExtractor<R> resultExtrator) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param resultExtrator
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> R query(final Collection<String> selectPropNames, final Condition cond, final ResultExtractor<R> resultExtrator) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @param resultExtrator
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> R query(final Condition cond, final BiResultExtractor<R> resultExtrator) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param resultExtrator
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> R query(final Collection<String> selectPropNames, final Condition cond, final BiResultExtractor<R> resultExtrator) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        List<T> list(final Condition cond) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> List<R> list(final Condition cond, final RowMapper<R> rowMapper) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> List<R> list(final Condition cond, final BiRowMapper<R> rowMapper) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowFilter
+         * @param rowMapper
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> List<R> list(final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowFilter
+         * @param rowMapper
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> List<R> list(final Condition cond, final BiRowFilter rowFilter, final BiRowMapper<R> rowMapper) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        List<T> list(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final RowMapper<R> rowMapper) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowFilter
+         * @param rowMapper
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper)
+                throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowFilter
+         * @param rowMapper
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter, final BiRowMapper<R> rowMapper)
+                throws UncheckedSQLException;
+
+        /**
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException {
+            final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
+            final RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
+
+            return list(singleSelectPropName, cond, rowMapper);
+        }
+
+        /**
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default <R> List<R> list(final String singleSelectPropName, final Condition cond, final RowMapper<R> rowMapper) throws UncheckedSQLException {
+            return list(N.asList(singleSelectPropName), cond, rowMapper);
+        }
+
+        /**
+         *
+         * @param propName
+         * @param propValue
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int update(final String propName, final Object propValue, final Condition cond) throws UncheckedSQLException {
+            final Map<String, Object> updateProps = new HashMap<>();
+            updateProps.put(propName, propValue);
+
+            return update(updateProps, cond);
+        }
+
+        /**
+         *
+         * @param updateProps
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        int update(final Map<String, Object> updateProps, final Condition cond) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        int delete(final Condition cond) throws UncheckedSQLException;
+    }
+
+    /**
+     * The Interface CrudDao.
+     *
+     * @param <T>
+     * @param <ID> use {@code Void} if there is no id defined/annotated with {@code @Id} in target entity class {@code T}.
+     * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
+     * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
+     * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
+     * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
+     * @see Dao
+     * @see SQLExecutor.Mapper
+     * @see com.landawn.abacus.condition.ConditionFactory
+     * @see com.landawn.abacus.condition.ConditionFactory.CF
+     */
+    public static interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
+            extends UncheckedDao<T, SB, TD>, CrudDao<T, ID, SB, TD> {
+
+        /**
+         *
+         * @param entityToInsert
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        ID insert(final T entityToInsert) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param entityToInsert
+         * @param propNamesToInsert
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param namedInsertSQL
+         * @param entityToInsert
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        ID insert(final String namedInsertSQL, final T entityToInsert) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param entities
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default List<ID> batchInsert(final Collection<? extends T> entities) throws UncheckedSQLException {
+            return batchInsert(entities, DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToInsert
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws UncheckedSQLException {
+            return batchInsert(entities, propNamesToInsert, DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToInsert
+         * @param batchSize
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize)
+                throws UncheckedSQLException;
+
+        /**
+         *
+         * @param namedInsertSQL
+         * @param entities
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        @Beta
+        default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities) throws UncheckedSQLException {
+            return batchInsert(namedInsertSQL, entities, DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         *
+         * @param namedInsertSQL
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        @Beta
+        List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default Optional<T> get(final ID id) throws UncheckedSQLException {
+            return Optional.ofNullable(gett(id));
+        }
+
+        /**
+         *
+         * @param id
+         * @param selectPropNames
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws UncheckedSQLException {
+            return Optional.ofNullable(gett(id, selectPropNames));
+        }
+
+        /**
+         *
+         * @param id
+         * @param includeAllJoinEntities
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws UncheckedSQLException {
+            return Optional.ofNullable(gett(id, includeAllJoinEntities));
+        }
+
+        /**
+         * 
+         * @param id
+         * @param selectPropNames
+         * @param includeAllJoinEntities
+         * @return
+         * @throws UncheckedSQLException
+         */
+        @Override
+        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws UncheckedSQLException {
+            return Optional.ofNullable(gett(id, selectPropNames, includeAllJoinEntities));
+        }
+
+        /**
+         *
+         * @param id
+         * @param joinEntitiesToLoad
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
+            return Optional.ofNullable(gett(id, joinEntitiesToLoad));
+        }
+
+        /**
+         * 
+         * @param id
+         * @param selectPropNames
+         * @param joinEntitiesToLoad
+         * @return
+         * @throws UncheckedSQLException
+         */
+        @Override
+        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
+            return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
+        }
+
+        /**
+         * 
+         * @param id
+         * @param selectPropNames
+         * @param joinEntitiesToLoad
+         * @return
+         * @throws UncheckedSQLException
+         */
+        @Override
+        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
+                throws UncheckedSQLException {
+            return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
+        }
+
+        /**
+         * Gets the t.
+         *
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        T gett(final ID id) throws UncheckedSQLException;
+
+        /**
+         * Gets the t.
+         * @param id
+         * @param selectPropNames
+         *
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        T gett(final ID id, final Collection<String> selectPropNames) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param id
+         * @param includeAllJoinEntities
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default T gett(final ID id, final boolean includeAllJoinEntities) throws UncheckedSQLException {
+            final T result = gett(id);
+
+            if (result != null && includeAllJoinEntities) {
+                getUncheckedJoinEntityHelper(this).loadAllJoinEntities(result);
+            }
+
+            return result;
+        }
+
+        /**
+         * 
+         * @param id
+         * @param selectPropNames
+         * @param includeAllJoinEntities
+         * @return
+         * @throws UncheckedSQLException
+         */
+        @Override
+        default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws UncheckedSQLException {
+            final T result = gett(id, selectPropNames);
+
+            if (result != null && includeAllJoinEntities) {
+                getUncheckedJoinEntityHelper(this).loadAllJoinEntities(result);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param id
+         * @param joinEntitiesToLoad
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
+            final T result = gett(id);
+
+            if (result != null) {
+                getUncheckedJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+            }
+
+            return result;
+        }
+
+        /**
+         * 
+         * @param id
+         * @param selectPropNames
+         * @param joinEntitiesToLoad
+         * @return
+         * @throws UncheckedSQLException
+         */
+        @Override
+        default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
+            final T result = gett(id, selectPropNames);
+
+            if (result != null) {
+                getUncheckedJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+            }
+
+            return result;
+        }
+
+        /**
+         * 
+         * @param id
+         * @param selectPropNames
+         * @param joinEntitiesToLoad
+         * @return
+         * @throws UncheckedSQLException
+         */
+        @Override
+        default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws UncheckedSQLException {
+            final T result = gett(id, selectPropNames);
+
+            if (result != null) {
+                final UncheckedJoinEntityHelper<T, SB, TD> joinEntityHelper = getUncheckedJoinEntityHelper(this);
+
+                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    joinEntityHelper.loadJoinEntities(result, joinEntityClass);
+                }
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @return
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicatedResultException, UncheckedSQLException {
+            return batchGet(ids, (Collection<String>) null);
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @param selectPropNames
+         * @return
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames)
+                throws DuplicatedResultException, UncheckedSQLException {
+            return batchGet(ids, selectPropNames, DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         *
+         * @param ids
+         * @param selectPropNames
+         * @param batchSize
+         * @return
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize)
+                throws DuplicatedResultException, UncheckedSQLException;
+
+        /**
+         *
+         * @param id
+         * @return true, if successful
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        boolean exists(final ID id) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param entityToUpdate
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        int update(final T entityToUpdate) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param entityToUpdate
+         * @param propNamesToUpdate
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws UncheckedSQLException;
+
+        /**
+        *
+        * @param propName
+        * @param propValue
+        * @param id
+        * @return
+        * @throws UncheckedSQLException the SQL exception
+        */
+        @Override
+        default int update(final String propName, final Object propValue, final ID id) throws UncheckedSQLException {
+            final Map<String, Object> updateProps = new HashMap<>();
+            updateProps.put(propName, propValue);
+
+            return update(updateProps, id);
+        }
+
+        /**
+         *
+         * @param updateProps
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        int update(final Map<String, Object> updateProps, final ID id) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param entities
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int batchUpdate(final Collection<? extends T> entities) throws UncheckedSQLException {
+            return batchUpdate(entities, DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToUpdate
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws UncheckedSQLException {
+            return batchUpdate(entities, DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToUpdate
+         * @param batchSize
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws UncheckedSQLException;
+
+        /**
+         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+         *
+         * @param entity
+         * @param whereCause to verify if the record exists or not.
+         * @return
+         */
+        @Override
+        default T upsert(final T entity, final Condition whereCause) throws UncheckedSQLException {
+            N.checkArgNotNull(whereCause, "whereCause");
+
+            final T dbEntity = findFirst(whereCause).orNull();
+
+            if (dbEntity == null) {
+                insert(entity);
+                return entity;
+            } else {
+                @SuppressWarnings("deprecation")
+                final List<String> idPropNameList = ClassUtil.getIdFieldNames(targetEntityClass());
+                N.merge(entity, dbEntity, false, N.newHashSet(idPropNameList));
+                update(dbEntity);
+                return dbEntity;
+            }
+        }
+
+        /**
+         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+         *
+         * @param entity
+         * @return
+         */
+        @Override
+        default T upsert(final T entity) throws UncheckedSQLException {
+            @SuppressWarnings("deprecation")
+            final List<String> idPropNameList = ClassUtil.getIdFieldNames(targetEntityClass());
+            final T dbEntity = idPropNameList.size() == 1 ? gett((ID) ClassUtil.getPropValue(entity, idPropNameList.get(0))) : gett((ID) entity);
+
+            if (dbEntity == null) {
+                insert(entity);
+                return entity;
+            } else {
+                N.merge(entity, dbEntity, false, N.newHashSet(idPropNameList));
+                update(dbEntity);
+                return dbEntity;
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @return true, if successful
+         * @throws UncheckedSQLException
+         */
+        @Override
+        default boolean refresh(final T entity) throws UncheckedSQLException {
+            final Class<?> cls = entity.getClass();
+            final Collection<String> propNamesToRefresh = DirtyMarkerUtil.isDirtyMarker(cls) ? DirtyMarkerUtil.signedPropNames((DirtyMarker) entity)
+                    : SQLBuilder.getSelectPropNamesByClass(cls, false, null);
+
+            return refresh(entity, propNamesToRefresh);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param propNamesToRefresh
+         * @return {@code false} if no record found by the ids in the specified {@code entity}.
+         * @throws UncheckedSQLException
+         */
+        @Override
+        @SuppressWarnings("deprecation")
+        default boolean refresh(final T entity, Collection<String> propNamesToRefresh) throws UncheckedSQLException {
+            final Class<?> cls = entity.getClass();
+            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+
+            ID id = null;
+
+            if (idPropNameList.size() == 1) {
+                id = entityInfo.getPropInfo(idPropNameList.get(0)).getPropValue(entity);
+
+            } else {
+                Seid entityId = Seid.of(ClassUtil.getSimpleClassName(cls));
+
+                for (String idPropName : idPropNameList) {
+                    entityId.set(idPropName, entityInfo.getPropInfo(idPropName).getPropValue(entity));
+                }
+
+                id = (ID) entityId;
+            }
+
+            if (N.isNullOrEmpty(propNamesToRefresh)) {
+                return exists(id);
+            }
+
+            final T dbEntity = gett(id, propNamesToRefresh);
+
+            if (dbEntity == null) {
+                return false;
+            } else {
+                N.merge(dbEntity, entity, propNamesToRefresh);
+
+                if (DirtyMarkerUtil.isDirtyMarker(cls)) {
+                    DirtyMarkerUtil.markDirty((DirtyMarker) entity, propNamesToRefresh, false);
+                }
+
+                return true;
+            }
+        }
+
+        /**
+         * Delete by id.
+         *
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        int deleteById(final ID id) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param entity
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        int delete(final T entity) throws UncheckedSQLException;
+        //
+        //    /**
+        //     *
+        //     * @param entity
+        //     * @param onDeleteAction It should be defined and done in DB server side.
+        //     * @return
+        //     * @throws UncheckedSQLException the SQL exception
+        //     */
+        //    @Beta
+        //    int delete(final T entity, final OnDeleteAction onDeleteAction) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param entities
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int batchDelete(final Collection<? extends T> entities) throws UncheckedSQLException {
+            return batchDelete(entities, DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        int batchDelete(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
+
+        //    /**
+        //     *
+        //     * @param entities
+        //     * @param onDeleteAction It should be defined and done in DB server side.
+        //     * @return
+        //     * @throws UncheckedSQLException the SQL exception
+        //     */
+        //    @Beta
+        //    default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction) throws UncheckedSQLException {
+        //        return batchDelete(entities, onDeleteAction, DEFAULT_BATCH_SIZE);
+        //    }
+        //
+        //    /**
+        //     *
+        //     * @param entities
+        //     * @param onDeleteAction It should be defined and done in DB server side.
+        //     * @param batchSize
+        //     * @return
+        //     * @throws UncheckedSQLException the SQL exception
+        //     */
+        //    @Beta
+        //    int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction, final int batchSize) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param ids
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int batchDeleteByIds(final Collection<? extends ID> ids) throws UncheckedSQLException {
+            return batchDeleteByIds(ids, DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         *
+         * @param ids
+         * @param batchSize
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws UncheckedSQLException;
+    }
+
+    /**
+     *  
+     *
+     * @param <T>
+     * @param <SB>
+     * @param <TD>
+     */
+    @Beta
+    public static interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends UncheckedCrudDaoL<T, SB, TD>>
+            extends UncheckedCrudDao<T, Long, SB, TD>, CrudDaoL<T, SB, TD> {
+
+        @Override
+        default Optional<T> get(final long id) throws UncheckedSQLException {
+            return get(Long.valueOf(id));
+        }
+
+        @Override
+        default Optional<T> get(final long id, final Collection<String> selectPropNames) throws UncheckedSQLException {
+            return get(Long.valueOf(id), selectPropNames);
+        }
+
+        @Override
+        default T gett(final long id) throws UncheckedSQLException {
+            return gett(Long.valueOf(id));
+        }
+
+        @Override
+        default T gett(final long id, final Collection<String> selectPropNames) throws UncheckedSQLException {
+            return gett(Long.valueOf(id), selectPropNames);
+        }
+
+        @Override
+        default boolean exists(final long id) throws UncheckedSQLException {
+            return exists(Long.valueOf(id));
+        }
+
+        @Override
+        default int update(final String propName, final Object propValue, final long id) throws UncheckedSQLException {
+            return update(propName, propValue, Long.valueOf(id));
+        }
+
+        @Override
+        default int update(final Map<String, Object> updateProps, final long id) throws UncheckedSQLException {
+            return update(updateProps, Long.valueOf(id));
+        }
+
+        @Override
+        default int deleteById(final long id) throws UncheckedSQLException {
+            return deleteById(Long.valueOf(id));
+        }
+    }
+
+    /**
+     * TODO
+     *
+     * @param <T>
+     * @param <SB>
+     * @param <TD>
+     */
+    @Beta
+    public static interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends UncheckedNoUpdateDao<T, SB, TD>>
+            extends UncheckedDao<T, SB, TD>, NoUpdateDao<T, SB, TD> {
+
+        /**
+         *
+         * @param propName
+         * @param propValue
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @deprecated unsupported Operation
+         */
+        @Override
+        @Deprecated
+        default int update(final String propName, final Object propValue, final Condition cond) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param updateProps
+         * @param cond
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final Map<String, Object> updateProps, final Condition cond) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param cond
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int delete(final Condition cond) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    /**
+     * TODO
+     *
+     * @param <T>
+     * @param <SB>
+     * @param <TD>
+     */
+    @Beta
+    public static interface UncheckedReadOnlyDao<T, SB extends SQLBuilder, TD extends UncheckedReadOnlyDao<T, SB, TD>>
+            extends UncheckedNoUpdateDao<T, SB, TD>, ReadOnlyDao<T, SB, TD> {
+
+        /**
+         *
+         * @param entityToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void save(final T entityToSave) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entityToSave
+         * @param propNamesToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void save(final T entityToSave, final Collection<String> propNamesToSave) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param namedInsertSQL
+         * @param entityToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void save(final String namedInsertSQL, final T entityToSave) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Always throws {@code UnsupportedOperationException}.
+         *
+         * @param entitiesToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void batchSave(final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Always throws {@code UnsupportedOperationException}.
+         *
+         * @param entitiesToSave
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Always throws {@code UnsupportedOperationException}.
+         *
+         * @param entitiesToSave
+         * @param propNamesToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave)
+                throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Always throws {@code UnsupportedOperationException}.
+         *
+         * @param entitiesToSave
+         * @param propNamesToSave
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize)
+                throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Always throws {@code UnsupportedOperationException}.
+         *
+         * @param namedInsertSQL
+         * @param entitiesToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave)
+                throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Always throws {@code UnsupportedOperationException}.
+         *
+         * @param namedInsertSQL
+         * @param entitiesToSave
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave, final int batchSize)
+                throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    /**
+     * TODO
+     *
+     * @param <T>
+     * @param <ID>
+     * @param <SB>
+     * @param <TD>
+     */
+    @Beta
+    public static interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends UncheckedNoUpdateCrudDao<T, ID, SB, TD>>
+            extends UncheckedNoUpdateDao<T, SB, TD>, UncheckedCrudDao<T, ID, SB, TD>, NoUpdateCrudDao<T, ID, SB, TD> {
+
+        /**
+         *
+         * @param entityToUpdate
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final T entityToUpdate) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entityToUpdate
+         * @param propNamesToUpdate
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param propName
+         * @param propValue
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @deprecated unsupported Operation
+         */
+        @Override
+        @Deprecated
+        default int update(final String propName, final Object propValue, final ID id) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param updateProps
+         * @param id
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final Map<String, Object> updateProps, final ID id) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchUpdate(final Collection<? extends T> entities) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToUpdate
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate)
+                throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToUpdate
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize)
+                throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+         *
+         * @param entity
+         * @param whereCause to verify if the record exists or not.
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default T upsert(final T entity, final Condition whereCause) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+         *
+         * @param entity
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default T upsert(final T entity) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Delete by id.
+         *
+         * @param id
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteById(final ID id) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int delete(final T entity) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        //    /**
+        //     *
+        //     * @param entity
+        //     * @param onDeleteAction
+        //     * @return
+        //     * @throws UnsupportedOperationException
+        //     * @throws UncheckedSQLException
+        //     * @deprecated unsupported Operation
+        //     */
+        //    @Deprecated
+        //    @Override
+        //    default int delete(final T entity, final OnDeleteAction onDeleteAction) throws UnsupportedOperationException, UncheckedSQLException {
+        //        throw new UnsupportedOperationException();
+        //    }
+
+        /**
+         *
+         * @param entities
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchDelete(final Collection<? extends T> entities) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchDelete(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        //    /**
+        //     *
+        //     * @param entities
+        //     * @param onDeleteAction
+        //     * @return
+        //     * @throws UnsupportedOperationException
+        //     * @throws UncheckedSQLException
+        //     * @deprecated unsupported Operation
+        //     */
+        //    @Deprecated
+        //    @Override
+        //    default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction)
+        //            throws UnsupportedOperationException, UncheckedSQLException {
+        //        throw new UnsupportedOperationException();
+        //    }
+        //
+        //    /**
+        //     *
+        //     * @param entities
+        //     * @param onDeleteAction
+        //     * @param batchSize
+        //     * @return
+        //     * @throws UnsupportedOperationException
+        //     * @throws UncheckedSQLException
+        //     * @deprecated unsupported Operation
+        //     */
+        //    @Deprecated
+        //    @Override
+        //    default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction, final int batchSize)
+        //            throws UnsupportedOperationException, UncheckedSQLException {
+        //        throw new UnsupportedOperationException();
+        //    }
+
+        /**
+         *
+         * @param ids
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchDeleteByIds(final Collection<? extends ID> ids) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param ids
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    /**
+     * TODO
+     *
+     * @param <T>
+     * @param <ID>
+     * @param <SB>
+     * @param <TD>
+     */
+    @Beta
+    public static interface UncheckedReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends UncheckedReadOnlyCrudDao<T, ID, SB, TD>>
+            extends UncheckedReadOnlyDao<T, SB, TD>, UncheckedNoUpdateCrudDao<T, ID, SB, TD>, ReadOnlyCrudDao<T, ID, SB, TD> {
+
+        /**
+         *
+         * @param entityToInsert
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default ID insert(final T entityToInsert) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entityToInsert
+         * @param propNamesToInsert
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param namedInsertSQL
+         * @param entityToSave
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default ID insert(final String namedInsertSQL, final T entityToSave) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default List<ID> batchInsert(final Collection<? extends T> entities) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToInsert
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert)
+                throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToInsert
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize)
+                throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param namedInsertSQL
+         * @param entities
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities)
+                throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param namedInsertSQL
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities, final int batchSize)
+                throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    public static interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntities(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
+            loadJoinEntities(entity, joinEntityClass, null);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @param selectPropNames
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws UncheckedSQLException {
+            final Class<?> targetEntityClass = targetEntityClass();
+            final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntities(entity, joinEntityPropName, selectPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
+            loadJoinEntities(entities, joinEntityClass, null);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @param selectPropNames
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+                throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            final Class<?> targetEntityClass = targetEntityClass();
+            final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntities(entities, joinEntityPropName, selectPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropName
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntities(final T entity, final String joinEntityPropName) throws UncheckedSQLException {
+            loadJoinEntities(entity, joinEntityPropName, null);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException {
+            loadJoinEntities(entities, joinEntityPropName, null);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
+                throws UncheckedSQLException;
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntities(entity, joinEntityPropName);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param inParallel
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException {
+            if (inParallel) {
+                loadJoinEntities(entity, joinEntityPropNames, executor());
+            } else {
+                loadJoinEntities(entity, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param executor
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            final List<ContinuableFuture<Void>> futures = StreamE.of(joinEntityPropNames, UncheckedSQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor))
+                    .toList();
+
+            JdbcUtil.uncheckedComplete(futures);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntities(entities, joinEntityPropName);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param inParallel
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
+                throws UncheckedSQLException {
+            if (inParallel) {
+                loadJoinEntities(entities, joinEntityPropNames, executor());
+            } else {
+                loadJoinEntities(entities, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param executor
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
+                throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            final List<ContinuableFuture<Void>> futures = StreamE.of(joinEntityPropNames, UncheckedSQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entities, joinEntityPropName), executor))
+                    .toList();
+
+            JdbcUtil.uncheckedComplete(futures);
+        }
+
+        /**
+         *
+         * @param entity
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadAllJoinEntities(T entity) throws UncheckedSQLException {
+            loadJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entity
+         * @param inParallel
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadAllJoinEntities(final T entity, final boolean inParallel) throws UncheckedSQLException {
+            if (inParallel) {
+                loadAllJoinEntities(entity, executor());
+            } else {
+                loadAllJoinEntities(entity);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param executor
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException {
+            loadJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entities
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadAllJoinEntities(final Collection<T> entities) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            loadJoinEntities(entities, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entities
+         * @param inParallel
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
+            if (inParallel) {
+                loadAllJoinEntities(entities, executor());
+            } else {
+                loadAllJoinEntities(entities);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param executor
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            loadJoinEntities(entities, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
+            loadJoinEntitiesIfNull(entity, joinEntityClass, null);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @param selectPropNames
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+                throws UncheckedSQLException {
+            final Class<?> targetEntityClass = targetEntityClass();
+            final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntitiesIfNull(entity, joinEntityPropName, selectPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
+            loadJoinEntitiesIfNull(entities, joinEntityClass, null);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @param selectPropNames
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+                throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            final Class<?> targetEntityClass = targetEntityClass();
+            final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+
+            if (joinEntityPropNames.size() == 1) {
+                loadJoinEntitiesIfNull(entities, joinEntityPropNames.get(0), selectPropNames);
+            } else {
+                for (String joinEntityPropName : joinEntityPropNames) {
+                    loadJoinEntitiesIfNull(entities, joinEntityPropName, selectPropNames);
+                }
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropName
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName) throws UncheckedSQLException {
+            loadJoinEntitiesIfNull(entity, joinEntityPropName, null);
+        }
+
+        /**
+         *
+         * @param entity
+         * ?
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames)
+                throws UncheckedSQLException {
+            final Class<?> cls = entity.getClass();
+            final PropInfo propInfo = ParserUtil.getEntityInfo(cls).getPropInfo(joinEntityPropName);
+
+            if (propInfo.getPropValue(entity) == null) {
+                loadJoinEntities(entity, joinEntityPropName, selectPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException {
+            loadJoinEntitiesIfNull(entities, joinEntityPropName, null);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
+                throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            final Class<?> cls = N.firstOrNullIfEmpty(entities).getClass();
+            final PropInfo propInfo = ParserUtil.getEntityInfo(cls).getPropInfo(joinEntityPropName);
+            final List<T> newEntities = N.filter(entities, entity -> propInfo.getPropValue(entity) == null);
+
+            loadJoinEntities(newEntities, joinEntityPropName, selectPropNames);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntitiesIfNull(entity, joinEntityPropName);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param inParallel
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel)
+                throws UncheckedSQLException {
+            if (inParallel) {
+                loadJoinEntitiesIfNull(entity, joinEntityPropNames, executor());
+            } else {
+                loadJoinEntitiesIfNull(entity, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param executor
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final Executor executor)
+                throws UncheckedSQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            final List<ContinuableFuture<Void>> futures = StreamE.of(joinEntityPropNames, UncheckedSQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entity, joinEntityPropName), executor))
+                    .toList();
+
+            JdbcUtil.uncheckedComplete(futures);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntitiesIfNull(entities, joinEntityPropName);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param inParallel
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
+                throws UncheckedSQLException {
+            if (inParallel) {
+                loadJoinEntitiesIfNull(entities, joinEntityPropNames, executor());
+            } else {
+                loadJoinEntitiesIfNull(entities, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param executor
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
+                throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return;
+            }
+
+            final List<ContinuableFuture<Void>> futures = StreamE.of(joinEntityPropNames, UncheckedSQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entities, joinEntityPropName), executor))
+                    .toList();
+
+            JdbcUtil.uncheckedComplete(futures);
+        }
+
+        /**
+         *
+         * @param entity
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(T entity) throws UncheckedSQLException {
+            loadJoinEntitiesIfNull(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entity
+         * @param inParallel
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) throws UncheckedSQLException {
+            if (inParallel) {
+                loadJoinEntitiesIfNull(entity, executor());
+            } else {
+                loadJoinEntitiesIfNull(entity);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param executor
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws UncheckedSQLException {
+            loadJoinEntitiesIfNull(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entities
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final Collection<T> entities) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            loadJoinEntitiesIfNull(entities, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entities
+         * @param inParallel
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
+            if (inParallel) {
+                loadJoinEntitiesIfNull(entities, executor());
+            } else {
+                loadJoinEntitiesIfNull(entities);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param executor
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return;
+            }
+
+            loadJoinEntitiesIfNull(entities, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityClass
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
+            final Class<?> targetEntityClass = targetEntityClass();
+            final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+
+            int result = 0;
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                result += deleteJoinEntities(entity, joinEntityPropName);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return 0;
+            }
+
+            final Class<?> targetEntityClass = targetEntityClass();
+            final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
+            N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+
+            int result = 0;
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                result += deleteJoinEntities(entities, joinEntityPropName);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        int deleteJoinEntities(final T entity, final String joinEntityPropName) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return 0;
+            }
+
+            int result = 0;
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                result += deleteJoinEntities(entity, joinEntityPropName);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException {
+            if (inParallel) {
+                return deleteJoinEntities(entity, joinEntityPropNames, executor());
+            } else {
+                return deleteJoinEntities(entity, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(joinEntityPropNames)) {
+                return 0;
+            }
+
+            final List<ContinuableFuture<Integer>> futures = StreamE.of(joinEntityPropNames, UncheckedSQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entity, joinEntityPropName), executor))
+                    .toList();
+
+            return JdbcUtil.uncheckedCompleteSum(futures);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return 0;
+            }
+
+            int result = 0;
+
+            for (String joinEntityPropName : joinEntityPropNames) {
+                result += deleteJoinEntities(entities, joinEntityPropName);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
+                throws UncheckedSQLException {
+            if (inParallel) {
+                return deleteJoinEntities(entities, joinEntityPropNames, executor());
+            } else {
+                return deleteJoinEntities(entities, joinEntityPropNames);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
+                throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
+                return 0;
+            }
+
+            final List<ContinuableFuture<Integer>> futures = StreamE.of(joinEntityPropNames, UncheckedSQLException.class)
+                    .map(joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entities, joinEntityPropName), executor))
+                    .toList();
+
+            return JdbcUtil.uncheckedCompleteSum(futures);
+        }
+
+        /**
+         *
+         * @param entity
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int deleteAllJoinEntities(T entity) throws UncheckedSQLException {
+            return deleteJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entity
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws UncheckedSQLException {
+            if (inParallel) {
+                return deleteAllJoinEntities(entity, executor());
+            } else {
+                return deleteAllJoinEntities(entity);
+            }
+        }
+
+        /**
+         *
+         * @param entity
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int deleteAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException {
+            return deleteJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
+        }
+
+        /**
+         *
+         * @param entities
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int deleteAllJoinEntities(final Collection<T> entities) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return 0;
+            }
+
+            return deleteJoinEntities(entities, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet());
+        }
+
+        /**
+         *
+         * @param entities
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
+            if (inParallel) {
+                return deleteAllJoinEntities(entities, executor());
+            } else {
+                return deleteAllJoinEntities(entities);
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UncheckedSQLException the SQL exception
+         */
+        @Override
+        default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return 0;
+            }
+
+            return deleteJoinEntities(entities, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
+        }
+    }
+
+    public static interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>>
+            extends UncheckedJoinEntityHelper<T, SB, TD>, ReadOnlyJoinEntityHelper<T, SB, TD> {
+
+        /**
+         * 
+         * @param entity
+         * @param joinEntityClass
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityClass
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass)
+                throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final T entity, final String joinEntityPropName) throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param selectPropNames
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName)
+                throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames)
+                throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel)
+                throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @param joinEntityPropNames
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor)
+                throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames)
+                throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
+                throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param joinEntityPropName
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
+                throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteAllJoinEntities(T entity) throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entity
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteAllJoinEntities(final Collection<T> entities) throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param inParallel
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param entities
+         * @param executor
+         * @return the total count of updated/deleted records.
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException, UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    static Object[] getParameterArray(final SP sp) {
+        return N.isNullOrEmpty(sp.parameters) ? N.EMPTY_OBJECT_ARRAY : sp.parameters.toArray();
+    }
+
+    static <R> BiRowMapper<R> toBiRowMapper(final RowMapper<R> rowMapper) {
+        return (rs, columnLabels) -> rowMapper.apply(rs);
+    }
+
+    static final Throwables.Consumer<? super Exception, SQLException> throwSQLExceptionAction = e -> {
+        if (e instanceof SQLException) {
+            throw (SQLException) e;
+        } else if (e.getCause() != null && e.getCause() instanceof SQLException) {
+            throw (SQLException) e.getCause();
+        } else {
+            throw N.toRuntimeException(e);
+        }
+    };
+
+    static void complete(final List<ContinuableFuture<Void>> futures) throws SQLException {
+        for (ContinuableFuture<Void> f : futures) {
+            f.gett().ifFailure(throwSQLExceptionAction);
+        }
+    }
+
+    static int completeSum(final List<ContinuableFuture<Integer>> futures) throws SQLException {
+        int result = 0;
+        Result<Integer, Exception> ret = null;
+
+        for (ContinuableFuture<Integer> f : futures) {
+            ret = f.gett();
+
+            if (ret.isFailure()) {
+                throwSQLExceptionAction.accept(ret.getExceptionIfPresent());
+            }
+
+            result += ret.orElse(0);
+        }
+
+        return result;
+    }
+
+    static final Throwables.Consumer<? super Exception, UncheckedSQLException> throwUncheckedSQLException = e -> {
+        if (e instanceof SQLException) {
+            throw new UncheckedSQLException((SQLException) e);
+        } else if (e.getCause() != null && e.getCause() instanceof SQLException) {
+            throw new UncheckedSQLException((SQLException) e.getCause());
+        } else {
+            throw N.toRuntimeException(e);
+        }
+    };
+
+    static void uncheckedComplete(final List<ContinuableFuture<Void>> futures) throws UncheckedSQLException {
+        for (ContinuableFuture<Void> f : futures) {
+            f.gett().ifFailure(throwUncheckedSQLException);
+        }
+    }
+
+    static int uncheckedCompleteSum(final List<ContinuableFuture<Integer>> futures) throws UncheckedSQLException {
+        int result = 0;
+        Result<Integer, Exception> ret = null;
+
+        for (ContinuableFuture<Integer> f : futures) {
+            ret = f.gett();
+
+            if (ret.isFailure()) {
+                throwUncheckedSQLException.accept(ret.getExceptionIfPresent());
+            }
+
+            result += ret.orElse(0);
+        }
+
+        return result;
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static final Map<Tuple2<Class<?>, Class<?>>, Map<NamingPolicy, Tuple3<BiRowMapper, Function, BiConsumer>>> idGeneratorGetterSetterPool = new ConcurrentHashMap<>();
+
+    @SuppressWarnings("rawtypes")
+    private static final Tuple3<BiRowMapper, Function, BiConsumer> noIdGeneratorGetterSetter = Tuple.of(NO_BI_GENERATED_KEY_EXTRACTOR, entity -> null,
+            BiConsumers.doNothing());
+
+    @SuppressWarnings({ "rawtypes", "deprecation" })
+    static <ID> Tuple3<BiRowMapper<ID>, Function<Object, ID>, BiConsumer<ID, Object>> getIdGeneratorGetterSetter(final Class<?> entityClass,
+            final NamingPolicy namingPolicy, final Class<?> idType) {
+        if (entityClass == null || !ClassUtil.isEntity(entityClass)) {
+            return (Tuple3) noIdGeneratorGetterSetter;
+        }
+
+        final Tuple2<Class<?>, Class<?>> key = Tuple.of(entityClass, idType);
+
+        Map<NamingPolicy, Tuple3<BiRowMapper, Function, BiConsumer>> map = idGeneratorGetterSetterPool.get(key);
+
+        if (map == null) {
+            final List<String> idPropNameList = ClassUtil.getIdFieldNames(entityClass);
+            final boolean isNoId = N.isNullOrEmpty(idPropNameList) || ClassUtil.isFakeId(idPropNameList);
+            final String oneIdPropName = isNoId ? null : idPropNameList.get(0);
+            final EntityInfo entityInfo = isNoId ? null : ParserUtil.getEntityInfo(entityClass);
+            final List<PropInfo> idPropInfoList = isNoId ? null : Stream.of(idPropNameList).map(entityInfo::getPropInfo).toList();
+            final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
+            final boolean isOneId = isNoId ? false : idPropNameList.size() == 1;
+            final boolean isEntityId = idType != null && EntityId.class.isAssignableFrom(idType);
+
+            final Function<Object, ID> idGetter = isNoId ? noIdGeneratorGetterSetter._2 //
+                    : (isOneId ? entity -> idPropInfo.getPropValue(entity) //
+                            : (isEntityId ? entity -> {
+                                final Seid ret = Seid.of(ClassUtil.getSimpleClassName(entityClass));
+
+                                for (PropInfo propInfo : idPropInfoList) {
+                                    ret.set(propInfo.name, propInfo.getPropValue(entity));
+                                }
+
+                                return (ID) ret;
+                            } : entity -> {
+                                final Object ret = N.newInstance(idType);
+
+                                for (PropInfo propInfo : idPropInfoList) {
+                                    ClassUtil.setPropValue(ret, propInfo.name, propInfo.getPropValue(entity));
+                                }
+
+                                return (ID) ret;
+                            }));
+
+            final BiConsumer<ID, Object> idSetter = isNoId ? noIdGeneratorGetterSetter._3 //
+                    : (isOneId ? (id, entity) -> idPropInfo.setPropValue(entity, id) //
+                            : (isEntityId ? (id, entity) -> {
+                                if (id instanceof EntityId) {
+                                    final EntityId entityId = (EntityId) id;
+                                    PropInfo propInfo = null;
+
+                                    for (String propName : entityId.keySet()) {
+                                        propInfo = entityInfo.getPropInfo(propName);
+
+                                        if ((propInfo = entityInfo.getPropInfo(propName)) != null) {
+                                            propInfo.setPropValue(entity, entityId.get(propName));
+                                        }
+                                    }
+                                } else {
+                                    logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
+                                }
+                            } : (id, entity) -> {
+                                if (id != null && ClassUtil.isEntity(id.getClass())) {
+                                    final Object entityId = id;
+
+                                    for (PropInfo propInfo : idPropInfoList) {
+                                        propInfo.setPropValue(entity, ClassUtil.getPropValue(entityId, propInfo.name));
+                                    }
+                                } else {
+                                    logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
+                                }
+                            }));
+
+            map = new EnumMap<>(NamingPolicy.class);
+
+            for (NamingPolicy np : NamingPolicy.values()) {
+                final ImmutableMap<String, String> propColumnNameMap = SQLBuilder.getPropColumnNameMap(entityClass, namingPolicy);
+
+                final ImmutableMap<String, String> columnPropNameMap = EntryStream.of(propColumnNameMap)
+                        .inversed()
+                        .flattMapKey(e -> N.asList(e, e.toLowerCase(), e.toUpperCase()))
+                        .distinctByKey()
+                        .toImmutableMap();
+
+                final BiRowMapper<Object> keyExtractor = isNoId ? noIdGeneratorGetterSetter._1 //
+                        : (isOneId ? (rs, columnLabels) -> idPropInfo.dbType.get(rs, 1) //
+                                : (rs, columnLabels) -> {
+                                    if (columnLabels.size() == 1) {
+                                        return idPropInfo.dbType.get(rs, 1);
+                                    } else if (isEntityId) {
+                                        final int columnCount = columnLabels.size();
+                                        final Seid id = Seid.of(ClassUtil.getSimpleClassName(entityClass));
+                                        String columnName = null;
+                                        String propName = null;
+                                        PropInfo propInfo = null;
+
+                                        for (int i = 1; i <= columnCount; i++) {
+                                            columnName = columnLabels.get(i - 1);
+
+                                            if ((propName = columnPropNameMap.get(columnName)) == null
+                                                    || (propInfo = entityInfo.getPropInfo(propName)) == null) {
+                                                id.set(columnName, getColumnValue(rs, i));
+                                            } else {
+                                                id.set(propInfo.name, propInfo.dbType.get(rs, i));
+                                            }
+                                        }
+
+                                        return id;
+                                    } else {
+                                        final EntityInfo idEntityInfo = ParserUtil.getEntityInfo(idType);
+                                        final List<Tuple2<String, PropInfo>> tpList = StreamEx.of(columnLabels)
+                                                .filter(it -> idEntityInfo.getPropInfo(it) != null)
+                                                .map(it -> Tuple.of(it, idEntityInfo.getPropInfo(it)))
+                                                .toList();
+                                        final Object id = N.newInstance(idType);
+
+                                        for (Tuple2<String, PropInfo> tp : tpList) {
+                                            tp._2.setPropValue(id, getColumnValue(rs, tp._1));
+                                        }
+
+                                        return id;
+                                    }
+                                });
+
+                map.put(np, Tuple.of(keyExtractor, idGetter, idSetter));
+            }
+
+            idGeneratorGetterSetterPool.put(key, map);
+        }
+
+        return (Tuple3) map.get(namingPolicy);
+    }
+
+    private static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> JoinEntityHelper<T, SB, TD> getJoinEntityHelper(final Dao<T, SB, TD> dao) {
         if (dao instanceof JoinEntityHelper) {
             return (JoinEntityHelper<T, SB, TD>) dao;
         } else {
             throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't extends interface JoinEntityHelper");
+        }
+    }
+
+    private static <T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> UncheckedJoinEntityHelper<T, SB, TD> getUncheckedJoinEntityHelper(
+            final UncheckedDao<T, SB, TD> dao) {
+        if (dao instanceof UncheckedJoinEntityHelper) {
+            return (UncheckedJoinEntityHelper<T, SB, TD>) dao;
+        } else {
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't extends interface UncheckedJoinEntityHelper");
         }
     }
 

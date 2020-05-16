@@ -23,6 +23,8 @@ import com.landawn.abacus.samples.dao.EmployeeProjectDao2;
 import com.landawn.abacus.samples.dao.NoUpdateUserDao;
 import com.landawn.abacus.samples.dao.ProjectDao;
 import com.landawn.abacus.samples.dao.ReadOnlyUserDao;
+import com.landawn.abacus.samples.dao.UncheckedUserDao;
+import com.landawn.abacus.samples.dao.UncheckedUserDaoL;
 import com.landawn.abacus.samples.dao.UserDao;
 import com.landawn.abacus.samples.dao.UserDaoL;
 import com.landawn.abacus.samples.entity.User;
@@ -32,8 +34,6 @@ import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLTransaction;
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
 
 /**
  * CRUD: insert -> read -> update -> delete a record in DB table.
@@ -45,19 +45,12 @@ public class Jdbc {
                 HandlerFactory.create((result, obj, args, tp) -> N.println("calling: " + tp._1.getName() + " by Handler2.afterInvoke")));
     }
 
-    static final DataSource dataSource;
-
-    static {
-        HikariConfig config = new HikariConfig();
-        config.setJdbcUrl("jdbc:h2:~/test");
-        config.setUsername("sa");
-        config.setPassword("");
-
-        dataSource = new HikariDataSource(config);
-    }
-
+    static final DataSource dataSource = JdbcUtil.createHikariDataSource("jdbc:h2:~/test", "sa", "");
+    static final DataSource dataSource2 = JdbcUtil.createC3p0DataSource("jdbc:h2:~/test", "sa", "");
     static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
     static final UserDaoL userDao2 = JdbcUtil.createDao(UserDaoL.class, dataSource);
+    static final UncheckedUserDao uncheckedUserDao = JdbcUtil.createDao(UncheckedUserDao.class, dataSource);
+    static final UncheckedUserDaoL uncheckedUserDao2 = JdbcUtil.createDao(UncheckedUserDaoL.class, dataSource);
     static final NoUpdateUserDao noUpdateUserDao = JdbcUtil.createDao(NoUpdateUserDao.class, dataSource);
     static final ReadOnlyUserDao readOnlyUserDao = JdbcUtil.createDao(ReadOnlyUserDao.class, dataSource);
 

@@ -55,6 +55,7 @@ import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.core.DirtyMarkerUtil;
 import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.parser.KryoParser;
@@ -64,7 +65,6 @@ import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Columns.ColumnOne;
-import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
 import com.landawn.abacus.util.Fn.IntFunctions;
 import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
@@ -97,6 +97,7 @@ import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.function.LongFunction;
 import com.landawn.abacus.util.function.Predicate;
+import com.landawn.abacus.util.function.Supplier;
 import com.landawn.abacus.util.function.TriFunction;
 import com.landawn.abacus.util.stream.BaseStream;
 import com.landawn.abacus.util.stream.EntryStream;
@@ -1154,6 +1155,9 @@ final class DaoUtil {
         final javax.sql.DataSource primaryDataSource = ds;
         final SQLMapper nonNullSQLMapper = sqlMapper == null ? new SQLMapper() : sqlMapper;
         final Executor nonNullExecutor = executor == null ? JdbcUtil.asyncExecutor.getExecutor() : executor;
+        final boolean isUnchecked = JdbcUtil.UncheckedDao.class.isAssignableFrom(daoInterface);
+        final boolean isCrudDao = JdbcUtil.CrudDao.class.isAssignableFrom(daoInterface) || JdbcUtil.UncheckedCrudDao.class.isAssignableFrom(daoInterface);
+        final boolean isCrudDaoL = JdbcUtil.CrudDaoL.class.isAssignableFrom(daoInterface) || JdbcUtil.UncheckedCrudDaoL.class.isAssignableFrom(daoInterface);
 
         java.lang.reflect.Type[] typeArguments = null;
 
@@ -1178,7 +1182,7 @@ final class DaoUtil {
                 }
             }
 
-            if (JdbcUtil.CrudDao.class.isAssignableFrom(daoInterface)) {
+            if (isCrudDao) {
                 final List<String> idFieldNames = ClassUtil.getIdFieldNames((Class) typeArguments[0]);
 
                 if (idFieldNames.size() == 0) {
@@ -1209,9 +1213,7 @@ final class DaoUtil {
 
         final Class<T> entityClass = N.isNullOrEmpty(typeArguments) ? null : (Class) typeArguments[0];
         final boolean isDirtyMarker = entityClass == null ? false : ClassUtil.isDirtyMarker(entityClass);
-        final Class<?> idClass = JdbcUtil.CrudDao.class.isAssignableFrom(daoInterface)
-                ? (JdbcUtil.CrudDaoL.class.isAssignableFrom(daoInterface) ? Long.class : (Class) typeArguments[1])
-                : null;
+        final Class<?> idClass = isCrudDao ? (isCrudDaoL ? Long.class : (Class) typeArguments[1]) : null;
         final boolean isEntityId = idClass != null && EntityId.class.isAssignableFrom(idClass);
 
         final Class<? extends SQLBuilder> sbc = N.isNullOrEmpty(typeArguments) ? PSC.class
@@ -1500,9 +1502,11 @@ final class DaoUtil {
                     && paramTypes[0].equals(String.class)) {
                 call = (proxy, args) -> sqlsCache.get(args[0]);
             } else {
+                final boolean isStreamReturn = Stream.class.isAssignableFrom(returnType) || ExceptionalStream.class.isAssignableFrom(returnType);
+                final boolean throwsSQLException = StreamEx.of(m.getExceptionTypes()).anyMatch(e -> SQLException.class.equals(e));
                 final Annotation sqlAnno = StreamEx.of(m.getAnnotations()).filter(anno -> sqlAnnoMap.containsKey(anno.annotationType())).first().orNull();
 
-                if (declaringClass.equals(Dao.class)) {
+                if (declaringClass.equals(JdbcUtil.Dao.class) || declaringClass.equals(JdbcUtil.UncheckedDao.class)) {
                     if (methodName.equals("save") && paramLen == 1) {
                         call = (proxy, args) -> {
                             final Object entity = args[0];
@@ -1915,284 +1919,110 @@ final class DaoUtil {
                         call = (proxy, args) -> {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
-                            final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Throwables.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
-                                        private ExceptionalIterator<T, SQLException> internalIter;
+                            final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setParameters(sp.parameters)
+                                    .stream(entityClass);
 
-                                        @Override
-                                        public ExceptionalIterator<T, SQLException> get() throws SQLException {
-                                            if (internalIter == null) {
-                                                internalIter = proxy.prepareQuery(sp.sql).setParameters(sp.parameters).stream(entityClass).iterator();
-                                            }
-
-                                            return internalIter;
-                                        }
-                                    });
-
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
-                                @Override
-                                public void run() throws SQLException {
-                                    lazyIter.close();
-                                }
-                            });
+                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
-                            final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
-                                        private ExceptionalIterator<Object, SQLException> internalIter;
+                            final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setParameters(sp.parameters)
+                                    .stream((JdbcUtil.RowMapper) args[1]);
 
-                                        @Override
-                                        public ExceptionalIterator<Object, SQLException> get() throws SQLException {
-                                            if (internalIter == null) {
-                                                internalIter = proxy.prepareQuery(sp.sql)
-                                                        .setParameters(sp.parameters)
-                                                        .stream((JdbcUtil.RowMapper) args[1])
-                                                        .iterator();
-                                            }
-
-                                            return internalIter;
-                                        }
-                                    });
-
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
-                                @Override
-                                public void run() throws SQLException {
-                                    lazyIter.close();
-                                }
-                            });
+                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
-                            final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
-                                        private ExceptionalIterator<Object, SQLException> internalIter;
+                            final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setParameters(sp.parameters)
+                                    .stream((JdbcUtil.BiRowMapper) args[1]);
 
-                                        @Override
-                                        public ExceptionalIterator<Object, SQLException> get() throws SQLException {
-                                            if (internalIter == null) {
-                                                internalIter = proxy.prepareQuery(sp.sql)
-                                                        .setParameters(sp.parameters)
-                                                        .stream((JdbcUtil.BiRowMapper) args[1])
-                                                        .iterator();
-                                            }
-
-                                            return internalIter;
-                                        }
-                                    });
-
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
-                                @Override
-                                public void run() throws SQLException {
-                                    lazyIter.close();
-                                }
-                            });
+                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.RowFilter.class) && paramTypes[2].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
-                            final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
-                                        private ExceptionalIterator<Object, SQLException> internalIter;
+                            final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setParameters(sp.parameters)
+                                    .stream((JdbcUtil.RowFilter) args[1], (JdbcUtil.RowMapper) args[2]);
 
-                                        @Override
-                                        public ExceptionalIterator<Object, SQLException> get() throws SQLException {
-                                            if (internalIter == null) {
-                                                internalIter = proxy.prepareQuery(sp.sql)
-                                                        .setParameters(sp.parameters)
-                                                        .stream((JdbcUtil.RowFilter) args[1], (JdbcUtil.RowMapper) args[2])
-                                                        .iterator();
-                                            }
-
-                                            return internalIter;
-                                        }
-                                    });
-
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
-                                @Override
-                                public void run() throws SQLException {
-                                    lazyIter.close();
-                                }
-                            });
+                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.BiRowFilter.class) && paramTypes[2].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
-                            final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
-                                        private ExceptionalIterator<Object, SQLException> internalIter;
+                            final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setParameters(sp.parameters)
+                                    .stream((JdbcUtil.BiRowFilter) args[1], (JdbcUtil.BiRowMapper) args[2]);
 
-                                        @Override
-                                        public ExceptionalIterator<Object, SQLException> get() throws SQLException {
-                                            if (internalIter == null) {
-                                                internalIter = proxy.prepareQuery(sp.sql)
-                                                        .setParameters(sp.parameters)
-                                                        .stream((JdbcUtil.BiRowFilter) args[1], (JdbcUtil.BiRowMapper) args[2])
-                                                        .iterator();
-                                            }
-
-                                            return internalIter;
-                                        }
-                                    });
-
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
-                                @Override
-                                public void run() throws SQLException {
-                                    lazyIter.close();
-                                }
-                            });
+                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
-                            final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Throwables.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
-                                        private ExceptionalIterator<T, SQLException> internalIter;
+                            final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setParameters(sp.parameters)
+                                    .stream(entityClass);
 
-                                        @Override
-                                        public ExceptionalIterator<T, SQLException> get() throws SQLException {
-                                            if (internalIter == null) {
-                                                internalIter = proxy.prepareQuery(sp.sql).setParameters(sp.parameters).stream(entityClass).iterator();
-                                            }
-
-                                            return internalIter;
-                                        }
-                                    });
-
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
-                                @Override
-                                public void run() throws SQLException {
-                                    lazyIter.close();
-                                }
-                            });
+                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
-                            final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
-                                        private ExceptionalIterator<Object, SQLException> internalIter;
+                            final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setParameters(sp.parameters)
+                                    .stream((JdbcUtil.RowMapper) args[2]);
 
-                                        @Override
-                                        public ExceptionalIterator<Object, SQLException> get() throws SQLException {
-                                            if (internalIter == null) {
-                                                internalIter = proxy.prepareQuery(sp.sql)
-                                                        .setParameters(sp.parameters)
-                                                        .stream((JdbcUtil.RowMapper) args[2])
-                                                        .iterator();
-                                            }
-
-                                            return internalIter;
-                                        }
-                                    });
-
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
-                                @Override
-                                public void run() throws SQLException {
-                                    lazyIter.close();
-                                }
-                            });
+                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
-                            final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
-                                        private ExceptionalIterator<Object, SQLException> internalIter;
+                            final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setParameters(sp.parameters)
+                                    .stream((JdbcUtil.BiRowMapper) args[2]);
 
-                                        @Override
-                                        public ExceptionalIterator<Object, SQLException> get() throws SQLException {
-                                            if (internalIter == null) {
-                                                internalIter = proxy.prepareQuery(sp.sql)
-                                                        .setParameters(sp.parameters)
-                                                        .stream((JdbcUtil.BiRowMapper) args[2])
-                                                        .iterator();
-                                            }
-
-                                            return internalIter;
-                                        }
-                                    });
-
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
-                                @Override
-                                public void run() throws SQLException {
-                                    lazyIter.close();
-                                }
-                            });
+                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.RowFilter.class) && paramTypes[3].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
-                            final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
-                                        private ExceptionalIterator<Object, SQLException> internalIter;
+                            final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setParameters(sp.parameters)
+                                    .stream((JdbcUtil.RowFilter) args[2], (JdbcUtil.RowMapper) args[3]);
 
-                                        @Override
-                                        public ExceptionalIterator<Object, SQLException> get() throws SQLException {
-                                            if (internalIter == null) {
-                                                internalIter = proxy.prepareQuery(sp.sql)
-                                                        .setParameters(sp.parameters)
-                                                        .stream((JdbcUtil.RowFilter) args[2], (JdbcUtil.RowMapper) args[3])
-                                                        .iterator();
-                                            }
-
-                                            return internalIter;
-                                        }
-                                    });
-
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
-                                @Override
-                                public void run() throws SQLException {
-                                    lazyIter.close();
-                                }
-                            });
+                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.BiRowFilter.class) && paramTypes[3].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
-                            final ExceptionalIterator<Object, SQLException> lazyIter = ExceptionalIterator
-                                    .of(new Throwables.Supplier<ExceptionalIterator<Object, SQLException>, SQLException>() {
-                                        private ExceptionalIterator<Object, SQLException> internalIter;
+                            final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setParameters(sp.parameters)
+                                    .stream((JdbcUtil.BiRowFilter) args[2], (JdbcUtil.BiRowMapper) args[3]);
 
-                                        @Override
-                                        public ExceptionalIterator<Object, SQLException> get() throws SQLException {
-                                            if (internalIter == null) {
-                                                internalIter = proxy.prepareQuery(sp.sql)
-                                                        .setParameters(sp.parameters)
-                                                        .stream((JdbcUtil.BiRowFilter) args[2], (JdbcUtil.BiRowMapper) args[3])
-                                                        .iterator();
-                                            }
-
-                                            return internalIter;
-                                        }
-                                    });
-
-                            return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
-                                @Override
-                                public void run() throws SQLException {
-                                    lazyIter.close();
-                                }
-                            });
+                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
                     } else if (methodName.equals("update") && paramLen == 2 && Map.class.equals(paramTypes[0])
                             && Condition.class.isAssignableFrom(paramTypes[1])) {
@@ -2214,129 +2044,7 @@ final class DaoUtil {
                             throw new UnsupportedOperationException("Unsupported operation: " + m);
                         };
                     }
-                } else if (declaringClass.equals(JdbcUtil.JoinEntityHelper.class)) {
-                    if (methodName.equals("loadJoinEntities") && paramLen == 3 && !Collection.class.isAssignableFrom(paramTypes[0])
-                            && String.class.isAssignableFrom(paramTypes[1]) && Collection.class.isAssignableFrom(paramTypes[2])) {
-                        call = (proxy, args) -> {
-                            final Object entity = args[0];
-                            final String joinEntityPropName = (String) args[1];
-                            final Collection<String> selectPropNames = (Collection<String>) args[2];
-                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
-                            final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
-                                    .getSelectSQLBuilderAndParamSetter(sbc);
-
-                            final JdbcUtil.PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
-
-                            if (propJoinInfo.joinPropInfo.type.isCollection()) {
-                                final List<?> propEntities = preparedQuery.list(propJoinInfo.referencedEntityClass);
-
-                                if (propJoinInfo.joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
-                                    propJoinInfo.joinPropInfo.setPropValue(entity, propEntities);
-                                } else {
-                                    final Collection<Object> c = (Collection) N.newInstance(propJoinInfo.joinPropInfo.clazz);
-                                    c.addAll(propEntities);
-                                    propJoinInfo.joinPropInfo.setPropValue(entity, c);
-                                }
-                            } else {
-                                propJoinInfo.joinPropInfo.setPropValue(entity, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orNull());
-                            }
-
-                            if (isDirtyMarker) {
-                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propJoinInfo.joinPropInfo.name, false);
-                            }
-
-                            return null;
-                        };
-                    } else if (methodName.equals("loadJoinEntities") && paramLen == 3 && Collection.class.isAssignableFrom(paramTypes[0])
-                            && String.class.isAssignableFrom(paramTypes[1]) && Collection.class.isAssignableFrom(paramTypes[2])) {
-                        call = (proxy, args) -> {
-                            final Collection<Object> entities = (Collection) args[0];
-                            final String joinEntityPropName = (String) args[1];
-                            final Collection<String> selectPropNames = (Collection<String>) args[2];
-                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
-
-                            if (N.isNullOrEmpty(entities)) {
-                                // Do nothing.
-                            } else if (entities.size() == 1) {
-                                final Object entity = N.firstOrNullIfEmpty(entities);
-                                final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
-                                        .getSelectSQLBuilderAndParamSetter(sbc);
-
-                                final JdbcUtil.PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
-
-                                if (propJoinInfo.joinPropInfo.type.isCollection()) {
-                                    final List<?> propEntities = preparedQuery.list(propJoinInfo.referencedEntityClass);
-
-                                    if (propJoinInfo.joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
-                                        propJoinInfo.joinPropInfo.setPropValue(entity, propEntities);
-                                    } else {
-                                        final Collection<Object> c = (Collection) N.newInstance(propJoinInfo.joinPropInfo.clazz);
-                                        c.addAll(propEntities);
-                                        propJoinInfo.joinPropInfo.setPropValue(entity, c);
-                                    }
-                                } else {
-                                    propJoinInfo.joinPropInfo.setPropValue(entity, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orNull());
-                                }
-
-                                if (isDirtyMarker) {
-                                    DirtyMarkerUtil.markDirty((DirtyMarker) entity, propJoinInfo.joinPropInfo.name, false);
-                                }
-                            } else {
-                                final Tuple2<BiFunction<Collection<String>, Integer, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
-                                        .getSelectSQLBuilderAndParamSetterForBatch(sbc);
-
-                                if (propJoinInfo.isManyToManyJoin()) {
-                                    final BiRowMapper<Object> biRowMapper = BiRowMapper.to(propJoinInfo.referencedEntityClass, true);
-                                    final BiRowMapper<Pair<Object, Object>> pairBiRowMapper = (rs, cls) -> Pair.of(rs.getObject(1), biRowMapper.apply(rs, cls));
-
-                                    final List<Pair<Object, Object>> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
-                                            .setParameters(entities, tp._2)
-                                            .list(pairBiRowMapper);
-
-                                    propJoinInfo.setJoinPropEntities(entities, Stream.of(joinPropEntities).groupTo(it -> it.left, it -> it.right));
-                                } else {
-                                    final List<?> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
-                                            .setParameters(entities, tp._2)
-                                            .list(propJoinInfo.referencedEntityClass);
-
-                                    propJoinInfo.setJoinPropEntities(entities, joinPropEntities);
-                                }
-                            }
-
-                            return null;
-                        };
-                    } else if (methodName.equals("deleteJoinEntities") && paramLen == 2 && !Collection.class.isAssignableFrom(paramTypes[0])
-                            && String.class.isAssignableFrom(paramTypes[1])) {
-                        call = (proxy, args) -> {
-                            final Object entity = args[0];
-                            final String joinEntityPropName = (String) args[1];
-                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
-                            final Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.getDeleteSqlAndParamSetter(sbc);
-
-                            return proxy.prepareQuery(tp._1).setParameters(entity, tp._2).update();
-                        };
-                    } else if (methodName.equals("deleteJoinEntities") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
-                            && String.class.isAssignableFrom(paramTypes[1])) {
-                        call = (proxy, args) -> {
-                            final Collection<Object> entities = (Collection) args[0];
-                            final String joinEntityPropName = (String) args[1];
-                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
-                            final Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.getDeleteSqlAndParamSetter(sbc);
-
-                            if (N.isNullOrEmpty(entities)) {
-                                return 0;
-                            } else if (entities.size() == 1) {
-                                return proxy.prepareQuery(tp._1).setParameters(N.firstOrNullIfEmpty(entities), tp._2).update();
-                            } else {
-                                return proxy.prepareQuery(tp._1).addBatchParametters(entities, tp._2).update();
-                            }
-                        };
-                    } else {
-                        call = (proxy, args) -> {
-                            throw new UnsupportedOperationException("Unsupported operation: " + m);
-                        };
-                    }
-                } else if (declaringClass.equals(JdbcUtil.CrudDao.class)) {
+                } else if (declaringClass.equals(JdbcUtil.CrudDao.class) || declaringClass.equals(JdbcUtil.UncheckedCrudDao.class)) {
                     if (methodName.equals("insert") && paramLen == 1) {
                         call = (proxy, args) -> {
                             final Object entity = args[0];
@@ -2972,6 +2680,128 @@ final class DaoUtil {
                             throw new UnsupportedOperationException("Unsupported operation: " + m);
                         };
                     }
+                } else if (declaringClass.equals(JdbcUtil.JoinEntityHelper.class) || declaringClass.equals(JdbcUtil.UncheckedJoinEntityHelper.class)) {
+                    if (methodName.equals("loadJoinEntities") && paramLen == 3 && !Collection.class.isAssignableFrom(paramTypes[0])
+                            && String.class.isAssignableFrom(paramTypes[1]) && Collection.class.isAssignableFrom(paramTypes[2])) {
+                        call = (proxy, args) -> {
+                            final Object entity = args[0];
+                            final String joinEntityPropName = (String) args[1];
+                            final Collection<String> selectPropNames = (Collection<String>) args[2];
+                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
+                            final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
+                                    .getSelectSQLBuilderAndParamSetter(sbc);
+
+                            final JdbcUtil.PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
+
+                            if (propJoinInfo.joinPropInfo.type.isCollection()) {
+                                final List<?> propEntities = preparedQuery.list(propJoinInfo.referencedEntityClass);
+
+                                if (propJoinInfo.joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
+                                    propJoinInfo.joinPropInfo.setPropValue(entity, propEntities);
+                                } else {
+                                    final Collection<Object> c = (Collection) N.newInstance(propJoinInfo.joinPropInfo.clazz);
+                                    c.addAll(propEntities);
+                                    propJoinInfo.joinPropInfo.setPropValue(entity, c);
+                                }
+                            } else {
+                                propJoinInfo.joinPropInfo.setPropValue(entity, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orNull());
+                            }
+
+                            if (isDirtyMarker) {
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propJoinInfo.joinPropInfo.name, false);
+                            }
+
+                            return null;
+                        };
+                    } else if (methodName.equals("loadJoinEntities") && paramLen == 3 && Collection.class.isAssignableFrom(paramTypes[0])
+                            && String.class.isAssignableFrom(paramTypes[1]) && Collection.class.isAssignableFrom(paramTypes[2])) {
+                        call = (proxy, args) -> {
+                            final Collection<Object> entities = (Collection) args[0];
+                            final String joinEntityPropName = (String) args[1];
+                            final Collection<String> selectPropNames = (Collection<String>) args[2];
+                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
+
+                            if (N.isNullOrEmpty(entities)) {
+                                // Do nothing.
+                            } else if (entities.size() == 1) {
+                                final Object entity = N.firstOrNullIfEmpty(entities);
+                                final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
+                                        .getSelectSQLBuilderAndParamSetter(sbc);
+
+                                final JdbcUtil.PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
+
+                                if (propJoinInfo.joinPropInfo.type.isCollection()) {
+                                    final List<?> propEntities = preparedQuery.list(propJoinInfo.referencedEntityClass);
+
+                                    if (propJoinInfo.joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
+                                        propJoinInfo.joinPropInfo.setPropValue(entity, propEntities);
+                                    } else {
+                                        final Collection<Object> c = (Collection) N.newInstance(propJoinInfo.joinPropInfo.clazz);
+                                        c.addAll(propEntities);
+                                        propJoinInfo.joinPropInfo.setPropValue(entity, c);
+                                    }
+                                } else {
+                                    propJoinInfo.joinPropInfo.setPropValue(entity, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orNull());
+                                }
+
+                                if (isDirtyMarker) {
+                                    DirtyMarkerUtil.markDirty((DirtyMarker) entity, propJoinInfo.joinPropInfo.name, false);
+                                }
+                            } else {
+                                final Tuple2<BiFunction<Collection<String>, Integer, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
+                                        .getSelectSQLBuilderAndParamSetterForBatch(sbc);
+
+                                if (propJoinInfo.isManyToManyJoin()) {
+                                    final BiRowMapper<Object> biRowMapper = BiRowMapper.to(propJoinInfo.referencedEntityClass, true);
+                                    final BiRowMapper<Pair<Object, Object>> pairBiRowMapper = (rs, cls) -> Pair.of(rs.getObject(1), biRowMapper.apply(rs, cls));
+
+                                    final List<Pair<Object, Object>> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
+                                            .setParameters(entities, tp._2)
+                                            .list(pairBiRowMapper);
+
+                                    propJoinInfo.setJoinPropEntities(entities, Stream.of(joinPropEntities).groupTo(it -> it.left, it -> it.right));
+                                } else {
+                                    final List<?> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
+                                            .setParameters(entities, tp._2)
+                                            .list(propJoinInfo.referencedEntityClass);
+
+                                    propJoinInfo.setJoinPropEntities(entities, joinPropEntities);
+                                }
+                            }
+
+                            return null;
+                        };
+                    } else if (methodName.equals("deleteJoinEntities") && paramLen == 2 && !Collection.class.isAssignableFrom(paramTypes[0])
+                            && String.class.isAssignableFrom(paramTypes[1])) {
+                        call = (proxy, args) -> {
+                            final Object entity = args[0];
+                            final String joinEntityPropName = (String) args[1];
+                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
+                            final Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+
+                            return proxy.prepareQuery(tp._1).setParameters(entity, tp._2).update();
+                        };
+                    } else if (methodName.equals("deleteJoinEntities") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
+                            && String.class.isAssignableFrom(paramTypes[1])) {
+                        call = (proxy, args) -> {
+                            final Collection<Object> entities = (Collection) args[0];
+                            final String joinEntityPropName = (String) args[1];
+                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
+                            final Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+
+                            if (N.isNullOrEmpty(entities)) {
+                                return 0;
+                            } else if (entities.size() == 1) {
+                                return proxy.prepareQuery(tp._1).setParameters(N.firstOrNullIfEmpty(entities), tp._2).update();
+                            } else {
+                                return proxy.prepareQuery(tp._1).addBatchParametters(entities, tp._2).update();
+                            }
+                        };
+                    } else {
+                        call = (proxy, args) -> {
+                            throw new UnsupportedOperationException("Unsupported operation: " + m);
+                        };
+                    }
                 } else {
                     if (java.util.Optional.class.isAssignableFrom(returnType) || java.util.OptionalInt.class.isAssignableFrom(returnType)
                             || java.util.OptionalLong.class.isAssignableFrom(returnType) || java.util.OptionalDouble.class.isAssignableFrom(returnType)) {
@@ -2979,8 +2809,14 @@ final class DaoUtil {
                                 + ". Please use the OptionalXXX classes defined in com.landawn.abacus.util.u");
                     }
 
-                    if (StreamEx.of(m.getExceptionTypes()).noneMatch(e -> SQLException.class.equals(e))) {
-                        throw new UnsupportedOperationException("'throws SQLException' is not declared in method: " + fullClassMethodName);
+                    if (!(isUnchecked || throwsSQLException || isStreamReturn)) {
+                        throw new UnsupportedOperationException("'throws SQLException' is not declared in method: " + fullClassMethodName
+                                + ". It's required for Dao interface extends Dao, not UncheckedDao");
+                    }
+
+                    if (isStreamReturn && throwsSQLException) {
+                        throw new UnsupportedOperationException("'throws SQLException' is not allowed in method: " + fullClassMethodName
+                                + " because its return type is Stream/ExceptionalStream which will be lazy evaluation");
                     }
 
                     final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
@@ -3460,6 +3296,38 @@ final class DaoUtil {
                                 "Unsupported sql annotation: " + sqlAnno.annotationType() + " in method: " + fullClassMethodName);
                     }
                 }
+
+                if (isStreamReturn) {
+                    if (ExceptionalStream.class.isAssignableFrom(returnType)) {
+                        final Throwables.BiFunction<JdbcUtil.Dao, Object[], ExceptionalStream, Exception> tmp = (Throwables.BiFunction) call;
+
+                        call = (proxy, args) -> {
+                            final Throwables.Supplier<ExceptionalStream, Exception> supplier = () -> tmp.apply(proxy, args);
+
+                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                        };
+                    } else {
+                        final Throwables.BiFunction<JdbcUtil.Dao, Object[], Stream, Exception> tmp = (Throwables.BiFunction) call;
+
+                        call = (proxy, args) -> {
+                            final Supplier<Stream> supplier = () -> Throwables.call(() -> tmp.apply(proxy, args));
+
+                            return Stream.of(supplier).flatMap(it -> it.get());
+                        };
+                    }
+                } else if (throwsSQLException == false) {
+                    final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> tmp = call;
+
+                    call = (proxy, args) -> {
+                        try {
+                            return tmp.apply(proxy, args);
+                        } catch (SQLException e) {
+                            throw new UncheckedSQLException(e);
+                        }
+                    };
+
+                    call = tmp;
+                }
             }
 
             final boolean isNonDBOperation = StreamEx.of(m.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(DaoUtil.NonDBOperation.class));
@@ -3473,7 +3341,6 @@ final class DaoUtil {
 
                 // ignore
             } else {
-
                 final Dao.Transactional transactionalAnno = StreamEx.of(m.getAnnotations()).select(Dao.Transactional.class).last().orNull();
 
                 //    if (transactionalAnno != null && Modifier.isAbstract(m.getModifiers())) {
