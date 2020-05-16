@@ -1,6 +1,6 @@
 ### 2.1
 
-* Remove `UncheckedDao`.
+* Add `UncheckedDao`.
 * Improvements and bug fix.
 
 
