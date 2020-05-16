@@ -1,3 +1,9 @@
+### 1.20.20
+
+* Add `JdbcUtil.UncheckedDao`.
+* Improvements and bug fix.
+
+
 ### 1.20.19
 
 * Move to branch and create version 2.0
