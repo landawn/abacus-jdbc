@@ -36,7 +36,7 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 
     @SqlLogEnabled(false)
     @NamedSelect("SELECT id, first_name, last_name, email FROM user")
-    Stream<User> allUsers() throws SQLException;
+    Stream<User> allUsers();
 
     @NamedInsert(sql = "INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)", isBatch = true)
     List<Long> batchInsertWithId(List<User> users) throws SQLException;
