@@ -1,3 +1,9 @@
+### 2.1
+
+* Remove `UncheckedDao`.
+* Improvements and bug fix.
+
+
 ### 2.0
 
 * Remove `SQLExecutor/Mapper`.
