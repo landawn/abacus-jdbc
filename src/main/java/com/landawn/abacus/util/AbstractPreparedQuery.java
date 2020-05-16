@@ -16,6 +16,7 @@
 
 package com.landawn.abacus.util;
 
+import java.io.Closeable;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -76,7 +77,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @param <S>
  * @param <Q>
  */
-abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends AbstractPreparedQuery<S, Q>> implements AutoCloseable {
+abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends AbstractPreparedQuery<S, Q>> implements Closeable {
 
     final S stmt;
 
