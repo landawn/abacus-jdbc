@@ -7631,6 +7631,14 @@ public final class JdbcUtil {
             return setString(parameterName, x == null ? (String) null : x.toString());
         }
 
+        public NamedQuery setString(String parameterName, char x) throws SQLException {
+            return setString(parameterName, String.valueOf(x));
+        }
+
+        public NamedQuery setString(String parameterName, Character x) throws SQLException {
+            return setString(parameterName, x == null ? (String) null : x.toString());
+        }
+
         /**
          * Sets the date.
          *
