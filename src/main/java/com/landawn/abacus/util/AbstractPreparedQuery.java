@@ -454,6 +454,18 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         return (Q) this;
     }
 
+    public Q setString(int parameterIndex, char x) throws SQLException {
+        stmt.setString(parameterIndex, String.valueOf(x));
+
+        return (Q) this;
+    }
+
+    public Q setString(int parameterIndex, Character x) throws SQLException {
+        stmt.setString(parameterIndex, x == null ? null : x.toString());
+
+        return (Q) this;
+    }
+
     /**
      * Sets the date.
      *
