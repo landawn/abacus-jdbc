@@ -11711,10 +11711,14 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.annotation.AccessFieldByMethod
      * @see com.landawn.abacus.condition.ConditionFactory
      * @see com.landawn.abacus.condition.ConditionFactory.CF
+     * 
+     * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
      */
     public static interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
         /**
          * The Interface Select.
+         * 
+         * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
@@ -11765,6 +11769,8 @@ public final class JdbcUtil {
 
         /**
          * The Interface Insert.
+         * 
+         * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
@@ -11819,6 +11825,8 @@ public final class JdbcUtil {
 
         /**
          * The Interface Update.
+         * 
+         * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
@@ -11875,6 +11883,8 @@ public final class JdbcUtil {
 
         /**
          * The Interface Delete.
+         * 
+         * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
@@ -11931,6 +11941,8 @@ public final class JdbcUtil {
 
         /**
          * The Interface NamedSelect.
+         * 
+         * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
@@ -11974,6 +11986,8 @@ public final class JdbcUtil {
 
         /**
          * The Interface NamedInsert.
+         * 
+         * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
@@ -12021,6 +12035,8 @@ public final class JdbcUtil {
 
         /**
          * The Interface NamedUpdate.
+         * 
+         * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
@@ -12070,6 +12086,8 @@ public final class JdbcUtil {
 
         /**
          * The Interface NamedDelete.
+         * 
+         * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
