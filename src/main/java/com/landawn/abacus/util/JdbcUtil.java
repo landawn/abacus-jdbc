@@ -19349,7 +19349,7 @@ public final class JdbcUtil {
                                         final Object id = N.newInstance(idType);
 
                                         for (Tuple2<String, PropInfo> tp : tpList) {
-                                            tp._2.setPropValue(id, getColumnValue(rs, tp._1));
+                                            tp._2.setPropValue(id, tp._2.dbType.get(rs, tp._1));
                                         }
 
                                         return id;
