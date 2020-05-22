@@ -1321,7 +1321,7 @@ final class DaoUtil {
                 : (isOneId ? Array.of(propColumnNameMap.get(oneIdPropName))
                         : Stream.of(idPropNameList).map(idName -> propColumnNameMap.get(idName)).toArray(IntFunctions.ofStringArray()));
 
-        final Tuple3<JdbcUtil.BiRowMapper<Object>, Function<Object, Object>, BiConsumer<Object, Object>> tp3 = JdbcUtil.getIdGeneratorGetterSetter(entityClass,
+        final Tuple3<JdbcUtil.BiRowMapper<Object>, Function<Object, Object>, BiConsumer<Object, Object>> tp3 = JdbcUtil.getIdGeneratorGetterSetter(daoInterface, entityClass,
                 namingPolicy, idClass);
 
         final JdbcUtil.BiRowMapper<Object> keyExtractor = tp3._1;

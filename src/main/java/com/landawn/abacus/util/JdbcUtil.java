@@ -810,7 +810,7 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      * @deprecated please consider using {@link #getColumnValue(ResultSet, int)}
      */
-    @Deprecated 
+    @Deprecated
     public static Object getColumnValue(final ResultSet rs, final String columnLabel) throws SQLException {
         return InternalUtil.getColumnValue(rs, columnLabel);
     }
@@ -19239,8 +19239,8 @@ public final class JdbcUtil {
             BiConsumers.doNothing());
 
     @SuppressWarnings({ "rawtypes", "deprecation" })
-    static <ID> Tuple3<BiRowMapper<ID>, Function<Object, ID>, BiConsumer<ID, Object>> getIdGeneratorGetterSetter(final Class<?> entityClass,
-            final NamingPolicy namingPolicy, final Class<?> idType) {
+    static <ID> Tuple3<BiRowMapper<ID>, Function<Object, ID>, BiConsumer<ID, Object>> getIdGeneratorGetterSetter(final Class<? extends Dao> daoInterface,
+            final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
         if (entityClass == null || !ClassUtil.isEntity(entityClass)) {
             return (Tuple3) noIdGeneratorGetterSetter;
         }
@@ -19319,45 +19319,46 @@ public final class JdbcUtil {
                         .distinctByKey()
                         .toImmutableMap();
 
-                final BiRowMapper<Object> keyExtractor = isNoId ? noIdGeneratorGetterSetter._1 //
-                        : (isOneId ? (rs, columnLabels) -> idPropInfo.dbType.get(rs, 1) //
-                                : (rs, columnLabels) -> {
-                                    if (columnLabels.size() == 1) {
-                                        return idPropInfo.dbType.get(rs, 1);
-                                    } else if (isEntityId) {
-                                        final int columnCount = columnLabels.size();
-                                        final Seid id = Seid.of(ClassUtil.getSimpleClassName(entityClass));
-                                        String columnName = null;
-                                        String propName = null;
-                                        PropInfo propInfo = null;
+                final BiRowMapper<Object> keyExtractor = isNoId ? noIdGeneratorGetterSetter._1
+                        : (idExtractorPool.containsKey(daoInterface) ? (BiRowMapper<Object>) idExtractorPool.get(daoInterface) //
+                                : (isOneId ? (rs, columnLabels) -> idPropInfo.dbType.get(rs, 1) //
+                                        : (rs, columnLabels) -> {
+                                            if (columnLabels.size() == 1) {
+                                                return idPropInfo.dbType.get(rs, 1);
+                                            } else if (isEntityId) {
+                                                final int columnCount = columnLabels.size();
+                                                final Seid id = Seid.of(ClassUtil.getSimpleClassName(entityClass));
+                                                String columnName = null;
+                                                String propName = null;
+                                                PropInfo propInfo = null;
 
-                                        for (int i = 1; i <= columnCount; i++) {
-                                            columnName = columnLabels.get(i - 1);
+                                                for (int i = 1; i <= columnCount; i++) {
+                                                    columnName = columnLabels.get(i - 1);
 
-                                            if ((propName = columnPropNameMap.get(columnName)) == null
-                                                    || (propInfo = entityInfo.getPropInfo(propName)) == null) {
-                                                id.set(columnName, getColumnValue(rs, i));
+                                                    if ((propName = columnPropNameMap.get(columnName)) == null
+                                                            || (propInfo = entityInfo.getPropInfo(propName)) == null) {
+                                                        id.set(columnName, getColumnValue(rs, i));
+                                                    } else {
+                                                        id.set(propInfo.name, propInfo.dbType.get(rs, i));
+                                                    }
+                                                }
+
+                                                return id;
                                             } else {
-                                                id.set(propInfo.name, propInfo.dbType.get(rs, i));
+                                                final EntityInfo idEntityInfo = ParserUtil.getEntityInfo(idType);
+                                                final List<Tuple2<String, PropInfo>> tpList = StreamEx.of(columnLabels)
+                                                        .filter(it -> idEntityInfo.getPropInfo(it) != null)
+                                                        .map(it -> Tuple.of(it, idEntityInfo.getPropInfo(it)))
+                                                        .toList();
+                                                final Object id = N.newInstance(idType);
+
+                                                for (Tuple2<String, PropInfo> tp : tpList) {
+                                                    tp._2.setPropValue(id, tp._2.dbType.get(rs, tp._1));
+                                                }
+
+                                                return id;
                                             }
-                                        }
-
-                                        return id;
-                                    } else {
-                                        final EntityInfo idEntityInfo = ParserUtil.getEntityInfo(idType);
-                                        final List<Tuple2<String, PropInfo>> tpList = StreamEx.of(columnLabels)
-                                                .filter(it -> idEntityInfo.getPropInfo(it) != null)
-                                                .map(it -> Tuple.of(it, idEntityInfo.getPropInfo(it)))
-                                                .toList();
-                                        final Object id = N.newInstance(idType);
-
-                                        for (Tuple2<String, PropInfo> tp : tpList) {
-                                            tp._2.setPropValue(id, tp._2.dbType.get(rs, tp._1));
-                                        }
-
-                                        return id;
-                                    }
-                                });
+                                        }));
 
                 map.put(np, Tuple.of(keyExtractor, idGetter, idSetter));
             }
@@ -19392,6 +19393,23 @@ public final class JdbcUtil {
 
     private static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass) {
         return JoinInfo.getEntityJoinInfo(targetDaoInterface, targetEntityClass);
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static final Map<Class<? extends Dao>, BiRowMapper<?>> idExtractorPool = new ConcurrentHashMap<>();
+
+    public static void setIdExtractorForDao(@SuppressWarnings("rawtypes") final Class<? extends CrudDao> daoInterface, final RowMapper<?> idExtractor) {
+        N.checkArgNotNull(daoInterface, "daoInterface");
+        N.checkArgNotNull(idExtractor, "idExtractor");
+
+        idExtractorPool.put(daoInterface, (rs, cls) -> idExtractor.apply(rs));
+    }
+
+    public static void setIdExtractorForDao(@SuppressWarnings("rawtypes") final Class<? extends CrudDao> daoInterface, final BiRowMapper<?> idExtractor) {
+        N.checkArgNotNull(daoInterface, "daoInterface");
+        N.checkArgNotNull(idExtractor, "idExtractor");
+
+        idExtractorPool.put(daoInterface, idExtractor);
     }
 
     /**
