@@ -808,8 +808,9 @@ public final class JdbcUtil {
      * @param columnLabel
      * @return
      * @throws SQLException the SQL exception
+     * @deprecated please consider using {@link #getColumnValue(ResultSet, int)}
      */
-    @SuppressWarnings("deprecation")
+    @Deprecated 
     public static Object getColumnValue(final ResultSet rs, final String columnLabel) throws SQLException {
         return InternalUtil.getColumnValue(rs, columnLabel);
     }
@@ -837,7 +838,9 @@ public final class JdbcUtil {
      * @param columnLabel
      * @return
      * @throws SQLException the SQL exception
+     * @deprecated please consider using {@link #getColumnValue(Class, ResultSet, int)}
      */
+    @Deprecated
     public static <T> T getColumnValue(final Class<T> targetClass, final ResultSet rs, final String columnLabel) throws SQLException {
         return N.<T> typeOf(targetClass).get(rs, columnLabel);
     }
