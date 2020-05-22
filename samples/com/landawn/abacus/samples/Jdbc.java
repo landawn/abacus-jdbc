@@ -43,6 +43,9 @@ public class Jdbc {
         HandlerFactory.register("handler1", HandlerFactory.create((obj, args, tp) -> N.println("calling: " + tp._1.getName() + " by Handler1.beforeInvoke")));
         HandlerFactory.register("handler2",
                 HandlerFactory.create((result, obj, args, tp) -> N.println("calling: " + tp._1.getName() + " by Handler2.afterInvoke")));
+
+        JdbcUtil.setIdExtractorForDao(EmployeeDao.class, rs -> rs.getInt(1));
+        JdbcUtil.setIdExtractorForDao(UserDaoL.class, rs -> rs.getLong(1));
     }
 
     static final DataSource dataSource = JdbcUtil.createHikariDataSource("jdbc:h2:~/test", "sa", "");

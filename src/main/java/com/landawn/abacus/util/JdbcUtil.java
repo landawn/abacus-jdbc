@@ -19398,14 +19398,16 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     private static final Map<Class<? extends Dao>, BiRowMapper<?>> idExtractorPool = new ConcurrentHashMap<>();
 
-    public static void setIdExtractorForDao(@SuppressWarnings("rawtypes") final Class<? extends CrudDao> daoInterface, final RowMapper<?> idExtractor) {
+    public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
+            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final RowMapper<ID> idExtractor) {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(idExtractor, "idExtractor");
 
         idExtractorPool.put(daoInterface, (rs, cls) -> idExtractor.apply(rs));
     }
 
-    public static void setIdExtractorForDao(@SuppressWarnings("rawtypes") final Class<? extends CrudDao> daoInterface, final BiRowMapper<?> idExtractor) {
+    public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
+            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final BiRowMapper<ID> idExtractor) {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(idExtractor, "idExtractor");
 
