@@ -986,7 +986,7 @@ public final class JdbcUtil {
      * @param entityClass
      * @return
      */
-    public static ImmutableMap<String, String> getColumn2FieldNameMap(Class<?> entityClass) {
+     static ImmutableMap<String, String> getColumn2FieldNameMap(Class<?> entityClass) {
         ImmutableMap<String, String> result = column2FieldNameMapPool.get(entityClass);
 
         if (result == null) {

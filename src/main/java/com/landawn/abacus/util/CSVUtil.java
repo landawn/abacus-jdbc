@@ -1013,7 +1013,6 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    @SuppressWarnings("deprecation")
     public static long exportCSV(final File out, final Connection conn, final String querySQL, final Collection<String> selectColumnNames, final long offset,
             final long count, final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
         final ParsedSql sql = ParsedSql.parse(querySQL);
@@ -1028,7 +1027,7 @@ public final class CSVUtil {
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
-            InternalUtil.closeQuietly(stmt);
+            JdbcUtil.closeQuietly(stmt);
         }
     }
 
@@ -1078,7 +1077,6 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    @SuppressWarnings("deprecation")
     public static long exportCSV(final File out, final PreparedStatement stmt, final Collection<String> selectColumnNames, final long offset, final long count,
             final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
         ResultSet rs = null;
@@ -1091,7 +1089,7 @@ public final class CSVUtil {
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
-            InternalUtil.closeQuietly(rs);
+            JdbcUtil.closeQuietly(rs);
         }
     }
 
@@ -1269,7 +1267,6 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    @SuppressWarnings("deprecation")
     public static long exportCSV(final Writer out, final ResultSet rs, final Collection<String> selectColumnNames, long offset, final long count,
             final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
@@ -1297,7 +1294,7 @@ public final class CSVUtil {
             String label = null;
 
             for (int i = 0; i < columnCount; i++) {
-                label = InternalUtil.getColumnLabel(rsmd, i + 1);
+                label = JdbcUtil.getColumnLabel(rsmd, i + 1);
 
                 if (columnNameSet == null || columnNameSet.remove(label)) {
                     columnNames[i] = label;
@@ -1348,7 +1345,7 @@ public final class CSVUtil {
                     type = typeArray[i];
 
                     if (type == null) {
-                        value = InternalUtil.getColumnValue(rs, i + 1);
+                        value = JdbcUtil.getColumnValue(rs, i + 1);
 
                         if (value == null) {
                             bw.write(N.NULL_CHAR_ARRAY);
@@ -1442,7 +1439,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      * @throws E the e
      */
-    @SuppressWarnings({ "rawtypes", "deprecation" })
+    @SuppressWarnings("rawtypes")
     public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final boolean skipTitle,
             final Throwables.Predicate<String[], E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
             final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException, E {
@@ -1455,7 +1452,7 @@ public final class CSVUtil {
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
-            InternalUtil.closeQuietly(stmt);
+            JdbcUtil.closeQuietly(stmt);
         }
     }
 
@@ -1780,7 +1777,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      * @throws E the e
      */
-    @SuppressWarnings({ "rawtypes", "deprecation" })
+    @SuppressWarnings("rawtypes")
     public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
             final Connection conn, final String insertSQL, final int batchSize, final int batchInterval, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException, E {
@@ -1793,7 +1790,7 @@ public final class CSVUtil {
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
-            InternalUtil.closeQuietly(stmt);
+            JdbcUtil.closeQuietly(stmt);
         }
     }
 
@@ -2121,7 +2118,6 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      * @throws E the e
      */
-    @SuppressWarnings("deprecation")
     public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
             final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
@@ -2135,7 +2131,7 @@ public final class CSVUtil {
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
-            InternalUtil.closeQuietly(stmt);
+            JdbcUtil.closeQuietly(stmt);
         }
     }
 

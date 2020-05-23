@@ -3648,7 +3648,7 @@ final class DaoUtil {
                         .prepend(StreamEx.of(daoClassHandlerList).filter(h -> StreamEx.of(h.filter()).anyMatch(filterByMethodName)))
                         .map(handlerAnno -> N.notNullOrEmpty(handlerAnno.qualifier()) ? HandlerFactory.get(handlerAnno.qualifier())
                                 : HandlerFactory.getOrCreate(handlerAnno.type()))
-                        .carry(handler -> N.checkArgNotNull(handler,
+                        .onEach(handler -> N.checkArgNotNull(handler,
                                 "No handler found/registered with qualifier or type in class/method: " + fullClassMethodName))
                         .reversed()
                         .toList();
