@@ -31,7 +31,9 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.net.URL;
+import java.sql.Blob;
 import java.sql.CallableStatement;
+import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -82,6 +84,7 @@ import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Columns.ColumnGetter;
 import com.landawn.abacus.util.Columns.ColumnOne;
 import com.landawn.abacus.util.DaoUtil.NonDBOperation;
+import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
 import com.landawn.abacus.util.ExceptionalStream.StreamE;
 import com.landawn.abacus.util.Fn.BiConsumers;
 import com.landawn.abacus.util.Fn.Suppliers;
@@ -716,9 +719,33 @@ public final class JdbcUtil {
      * @throws SQLException the SQL exception
      * @see {@link ResultSet#absolute(int)}
      */
-    @SuppressWarnings("deprecation")
     public static int skip(final ResultSet rs, long n) throws SQLException {
-        return InternalUtil.skip(rs, n);
+        if (n <= 0) {
+            return 0;
+        } else if (n == 1) {
+            return rs.next() == true ? 1 : 0;
+        } else {
+            final int currentRow = rs.getRow();
+
+            if (n <= Integer.MAX_VALUE) {
+                try {
+                    if (n > Integer.MAX_VALUE - rs.getRow()) {
+                        while (n-- > 0L && rs.next()) {
+                        }
+                    } else {
+                        rs.absolute((int) n + rs.getRow());
+                    }
+                } catch (SQLException e) {
+                    while (n-- > 0L && rs.next()) {
+                    }
+                }
+            } else {
+                while (n-- > 0L && rs.next()) {
+                }
+            }
+
+            return rs.getRow() - currentRow;
+        }
     }
 
     /**
@@ -763,16 +790,16 @@ public final class JdbcUtil {
         }
     }
 
-    /**
-     * Gets the column label list.
-     *
-     * @param rs
-     * @return
-     * @throws SQLException the SQL exception
-     */
-    @SuppressWarnings("deprecation")
     public static List<String> getColumnLabelList(ResultSet rs) throws SQLException {
-        return InternalUtil.getColumnLabelList(rs);
+        final ResultSetMetaData metaData = rs.getMetaData();
+        final int columnCount = metaData.getColumnCount();
+        final List<String> labelList = new ArrayList<>(columnCount);
+
+        for (int i = 1, n = columnCount + 1; i < n; i++) {
+            labelList.add(getColumnLabel(metaData, i));
+        }
+
+        return labelList;
     }
 
     /**
@@ -783,22 +810,90 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException the SQL exception
      */
-    @SuppressWarnings("deprecation")
     public static String getColumnLabel(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
-        return InternalUtil.getColumnLabel(rsmd, columnIndex);
+        final String result = rsmd.getColumnLabel(columnIndex);
+
+        return N.isNullOrEmpty(result) ? rsmd.getColumnName(columnIndex) : result;
+    }
+
+    /**
+     * Returns the column index starts with from 1, not 0.
+     *
+     * @param resultSet
+     * @param columnName
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    public static int getColumnIndex(final ResultSet resultSet, final String columnName) throws UncheckedSQLException {
+        try {
+            return getColumnIndex(resultSet.getMetaData(), columnName);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Returns the column index starts with from 1, not 0.
+     * 
+     * @param rsmd
+     * @param columnName
+     * @return
+     * @throws SQLException
+     */
+    public static int getColumnIndex(final ResultSetMetaData rsmd, final String columnName) throws SQLException {
+        final int columnCount = rsmd.getColumnCount();
+
+        for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
+            if (getColumnLabel(rsmd, columnIndex).equalsIgnoreCase(columnName)) {
+                return columnIndex;
+            }
+        }
+
+        return -1;
     }
 
     /**
      * Gets the column value.
      *
      * @param rs
-     * @param columnIndex
+     * @param columnIndex starts with 1, not 0.
      * @return
      * @throws SQLException the SQL exception
      */
-    @SuppressWarnings("deprecation")
     public static Object getColumnValue(final ResultSet rs, final int columnIndex) throws SQLException {
-        return InternalUtil.getColumnValue(rs, columnIndex);
+        // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
+
+        Object obj = rs.getObject(columnIndex);
+
+        if (obj == null || obj instanceof String || obj instanceof Number) {
+            return obj;
+        }
+
+        final String className = obj.getClass().getName();
+
+        if (obj instanceof Blob) {
+            Blob blob = (Blob) obj;
+            obj = blob.getBytes(1, (int) blob.length());
+        } else if (obj instanceof Clob) {
+            Clob clob = (Clob) obj;
+            obj = clob.getSubString(1, (int) clob.length());
+        } else if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
+            obj = rs.getTimestamp(columnIndex);
+        } else if (className != null && className.startsWith("oracle.sql.DATE")) {
+            final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
+
+            if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
+                obj = rs.getTimestamp(columnIndex);
+            } else {
+                obj = rs.getDate(columnIndex);
+            }
+        } else if (obj instanceof java.sql.Date) {
+            if ("java.sql.Timestamp".equals(rs.getMetaData().getColumnClassName(columnIndex))) {
+                obj = rs.getTimestamp(columnIndex);
+            }
+        }
+
+        return obj;
     }
 
     /**
@@ -812,7 +907,44 @@ public final class JdbcUtil {
      */
     @Deprecated
     public static Object getColumnValue(final ResultSet rs, final String columnLabel) throws SQLException {
-        return InternalUtil.getColumnValue(rs, columnLabel);
+        // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
+
+        Object obj = rs.getObject(columnLabel);
+
+        if (obj == null || obj instanceof String || obj instanceof Number) {
+            return obj;
+        }
+
+        final String className = obj.getClass().getName();
+
+        if (obj instanceof Blob) {
+            Blob blob = (Blob) obj;
+            obj = blob.getBytes(1, (int) blob.length());
+        } else if (obj instanceof Clob) {
+            Clob clob = (Clob) obj;
+            obj = clob.getSubString(1, (int) clob.length());
+        } else if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
+            obj = rs.getTimestamp(columnLabel);
+        } else {
+            final ResultSetMetaData metaData = rs.getMetaData();
+            final int columnIndex = getColumnIndex(metaData, columnLabel);
+
+            if (className != null && className.startsWith("oracle.sql.DATE")) {
+                final String metaDataClassName = metaData.getColumnClassName(columnIndex);
+
+                if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
+                    obj = rs.getTimestamp(columnLabel);
+                } else {
+                    obj = rs.getDate(columnLabel);
+                }
+            } else if (obj instanceof java.sql.Date) {
+                if ("java.sql.Timestamp".equals(metaData.getColumnClassName(columnIndex))) {
+                    obj = rs.getTimestamp(columnLabel);
+                }
+            }
+        }
+
+        return obj;
     }
 
     /**
@@ -843,6 +975,38 @@ public final class JdbcUtil {
     @Deprecated
     public static <T> T getColumnValue(final Class<T> targetClass, final ResultSet rs, final String columnLabel) throws SQLException {
         return N.<T> typeOf(targetClass).get(rs, columnLabel);
+    }
+
+    /** The Constant column2FieldNameMapPool. */
+    private static final Map<Class<?>, ImmutableMap<String, String>> column2FieldNameMapPool = new ConcurrentHashMap<>();
+
+    /**
+     * Gets the column 2 field name map.
+     *
+     * @param entityClass
+     * @return
+     */
+    public static ImmutableMap<String, String> getColumn2FieldNameMap(Class<?> entityClass) {
+        ImmutableMap<String, String> result = column2FieldNameMapPool.get(entityClass);
+
+        if (result == null) {
+            final Map<String, String> map = new HashMap<>();
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+
+            for (PropInfo propInfo : entityInfo.propInfoList) {
+                if (propInfo.columnName.isPresent()) {
+                    map.put(propInfo.columnName.get(), propInfo.name);
+                    map.put(propInfo.columnName.get().toLowerCase(), propInfo.name);
+                    map.put(propInfo.columnName.get().toUpperCase(), propInfo.name);
+                }
+            }
+
+            result = ImmutableMap.copyOf(map);
+
+            column2FieldNameMapPool.put(entityClass, result);
+        }
+
+        return result;
     }
 
     /**
@@ -3432,6 +3596,192 @@ public final class JdbcUtil {
                 closeQuietly(rs);
             }
         }
+    }
+
+    /**
+     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished.
+     *
+     * @param resultSet
+     * @return
+     */
+    public static ExceptionalStream<Object[], SQLException> stream(final ResultSet resultSet) {
+        return stream(Object[].class, resultSet);
+    }
+
+    /**
+     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished.
+     *
+     * @param <T>
+     * @param targetClass Array/List/Map or Entity with getter/setter methods.
+     * @param resultSet
+     * @return
+     */ 
+    public static <T> ExceptionalStream<T, SQLException> stream(final Class<T> targetClass, final ResultSet resultSet) {
+        N.checkArgNotNull(targetClass, "targetClass");
+        N.checkArgNotNull(resultSet, "resultSet");
+
+        return stream(resultSet, BiRowMapper.to(targetClass));
+    }
+
+    /**
+     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished.
+     *
+     * @param <T>
+     * @param resultSet
+     * @param rowMapper
+     * @return
+     */
+    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final RowMapper<T> rowMapper) {
+        N.checkArgNotNull(resultSet, "resultSet");
+        N.checkArgNotNull(rowMapper, "rowMapper");
+
+        final ExceptionalIterator<T, SQLException> iter = new ExceptionalIterator<T, SQLException>() {
+            private boolean hasNext;
+
+            @Override
+            public boolean hasNext() throws SQLException {
+                if (hasNext == false) {
+                    hasNext = resultSet.next();
+                }
+
+                return hasNext;
+            }
+
+            @Override
+            public T next() throws SQLException {
+                if (hasNext() == false) {
+                    throw new NoSuchElementException();
+                }
+
+                hasNext = false;
+
+                return rowMapper.apply(resultSet);
+            }
+ 
+            @Override
+            public void skip(long n) throws SQLException {
+                N.checkArgNotNegative(n, "n");
+
+                final long m = hasNext ? n - 1 : n;
+
+                JdbcUtil.skip(resultSet, m);
+
+                hasNext = false;
+            }
+        };
+
+        return ExceptionalStream.newStream(iter);
+    }
+
+    /**
+     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished.
+     *
+     * @param <T>
+     * @param resultSet
+     * @param rowMapper
+     * @return
+     */
+    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final BiRowMapper<T> rowMapper) {
+        N.checkArgNotNull(resultSet, "resultSet");
+        N.checkArgNotNull(rowMapper, "rowMapper");
+
+        final ExceptionalIterator<T, SQLException> iter = new ExceptionalIterator<T, SQLException>() {
+            private List<String> columnLabels = null;
+            private boolean hasNext;
+
+            @Override
+            public boolean hasNext() throws SQLException {
+                if (hasNext == false) {
+                    hasNext = resultSet.next();
+                }
+
+                return hasNext;
+            }
+ 
+            @Override
+            public T next() throws SQLException {
+                if (hasNext() == false) {
+                    throw new NoSuchElementException();
+                }
+
+                hasNext = false;
+
+                if (columnLabels == null) {
+                    columnLabels = getColumnLabelList(resultSet);
+                }
+
+                return rowMapper.apply(resultSet, columnLabels);
+            }
+ 
+            @Override
+            public void skip(long n) throws SQLException {
+                N.checkArgNotNegative(n, "n");
+
+                final long m = hasNext ? n - 1 : n;
+
+                JdbcUtil.skip(resultSet, m);
+
+                hasNext = false;
+            }
+
+            @Override
+            public long count() throws SQLException {
+                long cnt = 0;
+
+                while (resultSet.next()) {
+                    cnt++;
+                }
+
+                return cnt;
+            }
+        };
+
+        return ExceptionalStream.newStream(iter);
+    }
+
+    /**
+     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished.
+     *
+     * @param <T>
+     * @param resultSet
+     * @param columnIndex starts from 1, not 0.
+     * @return
+     */
+    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final int columnIndex) {
+        N.checkArgNotNull(resultSet, "resultSet");
+        N.checkArgPositive(columnIndex, "columnIndex");
+
+        final RowMapper<T> rowMapper = rs -> (T) getColumnValue(resultSet, columnIndex);
+
+        return stream(resultSet, rowMapper);
+    }
+
+    /**
+     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished.
+     *
+     * @param <T>
+     * @param resultSet
+     * @param columnName
+     * @return
+     */
+    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final String columnName) {
+        N.checkArgNotNull(resultSet, "resultSet");
+        N.checkArgNotNullOrEmpty(columnName, "columnName");
+
+        final RowMapper<T> rowMapper = new RowMapper<T>() {
+            private int columnIndex = -1;
+
+            @Override
+            public T apply(ResultSet rs) throws SQLException {
+                if (columnIndex == -1) {
+                    columnIndex = getColumnIndex(resultSet, columnName);
+                }
+
+                return (T) getColumnValue(resultSet, columnIndex);
+            }
+        };
+
+        return stream(resultSet, rowMapper);
     }
 
     /**
@@ -10929,15 +11279,153 @@ public final class JdbcUtil {
         @SequentialOnly
         @Stateful
         static <T> BiRowMapper<T> to(Class<? extends T> targetClass, final boolean ignoreNonMatchedColumns) {
-            return new BiRowMapper<T>() {
-                @SuppressWarnings("deprecation")
-                private final Throwables.BiFunction<ResultSet, List<String>, T, SQLException> mapper = InternalUtil.to(targetClass, ignoreNonMatchedColumns);
+            if (Object[].class.isAssignableFrom(targetClass)) {
+                return new BiRowMapper<T>() {
+                    @Override
+                    public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                        final int columnCount = columnLabelList.size();
+                        final Object[] a = Array.newInstance(targetClass.getComponentType(), columnCount);
 
-                @Override
-                public T apply(ResultSet rs, List<String> columnLabelList) throws SQLException {
-                    return mapper.apply(rs, columnLabelList);
-                }
-            };
+                        for (int i = 0; i < columnCount; i++) {
+                            a[i] = getColumnValue(rs, i + 1);
+                        }
+
+                        return (T) a;
+                    }
+                };
+            } else if (List.class.isAssignableFrom(targetClass)) {
+                return new BiRowMapper<T>() {
+                    private final boolean isListOrArrayList = targetClass.equals(List.class) || targetClass.equals(ArrayList.class);
+
+                    @Override
+                    public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                        final int columnCount = columnLabelList.size();
+                        final List<Object> c = isListOrArrayList ? new ArrayList<>(columnCount) : (List<Object>) N.newInstance(targetClass);
+
+                        for (int i = 0; i < columnCount; i++) {
+                            c.add(getColumnValue(rs, i + 1));
+                        }
+
+                        return (T) c;
+                    }
+                };
+            } else if (Map.class.isAssignableFrom(targetClass)) {
+                return new BiRowMapper<T>() {
+                    private final boolean isMapOrHashMap = targetClass.equals(Map.class) || targetClass.equals(HashMap.class);
+                    private final boolean isLinkedHashMap = targetClass.equals(LinkedHashMap.class);
+                    private volatile String[] columnLabels = null;
+
+                    @Override
+                    public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                        final int columnCount = columnLabelList.size();
+                        String[] columnLabels = this.columnLabels;
+
+                        if (columnLabels == null) {
+                            columnLabels = columnLabelList.toArray(new String[columnCount]);
+                            this.columnLabels = columnLabels;
+                        }
+
+                        final Map<String, Object> m = isMapOrHashMap ? new HashMap<>(columnCount)
+                                : (isLinkedHashMap ? new LinkedHashMap<>(columnCount) : (Map<String, Object>) N.newInstance(targetClass));
+
+                        for (int i = 0; i < columnCount; i++) {
+                            m.put(columnLabels[i], getColumnValue(rs, i + 1));
+                        }
+
+                        return (T) m;
+                    }
+                };
+            } else if (ClassUtil.isEntity(targetClass)) {
+                return new BiRowMapper<T>() {
+                    private final boolean isDirtyMarker = DirtyMarkerUtil.isDirtyMarker(targetClass);
+                    private final EntityInfo entityInfo = ParserUtil.getEntityInfo(targetClass);
+                    private volatile String[] columnLabels = null;
+                    private volatile PropInfo[] propInfos;
+                    private volatile Type<?>[] columnTypes = null;
+
+                    @Override
+                    public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                        final int columnCount = columnLabelList.size();
+
+                        String[] columnLabels = this.columnLabels;
+                        PropInfo[] propInfos = this.propInfos;
+                        Type<?>[] columnTypes = this.columnTypes;
+
+                        if (columnLabels == null) {
+                            columnLabels = columnLabelList.toArray(new String[columnCount]);
+                            this.columnLabels = columnLabels;
+                        }
+
+                        if (columnTypes == null || propInfos == null) {
+                            final Map<String, String> column2FieldNameMap = getColumn2FieldNameMap(targetClass);
+
+                            propInfos = new PropInfo[columnCount];
+                            columnTypes = new Type[columnCount];
+
+                            for (int i = 0; i < columnCount; i++) {
+                                propInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
+
+                                if (propInfos[i] == null) {
+                                    String fieldName = column2FieldNameMap.get(columnLabels[i]);
+
+                                    if (N.isNullOrEmpty(fieldName)) {
+                                        fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
+                                    }
+
+                                    if (N.notNullOrEmpty(fieldName)) {
+                                        propInfos[i] = entityInfo.getPropInfo(fieldName);
+                                    }
+                                }
+
+                                if (propInfos[i] == null) {
+                                    if (ignoreNonMatchedColumns) {
+                                        columnLabels[i] = null;
+                                    } else {
+                                        throw new IllegalArgumentException("No property in class: " + ClassUtil.getCanonicalClassName(targetClass)
+                                                + " mapping to column: " + columnLabels[i]);
+                                    }
+                                } else {
+                                    columnTypes[i] = entityInfo.getPropInfo(columnLabels[i]).dbType;
+                                }
+                            }
+
+                            this.propInfos = propInfos;
+                            this.columnTypes = columnTypes;
+                        }
+
+                        final Object entity = N.newInstance(targetClass);
+
+                        for (int i = 0; i < columnCount; i++) {
+                            if (columnLabels[i] == null) {
+                                continue;
+                            }
+
+                            propInfos[i].setPropValue(entity, columnTypes[i].get(rs, i + 1));
+                        }
+
+                        if (isDirtyMarker) {
+                            DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
+                        }
+
+                        return (T) entity;
+                    }
+                };
+            } else {
+                return new BiRowMapper<T>() {
+                    private final Type<? extends T> targetType = N.typeOf(targetClass);
+                    private int columnCount = 0;
+
+                    @Override
+                    public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                        if (columnCount != 1 && (columnCount = columnLabelList.size()) != 1) {
+                            throw new IllegalArgumentException(
+                                    "It's not supported to retrieve value from multiple columns: " + columnLabelList + " for type: " + targetClass);
+                        }
+
+                        return targetType.get(rs, 1);
+                    }
+                };
+            }
         }
 
         static BiRowMapperBuilder builder() {
@@ -11189,9 +11677,8 @@ public final class JdbcUtil {
 
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
                                 final PropInfo[] propInfos = new PropInfo[rsColumnCount];
-
-                                @SuppressWarnings("deprecation")
-                                final Map<String, String> column2FieldNameMap = InternalUtil.getColumn2FieldNameMap(targetClass);
+ 
+                                final Map<String, String> column2FieldNameMap = getColumn2FieldNameMap(targetClass);
 
                                 for (int i = 0; i < rsColumnCount; i++) {
                                     propInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
