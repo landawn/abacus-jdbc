@@ -977,37 +977,37 @@ public final class JdbcUtil {
         return N.<T> typeOf(targetClass).get(rs, columnLabel);
     }
 
-    /** The Constant column2FieldNameMapPool. */
-    private static final Map<Class<?>, ImmutableMap<String, String>> column2FieldNameMapPool = new ConcurrentHashMap<>();
-
-    /**
-     * Gets the column 2 field name map.
-     *
-     * @param entityClass
-     * @return
-     */
-     static ImmutableMap<String, String> getColumn2FieldNameMap(Class<?> entityClass) {
-        ImmutableMap<String, String> result = column2FieldNameMapPool.get(entityClass);
-
-        if (result == null) {
-            final Map<String, String> map = new HashMap<>();
-            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
-
-            for (PropInfo propInfo : entityInfo.propInfoList) {
-                if (propInfo.columnName.isPresent()) {
-                    map.put(propInfo.columnName.get(), propInfo.name);
-                    map.put(propInfo.columnName.get().toLowerCase(), propInfo.name);
-                    map.put(propInfo.columnName.get().toUpperCase(), propInfo.name);
-                }
-            }
-
-            result = ImmutableMap.copyOf(map);
-
-            column2FieldNameMapPool.put(entityClass, result);
-        }
-
-        return result;
-    }
+//    /** The Constant column2FieldNameMapPool. */
+//    private static final Map<Class<?>, ImmutableMap<String, String>> column2FieldNameMapPool = new ConcurrentHashMap<>();
+//
+//    /**
+//     * Gets the column 2 field name map.
+//     *
+//     * @param entityClass
+//     * @return
+//     */
+//     static ImmutableMap<String, String> getColumn2FieldNameMap(Class<?> entityClass) {
+//        ImmutableMap<String, String> result = column2FieldNameMapPool.get(entityClass);
+//
+//        if (result == null) {
+//            final Map<String, String> map = new HashMap<>();
+//            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+//
+//            for (PropInfo propInfo : entityInfo.propInfoList) {
+//                if (propInfo.columnName.isPresent()) {
+//                    map.put(propInfo.columnName.get(), propInfo.name);
+//                    map.put(propInfo.columnName.get().toLowerCase(), propInfo.name);
+//                    map.put(propInfo.columnName.get().toUpperCase(), propInfo.name);
+//                }
+//            }
+//
+//            result = ImmutableMap.copyOf(map);
+//
+//            column2FieldNameMapPool.put(entityClass, result);
+//        }
+//
+//        return result;
+//    }
 
     /**
      * 
@@ -11357,7 +11357,7 @@ public final class JdbcUtil {
                         }
 
                         if (columnTypes == null || propInfos == null) {
-                            final Map<String, String> column2FieldNameMap = getColumn2FieldNameMap(targetClass);
+                            final Map<String, String> column2FieldNameMap = ClassUtil.getColumn2FieldNameMap(targetClass);
 
                             propInfos = new PropInfo[columnCount];
                             columnTypes = new Type[columnCount];
@@ -11678,7 +11678,7 @@ public final class JdbcUtil {
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
                                 final PropInfo[] propInfos = new PropInfo[rsColumnCount];
  
-                                final Map<String, String> column2FieldNameMap = getColumn2FieldNameMap(targetClass);
+                                final Map<String, String> column2FieldNameMap = ClassUtil.getColumn2FieldNameMap(targetClass);
 
                                 for (int i = 0; i < rsColumnCount; i++) {
                                     propInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
