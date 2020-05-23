@@ -1,3 +1,9 @@
+### 2.2
+
+* Add `CSVUtil`.
+* Improvements and bug fix.
+
+
 ### 2.1
 
 * Add `UncheckedDao`.
