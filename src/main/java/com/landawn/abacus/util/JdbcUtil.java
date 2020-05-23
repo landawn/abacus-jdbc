@@ -1008,6 +1008,10 @@ public final class JdbcUtil {
 //
 //        return result;
 //    }
+    
+    public static ImmutableMap<String, String> getColumn2FieldNameMap(Class<?> entityClass) {
+        return ClassUtil.getColumn2FieldNameMap(entityClass);
+    }
 
     /**
      * 
@@ -11357,7 +11361,7 @@ public final class JdbcUtil {
                         }
 
                         if (columnTypes == null || propInfos == null) {
-                            final Map<String, String> column2FieldNameMap = ClassUtil.getColumn2FieldNameMap(targetClass);
+                            final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(targetClass);
 
                             propInfos = new PropInfo[columnCount];
                             columnTypes = new Type[columnCount];
@@ -11678,7 +11682,7 @@ public final class JdbcUtil {
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
                                 final PropInfo[] propInfos = new PropInfo[rsColumnCount];
  
-                                final Map<String, String> column2FieldNameMap = ClassUtil.getColumn2FieldNameMap(targetClass);
+                                final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(targetClass);
 
                                 for (int i = 0; i < rsColumnCount; i++) {
                                     propInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
