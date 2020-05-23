@@ -460,8 +460,16 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         return (Q) this;
     }
 
+    /**
+     * Sets the String.
+     *
+     * @param parameterIndex
+     * @param x
+     * @return
+     * @throws SQLException the SQL exception
+     */
     public Q setString(int parameterIndex, Character x) throws SQLException {
-        stmt.setString(parameterIndex, x == null ? null : x.toString());
+        stmt.setString(parameterIndex, x == null ? null : String.valueOf(x));
 
         return (Q) this;
     }

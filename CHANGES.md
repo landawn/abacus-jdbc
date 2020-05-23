@@ -1,3 +1,9 @@
+### 1.20.21
+
+* Add `CSVUtil`.
+* Improvements and bug fix.
+
+
 ### 1.20.20
 
 * Add `JdbcUtil.UncheckedDao`.

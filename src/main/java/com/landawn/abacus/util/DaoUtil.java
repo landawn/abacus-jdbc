@@ -1321,7 +1321,7 @@ final class DaoUtil {
                 : (isOneId ? Array.of(propColumnNameMap.get(oneIdPropName))
                         : Stream.of(idPropNameList).map(idName -> propColumnNameMap.get(idName)).toArray(IntFunctions.ofStringArray()));
 
-        final Tuple3<JdbcUtil.BiRowMapper<Object>, Function<Object, Object>, BiConsumer<Object, Object>> tp3 = JdbcUtil.getIdGeneratorGetterSetter(entityClass,
+        final Tuple3<JdbcUtil.BiRowMapper<Object>, Function<Object, Object>, BiConsumer<Object, Object>> tp3 = JdbcUtil.getIdGeneratorGetterSetter(daoInterface, entityClass,
                 namingPolicy, idClass);
 
         final JdbcUtil.BiRowMapper<Object> keyExtractor = tp3._1;
@@ -3648,7 +3648,7 @@ final class DaoUtil {
                         .prepend(StreamEx.of(daoClassHandlerList).filter(h -> StreamEx.of(h.filter()).anyMatch(filterByMethodName)))
                         .map(handlerAnno -> N.notNullOrEmpty(handlerAnno.qualifier()) ? HandlerFactory.get(handlerAnno.qualifier())
                                 : HandlerFactory.getOrCreate(handlerAnno.type()))
-                        .carry(handler -> N.checkArgNotNull(handler,
+                        .onEach(handler -> N.checkArgNotNull(handler,
                                 "No handler found/registered with qualifier or type in class/method: " + fullClassMethodName))
                         .reversed()
                         .toList();
