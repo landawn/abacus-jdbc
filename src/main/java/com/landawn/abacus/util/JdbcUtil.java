@@ -968,38 +968,38 @@ public final class JdbcUtil {
         return N.<T> typeOf(targetClass).get(rs, columnLabel);
     }
 
-//    /** The Constant column2FieldNameMapPool. */
-//    private static final Map<Class<?>, ImmutableMap<String, String>> column2FieldNameMapPool = new ConcurrentHashMap<>();
-//
-//    /**
-//     * Gets the column 2 field name map.
-//     *
-//     * @param entityClass
-//     * @return
-//     */
-//     static ImmutableMap<String, String> getColumn2FieldNameMap(Class<?> entityClass) {
-//        ImmutableMap<String, String> result = column2FieldNameMapPool.get(entityClass);
-//
-//        if (result == null) {
-//            final Map<String, String> map = new HashMap<>();
-//            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
-//
-//            for (PropInfo propInfo : entityInfo.propInfoList) {
-//                if (propInfo.columnName.isPresent()) {
-//                    map.put(propInfo.columnName.get(), propInfo.name);
-//                    map.put(propInfo.columnName.get().toLowerCase(), propInfo.name);
-//                    map.put(propInfo.columnName.get().toUpperCase(), propInfo.name);
-//                }
-//            }
-//
-//            result = ImmutableMap.copyOf(map);
-//
-//            column2FieldNameMapPool.put(entityClass, result);
-//        }
-//
-//        return result;
-//    }
-    
+    //    /** The Constant column2FieldNameMapPool. */
+    //    private static final Map<Class<?>, ImmutableMap<String, String>> column2FieldNameMapPool = new ConcurrentHashMap<>();
+    //
+    //    /**
+    //     * Gets the column 2 field name map.
+    //     *
+    //     * @param entityClass
+    //     * @return
+    //     */
+    //     static ImmutableMap<String, String> getColumn2FieldNameMap(Class<?> entityClass) {
+    //        ImmutableMap<String, String> result = column2FieldNameMapPool.get(entityClass);
+    //
+    //        if (result == null) {
+    //            final Map<String, String> map = new HashMap<>();
+    //            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+    //
+    //            for (PropInfo propInfo : entityInfo.propInfoList) {
+    //                if (propInfo.columnName.isPresent()) {
+    //                    map.put(propInfo.columnName.get(), propInfo.name);
+    //                    map.put(propInfo.columnName.get().toLowerCase(), propInfo.name);
+    //                    map.put(propInfo.columnName.get().toUpperCase(), propInfo.name);
+    //                }
+    //            }
+    //
+    //            result = ImmutableMap.copyOf(map);
+    //
+    //            column2FieldNameMapPool.put(entityClass, result);
+    //        }
+    //
+    //        return result;
+    //    }
+
     public static ImmutableMap<String, String> getColumn2FieldNameMap(Class<?> entityClass) {
         return ClassUtil.getColumn2FieldNameMap(entityClass);
     }
@@ -3610,7 +3610,7 @@ public final class JdbcUtil {
      * @param targetClass Array/List/Map or Entity with getter/setter methods.
      * @param resultSet
      * @return
-     */ 
+     */
     public static <T> ExceptionalStream<T, SQLException> stream(final Class<T> targetClass, final ResultSet resultSet) {
         N.checkArgNotNull(targetClass, "targetClass");
         N.checkArgNotNull(resultSet, "resultSet");
@@ -3652,7 +3652,7 @@ public final class JdbcUtil {
 
                 return rowMapper.apply(resultSet);
             }
- 
+
             @Override
             public void skip(long n) throws SQLException {
                 N.checkArgNotNegative(n, "n");
@@ -3692,7 +3692,7 @@ public final class JdbcUtil {
 
                 return hasNext;
             }
- 
+
             @Override
             public T next() throws SQLException {
                 if (hasNext() == false) {
@@ -3707,7 +3707,7 @@ public final class JdbcUtil {
 
                 return rowMapper.apply(resultSet, columnLabels);
             }
- 
+
             @Override
             public void skip(long n) throws SQLException {
                 N.checkArgNotNegative(n, "n");
@@ -9912,7 +9912,7 @@ public final class JdbcUtil {
 
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
                                 final PropInfo[] propInfos = new PropInfo[rsColumnCount];
- 
+
                                 final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(targetClass);
 
                                 for (int i = 0; i < rsColumnCount; i++) {
