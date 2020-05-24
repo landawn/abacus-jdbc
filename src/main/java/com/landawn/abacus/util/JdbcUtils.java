@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Haiyang Li.
+ * Copyright (c) 2020, Haiyang Li.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.landawn.abacus.util;
 
 import static com.landawn.abacus.util.IOUtil.DEFAULT_QUEUE_SIZE_FOR_ROW_PARSER;
