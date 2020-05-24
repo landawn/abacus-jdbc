@@ -1,3 +1,8 @@
+### 2.4
+
+* Improvements and bug fix.
+
+
 ### 2.3
 
 * Improvements and bug fix.
