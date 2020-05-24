@@ -72,8 +72,6 @@ import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.Dao;
 import com.landawn.abacus.util.JdbcUtil.Dao.OP;
 import com.landawn.abacus.util.JdbcUtil.Dao.OutParameter;
-import com.landawn.abacus.util.JdbcUtil.NamedQuery;
-import com.landawn.abacus.util.JdbcUtil.PreparedCallableQuery;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
 import com.landawn.abacus.util.SQLBuilder.NAC;
@@ -1321,8 +1319,8 @@ final class DaoUtil {
                 : (isOneId ? Array.of(propColumnNameMap.get(oneIdPropName))
                         : Stream.of(idPropNameList).map(idName -> propColumnNameMap.get(idName)).toArray(IntFunctions.ofStringArray()));
 
-        final Tuple3<JdbcUtil.BiRowMapper<Object>, Function<Object, Object>, BiConsumer<Object, Object>> tp3 = JdbcUtil.getIdGeneratorGetterSetter(daoInterface, entityClass,
-                namingPolicy, idClass);
+        final Tuple3<JdbcUtil.BiRowMapper<Object>, Function<Object, Object>, BiConsumer<Object, Object>> tp3 = JdbcUtil.getIdGeneratorGetterSetter(daoInterface,
+                entityClass, namingPolicy, idClass);
 
         final JdbcUtil.BiRowMapper<Object> keyExtractor = tp3._1;
         final Function<Object, Object> idGetter = tp3._2;
@@ -2363,7 +2361,7 @@ final class DaoUtil {
 
                                     final String qery = sql_selectPart + joiner.toString();
 
-                                    try (JdbcUtil.PreparedQuery preparedQuery = proxy.prepareQuery(qery).closeAfterExecution(false)) {
+                                    try (PreparedQuery preparedQuery = proxy.prepareQuery(qery).closeAfterExecution(false)) {
                                         for (int i = 0, to = ids.size() - batchSize; i <= to; i += batchSize) {
                                             resultList.addAll(preparedQuery.setParameters(idList.subList(i, i + batchSize)).list(entityClass));
                                         }
@@ -2691,7 +2689,7 @@ final class DaoUtil {
                             final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getSelectSQLBuilderAndParamSetter(sbc);
 
-                            final JdbcUtil.PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
+                            final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
 
                             if (propJoinInfo.joinPropInfo.type.isCollection()) {
                                 final List<?> propEntities = preparedQuery.list(propJoinInfo.referencedEntityClass);
@@ -2728,7 +2726,7 @@ final class DaoUtil {
                                 final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                         .getSelectSQLBuilderAndParamSetter(sbc);
 
-                                final JdbcUtil.PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
+                                final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
 
                                 if (propJoinInfo.joinPropInfo.type.isCollection()) {
                                     final List<?> propEntities = preparedQuery.list(propJoinInfo.referencedEntityClass);
