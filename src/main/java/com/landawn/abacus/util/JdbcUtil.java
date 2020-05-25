@@ -4424,43 +4424,119 @@ public final class JdbcUtil {
         }
     }
 
+    /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * 
+     * @param sqlAction
+     * @return
+     */
     @Beta
     public static ContinuableFuture<Void> asyncRun(final Throwables.Runnable<Exception> sqlAction) {
         return asyncExecutor.execute(sqlAction);
     }
 
+    /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * 
+     * @param <T>
+     * @param t
+     * @param sqlAction
+     * @return
+     */
     @Beta
     public static <T> ContinuableFuture<Void> asyncRun(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) {
         return asyncExecutor.execute(() -> sqlAction.accept(t));
     }
 
+    /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * 
+     * @param <T>
+     * @param <U>
+     * @param t
+     * @param u
+     * @param sqlAction
+     * @return
+     */
     @Beta
     public static <T, U> ContinuableFuture<Void> asyncRun(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) {
         return asyncExecutor.execute(() -> sqlAction.accept(t, u));
     }
 
+    /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * 
+     * @param <A>
+     * @param <B>
+     * @param <C>
+     * @param a
+     * @param b
+     * @param c
+     * @param sqlAction
+     * @return
+     */
     @Beta
     public static <A, B, C> ContinuableFuture<Void> asyncRun(final A a, final B b, final C c,
             final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) {
         return asyncExecutor.execute(() -> sqlAction.accept(a, b, c));
     }
 
+    /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * 
+     * @param <R>
+     * @param sqlAction
+     * @return
+     */
     @Beta
     public static <R> ContinuableFuture<R> asyncCall(final Callable<R> sqlAction) {
         return asyncExecutor.execute(sqlAction);
     }
 
+    /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * 
+     * @param <T>
+     * @param <R>
+     * @param t
+     * @param sqlAction
+     * @return
+     */
     @Beta
     public static <T, R> ContinuableFuture<R> asyncCall(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) {
         return asyncExecutor.execute(() -> sqlAction.apply(t));
     }
 
+    /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * 
+     * @param <T>
+     * @param <U>
+     * @param <R>
+     * @param t
+     * @param u
+     * @param sqlAction
+     * @return
+     */
     @Beta
     public static <T, U, R> ContinuableFuture<R> asyncCall(final T t, final U u,
             final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) {
         return asyncExecutor.execute(() -> sqlAction.apply(t, u));
     }
 
+    /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * 
+     * @param <A>
+     * @param <B>
+     * @param <C>
+     * @param <R>
+     * @param a
+     * @param b
+     * @param c
+     * @param sqlAction
+     * @return
+     */
     @Beta
     public static <A, B, C, R> ContinuableFuture<R> asyncCall(final A a, final B b, final C c,
             final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) {
@@ -5800,7 +5876,7 @@ public final class JdbcUtil {
                         }
 
                         if (columnTypes == null || propInfos == null) {
-                            final Map<String, String> column2FieldNameMap = getColumn2FieldNameMap(targetClass);
+                            final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(targetClass);
 
                             propInfos = new PropInfo[columnCount];
                             columnTypes = new Type[columnCount];
@@ -6121,7 +6197,7 @@ public final class JdbcUtil {
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
                                 final PropInfo[] propInfos = new PropInfo[rsColumnCount];
 
-                                final Map<String, String> column2FieldNameMap = getColumn2FieldNameMap(targetClass);
+                                final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(targetClass);
 
                                 for (int i = 0; i < rsColumnCount; i++) {
                                     propInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
@@ -8380,8 +8456,9 @@ public final class JdbcUtil {
         <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter,
                 final BiRowMapper<R> rowMapper);
 
+        // Will it cause confusion if it's called in transaction?
         /**
-         *
+         * lazy-execution, lazy-fetch.
          * @param singleSelectPropName
          * @param cond
          * @return
@@ -8393,7 +8470,9 @@ public final class JdbcUtil {
             return stream(singleSelectPropName, cond, rowMapper);
         }
 
+        // Will it cause confusion if it's called in transaction?
         /**
+         * lazy-execution, lazy-fetch.
          *
          * @param singleSelectPropName
          * @param cond
@@ -8437,72 +8516,68 @@ public final class JdbcUtil {
         int delete(final Condition cond) throws SQLException;
 
         /**
-         * Be careful to call asynchronized methods in transaction because Transaction is created on thread level.
-         * If the asynchronized method is called in transaction, it won't be executed under the transaction.
+         * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
          *
          * @param <R>
-         * @param func
+         * @param sqlAction
          * @return
          */
         @Beta
         @NonDBOperation
-        default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<TD, R, SQLException> func) {
-            return asyncCall(func, executor());
+        default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<TD, R, SQLException> sqlAction) {
+            return asyncCall(sqlAction, executor());
         }
 
         /**
-         * Be careful to call asynchronized methods in transaction because Transaction is created on thread level.
-         * If the asynchronized method is called in transaction, it won't be executed under the transaction.
+         * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
          *
          *
          * @param <R>
-         * @param func
+         * @param sqlAction
          * @param executor
          * @return
          */
         @Beta
         @NonDBOperation
-        default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<TD, R, SQLException> func, final Executor executor) {
-            N.checkArgNotNull(func, "func");
+        default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<TD, R, SQLException> sqlAction, final Executor executor) {
+            N.checkArgNotNull(sqlAction, "func");
             N.checkArgNotNull(executor, "executor");
 
             final TD tdao = (TD) this;
 
-            return ContinuableFuture.call(() -> func.apply(tdao), executor);
+            return ContinuableFuture.call(() -> sqlAction.apply(tdao), executor);
         }
 
         /**
-         * Be careful to call asynchronized methods in transaction because Transaction is created on thread level.
-         * If the asynchronized method is called in transaction, it won't be executed under the transaction.
+         * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
          *
          *
-         * @param action
+         * @param sqlAction
          * @return
          */
         @Beta
         @NonDBOperation
-        default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<TD, SQLException> action) {
-            return asyncRun(action, executor());
+        default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<TD, SQLException> sqlAction) {
+            return asyncRun(sqlAction, executor());
         }
 
         /**
-         * Be careful to call asynchronized methods in transaction because Transaction is created on thread level.
-         * If the asynchronized method is called in transaction, it won't be executed under the transaction.
+         * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
          *
          *
-         * @param action
+         * @param sqlAction
          * @param executor
          * @return
          */
         @Beta
         @NonDBOperation
-        default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<TD, SQLException> action, final Executor executor) {
-            N.checkArgNotNull(action, "action");
+        default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<TD, SQLException> sqlAction, final Executor executor) {
+            N.checkArgNotNull(sqlAction, "action");
             N.checkArgNotNull(executor, "executor");
 
             final TD tdao = (TD) this;
 
-            return ContinuableFuture.run(() -> action.accept(tdao), executor);
+            return ContinuableFuture.run(() -> sqlAction.accept(tdao), executor);
         }
     }
 

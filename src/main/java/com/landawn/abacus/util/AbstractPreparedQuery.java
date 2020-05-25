@@ -2835,6 +2835,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         }
     }
 
+    // Will it cause confusion if it's called in transaction?
     /**
      * lazy-execution, lazy-fetch.
      *
@@ -2847,6 +2848,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         return stream(BiRowMapper.to(targetClass));
     }
 
+    // Will it cause confusion if it's called in transaction?
     /**
      * lazy-execution, lazy-fetch.
      *
@@ -2949,6 +2951,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         });
     }
 
+    // Will it cause confusion if it's called in transaction?
     /**
      * lazy-execution, lazy-fetch.
      *
@@ -3056,6 +3059,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         });
     }
 
+    // Will it cause confusion if it's called in transaction?
     /**
      * lazy-execution, lazy-fetch.
      *
@@ -3143,6 +3147,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         });
     }
 
+    // Will it cause confusion if it's called in transaction?
     /**
      * lazy-execution, lazy-fetch.
      *
@@ -3917,69 +3922,73 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
     }
 
     /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
      * @param <R>
-     * @param func
+     * @param sqlAction
      * @return
      */
     @Beta
-    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<Q, R, SQLException> func) {
-        checkArgNotNull(func, "func");
+    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<Q, R, SQLException> sqlAction) {
+        checkArgNotNull(sqlAction, "func");
         assertNotClosed();
 
         final Q q = (Q) this;
 
-        return JdbcUtil.asyncExecutor.execute(() -> func.apply(q));
+        return JdbcUtil.asyncExecutor.execute(() -> sqlAction.apply(q));
     }
 
     /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
      * @param <R>
-     * @param func
+     * @param sqlAction
      * @param executor
      * @return
      */
     @Beta
-    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<Q, R, SQLException> func, final Executor executor) {
-        checkArgNotNull(func, "func");
+    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<Q, R, SQLException> sqlAction, final Executor executor) {
+        checkArgNotNull(sqlAction, "func");
         checkArgNotNull(executor, "executor");
         assertNotClosed();
 
         final Q q = (Q) this;
 
-        return ContinuableFuture.call(() -> func.apply(q), executor);
+        return ContinuableFuture.call(() -> sqlAction.apply(q), executor);
     }
 
     /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param action
+     * @param sqlAction
      * @return
      */
     @Beta
-    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<Q, SQLException> action) {
-        checkArgNotNull(action, "action");
+    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<Q, SQLException> sqlAction) {
+        checkArgNotNull(sqlAction, "action");
         assertNotClosed();
 
         final Q q = (Q) this;
 
-        return JdbcUtil.asyncExecutor.execute(() -> action.accept(q));
+        return JdbcUtil.asyncExecutor.execute(() -> sqlAction.accept(q));
     }
 
     /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param action
+     * @param sqlAction
      * @param executor
      * @return
      */
     @Beta
-    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<Q, SQLException> action, final Executor executor) {
-        checkArgNotNull(action, "action");
+    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<Q, SQLException> sqlAction, final Executor executor) {
+        checkArgNotNull(sqlAction, "action");
         checkArgNotNull(executor, "executor");
         assertNotClosed();
 
         final Q q = (Q) this;
 
-        return ContinuableFuture.run(() -> action.accept(q), executor);
+        return ContinuableFuture.run(() -> sqlAction.accept(q), executor);
     }
 
     /**
