@@ -198,6 +198,10 @@ final class DaoUtil {
                     if (attrs.containsKey(SQLMapper.TIMEOUT)) {
                         queryTimeout = N.parseInt(attrs.get(SQLMapper.TIMEOUT));
                     }
+
+                    if (attrs.containsKey(SQLMapper.BATCH_SIZE)) {
+                        batchSize = N.parseInt(attrs.get(SQLMapper.BATCH_SIZE));
+                    }
                 }
             }
 
@@ -238,6 +242,10 @@ final class DaoUtil {
                     if (attrs.containsKey(SQLMapper.TIMEOUT)) {
                         queryTimeout = N.parseInt(attrs.get(SQLMapper.TIMEOUT));
                     }
+
+                    if (attrs.containsKey(SQLMapper.BATCH_SIZE)) {
+                        batchSize = N.parseInt(attrs.get(SQLMapper.BATCH_SIZE));
+                    }
                 }
             }
 
@@ -277,6 +285,10 @@ final class DaoUtil {
                 if (N.notNullOrEmpty(attrs)) {
                     if (attrs.containsKey(SQLMapper.TIMEOUT)) {
                         queryTimeout = N.parseInt(attrs.get(SQLMapper.TIMEOUT));
+                    }
+
+                    if (attrs.containsKey(SQLMapper.BATCH_SIZE)) {
+                        batchSize = N.parseInt(attrs.get(SQLMapper.BATCH_SIZE));
                     }
                 }
             }
@@ -1057,9 +1069,9 @@ final class DaoUtil {
 
     @SuppressWarnings("rawtypes")
     private static AbstractPreparedQuery prepareQuery(final Dao proxy, final Method method, final Object[] args, final int[] defineParamIndexes,
-            final String[] defines, final boolean isNamedQuery, String query, ParsedSql namedSql, final int fetchSize, final boolean isBatch,
-            final int batchSize, final int queryTimeout, final boolean returnGeneratedKeys, final String[] returnColumnNames, final boolean isCall,
-            final List<OutParameter> outParameterList) throws SQLException, Exception {
+            final String[] defines, final boolean isNamedQuery, String query, ParsedSql namedSql, final boolean isBatch, final int batchSize,
+            final int fetchSize, final FetchDirection fetchDirection, final int queryTimeout, final boolean returnGeneratedKeys,
+            final String[] returnColumnNames, final boolean isCall, final List<OutParameter> outParameterList) throws SQLException, Exception {
 
         if (N.notNullOrEmpty(defines)) {
             for (int i = 0, len = defines.length; i < len; i++) {
@@ -1089,6 +1101,10 @@ final class DaoUtil {
 
         if (fetchSize > 0) {
             preparedQuery.setFetchSize(fetchSize);
+        }
+
+        if (fetchDirection != null) {
+            preparedQuery.setFetchDirection(fetchDirection);
         }
 
         if (queryTimeout >= 0) {
@@ -1824,100 +1840,137 @@ final class DaoUtil {
                     } else if (methodName.equals("query") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).query();
+                            return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).query();
                         };
                     } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).query();
+                            return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).query();
                         };
                     } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.ResultExtractor.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).query((JdbcUtil.ResultExtractor) args[1]);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .query((JdbcUtil.ResultExtractor) args[1]);
                         };
                     } else if (methodName.equals("query") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.ResultExtractor.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).query((JdbcUtil.ResultExtractor) args[2]);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .query((JdbcUtil.ResultExtractor) args[2]);
                         };
                     } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.BiResultExtractor.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).query((JdbcUtil.BiResultExtractor) args[1]);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .query((JdbcUtil.BiResultExtractor) args[1]);
                         };
                     } else if (methodName.equals("query") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.BiResultExtractor.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).query((JdbcUtil.BiResultExtractor) args[2]);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .query((JdbcUtil.BiResultExtractor) args[2]);
                         };
                     } else if (methodName.equals("list") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list(entityClass);
+                            return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).list(entityClass);
                         };
                     } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.RowMapper) args[1]);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .list((JdbcUtil.RowMapper) args[1]);
                         };
                     } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.BiRowMapper) args[1]);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .list((JdbcUtil.BiRowMapper) args[1]);
                         };
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.RowFilter.class) && paramTypes[2].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.RowFilter) args[1], (JdbcUtil.RowMapper) args[2]);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .list((JdbcUtil.RowFilter) args[1], (JdbcUtil.RowMapper) args[2]);
                         };
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.BiRowFilter.class) && paramTypes[2].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.BiRowFilter) args[1], (JdbcUtil.BiRowMapper) args[2]);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .list((JdbcUtil.BiRowFilter) args[1], (JdbcUtil.BiRowMapper) args[2]);
                         };
                     } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list(entityClass);
+                            return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).list(entityClass);
                         };
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.RowMapper) args[2]);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .list((JdbcUtil.RowMapper) args[2]);
                         };
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.BiRowMapper) args[2]);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .list((JdbcUtil.BiRowMapper) args[2]);
                         };
                     } else if (methodName.equals("list") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.RowFilter.class) && paramTypes[3].equals(JdbcUtil.RowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.RowFilter) args[2], (JdbcUtil.RowMapper) args[3]);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .list((JdbcUtil.RowFilter) args[2], (JdbcUtil.RowMapper) args[3]);
                         };
                     } else if (methodName.equals("list") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.BiRowFilter.class) && paramTypes[3].equals(JdbcUtil.BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).list((JdbcUtil.BiRowFilter) args[2], (JdbcUtil.BiRowMapper) args[3]);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .list((JdbcUtil.BiRowFilter) args[2], (JdbcUtil.BiRowMapper) args[3]);
                         };
                     } else if (methodName.equals("stream") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
                                     .stream(entityClass);
 
@@ -1929,6 +1982,7 @@ final class DaoUtil {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
                                     .stream((JdbcUtil.RowMapper) args[1]);
 
@@ -1940,6 +1994,7 @@ final class DaoUtil {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
                                     .stream((JdbcUtil.BiRowMapper) args[1]);
 
@@ -1951,6 +2006,7 @@ final class DaoUtil {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
                                     .stream((JdbcUtil.RowFilter) args[1], (JdbcUtil.RowMapper) args[2]);
 
@@ -1962,6 +2018,7 @@ final class DaoUtil {
                             final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
                                     .stream((JdbcUtil.BiRowFilter) args[1], (JdbcUtil.BiRowMapper) args[2]);
 
@@ -1973,6 +2030,7 @@ final class DaoUtil {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
                                     .stream(entityClass);
 
@@ -1984,6 +2042,7 @@ final class DaoUtil {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
                                     .stream((JdbcUtil.RowMapper) args[2]);
 
@@ -1995,6 +2054,7 @@ final class DaoUtil {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
                                     .stream((JdbcUtil.BiRowMapper) args[2]);
 
@@ -2006,6 +2066,7 @@ final class DaoUtil {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
                                     .stream((JdbcUtil.RowFilter) args[2], (JdbcUtil.RowMapper) args[3]);
 
@@ -2017,6 +2078,7 @@ final class DaoUtil {
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
                                     .stream((JdbcUtil.BiRowFilter) args[2], (JdbcUtil.BiRowMapper) args[3]);
 
@@ -3014,9 +3076,9 @@ final class DaoUtil {
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
 
                         call = (proxy, args) -> {
-                            Object result = queryFunc.apply(prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
-                                    isBatch, -1, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList).settParameters(args,
-                                            parametersSetter),
+                            Object result = queryFunc.apply(prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, isBatch,
+                                    -1, fetchSize, FetchDirection.FORWARD, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                            .settParameters(args, parametersSetter),
                                     args);
 
                             if (idDirtyMarkerReturnType) {
@@ -3050,8 +3112,8 @@ final class DaoUtil {
                                         && ClassUtil.isEntity(args[stmtParamIndexes[0]].getClass());
                                 final Object entity = isEntity ? args[stmtParamIndexes[0]] : null;
 
-                                final Optional<Object> id = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
-                                        isBatch, -1, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                final Optional<Object> id = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, isBatch,
+                                        -1, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
                                                 .settParameters(args, parametersSetter)
                                                 .insert(keyExtractor);
 
@@ -3093,12 +3155,12 @@ final class DaoUtil {
                                     AbstractPreparedQuery preparedQuery = null;
 
                                     if (isSingleParameter) {
-                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
-                                                isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, isBatch,
+                                                batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
                                                         .addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
                                     } else {
-                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
-                                                isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, isBatch,
+                                                batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
                                                         .addBatchParameters(batchParameters);
                                     }
 
@@ -3108,8 +3170,8 @@ final class DaoUtil {
 
                                     try {
                                         try (AbstractPreparedQuery preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery,
-                                                query, namedSql, fetchSize, isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall,
-                                                outParameterList).closeAfterExecution(false)) {
+                                                query, namedSql, isBatch, batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames,
+                                                isCall, outParameterList).closeAfterExecution(false)) {
 
                                             if (isSingleParameter) {
                                                 ids = ExceptionalStream.of(batchParameters)
@@ -3190,7 +3252,7 @@ final class DaoUtil {
 
                             call = (proxy, args) -> {
                                 final AbstractPreparedQuery preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query,
-                                        namedSql, fetchSize, isBatch, -1, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                        namedSql, isBatch, -1, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
                                                 .settParameters(args, parametersSetter);
 
                                 final long updatedRecordCount = isLargeUpdate ? preparedQuery.largeUpdate() : preparedQuery.update();
@@ -3229,12 +3291,12 @@ final class DaoUtil {
                                     AbstractPreparedQuery preparedQuery = null;
 
                                     if (isSingleParameter) {
-                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
-                                                isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, isBatch,
+                                                batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
                                                         .addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
                                     } else {
-                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, fetchSize,
-                                                isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, isBatch,
+                                                batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
                                                         .addBatchParameters(batchParameters);
                                     }
 
@@ -3248,8 +3310,8 @@ final class DaoUtil {
 
                                     try {
                                         try (AbstractPreparedQuery preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery,
-                                                query, namedSql, fetchSize, isBatch, batchSize, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall,
-                                                outParameterList).closeAfterExecution(false)) {
+                                                query, namedSql, isBatch, batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames,
+                                                isCall, outParameterList).closeAfterExecution(false)) {
 
                                             if (isSingleParameter) {
                                                 updatedRecordCount = ExceptionalStream.of(batchParameters)
