@@ -8172,6 +8172,7 @@ public final class JdbcUtil {
         }
 
         /**
+         * Update all the records found by specified {@code cond} with all the properties from specified {@code updateProps}.
          *
          * @param updateProps
          * @param cond
@@ -8181,34 +8182,36 @@ public final class JdbcUtil {
         int update(final Map<String, Object> updateProps, final Condition cond) throws SQLException;
 
         /**
+         * Update all the records found by specified {@code cond} with all the properties from specified {@code entity}.
          * 
          * @param entity
-         * @param whereCause
+         * @param cond
          * @return
          * @throws SQLException
          */
-        default int update(final T entity, final Condition whereCause) throws SQLException {
-            return update(Maps.entity2Map(entity), whereCause);
+        default int update(final T entity, final Condition cond) throws SQLException {
+            return update(Maps.entity2Map(entity), cond);
         }
 
         /**
          * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
          *
          * @param entity
-         * @param whereCause to verify if the record exists or not.
+         * @param cond to verify if the record exists or not.
          * @return
+         * @throws SQLException the SQL exception
          */
-        default T upsert(final T entity, final Condition whereCause) throws SQLException {
-            N.checkArgNotNull(whereCause, "whereCause");
+        default T upsert(final T entity, final Condition cond) throws SQLException {
+            N.checkArgNotNull(cond, "cond");
 
-            final T dbEntity = findFirst(whereCause).orNull();
+            final T dbEntity = findFirst(cond).orNull();
 
             if (dbEntity == null) {
                 save(entity);
                 return entity;
             } else {
                 N.merge(entity, dbEntity);
-                update(Maps.entity2Map(dbEntity), whereCause);
+                update(Maps.entity2Map(dbEntity), cond);
                 return dbEntity;
             }
         }
@@ -8712,14 +8715,15 @@ public final class JdbcUtil {
          * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
          *
          * @param entity
-         * @param whereCause to verify if the record exists or not.
+         * @param cond to verify if the record exists or not.
          * @return
+         * @throws SQLException the SQL exception
          */
         @Override
-        default T upsert(final T entity, final Condition whereCause) throws SQLException {
-            N.checkArgNotNull(whereCause, "whereCause");
+        default T upsert(final T entity, final Condition cond) throws SQLException {
+            N.checkArgNotNull(cond, "cond");
 
-            final T dbEntity = findFirst(whereCause).orNull();
+            final T dbEntity = findFirst(cond).orNull();
 
             if (dbEntity == null) {
                 insert(entity);
@@ -8738,6 +8742,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @return
+         * @throws SQLException the SQL exception
          */
         default T upsert(final T entity) throws SQLException {
             @SuppressWarnings("deprecation")
@@ -8991,7 +8996,7 @@ public final class JdbcUtil {
          * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
          *
          * @param entity
-         * @param whereCause to verify if the record exists or not.
+         * @param cond to verify if the record exists or not.
          * @return
          * @throws UnsupportedOperationException
          * @throws SQLException
@@ -8999,7 +9004,7 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default int update(final T entity, final Condition whereCause) throws UnsupportedOperationException, SQLException {
+        default int update(final T entity, final Condition cond) throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -9007,7 +9012,7 @@ public final class JdbcUtil {
          * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
          *
          * @param entity
-         * @param whereCause to verify if the record exists or not.
+         * @param cond to verify if the record exists or not.
          * @return
          * @throws UnsupportedOperationException
          * @throws SQLException
@@ -9015,7 +9020,7 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default T upsert(final T entity, final Condition whereCause) throws UnsupportedOperationException, SQLException {
+        default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -9326,7 +9331,7 @@ public final class JdbcUtil {
          * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
          *
          * @param entity
-         * @param whereCause to verify if the record exists or not.
+         * @param cond to verify if the record exists or not.
          * @return
          * @throws UnsupportedOperationException
          * @throws SQLException
@@ -9334,7 +9339,7 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default T upsert(final T entity, final Condition whereCause) throws UnsupportedOperationException, SQLException {
+        default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -11359,6 +11364,43 @@ public final class JdbcUtil {
         int update(final Map<String, Object> updateProps, final Condition cond) throws UncheckedSQLException;
 
         /**
+         * Update all the records found by specified {@code cond} with all the properties from specified {@code entity}.
+         * 
+         * @param entity
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException
+         */
+        @Override
+        default int update(final T entity, final Condition cond) throws UncheckedSQLException {
+            return update(Maps.entity2Map(entity), cond);
+        }
+
+        /**
+         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+         *
+         * @param entity
+         * @param cond to verify if the record exists or not.
+         * @return
+         * @throws UncheckedSQLException
+         */
+        @Override
+        default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {
+            N.checkArgNotNull(cond, "cond");
+
+            final T dbEntity = findFirst(cond).orNull();
+
+            if (dbEntity == null) {
+                save(entity);
+                return entity;
+            } else {
+                N.merge(entity, dbEntity);
+                update(Maps.entity2Map(dbEntity), cond);
+                return dbEntity;
+            }
+        }
+
+        /**
          *
          * @param cond
          * @return
@@ -11832,14 +11874,14 @@ public final class JdbcUtil {
          * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
          *
          * @param entity
-         * @param whereCause to verify if the record exists or not.
+         * @param cond to verify if the record exists or not.
          * @return
          */
         @Override
-        default T upsert(final T entity, final Condition whereCause) throws UncheckedSQLException {
-            N.checkArgNotNull(whereCause, "whereCause");
+        default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {
+            N.checkArgNotNull(cond, "cond");
 
-            final T dbEntity = findFirst(whereCause).orNull();
+            final T dbEntity = findFirst(cond).orNull();
 
             if (dbEntity == null) {
                 insert(entity);
@@ -12123,6 +12165,38 @@ public final class JdbcUtil {
         @Deprecated
         @Override
         default int update(final Map<String, Object> updateProps, final Condition cond) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+         *
+         * @param entity
+         * @param cond to verify if the record exists or not.
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final T entity, final Condition cond) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+         *
+         * @param entity
+         * @param cond to verify if the record exists or not.
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException, UncheckedSQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -12435,7 +12509,7 @@ public final class JdbcUtil {
          * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
          *
          * @param entity
-         * @param whereCause to verify if the record exists or not.
+         * @param cond to verify if the record exists or not.
          * @return
          * @throws UnsupportedOperationException
          * @throws UncheckedSQLException
@@ -12443,7 +12517,7 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default T upsert(final T entity, final Condition whereCause) throws UnsupportedOperationException, UncheckedSQLException {
+        default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException, UncheckedSQLException {
             throw new UnsupportedOperationException();
         }
 
