@@ -7204,6 +7204,9 @@ public final class JdbcUtil {
         @NonDBOperation
         Executor executor();
 
+        @NonDBOperation
+        AsyncExecutor asyncExecutor();
+
         void cacheSql(String key, String sql);
 
         void cacheSqls(String key, Collection<String> sqls);
@@ -8178,6 +8181,39 @@ public final class JdbcUtil {
         int update(final Map<String, Object> updateProps, final Condition cond) throws SQLException;
 
         /**
+         * 
+         * @param entity
+         * @param whereCause
+         * @return
+         * @throws SQLException
+         */
+        default int update(final T entity, final Condition whereCause) throws SQLException {
+            return update(Maps.entity2Map(entity), whereCause);
+        }
+
+        /**
+         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+         *
+         * @param entity
+         * @param whereCause to verify if the record exists or not.
+         * @return
+         */
+        default T upsert(final T entity, final Condition whereCause) throws SQLException {
+            N.checkArgNotNull(whereCause, "whereCause");
+
+            final T dbEntity = findFirst(whereCause).orNull();
+
+            if (dbEntity == null) {
+                save(entity);
+                return entity;
+            } else {
+                N.merge(entity, dbEntity);
+                update(Maps.entity2Map(dbEntity), whereCause);
+                return dbEntity;
+            }
+        }
+
+        /**
          *
          * @param cond
          * @return
@@ -8679,6 +8715,7 @@ public final class JdbcUtil {
          * @param whereCause to verify if the record exists or not.
          * @return
          */
+        @Override
         default T upsert(final T entity, final Condition whereCause) throws SQLException {
             N.checkArgNotNull(whereCause, "whereCause");
 
@@ -8947,6 +8984,38 @@ public final class JdbcUtil {
         @Deprecated
         @Override
         default int update(final Map<String, Object> updateProps, final Condition cond) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+         *
+         * @param entity
+         * @param whereCause to verify if the record exists or not.
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final T entity, final Condition whereCause) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+         *
+         * @param entity
+         * @param whereCause to verify if the record exists or not.
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default T upsert(final T entity, final Condition whereCause) throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
