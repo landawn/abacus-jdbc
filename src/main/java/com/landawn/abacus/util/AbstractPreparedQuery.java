@@ -2834,7 +2834,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             closeAfterExecutionIfAllowed();
         }
     }
-    
+
     // Will it cause confusion if it's called in transaction?
     /**
      * lazy-execution, lazy-fetch.

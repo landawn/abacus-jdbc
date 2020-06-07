@@ -4218,6 +4218,7 @@ public final class JdbcUtil {
      *
      * @param <QS>
      */
+    @FunctionalInterface
     public static interface ParametersSetter<QS> extends Throwables.Consumer<QS, SQLException> {
         @SuppressWarnings("rawtypes")
         public static final ParametersSetter DO_NOTHING = new ParametersSetter<Object>() {
@@ -4245,6 +4246,7 @@ public final class JdbcUtil {
      * @see Columns.ColumnTwo
      * @see Columns.ColumnThree
      */
+    @FunctionalInterface
     public static interface BiParametersSetter<QS, T> extends Throwables.BiConsumer<QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
         public static final BiParametersSetter DO_NOTHING = new BiParametersSetter<Object, Object>() {
@@ -4270,6 +4272,7 @@ public final class JdbcUtil {
      * @param <QS>
      * @param <T>
      */
+    @FunctionalInterface
     public static interface TriParametersSetter<QS, T> extends Throwables.TriConsumer<ParsedSql, QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
         public static final TriParametersSetter DO_NOTHING = new TriParametersSetter<Object, Object>() {
@@ -4295,6 +4298,7 @@ public final class JdbcUtil {
      *
      * @param <T>
      */
+    @FunctionalInterface
     public static interface ResultExtractor<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
         /** The Constant TO_DATA_SET. */
@@ -4603,6 +4607,7 @@ public final class JdbcUtil {
      *
      * @param <T>
      */
+    @FunctionalInterface
     public static interface BiResultExtractor<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
 
         /**
@@ -4924,6 +4929,7 @@ public final class JdbcUtil {
      * @see Columns.ColumnTwo
      * @see Columns.ColumnThree
      */
+    @FunctionalInterface
     public static interface RowMapper<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
         /**
@@ -5351,6 +5357,7 @@ public final class JdbcUtil {
      *
      * @param <T>
      */
+    @FunctionalInterface
     public static interface BiRowMapper<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
 
         /** The Constant TO_ARRAY. */
@@ -5956,6 +5963,7 @@ public final class JdbcUtil {
      * Consider using {@code BiRowConsumer} instead because it's more efficient to consume multiple records when column labels/count are used.
      *
      */
+    @FunctionalInterface
     public static interface RowConsumer extends Throwables.Consumer<ResultSet, SQLException> {
 
         static final RowConsumer DO_NOTHING = rs -> {
@@ -5973,6 +5981,7 @@ public final class JdbcUtil {
     /**
      * The Interface BiRowConsumer.
      */
+    @FunctionalInterface
     public static interface BiRowConsumer extends Throwables.BiConsumer<ResultSet, List<String>, SQLException> {
 
         static final BiRowConsumer DO_NOTHING = (rs, cls) -> {
@@ -5994,6 +6003,7 @@ public final class JdbcUtil {
      * Consider using {@code BiRowConsumer} instead because it's more efficient to test multiple records when column labels/count are used.
      *
      */
+    @FunctionalInterface
     public static interface RowFilter extends Throwables.Predicate<ResultSet, SQLException> {
 
         /** The Constant ALWAYS_TRUE. */
@@ -6027,6 +6037,7 @@ public final class JdbcUtil {
      * Only user {@code RowFilter/BiRowFilter} if there is a specific reason or the filter can't be done by SQL scripts in database server side.
      *
      */
+    @FunctionalInterface
     public static interface BiRowFilter extends Throwables.BiPredicate<ResultSet, List<String>, SQLException> {
 
         /** The Constant ALWAYS_TRUE. */
@@ -6081,6 +6092,7 @@ public final class JdbcUtil {
         COLUMN_GETTER_POOL.put(N.typeOf(Object.class), Columns.ColumnGetter.GET_OBJECT);
     }
 
+    @FunctionalInterface
     public static interface RowExtractor extends Throwables.BiConsumer<ResultSet, Object[], SQLException> {
         @Override
         void accept(final ResultSet rs, final Object[] outputRow) throws SQLException;
