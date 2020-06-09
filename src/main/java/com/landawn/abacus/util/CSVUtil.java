@@ -53,8 +53,6 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
-import com.opencsv.CSVReader;
-import com.opencsv.exceptions.CsvValidationException;
 
 /**
  * The Class CSVUtil.
@@ -75,43 +73,44 @@ public final class CSVUtil {
 
     /**
      *
-     * @param file
+     * @param csvFile
      * @return
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static DataSet loadCSV(final File file) throws UncheckedIOException {
-        return loadCSV(file, (Collection<String>) null);
+    public static DataSet loadCSV(final File csvFile) throws UncheckedIOException {
+        return loadCSV(csvFile, (Collection<String>) null);
     }
 
     /**
      *
-     * @param file
+     * @param csvFile
      * @param selectColumnNames
      * @return
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static DataSet loadCSV(final File file, final Collection<String> selectColumnNames) throws UncheckedIOException {
-        return loadCSV(file, selectColumnNames, 0, Integer.MAX_VALUE);
+    public static DataSet loadCSV(final File csvFile, final Collection<String> selectColumnNames) throws UncheckedIOException {
+        return loadCSV(csvFile, selectColumnNames, 0, Long.MAX_VALUE);
     }
 
     /**
      *
-     * @param file
+     * @param csvFile
      * @param selectColumnNames
      * @param offset
      * @param count
      * @return
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static DataSet loadCSV(final File file, final Collection<String> selectColumnNames, final int offset, final int count) throws UncheckedIOException {
-        return loadCSV(file, selectColumnNames, offset, count, Fn.<String[]> alwaysTrue());
+    public static DataSet loadCSV(final File csvFile, final Collection<String> selectColumnNames, final long offset, final long count)
+            throws UncheckedIOException {
+        return loadCSV(csvFile, selectColumnNames, offset, count, Fn.<String[]> alwaysTrue());
     }
 
     /**
      * Load the data from CSV.
      *
      * @param <E>
-     * @param file
+     * @param csvFile
      * @param selectColumnNames
      * @param offset
      * @param count
@@ -120,61 +119,61 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      * @throws E the e
      */
-    public static <E extends Exception> DataSet loadCSV(final File file, final Collection<String> selectColumnNames, final int offset, final int count,
+    public static <E extends Exception> DataSet loadCSV(final File csvFile, final Collection<String> selectColumnNames, final long offset, final long count,
             final Throwables.Predicate<String[], E> filter) throws UncheckedIOException, E {
-        InputStream inputStream = null;
+        InputStream csvInputStream = null;
 
         try {
-            inputStream = new FileInputStream(file);
+            csvInputStream = new FileInputStream(csvFile);
 
-            return loadCSV(inputStream, selectColumnNames, offset, count, filter);
+            return loadCSV(csvInputStream, selectColumnNames, offset, count, filter);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } finally {
-            IOUtil.closeQuietly(inputStream);
+            IOUtil.closeQuietly(csvInputStream);
         }
     }
 
     /**
      *
-     * @param inputStream
+     * @param csvInputStream
      * @return
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static DataSet loadCSV(final InputStream inputStream) throws UncheckedIOException {
-        return loadCSV(inputStream, (Collection<String>) null);
+    public static DataSet loadCSV(final InputStream csvInputStream) throws UncheckedIOException {
+        return loadCSV(csvInputStream, (Collection<String>) null);
     }
 
     /**
      *
-     * @param inputStream
+     * @param csvInputStream
      * @param selectColumnNames
      * @return
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static DataSet loadCSV(final InputStream inputStream, final Collection<String> selectColumnNames) throws UncheckedIOException {
-        return loadCSV(inputStream, selectColumnNames, 0, Integer.MAX_VALUE);
+    public static DataSet loadCSV(final InputStream csvInputStream, final Collection<String> selectColumnNames) throws UncheckedIOException {
+        return loadCSV(csvInputStream, selectColumnNames, 0, Long.MAX_VALUE);
     }
 
     /**
      *
-     * @param inputStream
+     * @param csvInputStream
      * @param selectColumnNames
      * @param offset
      * @param count
      * @return
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static DataSet loadCSV(final InputStream inputStream, final Collection<String> selectColumnNames, final int offset, final int count)
+    public static DataSet loadCSV(final InputStream csvInputStream, final Collection<String> selectColumnNames, final long offset, final long count)
             throws UncheckedIOException {
-        return loadCSV(inputStream, selectColumnNames, offset, count, Fn.<String[]> alwaysTrue());
+        return loadCSV(csvInputStream, selectColumnNames, offset, count, Fn.<String[]> alwaysTrue());
     }
 
     /**
      * Load the data from CSV.
      *
      * @param <E>
-     * @param inputStream
+     * @param csvInputStream
      * @param selectColumnNames
      * @param offset
      * @param count
@@ -183,52 +182,52 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      * @throws E the e
      */
-    public static <E extends Exception> DataSet loadCSV(final InputStream inputStream, final Collection<String> selectColumnNames, final int offset,
-            final int count, final Throwables.Predicate<String[], E> filter) throws UncheckedIOException, E {
-        final Reader reader = new InputStreamReader(inputStream);
+    public static <E extends Exception> DataSet loadCSV(final InputStream csvInputStream, final Collection<String> selectColumnNames, final long offset,
+            final long count, final Throwables.Predicate<String[], E> filter) throws UncheckedIOException, E {
+        final Reader csvReader = new InputStreamReader(csvInputStream);
 
-        return loadCSV(reader, selectColumnNames, offset, count, filter);
+        return loadCSV(csvReader, selectColumnNames, offset, count, filter);
     }
 
     /**
      *
-     * @param reader
+     * @param csvReader
      * @return
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static DataSet loadCSV(final Reader reader) throws UncheckedIOException {
-        return loadCSV(reader, (Collection<String>) null);
+    public static DataSet loadCSV(final Reader csvReader) throws UncheckedIOException {
+        return loadCSV(csvReader, (Collection<String>) null);
     }
 
     /**
      *
-     * @param reader
+     * @param csvReader
      * @param selectColumnNames
      * @return
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static DataSet loadCSV(final Reader reader, final Collection<String> selectColumnNames) throws UncheckedIOException {
-        return loadCSV(reader, selectColumnNames, 0, Integer.MAX_VALUE);
+    public static DataSet loadCSV(final Reader csvReader, final Collection<String> selectColumnNames) throws UncheckedIOException {
+        return loadCSV(csvReader, selectColumnNames, 0, Long.MAX_VALUE);
     }
 
     /**
      *
-     * @param reader
+     * @param csvReader
      * @param selectColumnNames
      * @param offset
      * @param count
      * @return
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static DataSet loadCSV(final Reader reader, final Collection<String> selectColumnNames, int offset, int count) throws UncheckedIOException {
-        return loadCSV(reader, selectColumnNames, offset, count, Fn.<String[]> alwaysTrue());
+    public static DataSet loadCSV(final Reader csvReader, final Collection<String> selectColumnNames, long offset, long count) throws UncheckedIOException {
+        return loadCSV(csvReader, selectColumnNames, offset, count, Fn.<String[]> alwaysTrue());
     }
 
     /**
      * Load the data from CSV.
      *
      * @param <E>
-     * @param reader
+     * @param csvReader
      * @param selectColumnNames
      * @param offset
      * @param count
@@ -237,202 +236,17 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      * @throws E the e
      */
-    public static <E extends Exception> DataSet loadCSV(final Reader reader, final Collection<String> selectColumnNames, int offset, int count,
+    public static <E extends Exception> DataSet loadCSV(final Reader csvReader, final Collection<String> selectColumnNames, long offset, long count,
             final Throwables.Predicate<String[], E> filter) throws UncheckedIOException, E {
-        return loadCSV(null, reader, selectColumnNames, offset, count, filter);
-    }
-
-    /**
-     *
-     * @param entityClass
-     * @param file
-     * @return
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static DataSet loadCSV(final Class<?> entityClass, final File file) throws UncheckedIOException {
-        return loadCSV(entityClass, file, null);
-    }
-
-    /**
-     *
-     * @param entityClass
-     * @param file
-     * @param selectColumnNames
-     * @return
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static DataSet loadCSV(final Class<?> entityClass, final File file, final Collection<String> selectColumnNames) throws UncheckedIOException {
-        return loadCSV(entityClass, file, selectColumnNames, 0, Integer.MAX_VALUE);
-    }
-
-    /**
-     *
-     * @param entityClass
-     * @param file
-     * @param selectColumnNames
-     * @param offset
-     * @param count
-     * @return
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static DataSet loadCSV(final Class<?> entityClass, final File file, final Collection<String> selectColumnNames, final int offset, final int count)
-            throws UncheckedIOException {
-        return loadCSV(entityClass, file, selectColumnNames, offset, count, Fn.<String[]> alwaysTrue());
-    }
-
-    /**
-     * Load the data from CSV.
-     *
-     * @param <E>
-     * @param entityClass
-     * @param file
-     * @param selectColumnNames
-     * @param offset
-     * @param count
-     * @param filter
-     * @return
-     * @throws UncheckedIOException the unchecked IO exception
-     * @throws E the e
-     */
-    public static <E extends Exception> DataSet loadCSV(final Class<?> entityClass, final File file, final Collection<String> selectColumnNames,
-            final int offset, final int count, final Throwables.Predicate<String[], E> filter) throws UncheckedIOException, E {
-        InputStream inputStream = null;
-
-        try {
-            inputStream = new FileInputStream(file);
-
-            return loadCSV(entityClass, inputStream, selectColumnNames, offset, count, filter);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        } finally {
-            IOUtil.closeQuietly(inputStream);
-        }
-    }
-
-    /**
-     *
-     * @param entityClass
-     * @param inputStream
-     * @return
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static DataSet loadCSV(final Class<?> entityClass, final InputStream inputStream) throws UncheckedIOException {
-        return loadCSV(entityClass, inputStream, null);
-    }
-
-    /**
-     *
-     * @param entityClass
-     * @param inputStream
-     * @param selectColumnNames
-     * @return
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static DataSet loadCSV(final Class<?> entityClass, final InputStream inputStream, final Collection<String> selectColumnNames)
-            throws UncheckedIOException {
-        return loadCSV(entityClass, inputStream, selectColumnNames, 0, Integer.MAX_VALUE);
-    }
-
-    /**
-     *
-     * @param entityClass
-     * @param inputStream
-     * @param selectColumnNames
-     * @param offset
-     * @param count
-     * @return
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static DataSet loadCSV(final Class<?> entityClass, final InputStream inputStream, final Collection<String> selectColumnNames, final int offset,
-            final int count) throws UncheckedIOException {
-        return loadCSV(entityClass, inputStream, selectColumnNames, offset, count, Fn.<String[]> alwaysTrue());
-    }
-
-    /**
-     * Load the data from CSV.
-     *
-     * @param <E>
-     * @param entityClass
-     * @param inputStream
-     * @param selectColumnNames
-     * @param offset
-     * @param count
-     * @param filter
-     * @return
-     * @throws UncheckedIOException the unchecked IO exception
-     * @throws E the e
-     */
-    public static <E extends Exception> DataSet loadCSV(final Class<?> entityClass, final InputStream inputStream, final Collection<String> selectColumnNames,
-            final int offset, final int count, final Throwables.Predicate<String[], E> filter) throws UncheckedIOException, E {
-        final Reader reader = new InputStreamReader(inputStream);
-        return loadCSV(entityClass, reader, selectColumnNames, offset, count, filter);
-    }
-
-    /**
-     *
-     * @param entityClass
-     * @param reader
-     * @return
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static DataSet loadCSV(final Class<?> entityClass, final Reader reader) throws UncheckedIOException {
-        return loadCSV(entityClass, reader, null);
-    }
-
-    /**
-     *
-     * @param entityClass
-     * @param reader
-     * @param selectColumnNames
-     * @return
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static DataSet loadCSV(final Class<?> entityClass, final Reader reader, final Collection<String> selectColumnNames) throws UncheckedIOException {
-        return loadCSV(entityClass, reader, selectColumnNames, 0, Integer.MAX_VALUE);
-    }
-
-    /**
-     *
-     * @param entityClass
-     * @param reader
-     * @param selectColumnNames
-     * @param offset
-     * @param count
-     * @return
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static DataSet loadCSV(final Class<?> entityClass, final Reader reader, final Collection<String> selectColumnNames, int offset, int count)
-            throws UncheckedIOException {
-        return loadCSV(entityClass, reader, selectColumnNames, offset, count, Fn.<String[]> alwaysTrue());
-    }
-
-    /**
-     * Load the data from CSV.
-     *
-     * @param <E>
-     * @param entityClass
-     * @param reader
-     * @param selectColumnNames
-     * @param offset
-     * @param count
-     * @param filter
-     * @return
-     * @throws UncheckedIOException the unchecked IO exception
-     * @throws E the e
-     */
-    public static <E extends Exception> DataSet loadCSV(final Class<?> entityClass, final Reader reader, final Collection<String> selectColumnNames, int offset,
-            int count, final Throwables.Predicate<String[], E> filter) throws UncheckedIOException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
 
-        final BufferedReader br = reader instanceof BufferedReader ? (BufferedReader) reader : Objectory.createBufferedReader(reader);
-        final EntityInfo entityInfo = entityClass == null || Object.class.equals(entityClass) ? null : ParserUtil.getEntityInfo(entityClass);
+        final BufferedReader br = csvReader instanceof BufferedReader ? (BufferedReader) csvReader : Objectory.createBufferedReader(csvReader);
 
-        try (CSVReader csvReader = new CSVReader(br)) {
-            final String[] titles = csvReader.readNext();
-
-            if (N.isNullOrEmpty(titles)) {
-                return N.newEmptyDataSet();
-            }
+        try {
+            List<String> tmp = new ArrayList<>();
+            String line = br.readLine();
+            jsonParser.readString(tmp, line, jdc);
+            final String[] titles = tmp.toArray(new String[tmp.size()]);
 
             final int columnCount = titles.length;
             final Type<?>[] columnTypes = new Type<?>[columnCount];
@@ -442,22 +256,9 @@ public final class CSVUtil {
 
             for (int i = 0; i < columnCount; i++) {
                 if (selectPropNameSet == null || selectPropNameSet.remove(titles[i])) {
-                    if (entityInfo == null) {
-                        columnTypes[i] = N.typeOf(String.class);
-                    } else {
-                        PropInfo propInfo = entityInfo.getPropInfo(titles[i]);
-
-                        if (propInfo == null && selectPropNameSet != null) {
-                            throw new IllegalArgumentException(titles[i] + " is not defined in entity class: " + ClassUtil.getCanonicalClassName(entityClass));
-                        }
-
-                        if (propInfo != null) {
-                            columnTypes[i] = propInfo.jsonXmlType;
-                        }
-                    }
-
                     columnNameList.add(titles[i]);
                     columnList.add(new ArrayList<>());
+                    columnTypes[i] = N.typeOf(String.class);
                 }
             }
 
@@ -465,28 +266,21 @@ public final class CSVUtil {
                 throw new IllegalArgumentException(selectPropNameSet + " are not included in titles: " + N.toString(titles));
             }
 
-            if (offset > 0) {
-                csvReader.skip(offset);
+            final String[] strs = new String[titles.length];
+
+            while (offset-- > 0 && br.readLine() != null) {
             }
 
-            String[] strs = null;
+            while (count > 0 && (line = br.readLine()) != null) {
+                jsonParser.readString(strs, line, jdc);
 
-            while (count > 0 && (strs = csvReader.readNext()) != null) {
                 if (filter != null && filter.test(strs) == false) {
                     continue;
                 }
 
-                if (entityInfo == null) {
-                    for (int i = 0, columnIndex = 0; i < columnCount; i++) {
-                        if (columnTypes[i] != null) {
-                            columnList.get(columnIndex++).add(strs[i]);
-                        }
-                    }
-                } else {
-                    for (int i = 0, columnIndex = 0; i < columnCount; i++) {
-                        if (columnTypes[i] != null) {
-                            columnList.get(columnIndex++).add(columnTypes[i].valueOf(strs[i]));
-                        }
+                for (int i = 0, columnIndex = 0; i < columnCount; i++) {
+                    if (columnTypes[i] != null) {
+                        columnList.get(columnIndex++).add(strs[i]);
                     }
                 }
 
@@ -498,10 +292,674 @@ public final class CSVUtil {
             return new RowDataSet(columnNameList, columnList);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
-        } catch (CsvValidationException e) {
-            throw N.toRuntimeException(e);
         } finally {
-            if (br != reader) {
+            if (br != csvReader) {
+                Objectory.recycle(br);
+            }
+        }
+    }
+
+    /**
+     *
+     * @param entityClass
+     * @param csvFile
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static DataSet loadCSV(final Class<?> entityClass, final File csvFile) throws UncheckedIOException {
+        return loadCSV(entityClass, csvFile, null);
+    }
+
+    /**
+     *
+     * @param entityClass
+     * @param csvFile
+     * @param selectColumnNames
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static DataSet loadCSV(final Class<?> entityClass, final File csvFile, final Collection<String> selectColumnNames) throws UncheckedIOException {
+        return loadCSV(entityClass, csvFile, selectColumnNames, 0, Long.MAX_VALUE);
+    }
+
+    /**
+     *
+     * @param entityClass
+     * @param csvFile
+     * @param selectColumnNames
+     * @param offset
+     * @param count
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static DataSet loadCSV(final Class<?> entityClass, final File csvFile, final Collection<String> selectColumnNames, final long offset,
+            final long count) throws UncheckedIOException {
+        return loadCSV(entityClass, csvFile, selectColumnNames, offset, count, Fn.<String[]> alwaysTrue());
+    }
+
+    /**
+     * Load the data from CSV.
+     *
+     * @param <E>
+     * @param entityClass
+     * @param csvFile
+     * @param selectColumnNames
+     * @param offset
+     * @param count
+     * @param filter
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     * @throws E the e
+     */
+    public static <E extends Exception> DataSet loadCSV(final Class<?> entityClass, final File csvFile, final Collection<String> selectColumnNames,
+            final long offset, final long count, final Throwables.Predicate<String[], E> filter) throws UncheckedIOException, E {
+        InputStream csvInputStream = null;
+
+        try {
+            csvInputStream = new FileInputStream(csvFile);
+
+            return loadCSV(entityClass, csvInputStream, selectColumnNames, offset, count, filter);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } finally {
+            IOUtil.closeQuietly(csvInputStream);
+        }
+    }
+
+    /**
+     *
+     * @param entityClass
+     * @param csvInputStream
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static DataSet loadCSV(final Class<?> entityClass, final InputStream csvInputStream) throws UncheckedIOException {
+        return loadCSV(entityClass, csvInputStream, null);
+    }
+
+    /**
+     *
+     * @param entityClass
+     * @param csvInputStream
+     * @param selectColumnNames
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static DataSet loadCSV(final Class<?> entityClass, final InputStream csvInputStream, final Collection<String> selectColumnNames)
+            throws UncheckedIOException {
+        return loadCSV(entityClass, csvInputStream, selectColumnNames, 0, Long.MAX_VALUE);
+    }
+
+    /**
+     *
+     * @param entityClass
+     * @param csvInputStream
+     * @param selectColumnNames
+     * @param offset
+     * @param count
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static DataSet loadCSV(final Class<?> entityClass, final InputStream csvInputStream, final Collection<String> selectColumnNames, final long offset,
+            final long count) throws UncheckedIOException {
+        return loadCSV(entityClass, csvInputStream, selectColumnNames, offset, count, Fn.<String[]> alwaysTrue());
+    }
+
+    /**
+     * Load the data from CSV.
+     *
+     * @param <E>
+     * @param entityClass
+     * @param csvInputStream
+     * @param selectColumnNames
+     * @param offset
+     * @param count
+     * @param filter
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     * @throws E the e
+     */
+    public static <E extends Exception> DataSet loadCSV(final Class<?> entityClass, final InputStream csvInputStream,
+            final Collection<String> selectColumnNames, final long offset, final long count, final Throwables.Predicate<String[], E> filter)
+            throws UncheckedIOException, E {
+        final Reader csvReader = new InputStreamReader(csvInputStream);
+        return loadCSV(entityClass, csvReader, selectColumnNames, offset, count, filter);
+    }
+
+    /**
+     *
+     * @param entityClass
+     * @param csvReader
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static DataSet loadCSV(final Class<?> entityClass, final Reader csvReader) throws UncheckedIOException {
+        return loadCSV(entityClass, csvReader, null);
+    }
+
+    /**
+     *
+     * @param entityClass
+     * @param csvReader
+     * @param selectColumnNames
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static DataSet loadCSV(final Class<?> entityClass, final Reader csvReader, final Collection<String> selectColumnNames) throws UncheckedIOException {
+        return loadCSV(entityClass, csvReader, selectColumnNames, 0, Long.MAX_VALUE);
+    }
+
+    /**
+     *
+     * @param entityClass
+     * @param csvReader
+     * @param selectColumnNames
+     * @param offset
+     * @param count
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static DataSet loadCSV(final Class<?> entityClass, final Reader csvReader, final Collection<String> selectColumnNames, long offset, long count)
+            throws UncheckedIOException {
+        return loadCSV(entityClass, csvReader, selectColumnNames, offset, count, Fn.<String[]> alwaysTrue());
+    }
+
+    /**
+     * Load the data from CSV.
+     *
+     * @param <E>
+     * @param entityClass
+     * @param csvReader
+     * @param selectColumnNames
+     * @param offset
+     * @param count
+     * @param filter
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     * @throws E the e
+     */
+    public static <E extends Exception> DataSet loadCSV(final Class<?> entityClass, final Reader csvReader, final Collection<String> selectColumnNames,
+            long offset, long count, final Throwables.Predicate<String[], E> filter) throws UncheckedIOException, E {
+        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
+
+        final BufferedReader br = csvReader instanceof BufferedReader ? (BufferedReader) csvReader : Objectory.createBufferedReader(csvReader);
+        final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+
+        try {
+            List<String> tmp = new ArrayList<>();
+            String line = br.readLine();
+            jsonParser.readString(tmp, line, jdc);
+            final String[] titles = tmp.toArray(new String[tmp.size()]);
+
+            final int columnCount = titles.length;
+            final Type<?>[] columnTypes = new Type<?>[columnCount];
+            final List<String> columnNameList = new ArrayList<>(selectColumnNames == null ? columnCount : selectColumnNames.size());
+            final List<List<Object>> columnList = new ArrayList<>(selectColumnNames == null ? columnCount : selectColumnNames.size());
+            final Set<String> selectPropNameSet = selectColumnNames == null ? null : N.newHashSet(selectColumnNames);
+
+            for (int i = 0; i < columnCount; i++) {
+                if (selectPropNameSet == null || selectPropNameSet.remove(titles[i])) {
+                    PropInfo propInfo = entityInfo.getPropInfo(titles[i]);
+
+                    if (propInfo == null && selectPropNameSet != null) {
+                        throw new IllegalArgumentException(titles[i] + " is not defined in entity class: " + ClassUtil.getCanonicalClassName(entityClass));
+                    }
+
+                    if (propInfo != null) {
+                        columnTypes[i] = propInfo.jsonXmlType;
+                        columnNameList.add(titles[i]);
+                        columnList.add(new ArrayList<>());
+                    }
+                }
+            }
+
+            if (selectPropNameSet != null && selectPropNameSet.size() > 0) {
+                throw new IllegalArgumentException(selectColumnNames + " are not included in titles: " + N.toString(titles));
+            }
+
+            final String[] strs = new String[titles.length];
+
+            while (offset-- > 0 && br.readLine() != null) {
+            }
+
+            while (count > 0 && (line = br.readLine()) != null) {
+                jsonParser.readString(strs, line, jdc);
+
+                if (filter != null && filter.test(strs) == false) {
+                    continue;
+                }
+
+                for (int i = 0, columnIndex = 0; i < columnCount; i++) {
+                    if (columnTypes[i] != null) {
+                        columnList.get(columnIndex++).add(columnTypes[i].valueOf(strs[i]));
+                    }
+                }
+
+                N.fill(strs, null);
+
+                count--;
+            }
+
+            return new RowDataSet(columnNameList, columnList);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } finally {
+            if (br != csvReader) {
+                Objectory.recycle(br);
+            }
+        }
+    }
+
+    /**
+     *
+     * @param csvFile
+     * @param columnTypeMap
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    @SuppressWarnings("rawtypes")
+    public static DataSet loadCSV(final File csvFile, final Map<String, ? extends Type> columnTypeMap) throws UncheckedIOException {
+        return loadCSV(csvFile, 0, Long.MAX_VALUE, columnTypeMap);
+    }
+
+    /**
+     *
+     * @param csvFile
+     * @param offset
+     * @param count
+     * @param columnTypeMap
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    @SuppressWarnings("rawtypes")
+    public static DataSet loadCSV(final File csvFile, final long offset, final long count, final Map<String, ? extends Type> columnTypeMap)
+            throws UncheckedIOException {
+        return loadCSV(csvFile, offset, count, Fn.<String[]> alwaysTrue(), columnTypeMap);
+    }
+
+    /**
+     * Load the data from CSV.
+     *
+     * @param <E>
+     * @param csvFile
+     * @param offset
+     * @param count
+     * @param filter
+     * @param columnTypeMap
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     * @throws E the e
+     */
+    @SuppressWarnings("rawtypes")
+    public static <E extends Exception> DataSet loadCSV(final File csvFile, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
+            final Map<String, ? extends Type> columnTypeMap) throws UncheckedIOException, E {
+        InputStream csvInputStream = null;
+
+        try {
+            csvInputStream = new FileInputStream(csvFile);
+
+            return loadCSV(csvInputStream, offset, count, filter, columnTypeMap);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } finally {
+            IOUtil.closeQuietly(csvInputStream);
+        }
+    }
+
+    /**
+     *
+     * @param csvInputStream
+     * @param columnTypeMap
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    @SuppressWarnings("rawtypes")
+    public static DataSet loadCSV(final InputStream csvInputStream, final Map<String, ? extends Type> columnTypeMap) throws UncheckedIOException {
+        return loadCSV(csvInputStream, 0, Long.MAX_VALUE, columnTypeMap);
+    }
+
+    /**
+     *
+     * @param csvInputStream
+     * @param offset
+     * @param count
+     * @param columnTypeMap
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    @SuppressWarnings("rawtypes")
+    public static DataSet loadCSV(final InputStream csvInputStream, final long offset, final long count, final Map<String, ? extends Type> columnTypeMap)
+            throws UncheckedIOException {
+        return loadCSV(csvInputStream, offset, count, Fn.<String[]> alwaysTrue(), columnTypeMap);
+    }
+
+    /**
+     * Load the data from CSV.
+     *
+     * @param <E>
+     * @param csvInputStream
+     * @param offset
+     * @param count
+     * @param filter
+     * @param columnTypeMap
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     * @throws E the e
+     */
+    @SuppressWarnings("rawtypes")
+    public static <E extends Exception> DataSet loadCSV(final InputStream csvInputStream, final long offset, final long count,
+            final Throwables.Predicate<String[], E> filter, final Map<String, ? extends Type> columnTypeMap) throws UncheckedIOException, E {
+        final Reader csvReader = new InputStreamReader(csvInputStream);
+
+        return loadCSV(csvReader, offset, count, filter, columnTypeMap);
+    }
+
+    /**
+     *
+     * @param csvReader
+     * @param columnTypeMap
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    @SuppressWarnings("rawtypes")
+    public static DataSet loadCSV(final Reader csvReader, final Map<String, ? extends Type> columnTypeMap) throws UncheckedIOException {
+        return loadCSV(csvReader, 0, Long.MAX_VALUE, columnTypeMap);
+    }
+
+    /**
+     *
+     * @param csvReader
+     * @param offset
+     * @param count
+     * @param columnTypeMap
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    @SuppressWarnings("rawtypes")
+    public static DataSet loadCSV(final Reader csvReader, long offset, long count, final Map<String, ? extends Type> columnTypeMap)
+            throws UncheckedIOException {
+        return loadCSV(csvReader, offset, count, Fn.<String[]> alwaysTrue(), columnTypeMap);
+    }
+
+    /**
+     * Load the data from CSV.
+     *
+     * @param <E>
+     * @param csvReader
+     * @param offset
+     * @param count
+     * @param filter
+     * @param columnTypeMap
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     * @throws E the e
+     */
+    @SuppressWarnings("rawtypes")
+    public static <E extends Exception> DataSet loadCSV(final Reader csvReader, long offset, long count, final Throwables.Predicate<String[], E> filter,
+            final Map<String, ? extends Type> columnTypeMap) throws UncheckedIOException, E {
+        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
+
+        if (N.isNullOrEmpty(columnTypeMap)) {
+            throw new IllegalArgumentException("columnTypeMap can't be null or empty");
+        }
+
+        final BufferedReader br = csvReader instanceof BufferedReader ? (BufferedReader) csvReader : Objectory.createBufferedReader(csvReader);
+
+        try {
+            List<String> tmp = new ArrayList<>();
+            String line = br.readLine();
+            jsonParser.readString(tmp, line, jdc);
+            final String[] titles = tmp.toArray(new String[tmp.size()]);
+
+            final int columnCount = titles.length;
+            final Type<?>[] columnTypes = new Type<?>[columnCount];
+            final List<String> columnNameList = new ArrayList<>(columnTypeMap.size());
+            final List<List<Object>> columnList = new ArrayList<>(columnTypeMap.size());
+
+            for (int i = 0; i < columnCount; i++) {
+                if (columnTypeMap.containsKey(titles[i])) {
+                    columnTypes[i] = columnTypeMap.get(titles[i]);
+                    columnNameList.add(titles[i]);
+                    columnList.add(new ArrayList<>());
+                }
+            }
+
+            if (columnNameList.size() != columnTypeMap.size()) {
+                final List<String> keys = new ArrayList<>(columnTypeMap.keySet());
+                keys.removeAll(columnNameList);
+                throw new IllegalArgumentException(keys + " are not included in titles: " + N.toString(titles));
+            }
+
+            final String[] strs = new String[titles.length];
+
+            while (offset-- > 0 && br.readLine() != null) {
+            }
+
+            while (count > 0 && (line = br.readLine()) != null) {
+                jsonParser.readString(strs, line, jdc);
+
+                if (filter != null && filter.test(strs) == false) {
+                    continue;
+                }
+
+                for (int i = 0, columnIndex = 0; i < columnCount; i++) {
+                    if (columnTypes[i] != null) {
+                        columnList.get(columnIndex++).add(columnTypes[i].valueOf(strs[i]));
+                    }
+                }
+
+                N.fill(strs, null);
+
+                count--;
+            }
+
+            return new RowDataSet(columnNameList, columnList);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } finally {
+            if (br != csvReader) {
+                Objectory.recycle(br);
+            }
+        }
+    }
+
+    /**
+     *
+     * @param csvFile
+     * @param columnTypeList
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    @SuppressWarnings("rawtypes")
+    public static DataSet loadCSV(final File csvFile, final List<? extends Type> columnTypeList) throws UncheckedIOException {
+        return loadCSV(csvFile, 0, Long.MAX_VALUE, columnTypeList);
+    }
+
+    /**
+     *
+     * @param csvFile
+     * @param offset
+     * @param count
+     * @param columnTypeList
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    @SuppressWarnings("rawtypes")
+    public static DataSet loadCSV(final File csvFile, final long offset, final long count, final List<? extends Type> columnTypeList)
+            throws UncheckedIOException {
+        return loadCSV(csvFile, offset, count, Fn.<String[]> alwaysTrue(), columnTypeList);
+    }
+
+    /**
+     * Load the data from CSV.
+     *
+     * @param <E>
+     * @param csvFile
+     * @param offset
+     * @param count
+     * @param filter
+     * @param columnTypeList set the column type to null to skip the column in CSV.
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     * @throws E the e
+     */
+    @SuppressWarnings("rawtypes")
+    public static <E extends Exception> DataSet loadCSV(final File csvFile, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
+            final List<? extends Type> columnTypeList) throws UncheckedIOException, E {
+        InputStream csvInputStream = null;
+
+        try {
+            csvInputStream = new FileInputStream(csvFile);
+
+            return loadCSV(csvInputStream, offset, count, filter, columnTypeList);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } finally {
+            IOUtil.closeQuietly(csvInputStream);
+        }
+    }
+
+    /**
+     *
+     * @param csvInputStream
+     * @param columnTypeList
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    @SuppressWarnings("rawtypes")
+    public static DataSet loadCSV(final InputStream csvInputStream, final List<? extends Type> columnTypeList) throws UncheckedIOException {
+        return loadCSV(csvInputStream, 0, Long.MAX_VALUE, columnTypeList);
+    }
+
+    /**
+     *
+     * @param csvInputStream
+     * @param offset
+     * @param count
+     * @param columnTypeList
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    @SuppressWarnings("rawtypes")
+    public static DataSet loadCSV(final InputStream csvInputStream, final long offset, final long count, final List<? extends Type> columnTypeList)
+            throws UncheckedIOException {
+        return loadCSV(csvInputStream, offset, count, Fn.<String[]> alwaysTrue(), columnTypeList);
+    }
+
+    /**
+     * Load the data from CSV.
+     *
+     * @param <E>
+     * @param csvInputStream
+     * @param offset
+     * @param count
+     * @param filter
+     * @param columnTypeList set the column type to null to skip the column in CSV.
+     * @return
+     * @throws E the e
+     */
+    @SuppressWarnings("rawtypes")
+    public static <E extends Exception> DataSet loadCSV(final InputStream csvInputStream, final long offset, final long count,
+            final Throwables.Predicate<String[], E> filter, final List<? extends Type> columnTypeList) throws E {
+        final Reader csvReader = new InputStreamReader(csvInputStream);
+
+        return loadCSV(csvReader, offset, count, filter, columnTypeList);
+    }
+
+    /**
+     *
+     * @param csvReader
+     * @param columnTypeList
+     * @return
+     */
+    @SuppressWarnings("rawtypes")
+    public static DataSet loadCSV(final Reader csvReader, final List<? extends Type> columnTypeList) {
+        return loadCSV(csvReader, 0, Long.MAX_VALUE, columnTypeList);
+    }
+
+    /**
+     *
+     * @param csvReader
+     * @param offset
+     * @param count
+     * @param columnTypeList
+     * @return
+     */
+    @SuppressWarnings("rawtypes")
+    public static DataSet loadCSV(final Reader csvReader, long offset, long count, final List<? extends Type> columnTypeList) {
+        return loadCSV(csvReader, offset, count, Fn.<String[]> alwaysTrue(), columnTypeList);
+    }
+
+    /**
+     * Load the data from CSV.
+     *
+     * @param <E>
+     * @param csvReader
+     * @param offset
+     * @param count
+     * @param filter
+     * @param columnTypeList set the column type to null to skip the column in CSV.
+     * @return
+     * @throws UncheckedIOException the unchecked IO exception
+     * @throws E the e
+     */
+    @SuppressWarnings("rawtypes")
+    public static <E extends Exception> DataSet loadCSV(final Reader csvReader, long offset, long count, final Throwables.Predicate<String[], E> filter,
+            final List<? extends Type> columnTypeList) throws UncheckedIOException, E {
+        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
+
+        if (N.isNullOrEmpty(columnTypeList)) {
+            throw new IllegalArgumentException("columnTypeList can't be null or empty");
+        }
+
+        final BufferedReader br = csvReader instanceof BufferedReader ? (BufferedReader) csvReader : Objectory.createBufferedReader(csvReader);
+        final Type<?>[] columnTypes = columnTypeList.toArray(new Type[columnTypeList.size()]);
+
+        try {
+            List<String> tmp = new ArrayList<>();
+            String line = br.readLine();
+            jsonParser.readString(tmp, line, jdc);
+            final String[] titles = tmp.toArray(new String[tmp.size()]);
+
+            final int columnCount = titles.length;
+            final List<String> columnNameList = new ArrayList<>(columnCount);
+            final List<List<Object>> columnList = new ArrayList<>();
+
+            for (int i = 0; i < columnCount; i++) {
+                if (columnTypes[i] != null) {
+                    columnNameList.add(titles[i]);
+                    columnList.add(new ArrayList<>());
+                }
+            }
+
+            final String[] strs = new String[titles.length];
+
+            while (offset-- > 0 && br.readLine() != null) {
+            }
+
+            while (count > 0 && (line = br.readLine()) != null) {
+                jsonParser.readString(strs, line, jdc);
+
+                if (filter != null && filter.test(strs) == false) {
+                    continue;
+                }
+
+                for (int i = 0, columnIndex = 0; i < columnCount; i++) {
+                    if (columnTypes[i] != null) {
+                        columnList.get(columnIndex++).add(columnTypes[i].valueOf(strs[i]));
+                    }
+                }
+
+                N.fill(strs, null);
+
+                count--;
+            }
+
+            return new RowDataSet(columnNameList, columnList);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } finally {
+            if (br != csvReader) {
                 Objectory.recycle(br);
             }
         }
@@ -518,7 +976,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      */
     public static long exportCSV(final File out, final Connection conn, final String querySQL) throws UncheckedSQLException, UncheckedIOException {
-        return exportCSV(out, conn, querySQL, 0, Integer.MAX_VALUE, true, true);
+        return exportCSV(out, conn, querySQL, 0, Long.MAX_VALUE, true, true);
     }
 
     /**
@@ -535,7 +993,7 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static long exportCSV(final File out, final Connection conn, final String querySQL, final int offset, final int count, final boolean writeTitle,
+    public static long exportCSV(final File out, final Connection conn, final String querySQL, final long offset, final long count, final boolean writeTitle,
             final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
         return exportCSV(out, conn, querySQL, null, offset, count, writeTitle, quoted);
     }
@@ -555,8 +1013,8 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static long exportCSV(final File out, final Connection conn, final String querySQL, final Collection<String> selectColumnNames, final int offset,
-            final int count, final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
+    public static long exportCSV(final File out, final Connection conn, final String querySQL, final Collection<String> selectColumnNames, final long offset,
+            final long count, final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
         final ParsedSql sql = ParsedSql.parse(querySQL);
         PreparedStatement stmt = null;
 
@@ -584,7 +1042,7 @@ public final class CSVUtil {
      */
     @SuppressWarnings("unchecked")
     public static long exportCSV(final File out, final PreparedStatement stmt) throws UncheckedSQLException, UncheckedIOException {
-        return exportCSV(out, stmt, 0, Integer.MAX_VALUE, true, true);
+        return exportCSV(out, stmt, 0, Long.MAX_VALUE, true, true);
     }
 
     /**
@@ -600,7 +1058,7 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static long exportCSV(final File out, final PreparedStatement stmt, final int offset, final int count, final boolean writeTitle,
+    public static long exportCSV(final File out, final PreparedStatement stmt, final long offset, final long count, final boolean writeTitle,
             final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
         return exportCSV(out, stmt, null, offset, count, writeTitle, quoted);
     }
@@ -619,7 +1077,7 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static long exportCSV(final File out, final PreparedStatement stmt, final Collection<String> selectColumnNames, final int offset, final int count,
+    public static long exportCSV(final File out, final PreparedStatement stmt, final Collection<String> selectColumnNames, final long offset, final long count,
             final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
         ResultSet rs = null;
 
@@ -645,7 +1103,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      */
     public static long exportCSV(final File out, final ResultSet rs) throws UncheckedSQLException, UncheckedIOException {
-        return exportCSV(out, rs, 0, Integer.MAX_VALUE, true, true);
+        return exportCSV(out, rs, 0, Long.MAX_VALUE, true, true);
     }
 
     /**
@@ -661,7 +1119,7 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static long exportCSV(final File out, final ResultSet rs, final int offset, final int count, final boolean writeTitle, final boolean quoted)
+    public static long exportCSV(final File out, final ResultSet rs, final long offset, final long count, final boolean writeTitle, final boolean quoted)
             throws UncheckedSQLException, UncheckedIOException {
         return exportCSV(out, rs, null, offset, count, writeTitle, quoted);
     }
@@ -679,7 +1137,7 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static long exportCSV(final File out, final ResultSet rs, final Collection<String> selectColumnNames, final int offset, final int count,
+    public static long exportCSV(final File out, final ResultSet rs, final Collection<String> selectColumnNames, final long offset, final long count,
             final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
         OutputStream os = null;
 
@@ -712,7 +1170,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      */
     public static long exportCSV(final OutputStream out, final ResultSet rs) throws UncheckedSQLException, UncheckedIOException {
-        return exportCSV(out, rs, 0, Integer.MAX_VALUE, true, true);
+        return exportCSV(out, rs, 0, Long.MAX_VALUE, true, true);
     }
 
     /**
@@ -728,8 +1186,8 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static long exportCSV(final OutputStream out, final ResultSet rs, final int offset, final int count, final boolean writeTitle, final boolean quoted)
-            throws UncheckedSQLException, UncheckedIOException {
+    public static long exportCSV(final OutputStream out, final ResultSet rs, final long offset, final long count, final boolean writeTitle,
+            final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
         return exportCSV(out, rs, null, offset, count, writeTitle, quoted);
     }
 
@@ -747,7 +1205,7 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static long exportCSV(final OutputStream out, final ResultSet rs, final Collection<String> selectColumnNames, final int offset, final int count,
+    public static long exportCSV(final OutputStream out, final ResultSet rs, final Collection<String> selectColumnNames, final long offset, final long count,
             final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
         Writer writer = null;
 
@@ -774,7 +1232,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      */
     public static long exportCSV(final Writer out, final ResultSet rs) throws UncheckedSQLException, UncheckedIOException {
-        return exportCSV(out, rs, 0, Integer.MAX_VALUE, true, true);
+        return exportCSV(out, rs, 0, Long.MAX_VALUE, true, true);
     }
 
     /**
@@ -790,7 +1248,7 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static long exportCSV(final Writer out, final ResultSet rs, final int offset, final int count, final boolean writeTitle, final boolean quoted)
+    public static long exportCSV(final Writer out, final ResultSet rs, final long offset, final long count, final boolean writeTitle, final boolean quoted)
             throws UncheckedSQLException, UncheckedIOException {
         return exportCSV(out, rs, null, offset, count, writeTitle, quoted);
     }
@@ -809,7 +1267,7 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static long exportCSV(final Writer out, final ResultSet rs, final Collection<String> selectColumnNames, int offset, final int count,
+    public static long exportCSV(final Writer out, final ResultSet rs, final Collection<String> selectColumnNames, long offset, final long count,
             final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
 
@@ -938,7 +1396,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final File file, final Connection conn, final String insertSQL, final List<? extends Type> columnTypeList)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, 0, Integer.MAX_VALUE, true, conn, insertSQL, 200, 0, columnTypeList);
+        return importCSV(file, 0, Long.MAX_VALUE, true, conn, insertSQL, 200, 0, columnTypeList);
     }
 
     /**
@@ -957,7 +1415,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static long importCSV(final File file, final int offset, final int count, final boolean skipTitle, final Connection conn, final String insertSQL,
+    public static long importCSV(final File file, final long offset, final long count, final boolean skipTitle, final Connection conn, final String insertSQL,
             final int batchSize, final int batchInterval, final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException {
         return importCSV(file, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), conn, insertSQL, batchSize, batchInterval, columnTypeList);
     }
@@ -982,7 +1440,7 @@ public final class CSVUtil {
      * @throws E the e
      */
     @SuppressWarnings("rawtypes")
-    public static <E extends Exception> long importCSV(final File file, final int offset, final int count, final boolean skipTitle,
+    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final boolean skipTitle,
             final Throwables.Predicate<String[], E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
             final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException, E {
         PreparedStatement stmt = null;
@@ -1010,7 +1468,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final File file, final PreparedStatement stmt, final List<? extends Type> columnTypeList)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, 0, Integer.MAX_VALUE, true, stmt, 200, 0, columnTypeList);
+        return importCSV(file, 0, Long.MAX_VALUE, true, stmt, 200, 0, columnTypeList);
     }
 
     /**
@@ -1028,7 +1486,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static long importCSV(final File file, int offset, final int count, final boolean skipTitle, final PreparedStatement stmt, final int batchSize,
+    public static long importCSV(final File file, long offset, final long count, final boolean skipTitle, final PreparedStatement stmt, final int batchSize,
             final int batchInterval, final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException {
         return importCSV(file, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, columnTypeList);
     }
@@ -1052,7 +1510,7 @@ public final class CSVUtil {
      * @throws E the e
      */
     @SuppressWarnings("rawtypes")
-    public static <E extends Exception> long importCSV(final File file, final int offset, final int count, final boolean skipTitle,
+    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final boolean skipTitle,
             final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
             final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException, E {
         Reader reader = null;
@@ -1080,7 +1538,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final InputStream is, final PreparedStatement stmt, final List<? extends Type> columnTypeList)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(is, 0, Integer.MAX_VALUE, true, stmt, 200, 0, columnTypeList);
+        return importCSV(is, 0, Long.MAX_VALUE, true, stmt, 200, 0, columnTypeList);
     }
 
     /**
@@ -1098,8 +1556,8 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static long importCSV(final InputStream is, int offset, final int count, final boolean skipTitle, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException {
+    public static long importCSV(final InputStream is, long offset, final long count, final boolean skipTitle, final PreparedStatement stmt,
+            final int batchSize, final int batchInterval, final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException {
         return importCSV(is, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, columnTypeList);
     }
 
@@ -1122,7 +1580,7 @@ public final class CSVUtil {
      * @throws E the e
      */
     @SuppressWarnings("rawtypes")
-    public static <E extends Exception> long importCSV(final InputStream is, final int offset, final int count, final boolean skipTitle,
+    public static <E extends Exception> long importCSV(final InputStream is, final long offset, final long count, final boolean skipTitle,
             final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
             final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException, E {
         final Reader reader = new InputStreamReader(is);
@@ -1142,7 +1600,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final Reader reader, final PreparedStatement stmt, final List<? extends Type> columnTypeList)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(reader, 0, Integer.MAX_VALUE, true, stmt, 200, 0, columnTypeList);
+        return importCSV(reader, 0, Long.MAX_VALUE, true, stmt, 200, 0, columnTypeList);
     }
 
     /**
@@ -1160,7 +1618,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static long importCSV(final Reader reader, int offset, final int count, final boolean skipTitle, final PreparedStatement stmt, final int batchSize,
+    public static long importCSV(final Reader reader, long offset, final long count, final boolean skipTitle, final PreparedStatement stmt, final int batchSize,
             final int batchInterval, final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException {
         return importCSV(reader, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, columnTypeList);
     }
@@ -1184,7 +1642,7 @@ public final class CSVUtil {
      * @throws E the e
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static <E extends Exception> long importCSV(final Reader reader, int offset, final int count, final boolean skipTitle,
+    public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count, final boolean skipTitle,
             final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
             final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
@@ -1279,7 +1737,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final File file, final Connection conn, final String insertSQL, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, 0, Integer.MAX_VALUE, conn, insertSQL, 200, 0, columnTypeMap);
+        return importCSV(file, 0, Long.MAX_VALUE, conn, insertSQL, 200, 0, columnTypeMap);
     }
 
     /**
@@ -1297,7 +1755,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      */
     @SuppressWarnings("rawtypes")
-    public static long importCSV(final File file, final int offset, final int count, final Connection conn, final String insertSQL, final int batchSize,
+    public static long importCSV(final File file, final long offset, final long count, final Connection conn, final String insertSQL, final int batchSize,
             final int batchInterval, final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, UncheckedIOException {
         return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), conn, insertSQL, batchSize, batchInterval, columnTypeMap);
     }
@@ -1320,7 +1778,7 @@ public final class CSVUtil {
      * @throws E the e
      */
     @SuppressWarnings("rawtypes")
-    public static <E extends Exception> long importCSV(final File file, final int offset, final int count, final Throwables.Predicate<String[], E> filter,
+    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
             final Connection conn, final String insertSQL, final int batchSize, final int batchInterval, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException, E {
         PreparedStatement stmt = null;
@@ -1348,7 +1806,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final File file, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, 0, Integer.MAX_VALUE, stmt, 200, 0, columnTypeMap);
+        return importCSV(file, 0, Long.MAX_VALUE, stmt, 200, 0, columnTypeMap);
     }
 
     /**
@@ -1365,8 +1823,8 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      */
     @SuppressWarnings("rawtypes")
-    public static long importCSV(final File file, final int offset, final int count, final PreparedStatement stmt, final int batchSize, final int batchInterval,
-            final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, UncheckedIOException {
+    public static long importCSV(final File file, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
+            final int batchInterval, final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, UncheckedIOException {
         return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, columnTypeMap);
     }
 
@@ -1388,7 +1846,7 @@ public final class CSVUtil {
      * @throws E the e
      */
     @SuppressWarnings("rawtypes")
-    public static <E extends Exception> long importCSV(final File file, final int offset, final int count, final Throwables.Predicate<String[], E> filter,
+    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
             final PreparedStatement stmt, final int batchSize, final int batchInterval, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException, E {
         Reader reader = null;
@@ -1416,7 +1874,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final InputStream is, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(is, 0, Integer.MAX_VALUE, stmt, 200, 0, columnTypeMap);
+        return importCSV(is, 0, Long.MAX_VALUE, stmt, 200, 0, columnTypeMap);
     }
 
     /**
@@ -1433,7 +1891,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      */
     @SuppressWarnings("rawtypes")
-    public static long importCSV(final InputStream is, final int offset, final int count, final PreparedStatement stmt, final int batchSize,
+    public static long importCSV(final InputStream is, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
             final int batchInterval, final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, UncheckedIOException {
         return importCSV(is, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, columnTypeMap);
     }
@@ -1456,7 +1914,7 @@ public final class CSVUtil {
      * @throws E the e
      */
     @SuppressWarnings("rawtypes")
-    public static <E extends Exception> long importCSV(final InputStream is, int offset, final int count, final Throwables.Predicate<String[], E> filter,
+    public static <E extends Exception> long importCSV(final InputStream is, long offset, final long count, final Throwables.Predicate<String[], E> filter,
             final PreparedStatement stmt, final int batchSize, final int batchInterval, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException, E {
         final Reader reader = new InputStreamReader(is);
@@ -1475,7 +1933,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final Reader reader, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(reader, 0, Integer.MAX_VALUE, stmt, 200, 0, columnTypeMap);
+        return importCSV(reader, 0, Long.MAX_VALUE, stmt, 200, 0, columnTypeMap);
     }
 
     /**
@@ -1492,7 +1950,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static long importCSV(final Reader reader, int offset, final int count, final PreparedStatement stmt, final int batchSize, final int batchInterval,
+    public static long importCSV(final Reader reader, long offset, final long count, final PreparedStatement stmt, final int batchSize, final int batchInterval,
             final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, UncheckedIOException {
         return importCSV(reader, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, columnTypeMap);
     }
@@ -1515,7 +1973,7 @@ public final class CSVUtil {
      * @throws E the e
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static <E extends Exception> long importCSV(final Reader reader, int offset, final int count, final Throwables.Predicate<String[], E> filter,
+    public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count, final Throwables.Predicate<String[], E> filter,
             final PreparedStatement stmt, final int batchSize, final int batchInterval, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
@@ -1620,7 +2078,7 @@ public final class CSVUtil {
     public static long importCSV(final File file, final Connection conn, final String insertSQL,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, 0, Integer.MAX_VALUE, conn, insertSQL, 200, 0, stmtSetter);
+        return importCSV(file, 0, Long.MAX_VALUE, conn, insertSQL, 200, 0, stmtSetter);
     }
 
     /**
@@ -1637,7 +2095,7 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static long importCSV(final File file, final int offset, final int count, final Connection conn, final String insertSQL, final int batchSize,
+    public static long importCSV(final File file, final long offset, final long count, final Connection conn, final String insertSQL, final int batchSize,
             final int batchInterval, final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
         return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), conn, insertSQL, batchSize, batchInterval, stmtSetter);
@@ -1660,7 +2118,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      * @throws E the e
      */
-    public static <E extends Exception> long importCSV(final File file, final int offset, final int count, final Throwables.Predicate<String[], E> filter,
+    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
             final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException, E {
@@ -1689,7 +2147,7 @@ public final class CSVUtil {
     public static long importCSV(final File file, final PreparedStatement stmt,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, 0, Integer.MAX_VALUE, stmt, 200, 0, stmtSetter);
+        return importCSV(file, 0, Long.MAX_VALUE, stmt, 200, 0, stmtSetter);
     }
 
     /**
@@ -1705,8 +2163,8 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static long importCSV(final File file, final int offset, final int count, final PreparedStatement stmt, final int batchSize, final int batchInterval,
-            final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
+    public static long importCSV(final File file, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
+            final int batchInterval, final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
         return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, stmtSetter);
     }
@@ -1728,7 +2186,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      * @throws E the e
      */
-    public static <E extends Exception> long importCSV(final File file, final int offset, final int count, final Throwables.Predicate<String[], E> filter,
+    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
             final PreparedStatement stmt, final int batchSize, final int batchInterval,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException, E {
@@ -1757,7 +2215,7 @@ public final class CSVUtil {
     public static long importCSV(final InputStream is, final PreparedStatement stmt,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(is, 0, Integer.MAX_VALUE, stmt, 200, 0, stmtSetter);
+        return importCSV(is, 0, Long.MAX_VALUE, stmt, 200, 0, stmtSetter);
     }
 
     /**
@@ -1773,7 +2231,7 @@ public final class CSVUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
-    public static long importCSV(final InputStream is, final int offset, final int count, final PreparedStatement stmt, final int batchSize,
+    public static long importCSV(final InputStream is, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
             final int batchInterval, final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
         return importCSV(is, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, stmtSetter);
@@ -1796,7 +2254,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      * @throws E the e
      */
-    public static <E extends Exception> long importCSV(final InputStream is, int offset, final int count, final Throwables.Predicate<String[], E> filter,
+    public static <E extends Exception> long importCSV(final InputStream is, long offset, final long count, final Throwables.Predicate<String[], E> filter,
             final PreparedStatement stmt, final int batchSize, final int batchInterval,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException, E {
@@ -1816,7 +2274,7 @@ public final class CSVUtil {
     public static long importCSV(final Reader reader, final PreparedStatement stmt,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(reader, 0, Integer.MAX_VALUE, stmt, 200, 0, stmtSetter);
+        return importCSV(reader, 0, Long.MAX_VALUE, stmt, 200, 0, stmtSetter);
     }
 
     /**
@@ -1833,7 +2291,7 @@ public final class CSVUtil {
      * @throws UncheckedIOException the unchecked IO exception
      */
     @SuppressWarnings({ "unchecked" })
-    public static long importCSV(final Reader reader, int offset, final int count, final PreparedStatement stmt, final int batchSize, final int batchInterval,
+    public static long importCSV(final Reader reader, long offset, final long count, final PreparedStatement stmt, final int batchSize, final int batchInterval,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
         return importCSV(reader, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, stmtSetter);
@@ -1857,7 +2315,7 @@ public final class CSVUtil {
      * @throws E the e
      */
     @SuppressWarnings({ "unchecked" })
-    public static <E extends Exception> long importCSV(final Reader reader, int offset, final int count, final Throwables.Predicate<String[], E> filter,
+    public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count, final Throwables.Predicate<String[], E> filter,
             final PreparedStatement stmt, final int batchSize, final int batchInterval,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException, E {
