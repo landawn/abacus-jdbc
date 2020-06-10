@@ -605,19 +605,19 @@ public class DaoTest {
         List<User> users3 = Stream.of(users).map(N::copy).toList();
 
         userDao.loadAllJoinEntities(users2);
-        System.out.println(users2);
+        users2.forEach(Fn.println());
 
         users2 = Stream.of(users).map(N::copy).toList();
         users3 = Stream.of(users).map(N::copy).toList();
 
         userDao.loadJoinEntitiesIfNull(users2);
-        System.out.println(users2);
+        users2.forEach(Fn.println());
 
         users2 = Stream.of(users).map(N::copy).toList();
         users3 = Stream.of(users).map(N::copy).toList();
 
         userDao.loadJoinEntities(users2, Device.class);
-        System.out.println(users2);
+        users2.forEach(Fn.println());
 
         users2 = Stream.of(users).map(N::copy).toList();
         users3 = Stream.of(users).map(N::copy).toList();
@@ -629,7 +629,7 @@ public class DaoTest {
         users3 = Stream.of(users).map(N::copy).toList();
 
         userDao.loadAllJoinEntities(users2, true);
-        System.out.println(users2);
+        users2.forEach(Fn.println());
 
         userDao.deleteJoinEntities(users3, Address.class);
         userDao.deleteJoinEntities(users, Device.class);
