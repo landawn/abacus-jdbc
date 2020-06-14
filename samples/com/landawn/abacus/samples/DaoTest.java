@@ -535,7 +535,7 @@ public class DaoTest {
 
     @Test
     @SuppressWarnings("deprecation")
-    public void crud_joinedBy() throws SQLException {
+    public void test_joinedBy() throws SQLException {
         N.println(userDao.targetEntityClass());
         N.println(userDao.targetDaoInterface());
         N.println(userDao.executor());
@@ -583,7 +583,7 @@ public class DaoTest {
     }
 
     @Test
-    public void crud_joinedBy_2() throws SQLException {
+    public void test_joinedBy_2() throws SQLException {
         final List<User> users = new ArrayList<>();
 
         for (int i = 0; i < 100; i++) {
@@ -644,7 +644,7 @@ public class DaoTest {
     }
 
     @Test
-    public void crud_many_to_many() throws SQLException {
+    public void test_many_to_many() throws SQLException {
 
         Employee employee = Employee.builder().employeeId(100).firstName("Forrest").lastName("Gump").build();
         employeeDao.insert(employee);
@@ -720,7 +720,7 @@ public class DaoTest {
     }
 
     @Test
-    public void crud_mergedEntity() throws SQLException {
+    public void test_mergedEntity() throws SQLException {
         Employee employee = Employee.builder().employeeId(100).firstName("Forrest").lastName("Gump").build();
         employeeDao.insert(employee);
 
