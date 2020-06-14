@@ -718,4 +718,45 @@ public class DaoTest {
         assertFalse(employeeProjectDao.exists(entityId));
         assertNull(employeeProjectDao.gett(entityId));
     }
+
+    @Test
+    public void crud_mergedEntity() throws SQLException {
+        Employee employee = Employee.builder().employeeId(100).firstName("Forrest").lastName("Gump").build();
+        employeeDao.insert(employee);
+
+        Project project = Project.builder().title("Project X").build();
+        projectDao.insert(project);
+
+        Project project2 = Project.builder().title("Project Y").build();
+        projectDao.insert(project2);
+
+        Project project3 = Project.builder().title("Project Z").build();
+        projectDao.insert(project3);
+
+        EmployeeProject employeeProject = EmployeeProject.builder().employeeId(employee.getEmployeeId()).projectId(project.getProjectId()).build();
+        EntityId entityId = employeeProjectDao.insert(employeeProject);
+        N.println(entityId);
+
+        employeeProject = EmployeeProject.builder().employeeId(employee.getEmployeeId()).projectId(project2.getProjectId()).build();
+        entityId = employeeProjectDao.insert(employeeProject);
+        N.println(entityId);
+
+        employeeProject = EmployeeProject.builder().employeeId(employee.getEmployeeId()).projectId(project3.getProjectId()).build();
+        entityId = employeeProjectDao.insert(employeeProject);
+        N.println(entityId);
+
+        employeeDao.loadJoinEntities(employee, Project.class, N.asList("title"));
+        System.out.println(employee);
+
+        List<Employee> employees = employeeDao.prepareQuery(
+                "select e.employee_id AS \"employeeId\", e.first_name AS \"firstName\", p.project_id AS \"projects.projectId\", p.title AS \"projects.title\" from employee e, employee_project ep left join project p on employee_id = ep.employee_id AND ep.project_id = p.project_id")
+                .query()
+                .toMergedEntities(Employee.class);
+
+        N.println(employees);
+
+        employeeDao.delete(CF.alwaysTrue());
+        projectDao.delete(CF.alwaysTrue());
+        employeeProjectDao.delete(CF.alwaysTrue());
+    }
 }
