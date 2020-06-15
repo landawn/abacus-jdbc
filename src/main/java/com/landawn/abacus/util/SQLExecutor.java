@@ -5837,14 +5837,14 @@ public class SQLExecutor {
             this.oneIdPropName = idPropNames.get(0);
             this.idPropNameList = ImmutableList.copyOf(idPropNames);
             this.idPropNameSet = ImmutableSet.copyOf(idPropNames);
-            this.defaultSelectPropNameList = ImmutableList.copyOf(SQLBuilder.getSelectPropNamesByClass(entityClass, false, null));
-            this.defaultUpdatePropNameList = ImmutableList.copyOf(SQLBuilder.getUpdatePropNamesByClass(entityClass, idPropNameSet));
+            this.defaultSelectPropNameList = ImmutableList.copyOf(SQLBuilder.getSelectPropNames(entityClass, false, null));
+            this.defaultUpdatePropNameList = ImmutableList.copyOf(SQLBuilder.getUpdatePropNames(entityClass, idPropNameSet));
             this.idCond = idPropNames.size() == 1 ? CF.eq(oneIdPropName) : CF.and(StreamEx.of(idPropNames).map(CF::eq).toList());
 
             this.sql_exists_by_id = this.prepareQuery(SQLBuilder._1_list, idCond).sql;
             this.sql_get_by_id = this.prepareQuery(defaultSelectPropNameList, idCond).sql;
-            this.sql_insert_with_id = this.prepareInsertSql(SQLBuilder.getInsertPropNamesByClass(entityClass, null));
-            this.sql_insert_without_id = this.prepareInsertSql(SQLBuilder.getInsertPropNamesByClass(entityClass, idPropNameSet));
+            this.sql_insert_with_id = this.prepareInsertSql(SQLBuilder.getInsertPropNames(entityClass, null));
+            this.sql_insert_without_id = this.prepareInsertSql(SQLBuilder.getInsertPropNames(entityClass, idPropNameSet));
             this.sql_update_by_id = this.prepareUpdateSql(defaultUpdatePropNameList);
             this.sql_delete_by_id = this.prepareDelete(idCond).sql;
 
@@ -5853,7 +5853,7 @@ public class SQLExecutor {
 
             final boolean isOneId = isNoId == false && idPropNameList.size() == 1;
 
-            final ImmutableMap<String, String> propColumnNameMap = SQLBuilder.getPropColumnNameMap(entityClass, namingPolicy);
+            final ImmutableMap<String, String> propColumnNameMap = ClassUtil.getProp2ColumnNameMap(entityClass, namingPolicy);
 
             returnColumnNames = isNoId ? N.EMPTY_STRING_ARRAY
                     : (isOneId ? Array.of(propColumnNameMap.get(oneIdPropName))

@@ -547,6 +547,7 @@ public final class Columns {
         }
     }
 
+    @FunctionalInterface
     public interface ColumnGetter<V> {
 
         ColumnGetter<Boolean> GET_BOOLEAN = (columnIndex, rs) -> rs.getBoolean(columnIndex);

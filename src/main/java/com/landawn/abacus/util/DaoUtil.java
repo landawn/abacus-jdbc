@@ -1330,7 +1330,7 @@ final class DaoUtil {
         final ParsedSql namedUpdateByIdSQL = N.isNullOrEmpty(sql_updateById) ? null : ParsedSql.parse(sql_updateById);
         final ParsedSql namedDeleteByIdSQL = N.isNullOrEmpty(sql_deleteById) ? null : ParsedSql.parse(sql_deleteById);
 
-        final ImmutableMap<String, String> propColumnNameMap = SQLBuilder.getPropColumnNameMap(entityClass, namingPolicy);
+        final ImmutableMap<String, String> propColumnNameMap = ClassUtil.getProp2ColumnNameMap(entityClass, namingPolicy);
 
         final String[] returnColumnNames = isNoId ? N.EMPTY_STRING_ARRAY
                 : (isOneId ? Array.of(propColumnNameMap.get(oneIdPropName))

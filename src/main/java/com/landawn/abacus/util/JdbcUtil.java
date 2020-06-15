@@ -1325,7 +1325,7 @@ public final class JdbcUtil {
     //    }
 
     public static ImmutableMap<String, String> getColumn2FieldNameMap(Class<?> entityClass) {
-        return ClassUtil.getColumn2FieldNameMap(entityClass);
+        return ClassUtil.getColumn2PropNameMap(entityClass);
     }
 
     /**
@@ -9098,7 +9098,7 @@ public final class JdbcUtil {
         default boolean refresh(final T entity) throws SQLException {
             final Class<?> cls = entity.getClass();
             final Collection<String> propNamesToRefresh = DirtyMarkerUtil.isDirtyMarker(cls) ? DirtyMarkerUtil.signedPropNames((DirtyMarker) entity)
-                    : SQLBuilder.getSelectPropNamesByClass(cls, false, null);
+                    : SQLBuilder.getSelectPropNames(cls, false, null);
 
             return refresh(entity, propNamesToRefresh);
         }
@@ -12257,7 +12257,7 @@ public final class JdbcUtil {
         default boolean refresh(final T entity) throws UncheckedSQLException {
             final Class<?> cls = entity.getClass();
             final Collection<String> propNamesToRefresh = DirtyMarkerUtil.isDirtyMarker(cls) ? DirtyMarkerUtil.signedPropNames((DirtyMarker) entity)
-                    : SQLBuilder.getSelectPropNamesByClass(cls, false, null);
+                    : SQLBuilder.getSelectPropNames(cls, false, null);
 
             return refresh(entity, propNamesToRefresh);
         }
@@ -14459,7 +14459,7 @@ public final class JdbcUtil {
             map = new EnumMap<>(NamingPolicy.class);
 
             for (NamingPolicy np : NamingPolicy.values()) {
-                final ImmutableMap<String, String> propColumnNameMap = SQLBuilder.getPropColumnNameMap(entityClass, namingPolicy);
+                final ImmutableMap<String, String> propColumnNameMap = ClassUtil.getProp2ColumnNameMap(entityClass, namingPolicy);
 
                 final ImmutableMap<String, String> columnPropNameMap = EntryStream.of(propColumnNameMap)
                         .inversed()
