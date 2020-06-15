@@ -40,6 +40,7 @@ import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Profiler;
 import com.landawn.abacus.util.SQLBuilder.NSC;
+import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLParser;
 import com.landawn.abacus.util.SQLTransaction;
 import com.landawn.abacus.util.stream.IntStream;
@@ -748,10 +749,15 @@ public class DaoTest {
         employeeDao.loadJoinEntities(employee, Project.class, N.asList("title"));
         System.out.println(employee);
 
-        List<Employee> employees = employeeDao.prepareQuery(
-                "select e.employee_id AS \"employeeId\", e.first_name AS \"firstName\", p.project_id AS \"projects.projectId\", p.title AS \"projects.title\" from employee e, employee_project ep left join project p on employee_id = ep.employee_id AND ep.project_id = p.project_id")
-                .query()
-                .toMergedEntities(Employee.class);
+        // String query = "select e.employee_id AS \"employeeId\", e.first_name AS \"firstName\", p.project_id AS \"projects.projectId\", p.title AS \"projects.title\" from employee e, employee_project ep left join project p on employee_id = ep.employee_id AND ep.project_id = p.project_id";
+
+        String query = PSC.select(Employee.class, true)
+                .from("employee e, employee_project ep")
+                .leftJoin("project")
+                .on("employee_id = ep.employee_id AND ep.project_id = project.project_id")
+                .sql();
+
+        List<Employee> employees = employeeDao.prepareQuery(query).query().toMergedEntities(Employee.class);
 
         N.println(employees);
 

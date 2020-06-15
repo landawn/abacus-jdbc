@@ -1,3 +1,9 @@
+### 2.5.3
+
+* Refactoring `SQLBuilder`.
+* Improvements and bug fix.
+
+
 ### 2.5.2
 
 * Improvements and bug fix.
