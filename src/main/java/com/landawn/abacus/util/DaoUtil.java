@@ -3072,15 +3072,38 @@ final class DaoUtil {
 
                     if (sqlAnno.annotationType().equals(Dao.Select.class) || sqlAnno.annotationType().equals(Dao.NamedSelect.class)
                             || (isCall && !isUpdateReturnType)) {
+
                         final Throwables.BiFunction<AbstractPreparedQuery, Object[], T, Exception> queryFunc = createQueryFunctionByMethod(m,
                                 hasRowMapperOrResultExtractor, hasRowFilter, op, fullClassMethodName);
 
                         // Getting ClassCastException. Not sure why query result is being casted Dao. It seems there is a bug in JDk compiler.
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
 
+                        int tmpFetchSize = fetchSize;
+
+                        if (fetchSize <= 0) {
+                            if (op == OP.exists || isExistsQuery(m, op, fullClassMethodName) || op == OP.findFirst || op == OP.queryForSingle) {
+                                tmpFetchSize = 1;
+                            } else if (op == OP.get || op == OP.queryForUnique) {
+                                tmpFetchSize = 2;
+                            } else if (op == OP.list || isListQuery(m, op, fullClassMethodName) || op == OP.query || op == OP.stream) {
+                                // skip.
+                            } else if (lastParamType != null
+                                    && (ResultExtractor.class.isAssignableFrom(lastParamType) || BiResultExtractor.class.isAssignableFrom(lastParamType))) {
+                                // skip.
+                            } else if (Stream.class.isAssignableFrom(returnType) || ExceptionalStream.class.isAssignableFrom(returnType)
+                                    || DataSet.class.isAssignableFrom(returnType)) {
+                                // skip.
+                            } else {
+                                tmpFetchSize = 1;
+                            }
+                        }
+
+                        final int finalFetchSize = tmpFetchSize;
+
                         call = (proxy, args) -> {
                             Object result = queryFunc.apply(prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, isBatch,
-                                    -1, fetchSize, FetchDirection.FORWARD, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                    -1, finalFetchSize, FetchDirection.FORWARD, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
                                             .settParameters(args, parametersSetter),
                                     args);
 
