@@ -7119,7 +7119,7 @@ public final class JdbcUtil {
 
         // TODO: First of all, it's bad idea to implement cache in DAL layer?! and how if not?
         /** 
-         * 
+         * Mostly, it's used for static tables.
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.TYPE })

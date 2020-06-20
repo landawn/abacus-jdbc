@@ -2493,7 +2493,10 @@ final class DaoUtil {
 
                                     final String qery = sql_selectPart + joiner.toString();
 
-                                    try (PreparedQuery preparedQuery = proxy.prepareQuery(qery).setFetchSize(batchSize).closeAfterExecution(false)) {
+                                    try (PreparedQuery preparedQuery = proxy.prepareQuery(qery)
+                                            .setFetchDirection(FetchDirection.FORWARD)
+                                            .setFetchSize(batchSize)
+                                            .closeAfterExecution(false)) {
                                         for (int i = 0, to = ids.size() - batchSize; i <= to; i += batchSize) {
                                             resultList.addAll(preparedQuery.setParameters(idList.subList(i, i + batchSize)).list(entityClass));
                                         }
@@ -2510,6 +2513,7 @@ final class DaoUtil {
 
                                     final String qery = sql_selectPart + joiner.toString();
                                     resultList.addAll(proxy.prepareQuery(qery)
+                                            .setFetchDirection(FetchDirection.FORWARD)
                                             .setFetchSize(batchSize)
                                             .setParameters(idList.subList(ids.size() - remaining, ids.size()))
                                             .list(entityClass));
