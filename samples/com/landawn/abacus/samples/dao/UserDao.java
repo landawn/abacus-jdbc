@@ -9,6 +9,7 @@ import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.JdbcUtil.Dao.Cache;
 import com.landawn.abacus.util.JdbcUtil.Dao.CacheResult;
+import com.landawn.abacus.util.JdbcUtil.Dao.DaoConfig;
 import com.landawn.abacus.util.JdbcUtil.Dao.Handler;
 import com.landawn.abacus.util.JdbcUtil.Dao.PerfLog;
 import com.landawn.abacus.util.JdbcUtil.Dao.RefreshCache;
@@ -23,6 +24,7 @@ import com.landawn.abacus.util.stream.Stream;
 @CacheResult(transfer = "none")
 @Cache(capacity = 1000, evictDelay = 6000)
 @RefreshCache
+@DaoConfig(addLimitForSingleQuery=true)
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
     @NamedInsert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
     void insertWithId(User user) throws SQLException;

@@ -158,6 +158,82 @@ public final class JdbcUtil {
         // singleton
     }
 
+    public static DBVersion getDBVersion(final javax.sql.DataSource ds) throws UncheckedSQLException {
+        try (Connection conn = ds.getConnection()) {
+            return getDBVersion(conn);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    public static DBVersion getDBVersion(final Connection conn) throws UncheckedSQLException {
+        try {
+            String dbProudctName = conn.getMetaData().getDatabaseProductName();
+            String dbProudctVersion = conn.getMetaData().getDatabaseProductVersion();
+
+            DBVersion dbVersion = DBVersion.OTHERS;
+
+            String upperCaseProductName = dbProudctName.toUpperCase();
+            if (upperCaseProductName.contains("H2")) {
+                dbVersion = DBVersion.H2;
+            } else if (upperCaseProductName.contains("HSQL")) {
+                dbVersion = DBVersion.HSQLDB;
+            } else if (upperCaseProductName.contains("MYSQL")) {
+                if (dbProudctVersion.startsWith("5.5")) {
+                    dbVersion = DBVersion.MYSQL_5_5;
+                } else if (dbProudctVersion.startsWith("5.6")) {
+                    dbVersion = DBVersion.MYSQL_5_6;
+                } else if (dbProudctVersion.startsWith("5.7")) {
+                    dbVersion = DBVersion.MYSQL_5_7;
+                } else if (dbProudctVersion.startsWith("5.8")) {
+                    dbVersion = DBVersion.MYSQL_5_8;
+                } else if (dbProudctVersion.startsWith("5.9")) {
+                    dbVersion = DBVersion.MYSQL_5_9;
+                } else if (dbProudctVersion.startsWith("6")) {
+                    dbVersion = DBVersion.MYSQL_6;
+                } else if (dbProudctVersion.startsWith("7")) {
+                    dbVersion = DBVersion.MYSQL_7;
+                } else if (dbProudctVersion.startsWith("8")) {
+                    dbVersion = DBVersion.MYSQL_8;
+                } else if (dbProudctVersion.startsWith("9")) {
+                    dbVersion = DBVersion.MYSQL_9;
+                } else if (dbProudctVersion.startsWith("10")) {
+                    dbVersion = DBVersion.MYSQL_10;
+                } else {
+                    dbVersion = DBVersion.MYSQL_OTHERS;
+                }
+            } else if (upperCaseProductName.contains("POSTGRESQL")) {
+                if (dbProudctVersion.startsWith("9.2")) {
+                    dbVersion = DBVersion.POSTGRESQL_9_2;
+                } else if (dbProudctVersion.startsWith("9.3")) {
+                    dbVersion = DBVersion.POSTGRESQL_9_3;
+                } else if (dbProudctVersion.startsWith("9.4")) {
+                    dbVersion = DBVersion.POSTGRESQL_9_4;
+                } else if (dbProudctVersion.startsWith("9.5")) {
+                    dbVersion = DBVersion.POSTGRESQL_9_5;
+                } else if (dbProudctVersion.startsWith("10")) {
+                    dbVersion = DBVersion.POSTGRESQL_10;
+                } else if (dbProudctVersion.startsWith("11")) {
+                    dbVersion = DBVersion.POSTGRESQL_11;
+                } else if (dbProudctVersion.startsWith("12")) {
+                    dbVersion = DBVersion.POSTGRESQL_12;
+                } else {
+                    dbVersion = DBVersion.POSTGRESQL_OTHERS;
+                }
+            } else if (upperCaseProductName.contains("ORACLE")) {
+                dbVersion = DBVersion.ORACLE;
+            } else if (upperCaseProductName.contains("DB2")) {
+                dbVersion = DBVersion.DB2;
+            } else if (upperCaseProductName.contains("SQL SERVER")) {
+                dbVersion = DBVersion.SQL_SERVER;
+            }
+
+            return dbVersion;
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
     /**
      * Creates the DataSource.
      *
@@ -6406,6 +6482,18 @@ public final class JdbcUtil {
      * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
      */
     public static interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
+
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(value = { ElementType.TYPE })
+        static @interface DaoConfig {
+            /**
+             * Single query method includes: queryForSingleXxx/queryForUniqueResult/findFirst/exists/count...
+             * 
+             * @return
+             */
+            boolean addLimitForSingleQuery() default false;
+        }
+
         /**
          * The Interface Select.
          * 
