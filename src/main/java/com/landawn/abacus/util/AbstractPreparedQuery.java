@@ -36,6 +36,8 @@ import java.util.concurrent.Executor;
 import com.landawn.abacus.DataSet;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.logging.Logger;
+import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
@@ -78,6 +80,8 @@ import com.landawn.abacus.util.stream.Stream;
  * @param <Q>
  */
 abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends AbstractPreparedQuery<S, Q>> implements Closeable {
+
+    static final Logger logger = LoggerFactory.getLogger(AbstractPreparedQuery.class);
 
     final S stmt;
 
@@ -1983,6 +1987,11 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         return (Q) this;
     }
 
+    int defaultFetchDirection = -1;
+    int defaultFetchSize = -1;
+    int defaultQueryTimeout = -1;
+    int defaultMaxFieldSize = -1;
+
     /**
      * Sets the fetch direction.
      *
@@ -1993,9 +2002,11 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @see {@link java.sql.Statement#setFetchDirection(int)}
      */
     public Q setFetchDirection(FetchDirection direction) throws SQLException {
-        isFetchDirectionSet = true;
+        defaultFetchDirection = stmt.getFetchDirection();
 
         stmt.setFetchDirection(direction.intValue);
+
+        isFetchDirectionSet = true;
 
         return (Q) this;
     }
@@ -2008,7 +2019,24 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     public Q setFetchSize(int rows) throws SQLException {
+        defaultFetchSize = stmt.getFetchSize();
+
         stmt.setFetchSize(rows);
+
+        return (Q) this;
+    }
+
+    /**
+     * Sets the max field size.
+     *
+     * @param max
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public Q setMaxFieldSize(int max) throws SQLException {
+        defaultMaxFieldSize = stmt.getMaxFieldSize();
+
+        stmt.setMaxFieldSize(max);
 
         return (Q) this;
     }
@@ -2040,19 +2068,6 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
     }
 
     /**
-     * Sets the max field size.
-     *
-     * @param max
-     * @return
-     * @throws SQLException the SQL exception
-     */
-    public Q setMaxFieldSize(int max) throws SQLException {
-        stmt.setMaxFieldSize(max);
-
-        return (Q) this;
-    }
-
-    /**
      * Sets the query timeout.
      *
      * @param seconds
@@ -2060,6 +2075,8 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     public Q setQueryTimeout(int seconds) throws SQLException {
+        defaultQueryTimeout = stmt.getQueryTimeout();
+
         stmt.setQueryTimeout(seconds);
 
         return (Q) this;
@@ -4046,13 +4063,37 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         isClosed = true;
 
         if (closeHandler == null) {
-            JdbcUtil.closeQuietly(stmt);
+            closeStatement();
         } else {
             try {
-                JdbcUtil.closeQuietly(stmt);
+                closeStatement();
             } finally {
                 closeHandler.run();
             }
+        }
+    }
+
+    private void closeStatement() {
+        try {
+            if (defaultFetchDirection >= 0) {
+                stmt.setFetchDirection(defaultFetchDirection);
+            }
+
+            if (defaultFetchSize >= 0) {
+                stmt.setFetchSize(defaultFetchSize);
+            }
+
+            if (defaultMaxFieldSize >= 0) {
+                stmt.setMaxFieldSize(defaultMaxFieldSize);
+            }
+
+            if (defaultQueryTimeout >= 0) {
+                stmt.setQueryTimeout(defaultQueryTimeout);
+            }
+        } catch (SQLException e) {
+            logger.warn("failed to reset statement", e);
+        } finally {
+            JdbcUtil.closeQuietly(stmt);
         }
     }
 

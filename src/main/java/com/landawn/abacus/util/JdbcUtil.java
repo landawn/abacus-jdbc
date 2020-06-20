@@ -182,6 +182,14 @@ public final class JdbcUtil {
         // singleton
     }
 
+    public static DBVersion getDBVersion(final javax.sql.DataSource ds) throws UncheckedSQLException {
+        try (Connection conn = ds.getConnection()) {
+            return getDBVersion(conn);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
     /**
      * Gets the DB version.
      *
@@ -6724,6 +6732,18 @@ public final class JdbcUtil {
      * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
      */
     public static interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
+
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(value = { ElementType.TYPE })
+        static @interface DaoConfig {
+            /**
+             * Single query method includes: queryForSingleXxx/queryForUniqueResult/findFirst/exists/count...
+             * 
+             * @return
+             */
+            boolean addLimitForSingleQuery() default false;
+        }
+
         /**
          * The Interface Select.
          * 
@@ -7349,7 +7369,7 @@ public final class JdbcUtil {
 
         // TODO: First of all, it's bad idea to implement cache in DAL layer?! and how if not?
         /** 
-         * 
+         * Mostly, it's used for static tables.
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.TYPE })
