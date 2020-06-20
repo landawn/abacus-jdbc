@@ -1201,7 +1201,7 @@ final class DaoUtil {
         final DBVersion dbVersion = JdbcUtil.getDBVersion(ds);
         final boolean addLimitForSingleQuery = StreamEx.of(allInterfaces)
                 .flatMapp(cls -> cls.getAnnotations())
-                .select(Dao.DaoConfig.class)
+                .select(Dao.Config.class)
                 .map(it -> it.addLimitForSingleQuery())
                 .first()
                 .orElse(false);
