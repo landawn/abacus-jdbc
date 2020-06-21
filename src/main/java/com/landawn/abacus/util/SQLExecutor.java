@@ -6122,7 +6122,7 @@ public class SQLExecutor {
                 sql = sql.substring(0, sql.lastIndexOf('=')) + "IN ";
 
                 if (ids.size() >= batchSize) {
-                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer(true);
+                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer();
 
                     for (int i = 0; i < batchSize; i++) {
                         joiner.append('?');
@@ -6137,7 +6137,7 @@ public class SQLExecutor {
 
                 if (ids.size() % batchSize != 0) {
                     final int remaining = ids.size() % batchSize;
-                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer(true);
+                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer();
 
                     for (int i = 0; i < remaining; i++) {
                         joiner.append('?');

@@ -1,3 +1,8 @@
+### 1.20.26
+
+* Improvements and bug fix.
+
+
 ### 1.20.25
  
 * Refactoring `SQLBuilder`.

@@ -6735,7 +6735,7 @@ public final class JdbcUtil {
 
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.TYPE })
-        static @interface DaoConfig {
+        static @interface Config {
             /**
              * Single query method includes: queryForSingleXxx/queryForUniqueResult/findFirst/exists/count...
              * 
