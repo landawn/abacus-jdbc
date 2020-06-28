@@ -20,7 +20,6 @@ import org.h2.tools.Server;
 
 // TODO: Auto-generated Javadoc
 /**
- * The Class H2Util.
  *
  * @author Haiyang Li
  * @since 0.8

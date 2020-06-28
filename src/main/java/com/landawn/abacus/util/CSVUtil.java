@@ -55,7 +55,6 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 
 /**
- * The Class CSVUtil.
  *
  * @author Haiyang Li
  * @since 0.8

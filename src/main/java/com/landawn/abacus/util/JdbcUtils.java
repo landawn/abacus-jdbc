@@ -44,7 +44,6 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.type.Type;
 
 /**
- * The Class JdbcUtil.
  *
  * @author Haiyang Li
  * @see {@link com.landawn.abacus.condition.ConditionFactory}

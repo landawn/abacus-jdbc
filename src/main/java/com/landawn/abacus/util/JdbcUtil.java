@@ -100,7 +100,6 @@ import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
- * The Class JdbcUtil.
  *
  * @author Haiyang Li
  * @see {@link com.landawn.abacus.condition.ConditionFactory}
