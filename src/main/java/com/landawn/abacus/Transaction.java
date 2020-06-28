@@ -31,10 +31,6 @@ public interface Transaction {
      */
     String id();
 
-    /**
-     *
-     * @return
-     */
     IsolationLevel isolationLevel();
 
     /**

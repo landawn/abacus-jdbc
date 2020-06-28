@@ -95,11 +95,6 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
 
     Runnable closeHandler;
 
-    /**
-     * Instantiates a new abstract prepared query.
-     *
-     * @param stmt
-     */
     AbstractPreparedQuery(S stmt) {
         this.stmt = stmt;
     }
@@ -129,10 +124,6 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         return (Q) this;
     }
 
-    /**
-     *
-     * @return
-     */
     boolean isCloseAfterExecution() {
         return isCloseAfterExecution;
     }
@@ -2098,7 +2089,6 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         }
     }
 
-    /** The Constant charType. */
     private static final Type<Character> charType = TypeFactory.getType(char.class);
 
     /**

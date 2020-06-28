@@ -26,9 +26,6 @@ import org.h2.tools.Server;
  */
 public final class H2Util {
 
-    /**
-     * Instantiates a new h 2 util.
-     */
     private H2Util() {
         // Singleton.
     }

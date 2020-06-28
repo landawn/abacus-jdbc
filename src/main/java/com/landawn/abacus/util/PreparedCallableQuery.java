@@ -70,14 +70,8 @@ import com.landawn.abacus.util.u.Optional;
  */
 public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStatement, PreparedCallableQuery> {
 
-    /** The stmt. */
     final CallableStatement stmt;
 
-    /**
-     * Instantiates a new prepared callable query.
-     *
-     * @param stmt
-     */
     PreparedCallableQuery(CallableStatement stmt) {
         super(stmt);
         this.stmt = stmt;

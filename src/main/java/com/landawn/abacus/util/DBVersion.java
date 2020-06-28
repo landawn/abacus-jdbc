@@ -18,9 +18,7 @@ package com.landawn.abacus.util;
 
 public enum DBVersion {
 
-    /** The h2. */
     H2,
-    /** The hsqldb. */
     HSQLDB,
     /** The mysql 5 5. */
     MYSQL_5_5,
@@ -42,7 +40,6 @@ public enum DBVersion {
     MYSQL_9,
     /** The mysql 10. */
     MYSQL_10,
-    /** The mysql others. */
     MYSQL_OTHERS,
     /** The postgresql 9 2. */
     //
@@ -61,15 +58,10 @@ public enum DBVersion {
     POSTGRESQL_11,
     /** The postgresql 12. */
     POSTGRESQL_12,
-    /** The postgresql others. */
     POSTGRESQL_OTHERS,
-    /** The oracle. */
     //
     ORACLE,
-    /** The db2. */
     DB2,
-    /** The sql server. */
     SQL_SERVER,
-    /** The others. */
     OTHERS;
 }

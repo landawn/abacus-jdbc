@@ -40,11 +40,6 @@ public enum OnDeleteAction {
      */
     private int intValue;
 
-    /**
-     * Instantiates a new on delete action.
-     *
-     * @param intValue
-     */
     OnDeleteAction(int intValue) {
         this.intValue = intValue;
     }

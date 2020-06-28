@@ -61,13 +61,10 @@ import com.landawn.abacus.type.Type;
  */
 public final class CSVUtil {
 
-    /** The Constant logger. */
     private static final Logger logger = LoggerFactory.getLogger(CSVUtil.class);
 
-    /** The Constant jsonParser. */
     private static final JSONParser jsonParser = ParserFactory.createJSONParser();
 
-    /** The Constant jsonParser. */
     private static final JSONDeserializationConfig jdc = JDC.create().setElementType(String.class);
 
     /**

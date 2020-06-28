@@ -37,65 +37,39 @@ import com.landawn.abacus.logging.LoggerFactory;
  */
 public final class SQLTransaction implements Transaction, Closeable {
 
-    /** The Constant logger. */
     private static final Logger logger = LoggerFactory.getLogger(SQLTransaction.class);
 
-    /** The Constant threadTransactionMap. */
     private static final Map<String, SQLTransaction> threadTransactionMap = new ConcurrentHashMap<>();
     // private static final Map<String, SQLTransaction> attachedThreadTransactionMap = new ConcurrentHashMap<>();
 
-    /** The id. */
     private final String id;
 
-    /** The timed id. */
     private final String timedId;
 
-    /** The ds. */
     private final javax.sql.DataSource ds;
 
-    /** The conn. */
     private final Connection conn;
 
-    /** The close connection. */
     private final boolean closeConnection;
 
-    /** The original auto commit. */
     private final boolean originalAutoCommit;
 
-    /** The original isolation level. */
     private final int originalIsolationLevel;
 
-    /** The status. */
     private Transaction.Status status = Status.ACTIVE;
 
-    /** The ref count. */
     private final AtomicInteger refCount = new AtomicInteger();
 
-    /** The isolation level stack. */
     private final Stack<IsolationLevel> isolationLevelStack = new Stack<>();
 
-    /** The is for update only stack. */
     private final Stack<Boolean> isForUpdateOnlyStack = new Stack<>();
 
-    /** The isolation level. */
     private IsolationLevel isolationLevel;
 
-    /** The is for update only. */
     private boolean isForUpdateOnly;
 
-    /** The is marked by commit previously. */
     private boolean isMarkedByCommitPreviously = false;
 
-    /**
-     * Instantiates a new SQL transaction.
-     *
-     * @param ds
-     * @param conn
-     * @param isolationLevel
-     * @param creator
-     * @param closeConnection
-     * @throws SQLException the SQL exception
-     */
     SQLTransaction(final javax.sql.DataSource ds, final Connection conn, final IsolationLevel isolationLevel, final CreatedBy creator,
             final boolean closeConnection) throws SQLException {
         N.checkArgNotNull(conn);
@@ -118,36 +92,20 @@ public final class SQLTransaction implements Transaction, Closeable {
         }
     }
 
-    /**
-     *
-     * @return
-     */
     @Override
     public String id() {
         return timedId;
     }
 
-    /**
-     *
-     * @return
-     */
     public Connection connection() {
         return conn;
     }
 
-    /**
-     *
-     * @return
-     */
     @Override
     public IsolationLevel isolationLevel() {
         return isolationLevel;
     }
 
-    /**
-     *
-     * @return
-     */
     @Override
     public Transaction.Status status() {
         return status;
@@ -531,10 +489,6 @@ public final class SQLTransaction implements Transaction, Closeable {
         rollbackIfNotCommitted();
     }
 
-    /**
-     *
-     * @return
-     */
     @Override
     public int hashCode() {
         return timedId.hashCode();
@@ -550,10 +504,6 @@ public final class SQLTransaction implements Transaction, Closeable {
         return obj instanceof SQLTransaction && timedId.equals(((SQLTransaction) obj).timedId);
     }
 
-    /**
-     *
-     * @return
-     */
     @Override
     public String toString() {
         return "SQLTransaction={id=" + timedId + "}";

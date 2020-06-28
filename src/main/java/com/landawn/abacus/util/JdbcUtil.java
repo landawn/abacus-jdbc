@@ -118,20 +118,15 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  */
 public final class JdbcUtil {
 
-    /** The Constant logger. */
     static final Logger logger = LoggerFactory.getLogger(JdbcUtil.class);
 
-    /** The Constant DEFAULT_BATCH_SIZE. */
     public static final int DEFAULT_BATCH_SIZE = 200;
 
-    /** The Constant CURRENT_DIR_PATH. */
     // ...
     static final String CURRENT_DIR_PATH = "./";
 
-    /** The async executor. */
     static final AsyncExecutor asyncExecutor = new AsyncExecutor(Math.max(8, IOUtil.CPU_CORES), Math.max(64, IOUtil.CPU_CORES), 180L, TimeUnit.SECONDS);
 
-    /** The Constant DEFAULT_STMT_SETTER. */
     static final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super Object[]> DEFAULT_STMT_SETTER = new JdbcUtil.BiParametersSetter<PreparedStatement, Object[]>() {
         @Override
         public void accept(PreparedStatement stmt, Object[] parameters) throws SQLException {
@@ -141,7 +136,6 @@ public final class JdbcUtil {
         }
     };
 
-    /** The Constant sqlStateForTableNotExists. */
     private static final Set<String> sqlStateForTableNotExists = N.newHashSet();
 
     static {
@@ -150,9 +144,6 @@ public final class JdbcUtil {
         sqlStateForTableNotExists.add("42501"); // for HSQLDB.
     }
 
-    /**
-     * Instantiates a new jdbc util.
-     */
     private JdbcUtil() {
         // singleton
     }
@@ -364,7 +355,6 @@ public final class JdbcUtil {
         return driverClass;
     }
 
-    /** The is in spring. */
     private static boolean isInSpring = true;
 
     static {
@@ -4947,13 +4937,10 @@ public final class JdbcUtil {
         }
     }
 
-    /** The Constant NO_GENERATED_KEY_EXTRACTOR. */
     static final RowMapper<Object> NO_GENERATED_KEY_EXTRACTOR = rs -> null;
 
-    /** The Constant SINGLE_GENERATED_KEY_EXTRACTOR. */
     static final RowMapper<Object> SINGLE_GENERATED_KEY_EXTRACTOR = rs -> getColumnValue(rs, 1);
 
-    /** The Constant MULTI_GENERATED_KEY_EXTRACTOR. */
     @SuppressWarnings("deprecation")
     static final RowMapper<Object> MULTI_GENERATED_KEY_EXTRACTOR = rs -> {
         final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
@@ -4972,13 +4959,10 @@ public final class JdbcUtil {
         }
     };
 
-    /** The Constant NO_BI_GENERATED_KEY_EXTRACTOR. */
     static final BiRowMapper<Object> NO_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> null;
 
-    /** The Constant SINGLE_BI_GENERATED_KEY_EXTRACTOR. */
     static final BiRowMapper<Object> SINGLE_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> getColumnValue(rs, 1);
 
-    /** The Constant MULTI_BI_GENERATED_KEY_EXTRACTOR. */
     @SuppressWarnings("deprecation")
     static final BiRowMapper<Object> MULTI_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> {
         if (columnLabels.size() == 1) {

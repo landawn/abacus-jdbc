@@ -40,25 +40,18 @@ import com.landawn.abacus.logging.LoggerFactory;
  */
 public final class DBLock {
 
-    /** The Constant logger. */
     private static final Logger logger = LoggerFactory.getLogger(DBLock.class);
 
-    /** The Constant LOCKED. */
     public static final String LOCKED = "locked";
 
-    /** The Constant UNLOCKED. */
     public static final String UNLOCKED = "unlocked";
 
-    /** The Constant DEFAULT_LOCK_LIVE_TIME. */
     public static final int DEFAULT_LOCK_LIVE_TIME = 3 * 60 * 1000;
 
-    /** The Constant DEFAULT_TIMEOUT. */
     public static final int DEFAULT_TIMEOUT = 3 * 1000;
 
-    /** The Constant MAX_IDLE_TIME. */
     private static final int MAX_IDLE_TIME = 60 * 1000;
 
-    /** The Constant scheduledExecutor. */
     static final ScheduledExecutorService scheduledExecutor;
     static {
         final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(8);
@@ -70,33 +63,20 @@ public final class DBLock {
 
     private final DataSource ds;
 
-    /** The scheduled future. */
     private final ScheduledFuture<?> scheduledFuture;
 
-    /** The target code pool. */
     private final Map<String, String> targetCodePool = new ConcurrentHashMap<>();
 
-    /** The remove expired lock SQL. */
     private final String removeExpiredLockSQL;
 
-    /** The lock SQL. */
     private final String lockSQL;
 
-    /** The unlock SQL. */
     private final String unlockSQL;
 
-    /** The refresh SQL. */
     private final String refreshSQL;
 
-    /** The is closed. */
     private boolean isClosed = false;
 
-    /**
-     * Instantiates a new DB lock.
-     *
-     * @param sqlExecutor
-     * @param tableName
-     */
     DBLock(final DataSource ds, final String tableName) {
         this.ds = ds;
         // ...
