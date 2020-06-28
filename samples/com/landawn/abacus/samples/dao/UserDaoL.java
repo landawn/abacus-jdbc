@@ -8,7 +8,7 @@ import com.landawn.abacus.util.JdbcUtil.Dao.PerfLog;
 import com.landawn.abacus.util.JdbcUtil.Dao.RefreshCache;
 import com.landawn.abacus.util.SQLBuilder;
 
-@PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100) 
+@PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
 @CacheResult(transfer = "none")
 @Cache(capacity = 1000, evictDelay = 6000)
 @RefreshCache

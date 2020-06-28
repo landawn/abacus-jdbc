@@ -15,7 +15,7 @@ import com.landawn.abacus.util.Propagation;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.stream.Stream;
 
-@PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)  
+@PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
 @CacheResult(transfer = "none")
 @Cache(capacity = 1000, evictDelay = 6000)
 @RefreshCache

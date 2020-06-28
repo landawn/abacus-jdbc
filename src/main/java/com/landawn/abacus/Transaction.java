@@ -18,7 +18,6 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 
 // TODO: Auto-generated Javadoc
 /**
- * The Interface Transaction.
  *
  * @author Haiyang Li
  * @since 0.8
