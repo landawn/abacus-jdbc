@@ -18,9 +18,7 @@ import java.sql.Connection;
 import java.util.Map;
 import java.util.Properties;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Interface ConnectionManager.
+/** 
  *
  * @author Haiyang Li
  * @since 0.8

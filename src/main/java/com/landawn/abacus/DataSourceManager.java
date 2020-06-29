@@ -18,9 +18,7 @@ import java.util.Map;
 
 import com.landawn.abacus.util.Properties;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Interface DataSourceManager.
+/** 
  *
  * @author Haiyang Li
  * @since 0.8

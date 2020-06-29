@@ -55,20 +55,12 @@ import com.landawn.abacus.util.N;
  */
 class DBCP2ConnectionManager extends AbstractConnectionManager {
 
-    /** The Constant logger. */
     static final Logger logger = LoggerFactory.getLogger(DBCP2ConnectionManager.class);
 
-    /** The ds. */
     private final DataSource ds;
 
-    /** The bds. */
     private final org.apache.commons.dbcp2.BasicDataSource bds;
 
-    /**
-     * Instantiates a new DBCP 2 connection manager.
-     *
-     * @param props
-     */
     public DBCP2ConnectionManager(Map<String, ?> props) {
         super(props);
 

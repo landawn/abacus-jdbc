@@ -57,80 +57,53 @@ import com.landawn.abacus.util.ExceptionUtil;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.N;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Class SQLConnectionManager.
+/** 
  *
  * @author Haiyang Li
  * @since 0.8
  */
 public final class SQLConnectionManager extends AbstractConnectionManager {
 
-    /** The Constant logger. */
     private static final Logger logger = LoggerFactory.getLogger(SQLConnectionManager.class);
 
-    /** The ds. */
     private final DataSource ds;
 
-    /** The xpool. */
     private final Map<Connection, Connection> xpool = new IdentityHashMap<Connection, Connection>();
 
-    /** The pool. */
     private final ObjectPool<PoolableConnection> pool;
 
-    /** The driver. */
     private final String driver;
 
-    /** The url. */
     private final String url;
 
-    /** The user. */
     private final String user;
 
-    /** The password. */
     private final String password;
 
-    /** The initial size. */
     private final int initialSize;
 
-    /** The min idle. */
     private final int minIdle;
 
-    /** The max idle. */
     private final int maxIdle;
 
-    /** The max active. */
     private final int maxActive;
 
-    /** The live time. */
     private final long liveTime;
 
-    /** The max idle time. */
     private final long maxIdleTime;
 
-    /** The max wait time. */
     private final long maxWaitTime;
 
-    /** The max open prepared statements per connection. */
     private final int maxOpenPreparedStatementsPerConnection;
 
-    /** The validation query. */
     private final String validationQuery;
 
-    /** The test on borrow. */
     private final boolean testOnBorrow;
 
-    /** The test on return. */
     private final boolean testOnReturn;
 
-    /** The is closed. */
     private boolean isClosed = false;
 
-    /**
-     * Instantiates a new SQL connection manager.
-     *
-     * @param props
-     */
     public SQLConnectionManager(Map<String, ?> props) {
         super(props);
         driver = properties.get(DRIVER);

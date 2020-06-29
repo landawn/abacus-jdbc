@@ -45,36 +45,27 @@ import com.landawn.abacus.pool.AbstractPoolable;
 import com.landawn.abacus.util.ExceptionUtil;
 import com.landawn.abacus.util.N;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Class PoolablePreparedStatement.
+/** 
  *
  * @author Haiyang Li
  * @since 0.8
  */
 class PoolablePreparedStatement extends AbstractPoolable implements PreparedStatement {
 
-    /** The Constant logger. */
     private static final Logger logger = LoggerFactory.getLogger(PoolablePreparedStatement.class);
 
-    /** The Constant DEFAULT_LIVE_TIME. */
     private static final long DEFAULT_LIVE_TIME = 24 * 60 * 60 * 1000L;
 
-    /** The Constant DEFAULT_MAX_IDLE_TIME. */
     private static final long DEFAULT_MAX_IDLE_TIME = 30 * 60 * 1000L;
 
-    /** The id. */
     private final CachedStatmentKey id;
 
-    /** The internal stmt. */
     private final java.sql.PreparedStatement internalStmt;
 
-    /** The poolable conn. */
     private final PoolableConnection poolableConn;
 
     private final String sql;
 
-    /** The is closed. */
     private boolean isClosed = false;
 
     public PoolablePreparedStatement(final String sql, final java.sql.PreparedStatement stmt, final PoolableConnection conn, final CachedStatmentKey id) {

@@ -64,32 +64,21 @@ import com.landawn.abacus.util.Configuration;
 import com.landawn.abacus.util.ExceptionUtil;
 import com.landawn.abacus.util.N;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Class AbstractConnectionManager.
+/** 
  *
  * @author Haiyang Li
  * @since 0.8
  */
 abstract class AbstractConnectionManager implements ConnectionManager {
 
-    /** The Constant logger. */
     static final Logger logger = LoggerFactory.getLogger(AbstractConnectionManager.class);
 
-    /** The properties. */
     protected final Map<String, String> properties;
 
-    /** The connection properties. */
     protected final Properties connectionProperties;
 
-    /** The last SQL execution failure time. */
     protected volatile long lastSQLExecutionFailureTime;
 
-    /**
-     * Instantiates a new abstract connection manager.
-     *
-     * @param props
-     */
     public AbstractConnectionManager(Map<String, ?> props) {
         properties = new HashMap<>();
         connectionProperties = new Properties();

@@ -18,9 +18,7 @@ import java.sql.Connection;
 
 import com.landawn.abacus.util.Properties;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Interface DataSource.
+/** 
  *
  * @author Haiyang Li
  * @since 0.8

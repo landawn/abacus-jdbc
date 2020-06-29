@@ -113,11 +113,9 @@ final class DaoUtil {
 
     private static final KryoParser kryoParser = ParserFactory.isKryoAvailable() ? ParserFactory.createKryoParser() : null;
 
-    /** The Constant daoPool. */
     @SuppressWarnings("rawtypes")
     private static final Map<String, JdbcUtil.Dao> daoPool = new ConcurrentHashMap<>();
 
-    /** The Constant sqlAnnoMap. */
     private static final Map<Class<? extends Annotation>, BiFunction<Annotation, SQLMapper, QueryInfo>> sqlAnnoMap = new HashMap<>();
 
     static {

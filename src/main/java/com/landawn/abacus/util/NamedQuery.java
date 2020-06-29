@@ -66,24 +66,14 @@ import com.landawn.abacus.util.JdbcUtil.TriParametersSetter;
  */
 public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQuery> {
 
-    /** The named SQL. */
     private final ParsedSql namedSql;
 
-    /** The parameter names. */
     private final List<String> parameterNames;
 
-    /** The parameter count. */
     private final int parameterCount;
 
-    /** The param name index map. */
     private Map<String, IntList> paramNameIndexMap;
 
-    /**
-     * Instantiates a new named query.
-     *
-     * @param stmt
-     * @param namedSql
-     */
     NamedQuery(final PreparedStatement stmt, final ParsedSql namedSql) {
         super(stmt);
         this.namedSql = namedSql;

@@ -12,34 +12,20 @@ import com.landawn.abacus.SliceSelector;
 import com.landawn.abacus.dataSource.NonSliceSelector;
 import com.landawn.abacus.exception.UncheckedSQLException;
 
-/**
- * The Class SimpleDataSource.
- */
 class SimpleDataSource implements DataSource {
 
-    /** The Constant PRIMARY. */
     static final String PRIMARY = "primary";
 
-    /** The sql data source. */
     private final javax.sql.DataSource sqlDataSource;
 
-    /** The props. */
     private final Properties<String, String> props = new Properties<>();
 
-    /** The slice selector. */
     private final SliceSelector sliceSelector = new NonSliceSelector();
 
-    /** The close method. */
     private final Method closeMethod;
 
-    /** The is closed. */
     private boolean isClosed = false;
 
-    /**
-     * Instantiates a new simple data source.
-     *
-     * @param sqlDataSource
-     */
     public SimpleDataSource(final javax.sql.DataSource sqlDataSource) {
         this.sqlDataSource = sqlDataSource;
 

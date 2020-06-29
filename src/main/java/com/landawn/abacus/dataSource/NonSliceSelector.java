@@ -19,9 +19,7 @@ import java.util.Map;
 
 import com.landawn.abacus.SliceSelector;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Class NonSliceSelector.
+/** 
  *
  * @author Haiyang Li
  * @since 0.8

@@ -16,9 +16,7 @@ package com.landawn.abacus.util;
 
 import org.hsqldb.server.Server;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Class HSQLDBUtil.
+/** 
  *
  * @author Haiyang Li
  * @since 0.8

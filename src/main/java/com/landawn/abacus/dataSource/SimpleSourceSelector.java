@@ -21,16 +21,13 @@ import com.landawn.abacus.DataSource;
 import com.landawn.abacus.DataSourceManager;
 import com.landawn.abacus.DataSourceSelector;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Class SimpleSourceSelector.
+/** 
  *
  * @author Haiyang Li
  * @since 0.8
  */
 public class SimpleSourceSelector implements DataSourceSelector {
 
-    /** The Constant QUERY_WITH_DATA_SOURCE. */
     private static final String QUERY_WITH_DATA_SOURCE = "queryWithDataSource";
 
     /**

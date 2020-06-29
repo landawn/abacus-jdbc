@@ -100,7 +100,6 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
 import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
-// TODO: Auto-generated Javadoc
 /**
  * SQLExecutor is a simple sql/jdbc utility class. SQL is supported with different format: <br />
  *

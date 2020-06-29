@@ -21,21 +21,10 @@ import java.sql.ResultSet;
  */
 public enum FetchDirection {
 
-    /** The forward. */
-    FORWARD(ResultSet.FETCH_FORWARD),
-    /** The reverse. */
-    REVERSE(ResultSet.FETCH_REVERSE),
-    /** The unknown. */
-    UNKNOWN(ResultSet.FETCH_UNKNOWN);
+    FORWARD(ResultSet.FETCH_FORWARD), REVERSE(ResultSet.FETCH_REVERSE), UNKNOWN(ResultSet.FETCH_UNKNOWN);
 
-    /** The int value. */
     final int intValue;
 
-    /**
-     * Instantiates a new fetch direction.
-     *
-     * @param intValue
-     */
     FetchDirection(int intValue) {
         this.intValue = intValue;
     }
@@ -62,10 +51,6 @@ public enum FetchDirection {
         }
     }
 
-    /**
-     *
-     * @return
-     */
     public int intValue() {
         return intValue;
     }

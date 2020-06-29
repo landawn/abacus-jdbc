@@ -17,9 +17,7 @@ package com.landawn.abacus.util;
 import java.util.HashMap;
 import java.util.Map;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Class DBDataTypeMapper.
+/** 
  *
  * @author Haiyang Li
  * @since 0.8

@@ -49,11 +49,6 @@ import java.sql.PreparedStatement;
  */
 public class PreparedQuery extends AbstractPreparedQuery<PreparedStatement, PreparedQuery> {
 
-    /**
-     * Instantiates a new prepared query.
-     *
-     * @param stmt
-     */
     PreparedQuery(PreparedStatement stmt) {
         super(stmt);
     }

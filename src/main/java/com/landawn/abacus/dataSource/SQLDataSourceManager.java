@@ -25,41 +25,27 @@ import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.util.Properties;
 import com.landawn.abacus.util.TypeAttrParser;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Class SQLDataSourceManager.
+/** 
  *
  * @author Haiyang Li
  * @since 0.8
  */
 public class SQLDataSourceManager implements DataSourceManager {
 
-    /** The Constant logger. */
     private static final Logger logger = LoggerFactory.getLogger(SQLDataSourceManager.class);
 
-    /** The dsm config. */
     private final DataSourceManagerConfiguration dsmConfig;
 
-    /** The properties. */
     private final Properties<String, String> properties;
 
-    /** The active data sources. */
     private final Map<String, DataSource> activeDataSources;
 
-    /** The primary data source. */
     private final DataSource primaryDataSource;
 
-    /** The data source selector. */
     private final DataSourceSelector dataSourceSelector;
 
-    /** The is closed. */
     private boolean isClosed = false;
 
-    /**
-     * Instantiates a new SQL data source manager.
-     *
-     * @param dataSourceManagerConfiguration
-     */
     public SQLDataSourceManager(DataSourceManagerConfiguration dataSourceManagerConfiguration) {
         this.dsmConfig = dataSourceManagerConfiguration;
 

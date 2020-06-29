@@ -31,33 +31,16 @@ import com.landawn.abacus.util.N;
  * @since 1.3
  */
 public final class DataSourceManagerConfiguration extends Configuration {
-    /**
-     * Field DATA_SOURCE_MANAGER. (value is ""dataSourceManager"")
-     */
     public static final String DATA_SOURCE_MANAGER = "dataSourceManager";
 
-    /**
-     * Field DATA_SOURCE_SELECTOR. (value is ""dataSourceSelector"")
-     */
     public static final String DATA_SOURCE_SELECTOR = "dataSourceSelector";
 
-    /**
-     * Field LIVE_ENV. (value is ""liveEnv"")
-     */
     public static final String LIVE_ENV = "liveEnv";
 
-    /** The live env. */
     private final String liveEnv;
 
-    /** The data source configuration list. */
     private List<DataSourceConfiguration> dataSourceConfigurationList;
 
-    /**
-     * Instantiates a new data source manager configuration.
-     *
-     * @param element
-     * @param properties
-     */
     public DataSourceManagerConfiguration(Element element, Map<String, String> properties) {
         super(element, properties);
 

@@ -7,31 +7,18 @@ import com.landawn.abacus.DataSourceManager;
 import com.landawn.abacus.DataSourceSelector;
 import com.landawn.abacus.dataSource.SimpleSourceSelector;
 
-/**
- * The Class SimpleDataSourceManager.
- */
 class SimpleDataSourceManager implements DataSourceManager {
 
-    /** The primary data source. */
     private final DataSource primaryDataSource;
 
-    /** The active data sources. */
     private final Map<String, DataSource> activeDataSources;
 
-    /** The props. */
     private final Properties<String, String> props = new Properties<>();
 
-    /** The data source selector. */
     private final DataSourceSelector dataSourceSelector = new SimpleSourceSelector();
 
-    /** The is closed. */
     private boolean isClosed = false;
 
-    /**
-     * Instantiates a new simple data source manager.
-     *
-     * @param ds
-     */
     public SimpleDataSourceManager(final DataSource ds) {
         this.primaryDataSource = ds;
 

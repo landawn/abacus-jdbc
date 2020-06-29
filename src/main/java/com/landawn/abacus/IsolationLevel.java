@@ -16,10 +16,8 @@ package com.landawn.abacus;
 
 import java.sql.Connection;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Enum IsolationLevel.
- *
+/** 
+ * 
  * @author Haiyang Li
  * @see <a href="http://docs.oracle.com/javase/tutorial/jdbc/basics/transactions.html">http://docs.oracle.com/javase/tutorial/jdbc/basics/transactions.html</a>
  * @since 0.8

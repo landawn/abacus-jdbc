@@ -38,68 +38,45 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Properties;
 import com.landawn.abacus.util.TypeAttrParser;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Class SQLDataSource.
+/** 
  *
  * @author Haiyang Li
  * @since 0.8
  */
 public class SQLDataSource extends AbstractDataSource implements com.landawn.abacus.DataSource {
 
-    /** The Constant logger. */
     private static final Logger logger = LoggerFactory.getLogger(SQLDataSource.class);
 
-    /** The name. */
     private final String name;
 
-    /** The properties. */
     private final Properties<String, String> properties;
 
-    /** The connection manager. */
     private final ConnectionManager connectionManager;
 
-    /** The read onlyconnection manager. */
     private final ConnectionManager readOnlyconnectionManager;
 
-    /** The database product name. */
     private final String databaseProductName;
 
-    /** The database product version. */
     private final String databaseProductVersion;
 
-    /** The default isolation level. */
     private final IsolationLevel defaultIsolationLevel;
 
-    /** The default connection isolation. */
     private final int defaultConnectionIsolation;
 
-    /** The query with read only connection by default. */
     private final boolean queryWithReadOnlyConnectionByDefault;
 
-    /** The sql log. */
     private final boolean sqlLog;
 
-    /** The is perf log. */
     private final boolean isPerfLog;
 
-    /** The perf log. */
     private final long perfLog;
 
-    /** The slice selector. */
     private final SliceSelector sliceSelector;
 
-    /** The persistent connection. */
     private Connection persistentConnection;
 
-    /** The is closed. */
     private boolean isClosed = false;
 
-    /**
-     * Instantiates a new SQL data source.
-     *
-     * @param dsConfig
-     */
     public SQLDataSource(DataSourceConfiguration dsConfig) {
         properties = new Properties<>();
 
@@ -154,11 +131,6 @@ public class SQLDataSource extends AbstractDataSource implements com.landawn.aba
         }
     }
 
-    /**
-     * Instantiates a new SQL data source.
-     *
-     * @param props
-     */
     public SQLDataSource(Map<String, ?> props) {
         properties = new Properties<>();
 

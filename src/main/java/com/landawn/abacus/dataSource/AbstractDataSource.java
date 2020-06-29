@@ -23,9 +23,7 @@ import javax.sql.DataSource;
 
 import com.landawn.abacus.util.ClassUtil;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Class AbstractDataSource.
+/** 
  *
  * @author Haiyang Li
  * @since 0.8

@@ -40,59 +40,34 @@ import com.landawn.abacus.pool.PoolFactory;
 import com.landawn.abacus.util.ExceptionUtil;
 import com.landawn.abacus.util.N;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Class PoolableConnection.
+/** 
  *
  * @author Haiyang Li
  * @since 0.8
  */
 class PoolableConnection extends AbstractPoolable implements Connection {
 
-    /** The Constant logger. */
     private static final Logger logger = LoggerFactory.getLogger(PoolableConnection.class);
 
-    /** The Constant CACHED_SQL_LENGTH. */
     private static final int CACHED_SQL_LENGTH = 4096;
 
-    /** The Constant EVICTY_DELAY_FOR_STATEMENT_POOL. */
     private static final int EVICTY_DELAY_FOR_STATEMENT_POOL = 60 * 1000;
 
-    /** The cached statement pool. */
     private final KeyedObjectPool<CachedStatmentKey, PoolablePreparedStatement> cachedStatementPool;
 
-    /** The conn manager. */
     private final ConnectionManager connManager;
 
-    /** The internal conn. */
     private final Connection internalConn;
 
-    /** The last SQL execution time. */
     private volatile long lastSQLExecutionTime;
 
-    /** The is closed. */
     private boolean isClosed = false;
 
-    /**
-     * Instantiates a new poolable connection.
-     *
-     * @param dataSource
-     * @param conn
-     */
     public PoolableConnection(ConnectionManager dataSource, java.sql.Connection conn) {
         this(dataSource, conn, DataSourceConfiguration.DEFAULT_LIVE_TIME, DataSourceConfiguration.DEFAULT_MAX_IDLE_TIME,
                 DataSourceConfiguration.DEFAULT_MAX_OPEN_PREPARED_STATEMENTS_PER_CONNECTION);
     }
 
-    /**
-     * Instantiates a new poolable connection.
-     *
-     * @param connManager
-     * @param conn
-     * @param liveTime
-     * @param maxIdleTime
-     * @param cachedStatementSize
-     */
     public PoolableConnection(ConnectionManager connManager, java.sql.Connection conn, long liveTime, long maxIdleTime, int cachedStatementSize) {
         super(liveTime, maxIdleTime);
 

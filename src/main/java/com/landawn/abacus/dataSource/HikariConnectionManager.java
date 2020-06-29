@@ -43,17 +43,10 @@ import com.landawn.abacus.util.ExceptionUtil;
  */
 class HikariConnectionManager extends AbstractConnectionManager {
 
-    /** The Constant logger. */
     static final Logger logger = LoggerFactory.getLogger(HikariConnectionManager.class);
 
-    /** The ds. */
     private final com.zaxxer.hikari.HikariDataSource ds;
 
-    /**
-     * Instantiates a new hikari connection manager.
-     *
-     * @param props
-     */
     public HikariConnectionManager(Map<String, ?> props) {
         super(props);
 

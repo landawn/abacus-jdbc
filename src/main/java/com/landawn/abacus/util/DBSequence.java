@@ -34,41 +34,24 @@ import com.landawn.abacus.logging.LoggerFactory;
  */
 public final class DBSequence {
 
-    /** The Constant logger. */
     private static final Logger logger = LoggerFactory.getLogger(DBSequence.class);
 
     private final DataSource ds;
 
-    /** The seq name. */
     private final String seqName;
 
-    /** The seq buffer size. */
     private int seqBufferSize;
 
-    /** The query SQL. */
     private final String querySQL;
 
-    /** The update SQL. */
     private final String updateSQL;
 
-    /** The reset SQL. */
     private final String resetSQL;
 
-    /** The low seq id. */
     private final AtomicLong lowSeqId;
 
-    /** The high seq id. */
     private final AtomicLong highSeqId;
 
-    /**
-     * Instantiates a new DB sequence.
-     *
-     * @param sqlExecutor
-     * @param tableName
-     * @param seqName
-     * @param startVal
-     * @param seqBufferSize
-     */
     DBSequence(final DataSource ds, String tableName, String seqName, long startVal, int seqBufferSize) {
         this.ds = ds;
         this.seqName = seqName;
@@ -145,10 +128,6 @@ public final class DBSequence {
         }
     }
 
-    /**
-     *
-     * @return
-     */
     public long nextVal() {
         synchronized (seqName) {
             try {

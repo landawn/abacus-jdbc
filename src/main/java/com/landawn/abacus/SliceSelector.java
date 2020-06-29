@@ -17,7 +17,6 @@ package com.landawn.abacus;
 import java.util.List;
 import java.util.Map;
 
-// TODO: Auto-generated Javadoc
 /**
  * It's designed to support partitioning by tables.
  *
