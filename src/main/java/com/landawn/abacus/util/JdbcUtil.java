@@ -538,7 +538,6 @@ public final class JdbcUtil {
     //        return sqlDataSource instanceof DataSource ? ((DataSource) sqlDataSource) : new SimpleDataSource(sqlDataSource);
     //    }
 
-
     /**
      * Creates the connection.
      *
@@ -9078,13 +9077,7 @@ public final class JdbcUtil {
          */
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws SQLException {
-            final List<T> result = batchGet(ids);
-
-            if (N.notNullOrEmpty(result)) {
-                getJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
-            }
-
-            return result;
+            return batchGet(ids, null, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
         }
 
         /**
@@ -9097,13 +9090,7 @@ public final class JdbcUtil {
          */
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws SQLException {
-            final List<T> result = batchGet(ids);
-
-            if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
-                getJoinEntityHelper(this).loadAllJoinEntities(result);
-            }
-
-            return result;
+            return batchGet(ids, null, JdbcUtil.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
         }
 
         /**
@@ -9118,13 +9105,7 @@ public final class JdbcUtil {
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
                 throws SQLException {
-            final List<T> result = batchGet(ids, selectPropNames);
-
-            if (N.notNullOrEmpty(result)) {
-                getJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
-            }
-
-            return result;
+            return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
         }
 
         /**
@@ -9139,17 +9120,7 @@ public final class JdbcUtil {
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames,
                 final Collection<? extends Class<?>> joinEntitiesToLoad) throws SQLException {
-            final List<T> result = batchGet(ids, selectPropNames);
-
-            if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {
-                final JoinEntityHelper<T, SB, TD> joinEntityHelper = getJoinEntityHelper(this);
-
-                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
-                    joinEntityHelper.loadJoinEntities(result, joinEntityClass);
-                }
-            }
-
-            return result;
+            return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
         }
 
         /**
@@ -9164,13 +9135,7 @@ public final class JdbcUtil {
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
                 throws SQLException {
-            final List<T> result = batchGet(ids, selectPropNames);
-
-            if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
-                getJoinEntityHelper(this).loadAllJoinEntities(result);
-            }
-
-            return result;
+            return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
         }
 
         /**
@@ -12515,13 +12480,7 @@ public final class JdbcUtil {
         @Override
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
-            final List<T> result = batchGet(ids);
-
-            if (N.notNullOrEmpty(result)) {
-                getUncheckedJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
-            }
-
-            return result;
+            return batchGet(ids, null, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
         }
 
         /**
@@ -12535,13 +12494,7 @@ public final class JdbcUtil {
         @Override
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws UncheckedSQLException {
-            final List<T> result = batchGet(ids);
-
-            if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
-                getUncheckedJoinEntityHelper(this).loadAllJoinEntities(result);
-            }
-
-            return result;
+            return batchGet(ids, null, JdbcUtil.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
         }
 
         /**
@@ -12556,14 +12509,8 @@ public final class JdbcUtil {
         @Override
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
-                throws SQLException {
-            final List<T> result = batchGet(ids, selectPropNames);
-
-            if (N.notNullOrEmpty(result)) {
-                getUncheckedJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
-            }
-
-            return result;
+                throws UncheckedSQLException {
+            return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
         }
 
         /**
@@ -12579,17 +12526,7 @@ public final class JdbcUtil {
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames,
                 final Collection<? extends Class<?>> joinEntitiesToLoad) throws UncheckedSQLException {
-            final List<T> result = batchGet(ids, selectPropNames);
-
-            if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {
-                final UncheckedJoinEntityHelper<T, SB, TD> joinEntityHelper = getUncheckedJoinEntityHelper(this);
-
-                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
-                    joinEntityHelper.loadJoinEntities(result, joinEntityClass);
-                }
-            }
-
-            return result;
+            return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
         }
 
         /**
@@ -12604,14 +12541,8 @@ public final class JdbcUtil {
         @Override
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
-                throws SQLException {
-            final List<T> result = batchGet(ids, selectPropNames);
-
-            if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
-                getUncheckedJoinEntityHelper(this).loadAllJoinEntities(result);
-            }
-
-            return result;
+                throws UncheckedSQLException {
+            return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
         }
 
         /**
@@ -15260,4 +15191,3 @@ public final class JdbcUtil {
         return DaoUtil.createDao(daoInterface, ds, sqlMapper, cache, executor);
     }
 }
-
