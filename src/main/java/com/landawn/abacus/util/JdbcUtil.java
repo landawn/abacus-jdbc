@@ -538,6 +538,7 @@ public final class JdbcUtil {
     //        return sqlDataSource instanceof DataSource ? ((DataSource) sqlDataSource) : new SimpleDataSource(sqlDataSource);
     //    }
 
+
     /**
      * Creates the connection.
      *
@@ -8390,7 +8391,12 @@ public final class JdbcUtil {
             final List<T> result = list(selectPropNames, cond);
 
             if (N.notNullOrEmpty(result)) {
-                getJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+                if (result.size() > JdbcUtil.DEFAULT_BATCH_SIZE) {
+                    final JoinEntityHelper<T, SB, TD> joinEntityHelper = getJoinEntityHelper(this);
+                    StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(it -> joinEntityHelper.loadJoinEntities(it, joinEntitiesToLoad));
+                } else {
+                    getJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+                }
             }
 
             return result;
@@ -8412,8 +8418,16 @@ public final class JdbcUtil {
             if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {
                 final JoinEntityHelper<T, SB, TD> joinEntityHelper = getJoinEntityHelper(this);
 
-                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
-                    joinEntityHelper.loadJoinEntities(result, joinEntityClass);
+                if (result.size() > JdbcUtil.DEFAULT_BATCH_SIZE) {
+                    StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(it -> {
+                        for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                            joinEntityHelper.loadJoinEntities(it, joinEntityClass);
+                        }
+                    });
+                } else {
+                    for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                        joinEntityHelper.loadJoinEntities(result, joinEntityClass);
+                    }
                 }
             }
 
@@ -8433,7 +8447,12 @@ public final class JdbcUtil {
             final List<T> result = list(selectPropNames, cond);
 
             if (N.notNullOrEmpty(result)) {
-                getJoinEntityHelper(this).loadAllJoinEntities(result);
+                if (result.size() > JdbcUtil.DEFAULT_BATCH_SIZE) {
+                    final JoinEntityHelper<T, SB, TD> joinEntityHelper = getJoinEntityHelper(this);
+                    StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(it -> joinEntityHelper.loadAllJoinEntities(it));
+                } else {
+                    getJoinEntityHelper(this).loadAllJoinEntities(result);
+                }
             }
 
             return result;
@@ -11971,7 +11990,12 @@ public final class JdbcUtil {
             final List<T> result = list(selectPropNames, cond);
 
             if (N.notNullOrEmpty(result)) {
-                getUncheckedJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+                if (result.size() > JdbcUtil.DEFAULT_BATCH_SIZE) {
+                    final UncheckedJoinEntityHelper<T, SB, TD> joinEntityHelper = getUncheckedJoinEntityHelper(this);
+                    StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(it -> joinEntityHelper.loadJoinEntities(it, joinEntitiesToLoad));
+                } else {
+                    getUncheckedJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+                }
             }
 
             return result;
@@ -11994,8 +12018,16 @@ public final class JdbcUtil {
             if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {
                 final UncheckedJoinEntityHelper<T, SB, TD> joinEntityHelper = getUncheckedJoinEntityHelper(this);
 
-                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
-                    joinEntityHelper.loadJoinEntities(result, joinEntityClass);
+                if (result.size() > JdbcUtil.DEFAULT_BATCH_SIZE) {
+                    StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(it -> {
+                        for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                            joinEntityHelper.loadJoinEntities(it, joinEntityClass);
+                        }
+                    });
+                } else {
+                    for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                        joinEntityHelper.loadJoinEntities(result, joinEntityClass);
+                    }
                 }
             }
 
@@ -12017,7 +12049,12 @@ public final class JdbcUtil {
             final List<T> result = list(selectPropNames, cond);
 
             if (N.notNullOrEmpty(result)) {
-                getUncheckedJoinEntityHelper(this).loadAllJoinEntities(result);
+                if (result.size() > JdbcUtil.DEFAULT_BATCH_SIZE) {
+                    final UncheckedJoinEntityHelper<T, SB, TD> joinEntityHelper = getUncheckedJoinEntityHelper(this);
+                    StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(it -> joinEntityHelper.loadAllJoinEntities(it));
+                } else {
+                    getUncheckedJoinEntityHelper(this).loadAllJoinEntities(result);
+                }
             }
 
             return result;
@@ -15223,3 +15260,4 @@ public final class JdbcUtil {
         return DaoUtil.createDao(daoInterface, ds, sqlMapper, cache, executor);
     }
 }
+
