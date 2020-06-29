@@ -8684,7 +8684,7 @@ public final class JdbcUtil {
          *
          *
          * @param ids
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException the SQL exception
@@ -8696,7 +8696,7 @@ public final class JdbcUtil {
         /**
          *
          * @param ids
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param batchSize
          * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
@@ -8704,6 +8704,106 @@ public final class JdbcUtil {
          */
         List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize)
                 throws DuplicatedResultException, SQLException;
+
+        /**
+         *
+         *
+         * @param ids
+         * @param joinEntitiesToLoad
+         * @return 
+         * @throws SQLException the SQL exception
+         */
+        default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws SQLException {
+            final List<T> result = batchGet(ids);
+
+            if (N.notNullOrEmpty(result)) {
+                getJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @param includeAllJoinEntities
+         * @return 
+         * @throws SQLException the SQL exception
+         */
+        default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws SQLException {
+            final List<T> result = batchGet(ids);
+
+            if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
+                getJoinEntityHelper(this).loadAllJoinEntities(result);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param joinEntitiesToLoad
+         * @return 
+         * @throws SQLException the SQL exception
+         */
+        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
+                throws SQLException {
+            final List<T> result = batchGet(ids, selectPropNames);
+
+            if (N.notNullOrEmpty(result)) {
+                getJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param joinEntitiesToLoad
+         * @return 
+         * @throws SQLException the SQL exception
+         */
+        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames,
+                final Collection<? extends Class<?>> joinEntitiesToLoad) throws SQLException {
+            final List<T> result = batchGet(ids, selectPropNames);
+
+            if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {
+                final JoinEntityHelper<T, SB, TD> joinEntityHelper = getJoinEntityHelper(this);
+
+                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    joinEntityHelper.loadJoinEntities(result, joinEntityClass);
+                }
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param includeAllJoinEntities
+         * @return 
+         * @throws SQLException the SQL exception
+         */
+        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
+                throws SQLException {
+            final List<T> result = batchGet(ids, selectPropNames);
+
+            if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
+                getJoinEntityHelper(this).loadAllJoinEntities(result);
+            }
+
+            return result;
+        }
 
         /**
          *
