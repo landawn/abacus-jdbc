@@ -7726,7 +7726,7 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @return
          * @throws SQLException the SQL exception
@@ -7735,7 +7735,7 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowMapper
          * @return
@@ -7745,7 +7745,7 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowMapper
          * @return
@@ -7935,7 +7935,7 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @return
          * @throws SQLException the SQL exception
@@ -7953,7 +7953,7 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param resultExtrator
          * @return
@@ -7972,7 +7972,7 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param resultExtrator
          * @return
@@ -8028,7 +8028,7 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @return
          * @throws SQLException the SQL exception
@@ -8037,7 +8037,7 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowMapper
          * @return
@@ -8047,7 +8047,7 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowMapper
          * @return
@@ -8057,7 +8057,7 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowFilter
          * @param rowMapper
@@ -8069,7 +8069,7 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowFilter
          * @param rowMapper
@@ -8103,6 +8103,68 @@ public final class JdbcUtil {
          */
         default <R> List<R> list(final String singleSelectPropName, final Condition cond, final RowMapper<R> rowMapper) throws SQLException {
             return list(N.asList(singleSelectPropName), cond, rowMapper);
+        }
+
+        /** 
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param joinEntitiesToLoad
+         * @param cond
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        @Beta
+        default List<T> list(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws SQLException {
+            final List<T> result = list(selectPropNames, cond);
+
+            if (N.notNullOrEmpty(result)) {
+                getJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param joinEntitiesToLoad
+         * @param cond
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        @Beta
+        default List<T> list(final Collection<String> selectPropNames, final Collection<? extends Class<?>> joinEntitiesToLoad, final Condition cond)
+                throws SQLException {
+            final List<T> result = list(selectPropNames, cond);
+
+            if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {
+                final JoinEntityHelper<T, SB, TD> joinEntityHelper = getJoinEntityHelper(this);
+
+                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    joinEntityHelper.loadJoinEntities(result, joinEntityClass);
+                }
+            }
+
+            return result;
+        }
+
+        /** 
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param includeAllJoinEntities
+         * @param cond
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        @Beta
+        default List<T> list(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws SQLException {
+            final List<T> result = list(selectPropNames, cond);
+
+            if (N.notNullOrEmpty(result)) {
+                getJoinEntityHelper(this).loadAllJoinEntities(result);
+            }
+
+            return result;
         }
 
         // Will it cause confusion if it's called in transaction?
@@ -8158,7 +8220,7 @@ public final class JdbcUtil {
         /**
          * lazy-execution, lazy-fetch.
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @return
          */
@@ -8168,7 +8230,7 @@ public final class JdbcUtil {
         /**
          * lazy-execution, lazy-fetch.
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowMapper
          * @return
@@ -8179,7 +8241,7 @@ public final class JdbcUtil {
         /**
          * lazy-execution, lazy-fetch.
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowMapper
          * @return
@@ -8190,7 +8252,7 @@ public final class JdbcUtil {
         /**
          * lazy-execution, lazy-fetch.
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowFilter
          * @param rowMapper
@@ -8203,7 +8265,7 @@ public final class JdbcUtil {
         /**
          * lazy-execution, lazy-fetch.
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowFilter
          * @param rowMapper
@@ -8491,7 +8553,7 @@ public final class JdbcUtil {
         /**
          *
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @return
          * @throws SQLException the SQL exception
          */
@@ -8506,6 +8568,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
+        @Beta
         default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws SQLException {
             return Optional.ofNullable(gett(id, includeAllJoinEntities));
         }
@@ -8513,11 +8576,12 @@ public final class JdbcUtil {
         /**
          * 
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
          * @return
          * @throws SQLException
          */
+        @Beta
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws SQLException {
             return Optional.ofNullable(gett(id, selectPropNames, includeAllJoinEntities));
         }
@@ -8529,6 +8593,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
+        @Beta
         default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws SQLException {
             return Optional.ofNullable(gett(id, joinEntitiesToLoad));
         }
@@ -8536,11 +8601,12 @@ public final class JdbcUtil {
         /**
          * 
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
          * @throws SQLException
          */
+        @Beta
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws SQLException {
             return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
         }
@@ -8548,11 +8614,12 @@ public final class JdbcUtil {
         /**
          * 
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
          * @throws SQLException
          */
+        @Beta
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws SQLException {
             return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
         }
@@ -8569,7 +8636,7 @@ public final class JdbcUtil {
         /**
          * Gets the t.
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          *
          * @return
          * @throws SQLException the SQL exception
@@ -8583,6 +8650,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
+        @Beta
         default T gett(final ID id, final boolean includeAllJoinEntities) throws SQLException {
             final T result = gett(id);
 
@@ -8596,11 +8664,12 @@ public final class JdbcUtil {
         /**
          * 
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
          * @return
          * @throws SQLException
          */
+        @Beta
         default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws SQLException {
             final T result = gett(id, selectPropNames);
 
@@ -8618,6 +8687,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException the SQL exception
          */
+        @Beta
         default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws SQLException {
             final T result = gett(id);
 
@@ -8631,11 +8701,12 @@ public final class JdbcUtil {
         /**
          * 
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
          * @throws SQLException
          */
+        @Beta
         default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws SQLException {
             final T result = gett(id, selectPropNames);
 
@@ -8649,11 +8720,12 @@ public final class JdbcUtil {
         /**
          * 
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
          * @throws SQLException
          */
+        @Beta
         default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws SQLException {
             final T result = gett(id, selectPropNames);
 
@@ -8684,7 +8756,7 @@ public final class JdbcUtil {
          *
          *
          * @param ids
-         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException the SQL exception
@@ -8696,7 +8768,7 @@ public final class JdbcUtil {
         /**
          *
          * @param ids
-         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param batchSize
          * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
@@ -8713,6 +8785,7 @@ public final class JdbcUtil {
          * @return 
          * @throws SQLException the SQL exception
          */
+        @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws SQLException {
             final List<T> result = batchGet(ids);
 
@@ -8731,6 +8804,7 @@ public final class JdbcUtil {
          * @return 
          * @throws SQLException the SQL exception
          */
+        @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws SQLException {
             final List<T> result = batchGet(ids);
 
@@ -8745,11 +8819,12 @@ public final class JdbcUtil {
          *
          *
          * @param ids
-         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return 
          * @throws SQLException the SQL exception
          */
+        @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
                 throws SQLException {
             final List<T> result = batchGet(ids, selectPropNames);
@@ -8765,11 +8840,12 @@ public final class JdbcUtil {
          *
          *
          * @param ids
-         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return 
          * @throws SQLException the SQL exception
          */
+        @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames,
                 final Collection<? extends Class<?>> joinEntitiesToLoad) throws SQLException {
             final List<T> result = batchGet(ids, selectPropNames);
@@ -8789,17 +8865,106 @@ public final class JdbcUtil {
          *
          *
          * @param ids
-         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
          * @return 
          * @throws SQLException the SQL exception
          */
+        @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
                 throws SQLException {
             final List<T> result = batchGet(ids, selectPropNames);
 
             if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
                 getJoinEntityHelper(this).loadAllJoinEntities(result);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param batchSize
+         * @param joinEntitiesToLoad
+         * @return 
+         * @throws SQLException the SQL exception
+         */
+        @Beta
+        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
+                final Class<?> joinEntitiesToLoad) throws SQLException {
+            final List<T> result = batchGet(ids, selectPropNames, batchSize);
+
+            if (N.notNullOrEmpty(result)) {
+                if (result.size() > batchSize) {
+                    final JoinEntityHelper<T, SB, TD> joinEntityHelper = getJoinEntityHelper(this);
+                    StreamEx.of(result).splitToList(batchSize).forEach(it -> joinEntityHelper.loadJoinEntities(it, joinEntitiesToLoad));
+                } else {
+                    getJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+                }
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param batchSize
+         * @param joinEntitiesToLoad
+         * @return 
+         * @throws SQLException the SQL exception
+         */
+        @Beta
+        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
+                final Collection<? extends Class<?>> joinEntitiesToLoad) throws SQLException {
+            final List<T> result = batchGet(ids, selectPropNames, batchSize);
+
+            if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {
+                final JoinEntityHelper<T, SB, TD> joinEntityHelper = getJoinEntityHelper(this);
+
+                if (result.size() > batchSize) {
+                    StreamEx.of(result).splitToList(batchSize).forEach(it -> {
+                        for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                            joinEntityHelper.loadJoinEntities(it, joinEntityClass);
+                        }
+                    });
+                } else {
+                    for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                        joinEntityHelper.loadJoinEntities(result, joinEntityClass);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param batchSize
+         * @param includeAllJoinEntities
+         * @return 
+         * @throws SQLException the SQL exception
+         */
+        @Beta
+        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
+                final boolean includeAllJoinEntities) throws SQLException {
+            final List<T> result = batchGet(ids, selectPropNames, batchSize);
+
+            if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
+                if (result.size() > batchSize) {
+                    final JoinEntityHelper<T, SB, TD> joinEntityHelper = getJoinEntityHelper(this);
+                    StreamEx.of(result).splitToList(batchSize).forEach(it -> joinEntityHelper.loadAllJoinEntities(it));
+                } else {
+                    getJoinEntityHelper(this).loadAllJoinEntities(result);
+                }
             }
 
             return result;
@@ -9874,7 +10039,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityClass
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @throws SQLException the SQL exception
          */
         default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
@@ -9901,7 +10066,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityClass
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @throws SQLException the SQL exception
          */
         default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
@@ -9933,7 +10098,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityPropName
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @throws SQLException the SQL exception
          */
         void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException;
@@ -9952,7 +10117,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityPropName
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @throws SQLException the SQL exception
          */
         void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException;
@@ -10146,7 +10311,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityClass
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @throws SQLException the SQL exception
          */
         default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
@@ -10173,7 +10338,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityClass
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @throws SQLException the SQL exception
          */
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
@@ -10210,7 +10375,7 @@ public final class JdbcUtil {
          * @param entity
          * ?
          * @param joinEntityPropName
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @throws SQLException the SQL exception
          */
         default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException {
@@ -10236,7 +10401,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityPropName
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @throws SQLException the SQL exception
          */
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
@@ -10478,7 +10643,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityPropName
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @return the total count of updated/deleted records.
          * @throws SQLException the SQL exception
          */
@@ -10488,7 +10653,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityPropName
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @return the total count of updated/deleted records.
          * @throws SQLException the SQL exception
          */
@@ -10727,7 +10892,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityPropName
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @return the total count of updated/deleted records.
          * @throws UnsupportedOperationException
          * @throws SQLException
@@ -10743,7 +10908,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityPropName
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @return the total count of updated/deleted records.
          * @throws UnsupportedOperationException
          * @throws SQLException
@@ -10948,7 +11113,7 @@ public final class JdbcUtil {
          *
          * @param entityToSave
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         void save(final T entityToSave) throws UncheckedSQLException;
@@ -10958,7 +11123,7 @@ public final class JdbcUtil {
          * @param entityToSave
          * @param propNamesToSave
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         void save(final T entityToSave, final Collection<String> propNamesToSave) throws UncheckedSQLException;
@@ -10968,7 +11133,7 @@ public final class JdbcUtil {
          * @param namedInsertSQL
          * @param entityToSave
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         void save(final String namedInsertSQL, final T entityToSave) throws UncheckedSQLException;
@@ -10978,7 +11143,7 @@ public final class JdbcUtil {
          *
          * @param entitiesToSave
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          * @see CrudDao#batchInsert(Collection)
          */
         @Override
@@ -10992,7 +11157,7 @@ public final class JdbcUtil {
          * @param entitiesToSave
          * @param batchSize
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          * @see CrudDao#batchInsert(Collection)
          */
         @Override
@@ -11004,7 +11169,7 @@ public final class JdbcUtil {
          * @param entitiesToSave
          * @param propNamesToSave
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          * @see CrudDao#batchInsert(Collection)
          */
         @Override
@@ -11019,7 +11184,7 @@ public final class JdbcUtil {
          * @param propNamesToSave
          * @param batchSize
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          * @see CrudDao#batchInsert(Collection)
          */
         @Override
@@ -11032,7 +11197,7 @@ public final class JdbcUtil {
          * @param namedInsertSQL
          * @param entitiesToSave
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          * @see CrudDao#batchInsert(Collection)
          */
         @Override
@@ -11048,7 +11213,7 @@ public final class JdbcUtil {
          * @param entitiesToSave
          * @param batchSize
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          * @see CrudDao#batchInsert(Collection)
          */
         @Override
@@ -11059,7 +11224,7 @@ public final class JdbcUtil {
          *
          * @param cond
          * @return true, if successful
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         boolean exists(final Condition cond) throws UncheckedSQLException;
@@ -11068,7 +11233,7 @@ public final class JdbcUtil {
          *
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         int count(final Condition cond) throws UncheckedSQLException;
@@ -11077,7 +11242,7 @@ public final class JdbcUtil {
          *
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         Optional<T> findFirst(final Condition cond) throws UncheckedSQLException;
@@ -11086,7 +11251,7 @@ public final class JdbcUtil {
          * @param cond
          * @param rowMapper
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> Optional<R> findFirst(final Condition cond, final RowMapper<R> rowMapper) throws UncheckedSQLException;
@@ -11095,39 +11260,39 @@ public final class JdbcUtil {
          * @param cond
          * @param rowMapper
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> Optional<R> findFirst(final Condition cond, final BiRowMapper<R> rowMapper) throws UncheckedSQLException;
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowMapper
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final RowMapper<R> rowMapper) throws UncheckedSQLException;
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowMapper
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper) throws UncheckedSQLException;
@@ -11138,7 +11303,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
@@ -11149,7 +11314,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
@@ -11160,7 +11325,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
@@ -11171,7 +11336,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
@@ -11182,7 +11347,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
@@ -11193,7 +11358,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
@@ -11204,7 +11369,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
@@ -11215,7 +11380,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
@@ -11226,7 +11391,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         Nullable<String> queryForString(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
@@ -11237,7 +11402,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
@@ -11248,7 +11413,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
@@ -11259,7 +11424,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
@@ -11272,7 +11437,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
@@ -11287,7 +11452,7 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws DuplicatedResultException if more than one record found.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
@@ -11302,7 +11467,7 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws DuplicatedResultException if more than one record found.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
@@ -11316,7 +11481,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
@@ -11326,17 +11491,17 @@ public final class JdbcUtil {
          *
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         DataSet query(final Condition cond) throws UncheckedSQLException;
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         DataSet query(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
@@ -11346,18 +11511,18 @@ public final class JdbcUtil {
          * @param cond
          * @param resultExtrator
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> R query(final Condition cond, final ResultExtractor<R> resultExtrator) throws UncheckedSQLException;
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param resultExtrator
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> R query(final Collection<String> selectPropNames, final Condition cond, final ResultExtractor<R> resultExtrator) throws UncheckedSQLException;
@@ -11367,18 +11532,18 @@ public final class JdbcUtil {
          * @param cond
          * @param resultExtrator
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> R query(final Condition cond, final BiResultExtractor<R> resultExtrator) throws UncheckedSQLException;
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param resultExtrator
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> R query(final Collection<String> selectPropNames, final Condition cond, final BiResultExtractor<R> resultExtrator) throws UncheckedSQLException;
@@ -11387,7 +11552,7 @@ public final class JdbcUtil {
          *
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         List<T> list(final Condition cond) throws UncheckedSQLException;
@@ -11397,7 +11562,7 @@ public final class JdbcUtil {
          * @param cond
          * @param rowMapper
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> List<R> list(final Condition cond, final RowMapper<R> rowMapper) throws UncheckedSQLException;
@@ -11407,7 +11572,7 @@ public final class JdbcUtil {
          * @param cond
          * @param rowMapper
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> List<R> list(final Condition cond, final BiRowMapper<R> rowMapper) throws UncheckedSQLException;
@@ -11418,7 +11583,7 @@ public final class JdbcUtil {
          * @param rowFilter
          * @param rowMapper
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> List<R> list(final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper) throws UncheckedSQLException;
@@ -11429,51 +11594,51 @@ public final class JdbcUtil {
          * @param rowFilter
          * @param rowMapper
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> List<R> list(final Condition cond, final BiRowFilter rowFilter, final BiRowMapper<R> rowMapper) throws UncheckedSQLException;
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         List<T> list(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowMapper
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final RowMapper<R> rowMapper) throws UncheckedSQLException;
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowMapper
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper) throws UncheckedSQLException;
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowFilter
          * @param rowMapper
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper)
@@ -11481,12 +11646,12 @@ public final class JdbcUtil {
 
         /**
          *
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @param rowFilter
          * @param rowMapper
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter, final BiRowMapper<R> rowMapper)
@@ -11497,7 +11662,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException {
@@ -11513,11 +11678,77 @@ public final class JdbcUtil {
          * @param cond
          * @param rowMapper
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default <R> List<R> list(final String singleSelectPropName, final Condition cond, final RowMapper<R> rowMapper) throws UncheckedSQLException {
             return list(N.asList(singleSelectPropName), cond, rowMapper);
+        }
+
+        /** 
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param joinEntitiesToLoad
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        @Beta
+        default List<T> list(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws UncheckedSQLException {
+            final List<T> result = list(selectPropNames, cond);
+
+            if (N.notNullOrEmpty(result)) {
+                getUncheckedJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param joinEntitiesToLoad
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        @Beta
+        default List<T> list(final Collection<String> selectPropNames, final Collection<? extends Class<?>> joinEntitiesToLoad, final Condition cond)
+                throws UncheckedSQLException {
+            final List<T> result = list(selectPropNames, cond);
+
+            if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {
+                final UncheckedJoinEntityHelper<T, SB, TD> joinEntityHelper = getUncheckedJoinEntityHelper(this);
+
+                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    joinEntityHelper.loadJoinEntities(result, joinEntityClass);
+                }
+            }
+
+            return result;
+        }
+
+        /** 
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param includeAllJoinEntities
+         * @param cond
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        @Beta
+        default List<T> list(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond)
+                throws UncheckedSQLException {
+            final List<T> result = list(selectPropNames, cond);
+
+            if (N.notNullOrEmpty(result)) {
+                getUncheckedJoinEntityHelper(this).loadAllJoinEntities(result);
+            }
+
+            return result;
         }
 
         /**
@@ -11526,7 +11757,7 @@ public final class JdbcUtil {
          * @param propValue
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int update(final String propName, final Object propValue, final Condition cond) throws UncheckedSQLException {
@@ -11541,7 +11772,7 @@ public final class JdbcUtil {
          * @param updateProps
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         int update(final Map<String, Object> updateProps, final Condition cond) throws UncheckedSQLException;
@@ -11587,7 +11818,7 @@ public final class JdbcUtil {
          *
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         int delete(final Condition cond) throws UncheckedSQLException;
@@ -11614,7 +11845,7 @@ public final class JdbcUtil {
          *
          * @param entityToInsert
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         ID insert(final T entityToInsert) throws UncheckedSQLException;
@@ -11624,7 +11855,7 @@ public final class JdbcUtil {
          * @param entityToInsert
          * @param propNamesToInsert
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws UncheckedSQLException;
@@ -11634,7 +11865,7 @@ public final class JdbcUtil {
          * @param namedInsertSQL
          * @param entityToInsert
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         ID insert(final String namedInsertSQL, final T entityToInsert) throws UncheckedSQLException;
@@ -11643,7 +11874,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default List<ID> batchInsert(final Collection<? extends T> entities) throws UncheckedSQLException {
@@ -11655,7 +11886,7 @@ public final class JdbcUtil {
          * @param entities
          * @param batchSize
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
@@ -11665,7 +11896,7 @@ public final class JdbcUtil {
          * @param entities
          * @param propNamesToInsert
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws UncheckedSQLException {
@@ -11678,7 +11909,7 @@ public final class JdbcUtil {
          * @param propNamesToInsert
          * @param batchSize
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize)
@@ -11689,7 +11920,7 @@ public final class JdbcUtil {
          * @param namedInsertSQL
          * @param entities
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         @Beta
@@ -11703,7 +11934,7 @@ public final class JdbcUtil {
          * @param entities
          * @param batchSize
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         @Beta
@@ -11713,7 +11944,7 @@ public final class JdbcUtil {
          *
          * @param id
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default Optional<T> get(final ID id) throws UncheckedSQLException {
@@ -11723,9 +11954,9 @@ public final class JdbcUtil {
         /**
          *
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws UncheckedSQLException {
@@ -11737,8 +11968,9 @@ public final class JdbcUtil {
          * @param id
          * @param includeAllJoinEntities
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
+        @Beta
         @Override
         default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws UncheckedSQLException {
             return Optional.ofNullable(gett(id, includeAllJoinEntities));
@@ -11747,11 +11979,12 @@ public final class JdbcUtil {
         /**
          * 
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
          * @return
          * @throws UncheckedSQLException
          */
+        @Beta
         @Override
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws UncheckedSQLException {
             return Optional.ofNullable(gett(id, selectPropNames, includeAllJoinEntities));
@@ -11762,8 +11995,9 @@ public final class JdbcUtil {
          * @param id
          * @param joinEntitiesToLoad
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
+        @Beta
         @Override
         default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
             return Optional.ofNullable(gett(id, joinEntitiesToLoad));
@@ -11772,11 +12006,12 @@ public final class JdbcUtil {
         /**
          * 
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
          * @throws UncheckedSQLException
          */
+        @Beta
         @Override
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
             return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
@@ -11785,11 +12020,12 @@ public final class JdbcUtil {
         /**
          * 
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
          * @throws UncheckedSQLException
          */
+        @Beta
         @Override
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
                 throws UncheckedSQLException {
@@ -11801,7 +12037,7 @@ public final class JdbcUtil {
          *
          * @param id
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         T gett(final ID id) throws UncheckedSQLException;
@@ -11809,10 +12045,10 @@ public final class JdbcUtil {
         /**
          * Gets the t.
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          *
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         T gett(final ID id, final Collection<String> selectPropNames) throws UncheckedSQLException;
@@ -11822,8 +12058,9 @@ public final class JdbcUtil {
          * @param id
          * @param includeAllJoinEntities
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
+        @Beta
         @Override
         default T gett(final ID id, final boolean includeAllJoinEntities) throws UncheckedSQLException {
             final T result = gett(id);
@@ -11838,11 +12075,12 @@ public final class JdbcUtil {
         /**
          * 
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
          * @return
          * @throws UncheckedSQLException
          */
+        @Beta
         @Override
         default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws UncheckedSQLException {
             final T result = gett(id, selectPropNames);
@@ -11859,8 +12097,9 @@ public final class JdbcUtil {
          * @param id
          * @param joinEntitiesToLoad
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
+        @Beta
         @Override
         default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
             final T result = gett(id);
@@ -11875,11 +12114,12 @@ public final class JdbcUtil {
         /**
          * 
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
          * @throws UncheckedSQLException
          */
+        @Beta
         @Override
         default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
             final T result = gett(id, selectPropNames);
@@ -11894,11 +12134,12 @@ public final class JdbcUtil {
         /**
          * 
          * @param id
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
          * @throws UncheckedSQLException
          */
+        @Beta
         @Override
         default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws UncheckedSQLException {
             final T result = gett(id, selectPropNames);
@@ -11920,7 +12161,7 @@ public final class JdbcUtil {
          * @param ids
          * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicatedResultException, UncheckedSQLException {
@@ -11931,10 +12172,10 @@ public final class JdbcUtil {
          *
          *
          * @param ids
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames)
@@ -11945,11 +12186,11 @@ public final class JdbcUtil {
         /**
          *
          * @param ids
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param batchSize
          * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize)
@@ -11957,9 +12198,208 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param ids
+         * @param joinEntitiesToLoad
+         * @return 
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        @Beta
+        default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
+            final List<T> result = batchGet(ids);
+
+            if (N.notNullOrEmpty(result)) {
+                getUncheckedJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @param includeAllJoinEntities
+         * @return 
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        @Beta
+        default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws UncheckedSQLException {
+            final List<T> result = batchGet(ids);
+
+            if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
+                getUncheckedJoinEntityHelper(this).loadAllJoinEntities(result);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param joinEntitiesToLoad
+         * @return 
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        @Beta
+        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
+                throws SQLException {
+            final List<T> result = batchGet(ids, selectPropNames);
+
+            if (N.notNullOrEmpty(result)) {
+                getUncheckedJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param joinEntitiesToLoad
+         * @return 
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        @Beta
+        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames,
+                final Collection<? extends Class<?>> joinEntitiesToLoad) throws UncheckedSQLException {
+            final List<T> result = batchGet(ids, selectPropNames);
+
+            if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {
+                final UncheckedJoinEntityHelper<T, SB, TD> joinEntityHelper = getUncheckedJoinEntityHelper(this);
+
+                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    joinEntityHelper.loadJoinEntities(result, joinEntityClass);
+                }
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param includeAllJoinEntities
+         * @return 
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        @Beta
+        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
+                throws SQLException {
+            final List<T> result = batchGet(ids, selectPropNames);
+
+            if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
+                getUncheckedJoinEntityHelper(this).loadAllJoinEntities(result);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param batchSize
+         * @param joinEntitiesToLoad
+         * @return 
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        @Beta
+        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
+                final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
+            final List<T> result = batchGet(ids, selectPropNames, batchSize);
+
+            if (N.notNullOrEmpty(result)) {
+                if (result.size() > batchSize) {
+                    final UncheckedJoinEntityHelper<T, SB, TD> joinEntityHelper = getUncheckedJoinEntityHelper(this);
+                    StreamEx.of(result).splitToList(batchSize).forEach(it -> joinEntityHelper.loadJoinEntities(it, joinEntitiesToLoad));
+                } else {
+                    getUncheckedJoinEntityHelper(this).loadJoinEntities(result, joinEntitiesToLoad);
+                }
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         *
+         * @param ids
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param batchSize
+         * @param joinEntitiesToLoad
+         * @return 
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        @Beta
+        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
+                final Collection<? extends Class<?>> joinEntitiesToLoad) throws UncheckedSQLException {
+            final List<T> result = batchGet(ids, selectPropNames, batchSize);
+
+            if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {
+                final UncheckedJoinEntityHelper<T, SB, TD> joinEntityHelper = getUncheckedJoinEntityHelper(this);
+
+                if (result.size() > batchSize) {
+                    StreamEx.of(result).splitToList(batchSize).forEach(it -> {
+                        for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                            joinEntityHelper.loadJoinEntities(it, joinEntityClass);
+                        }
+                    });
+                } else {
+                    for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                        joinEntityHelper.loadJoinEntities(result, joinEntityClass);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param ids
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+         * @param batchSize
+         * @param includeAllJoinEntities
+         * @return 
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        @Beta
+        default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
+                final boolean includeAllJoinEntities) throws UncheckedSQLException {
+            final List<T> result = batchGet(ids, selectPropNames, batchSize);
+
+            if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
+                if (result.size() > batchSize) {
+                    final UncheckedJoinEntityHelper<T, SB, TD> joinEntityHelper = getUncheckedJoinEntityHelper(this);
+                    StreamEx.of(result).splitToList(batchSize).forEach(it -> joinEntityHelper.loadAllJoinEntities(it));
+                } else {
+                    getUncheckedJoinEntityHelper(this).loadAllJoinEntities(result);
+                }
+            }
+
+            return result;
+        }
+
+        /**
+         *
          * @param id
          * @return true, if successful
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         boolean exists(final ID id) throws UncheckedSQLException;
@@ -11968,7 +12408,7 @@ public final class JdbcUtil {
          *
          * @param entityToUpdate
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         int update(final T entityToUpdate) throws UncheckedSQLException;
@@ -11978,7 +12418,7 @@ public final class JdbcUtil {
          * @param entityToUpdate
          * @param propNamesToUpdate
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws UncheckedSQLException;
@@ -11989,7 +12429,7 @@ public final class JdbcUtil {
         * @param propValue
         * @param id
         * @return
-        * @throws UncheckedSQLException the SQL exception
+        * @throws UncheckedSQLException the unchecked SQL exception
         */
         @Override
         default int update(final String propName, final Object propValue, final ID id) throws UncheckedSQLException {
@@ -12004,7 +12444,7 @@ public final class JdbcUtil {
          * @param updateProps
          * @param id
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         int update(final Map<String, Object> updateProps, final ID id) throws UncheckedSQLException;
@@ -12013,7 +12453,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int batchUpdate(final Collection<? extends T> entities) throws UncheckedSQLException {
@@ -12025,7 +12465,7 @@ public final class JdbcUtil {
          * @param entities
          * @param batchSize
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
@@ -12035,7 +12475,7 @@ public final class JdbcUtil {
          * @param entities
          * @param propNamesToUpdate
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws UncheckedSQLException {
@@ -12048,7 +12488,7 @@ public final class JdbcUtil {
          * @param propNamesToUpdate
          * @param batchSize
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws UncheckedSQLException;
@@ -12168,7 +12608,7 @@ public final class JdbcUtil {
          *
          * @param id
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         int deleteById(final ID id) throws UncheckedSQLException;
@@ -12177,7 +12617,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         int delete(final T entity) throws UncheckedSQLException;
@@ -12187,7 +12627,7 @@ public final class JdbcUtil {
         //     * @param entity
         //     * @param onDeleteAction It should be defined and done in DB server side.
         //     * @return
-        //     * @throws UncheckedSQLException the SQL exception
+        //     * @throws UncheckedSQLException the unchecked SQL exception
         //     */
         //    @Beta
         //    int delete(final T entity, final OnDeleteAction onDeleteAction) throws UncheckedSQLException;
@@ -12196,7 +12636,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int batchDelete(final Collection<? extends T> entities) throws UncheckedSQLException {
@@ -12208,7 +12648,7 @@ public final class JdbcUtil {
          * @param entities
          * @param batchSize
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         int batchDelete(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
@@ -12218,7 +12658,7 @@ public final class JdbcUtil {
         //     * @param entities
         //     * @param onDeleteAction It should be defined and done in DB server side.
         //     * @return
-        //     * @throws UncheckedSQLException the SQL exception
+        //     * @throws UncheckedSQLException the unchecked SQL exception
         //     */
         //    @Beta
         //    default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction) throws UncheckedSQLException {
@@ -12231,7 +12671,7 @@ public final class JdbcUtil {
         //     * @param onDeleteAction It should be defined and done in DB server side.
         //     * @param batchSize
         //     * @return
-        //     * @throws UncheckedSQLException the SQL exception
+        //     * @throws UncheckedSQLException the unchecked SQL exception
         //     */
         //    @Beta
         //    int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction, final int batchSize) throws UncheckedSQLException;
@@ -12240,7 +12680,7 @@ public final class JdbcUtil {
          *
          * @param ids
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int batchDeleteByIds(final Collection<? extends ID> ids) throws UncheckedSQLException {
@@ -12252,7 +12692,7 @@ public final class JdbcUtil {
          * @param ids
          * @param batchSize
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws UncheckedSQLException;
@@ -12327,7 +12767,7 @@ public final class JdbcUtil {
          * @param propValue
          * @param cond
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          * @deprecated unsupported Operation
          */
         @Override
@@ -12602,7 +13042,7 @@ public final class JdbcUtil {
          * @param propValue
          * @param id
          * @return
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          * @deprecated unsupported Operation
          */
         @Override
@@ -13013,7 +13453,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityClass
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntities(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
@@ -13024,8 +13464,8 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityClass
-         * @param selectPropNames
-         * @throws UncheckedSQLException the SQL exception
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws UncheckedSQLException {
@@ -13042,7 +13482,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityClass
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
@@ -13053,8 +13493,8 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityClass
-         * @param selectPropNames
-         * @throws UncheckedSQLException the SQL exception
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
@@ -13076,7 +13516,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityPropName
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntities(final T entity, final String joinEntityPropName) throws UncheckedSQLException {
@@ -13087,8 +13527,8 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityPropName
-         * @param selectPropNames
-         * @throws UncheckedSQLException the SQL exception
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException;
@@ -13097,7 +13537,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityPropName
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException {
@@ -13108,8 +13548,8 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityPropName
-         * @param selectPropNames
-         * @throws UncheckedSQLException the SQL exception
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
@@ -13119,7 +13559,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityPropNames
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
@@ -13137,7 +13577,7 @@ public final class JdbcUtil {
          * @param entity
          * @param joinEntityPropNames
          * @param inParallel
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException {
@@ -13153,7 +13593,7 @@ public final class JdbcUtil {
          * @param entity
          * @param joinEntityPropNames
          * @param executor
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
@@ -13172,7 +13612,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityPropName
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
@@ -13190,7 +13630,7 @@ public final class JdbcUtil {
          * @param entities
          * @param joinEntityPropName
          * @param inParallel
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
@@ -13207,7 +13647,7 @@ public final class JdbcUtil {
          * @param entities
          * @param joinEntityPropName
          * @param executor
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
@@ -13226,7 +13666,7 @@ public final class JdbcUtil {
         /**
          *
          * @param entity
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadAllJoinEntities(T entity) throws UncheckedSQLException {
@@ -13237,7 +13677,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param inParallel
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadAllJoinEntities(final T entity, final boolean inParallel) throws UncheckedSQLException {
@@ -13252,7 +13692,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param executor
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException {
@@ -13262,7 +13702,7 @@ public final class JdbcUtil {
         /**
          *
          * @param entities
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadAllJoinEntities(final Collection<T> entities) throws UncheckedSQLException {
@@ -13277,7 +13717,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param inParallel
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
@@ -13292,7 +13732,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param executor
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
@@ -13307,7 +13747,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityClass
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
@@ -13318,8 +13758,8 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityClass
-         * @param selectPropNames
-         * @throws UncheckedSQLException the SQL exception
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
@@ -13337,7 +13777,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityClass
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
@@ -13348,8 +13788,8 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityClass
-         * @param selectPropNames
-         * @throws UncheckedSQLException the SQL exception
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
@@ -13375,7 +13815,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityPropName
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName) throws UncheckedSQLException {
@@ -13387,8 +13827,8 @@ public final class JdbcUtil {
          * @param entity
          * ?
          * @param joinEntityPropName
-         * @param selectPropNames
-         * @throws UncheckedSQLException the SQL exception
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames)
@@ -13405,7 +13845,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityPropName
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException {
@@ -13416,8 +13856,8 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityPropName
-         * @param selectPropNames
-         * @throws UncheckedSQLException the SQL exception
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
@@ -13437,7 +13877,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityPropNames
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
@@ -13455,7 +13895,7 @@ public final class JdbcUtil {
          * @param entity
          * @param joinEntityPropNames
          * @param inParallel
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel)
@@ -13472,7 +13912,7 @@ public final class JdbcUtil {
          * @param entity
          * @param joinEntityPropNames
          * @param executor
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final Executor executor)
@@ -13492,7 +13932,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityPropName
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
@@ -13510,7 +13950,7 @@ public final class JdbcUtil {
          * @param entities
          * @param joinEntityPropName
          * @param inParallel
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
@@ -13527,7 +13967,7 @@ public final class JdbcUtil {
          * @param entities
          * @param joinEntityPropName
          * @param executor
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
@@ -13546,7 +13986,7 @@ public final class JdbcUtil {
         /**
          *
          * @param entity
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(T entity) throws UncheckedSQLException {
@@ -13557,7 +13997,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param inParallel
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) throws UncheckedSQLException {
@@ -13572,7 +14012,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param executor
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws UncheckedSQLException {
@@ -13582,7 +14022,7 @@ public final class JdbcUtil {
         /**
          *
          * @param entities
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final Collection<T> entities) throws UncheckedSQLException {
@@ -13597,7 +14037,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param inParallel
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
@@ -13612,7 +14052,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param executor
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
@@ -13628,7 +14068,7 @@ public final class JdbcUtil {
          * @param entity
          * @param joinEntityClass
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
@@ -13650,7 +14090,7 @@ public final class JdbcUtil {
          * @param entities
          * @param joinEntityClass
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
@@ -13675,9 +14115,9 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityPropName
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         int deleteJoinEntities(final T entity, final String joinEntityPropName) throws UncheckedSQLException;
@@ -13686,9 +14126,9 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityPropName
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException;
@@ -13698,7 +14138,7 @@ public final class JdbcUtil {
          * @param entity
          * @param joinEntityPropNames
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
@@ -13721,7 +14161,7 @@ public final class JdbcUtil {
          * @param joinEntityPropNames
          * @param inParallel
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException {
@@ -13738,7 +14178,7 @@ public final class JdbcUtil {
          * @param joinEntityPropNames
          * @param executor
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
@@ -13758,7 +14198,7 @@ public final class JdbcUtil {
          * @param entities
          * @param joinEntityPropName
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
@@ -13781,7 +14221,7 @@ public final class JdbcUtil {
          * @param joinEntityPropName
          * @param inParallel
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
@@ -13799,7 +14239,7 @@ public final class JdbcUtil {
          * @param joinEntityPropName
          * @param executor
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
@@ -13819,7 +14259,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int deleteAllJoinEntities(T entity) throws UncheckedSQLException {
@@ -13831,7 +14271,7 @@ public final class JdbcUtil {
          * @param entity
          * @param inParallel
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws UncheckedSQLException {
@@ -13847,7 +14287,7 @@ public final class JdbcUtil {
          * @param entity
          * @param executor
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int deleteAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException {
@@ -13858,7 +14298,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int deleteAllJoinEntities(final Collection<T> entities) throws UncheckedSQLException {
@@ -13874,7 +14314,7 @@ public final class JdbcUtil {
          * @param entities
          * @param inParallel
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
@@ -13890,7 +14330,7 @@ public final class JdbcUtil {
          * @param entities
          * @param executor
          * @return the total count of updated/deleted records.
-         * @throws UncheckedSQLException the SQL exception
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
@@ -13940,7 +14380,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @param joinEntityPropName
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @return the total count of updated/deleted records.
          * @throws UnsupportedOperationException
          * @throws UncheckedSQLException
@@ -13956,7 +14396,7 @@ public final class JdbcUtil {
          *
          * @param entities
          * @param joinEntityPropName
-         * @param selectPropNames
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @return the total count of updated/deleted records.
          * @throws UnsupportedOperationException
          * @throws UncheckedSQLException
