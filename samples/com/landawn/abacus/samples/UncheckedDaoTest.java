@@ -304,6 +304,7 @@ public class UncheckedDaoTest {
         uncheckedUserDao2.deleteById(id);
 
         assertFalse(uncheckedUserDao2.exists(id));
+
     }
 
     @SuppressWarnings("deprecation")
@@ -323,6 +324,16 @@ public class UncheckedDaoTest {
 
         try {
             readOnlyUserDao.batchSave(N.asList(user));
+            fail("Should throw UnsupportedOperationException");
+        } catch (UnsupportedOperationException e) {
+            //
+        } catch (Exception e) {
+            //
+            e.printStackTrace();
+        }
+
+        try {
+            uncheckedUserDao2.deleteJoinEntities(user, Device.class);
             fail("Should throw UnsupportedOperationException");
         } catch (UnsupportedOperationException e) {
             //

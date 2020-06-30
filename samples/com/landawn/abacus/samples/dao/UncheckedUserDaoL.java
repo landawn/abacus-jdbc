@@ -13,5 +13,5 @@ import com.landawn.abacus.util.SQLBuilder;
 @Cache(capacity = 1000, evictDelay = 6000)
 @RefreshCache
 public interface UncheckedUserDaoL extends JdbcUtil.UncheckedCrudDaoL<User, SQLBuilder.PSC, UncheckedUserDaoL>,
-        JdbcUtil.UncheckedJoinEntityHelper<User, SQLBuilder.PSC, UncheckedUserDaoL> {
+        JdbcUtil.UnckeckedReadOnlyCrudJoinEntityHelper<User, Long, SQLBuilder.PSC, UncheckedUserDaoL> {
 }
