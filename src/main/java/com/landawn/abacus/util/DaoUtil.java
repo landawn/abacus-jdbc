@@ -645,8 +645,11 @@ final class DaoUtil {
             return false;
         }
 
-        if (paramLen > 0
-                && (ResultExtractor.class.isAssignableFrom(paramTypes[paramLen - 1]) || BiResultExtractor.class.isAssignableFrom(paramTypes[paramLen - 1]))) {
+        if (paramLen > 0 //
+                && (ResultExtractor.class.isAssignableFrom(paramTypes[paramLen - 1]) //
+                        || BiResultExtractor.class.isAssignableFrom(paramTypes[paramLen - 1]) //
+                        || RowMapper.class.isAssignableFrom(paramTypes[paramLen - 1]) //
+                        || BiRowMapper.class.isAssignableFrom(paramTypes[paramLen - 1]))) {
             return false;
         }
 
