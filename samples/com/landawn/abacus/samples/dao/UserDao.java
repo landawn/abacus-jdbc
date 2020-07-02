@@ -2,6 +2,8 @@ package com.landawn.abacus.samples.dao;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Queue;
+import java.util.Set;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.samples.dao.handler.UserDaoHandlerA;
@@ -131,4 +133,9 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     @NamedSelect(sql = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}", op = OP.exists)
     boolean isThere(@Define("tableName") String tableName, @Define("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
 
+    @Select("select * from user where id > ?")
+    Set<User> listToSet(int id) throws SQLException;
+
+    @Select("select * from user where id > ?")
+    Queue<User> listToCollection(int id) throws SQLException;
 }

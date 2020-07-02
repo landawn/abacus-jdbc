@@ -479,6 +479,14 @@ public class DaoTest {
 
         assertEquals(1, userDao.listUserByAnnoSql2("newFirstName", 0).size());
 
+        userDao.listToSet(0).forEach(Fn.println());
+
+        assertEquals(1, userDao.listToSet(0).size());
+
+        userDao.listToCollection(0).forEach(Fn.println());
+
+        assertEquals(1, userDao.listToSet(0).size());
+
         userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
         userDao.allUsers().map(e -> e.getFirstName() + " " + e.getLastName()).forEach(Fn.println());
