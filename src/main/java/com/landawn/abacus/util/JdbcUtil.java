@@ -9578,6 +9578,57 @@ public final class JdbcUtil {
         }
     }
 
+    @Beta
+    public static interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateCrudDaoL<T, SB, TD>>
+            extends NoUpdateCrudDao<T, Long, SB, TD>, CrudDaoL<T, SB, TD> {
+
+        /**
+         * 
+         * @param propName
+         * @param propValue
+         * @param id
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final String propName, final Object propValue, final long id) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * 
+         * @param updateProps
+         * @param id
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final Map<String, Object> updateProps, final long id) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * @param id
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteById(final long id) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    @Beta
+    public static interface ReadOnlyCrudDaoL<T, SB extends SQLBuilder, TD extends ReadOnlyCrudDaoL<T, SB, TD>>
+            extends ReadOnlyCrudDao<T, Long, SB, TD>, NoUpdateCrudDaoL<T, SB, TD> {
+    }
+
     public static interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
         /**
@@ -12897,6 +12948,57 @@ public final class JdbcUtil {
         default int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws UnsupportedOperationException, UncheckedSQLException {
             throw new UnsupportedOperationException();
         }
+    }
+
+    @Beta
+    public static interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends UncheckedNoUpdateCrudDaoL<T, SB, TD>>
+            extends UncheckedNoUpdateCrudDao<T, Long, SB, TD>, UncheckedCrudDaoL<T, SB, TD> {
+
+        /**
+         * 
+         * @param propName
+         * @param propValue
+         * @param id
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final String propName, final Object propValue, final long id) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * 
+         * @param updateProps
+         * @param id
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final Map<String, Object> updateProps, final long id) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * @param id
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int deleteById(final long id) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    @Beta
+    public static interface UncheckedReadOnlyCrudDaoL<T, SB extends SQLBuilder, TD extends UncheckedReadOnlyCrudDaoL<T, SB, TD>>
+            extends UncheckedReadOnlyCrudDao<T, Long, SB, TD>, UncheckedNoUpdateCrudDaoL<T, SB, TD> {
     }
 
     /**
