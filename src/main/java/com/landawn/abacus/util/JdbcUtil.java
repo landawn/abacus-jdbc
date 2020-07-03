@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -4085,7 +4086,6 @@ public final class JdbcUtil {
     public static boolean isDefaultIdPropValue(final Object propValue) {
         return (propValue == null) || (propValue instanceof Number && (((Number) propValue).longValue() == 0));
     }
-
 
     static <ID> boolean isAllNullIds(List<ID> ids) {
         return N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(JdbcUtil::isDefaultIdPropValue);
@@ -8704,6 +8704,8 @@ public final class JdbcUtil {
          */
         @SuppressWarnings("deprecation")
         default boolean refresh(final T entity, Collection<String> propNamesToRefresh) throws SQLException {
+            N.checkArgNotNullOrEmpty(propNamesToRefresh, "propNamesToRefresh");
+
             final Class<?> cls = entity.getClass();
             final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
@@ -8712,7 +8714,6 @@ public final class JdbcUtil {
 
             if (idPropNameList.size() == 1) {
                 id = entityInfo.getPropInfo(idPropNameList.get(0)).getPropValue(entity);
-
             } else {
                 Seid entityId = Seid.of(ClassUtil.getSimpleClassName(cls));
 
@@ -8723,11 +8724,9 @@ public final class JdbcUtil {
                 id = (ID) entityId;
             }
 
-            if (N.isNullOrEmpty(propNamesToRefresh)) {
-                return exists(id);
-            }
+            final Collection<String> selectPropNames = getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
-            final T dbEntity = gett(id, propNamesToRefresh);
+            final T dbEntity = gett(id, selectPropNames);
 
             if (dbEntity == null) {
                 return false;
@@ -8739,6 +8738,111 @@ public final class JdbcUtil {
                 }
 
                 return true;
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @return the count of refreshed entities.
+         * @throws SQLException
+         */
+        default int batchRefresh(final Collection<? extends T> entities) throws SQLException {
+            return batchRefresh(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         * 
+         * @param entities
+         * @param batchSize
+         * @return the count of refreshed entities.
+         * @throws SQLException
+         */
+        default int batchRefresh(final Collection<? extends T> entities, final int batchSize) throws SQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return 0;
+            }
+
+            final T first = N.firstOrNullIfEmpty(entities);
+            final Class<?> cls = first.getClass();
+            final Collection<String> propNamesToRefresh = DirtyMarkerUtil.isDirtyMarker(cls) ? DirtyMarkerUtil.signedPropNames((DirtyMarker) first)
+                    : SQLBuilder.getSelectPropNames(cls, false, null);
+
+            return batchRefresh(entities, propNamesToRefresh, batchSize);
+        }
+
+        /**
+         * 
+         * @param entities
+         * @param propNamesToRefresh
+         * @return the count of refreshed entities.
+         * @throws SQLException
+         */
+        default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh) throws SQLException {
+            return batchRefresh(entities, propNamesToRefresh, JdbcUtil.DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToRefresh
+         * @param batchSize
+         * @return the count of refreshed entities.
+         * @throws SQLException
+         */
+        @SuppressWarnings("deprecation")
+        default int batchRefresh(final Collection<? extends T> entities, Collection<String> propNamesToRefresh, final int batchSize) throws SQLException {
+            N.checkArgNotNullOrEmpty(propNamesToRefresh, "propNamesToRefresh");
+
+            if (N.isNullOrEmpty(entities)) {
+                return 0;
+            }
+
+            final T first = N.firstOrNullIfEmpty(entities);
+            final Class<?> cls = first.getClass();
+            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+
+            final PropInfo idPropInfo = idPropNameList.size() == 1 ? entityInfo.getPropInfo(idPropNameList.get(0)) : null;
+            final List<PropInfo> idPropInfos = idPropNameList.size() == 1 ? null : N.map(idPropNameList, idPropName -> entityInfo.getPropInfo(idPropName));
+
+            final Function<T, ID> idExtractorFunc = idPropNameList.size() == 1 ? it -> idPropInfo.getPropValue(it) : it -> {
+                final Seid entityId = Seid.of(ClassUtil.getSimpleClassName(cls));
+
+                for (PropInfo propInfo : idPropInfos) {
+                    entityId.set(propInfo.name, propInfo.getPropValue(it));
+                }
+
+                return (ID) entityId;
+            };
+
+            final Map<ID, List<T>> idEntityMap = StreamEx.of(entities).groupTo(idExtractorFunc, Fn.identity());
+
+            final Collection<String> selectPropNames = getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
+
+            final List<T> dbEntities = batchGet(idEntityMap.keySet(), selectPropNames, batchSize);
+
+            if (N.isNullOrEmpty(dbEntities)) {
+                return 0;
+            } else {
+                final boolean isDirtyMarker = DirtyMarkerUtil.isDirtyMarker(cls);
+
+                return dbEntities.stream().mapToInt(dbEntity -> {
+                    final ID id = idExtractorFunc.apply(dbEntity);
+                    final List<T> tmp = idEntityMap.get(id);
+
+                    if (N.notNullOrEmpty(tmp)) {
+                        for (T entity : tmp) {
+                            N.merge(dbEntity, entity, propNamesToRefresh);
+
+                            if (isDirtyMarker) {
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propNamesToRefresh, false);
+                            }
+                        }
+                    }
+
+                    return N.size(tmp);
+                }).sum();
             }
         }
 
@@ -12188,7 +12292,7 @@ public final class JdbcUtil {
          *
          * @param entity
          * @return true, if successful
-         * @throws UncheckedSQLException
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default boolean refresh(final T entity) throws UncheckedSQLException {
@@ -12204,11 +12308,13 @@ public final class JdbcUtil {
          * @param entity
          * @param propNamesToRefresh
          * @return {@code false} if no record found by the ids in the specified {@code entity}.
-         * @throws UncheckedSQLException
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         @SuppressWarnings("deprecation")
         default boolean refresh(final T entity, Collection<String> propNamesToRefresh) throws UncheckedSQLException {
+            N.checkArgNotNullOrEmpty(propNamesToRefresh, "propNamesToRefresh");
+
             final Class<?> cls = entity.getClass();
             final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
@@ -12217,7 +12323,6 @@ public final class JdbcUtil {
 
             if (idPropNameList.size() == 1) {
                 id = entityInfo.getPropInfo(idPropNameList.get(0)).getPropValue(entity);
-
             } else {
                 Seid entityId = Seid.of(ClassUtil.getSimpleClassName(cls));
 
@@ -12228,11 +12333,9 @@ public final class JdbcUtil {
                 id = (ID) entityId;
             }
 
-            if (N.isNullOrEmpty(propNamesToRefresh)) {
-                return exists(id);
-            }
+            final Collection<String> selectPropNames = getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
-            final T dbEntity = gett(id, propNamesToRefresh);
+            final T dbEntity = gett(id, selectPropNames);
 
             if (dbEntity == null) {
                 return false;
@@ -12244,6 +12347,116 @@ public final class JdbcUtil {
                 }
 
                 return true;
+            }
+        }
+
+        /**
+         *
+         * @param entities
+         * @return the count of refreshed entities.
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        default int batchRefresh(final Collection<? extends T> entities) throws UncheckedSQLException {
+            return batchRefresh(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         * 
+         * @param entities
+         * @param batchSize
+         * @return the count of refreshed entities.
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        default int batchRefresh(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException {
+            if (N.isNullOrEmpty(entities)) {
+                return 0;
+            }
+
+            final T first = N.firstOrNullIfEmpty(entities);
+            final Class<?> cls = first.getClass();
+            final Collection<String> propNamesToRefresh = DirtyMarkerUtil.isDirtyMarker(cls) ? DirtyMarkerUtil.signedPropNames((DirtyMarker) first)
+                    : SQLBuilder.getSelectPropNames(cls, false, null);
+
+            return batchRefresh(entities, propNamesToRefresh, batchSize);
+        }
+
+        /**
+         * 
+         * @param entities
+         * @param propNamesToRefresh
+         * @return the count of refreshed entities.
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh) throws UncheckedSQLException {
+            return batchRefresh(entities, propNamesToRefresh, JdbcUtil.DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         *
+         * @param entities
+         * @param propNamesToRefresh
+         * @param batchSize
+         * @return the count of refreshed entities.
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        @SuppressWarnings("deprecation")
+        default int batchRefresh(final Collection<? extends T> entities, Collection<String> propNamesToRefresh, final int batchSize)
+                throws UncheckedSQLException {
+            N.checkArgNotNullOrEmpty(propNamesToRefresh, "propNamesToRefresh");
+
+            if (N.isNullOrEmpty(entities)) {
+                return 0;
+            }
+
+            final T first = N.firstOrNullIfEmpty(entities);
+            final Class<?> cls = first.getClass();
+            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+
+            final PropInfo idPropInfo = idPropNameList.size() == 1 ? entityInfo.getPropInfo(idPropNameList.get(0)) : null;
+            final List<PropInfo> idPropInfos = idPropNameList.size() == 1 ? null : N.map(idPropNameList, idPropName -> entityInfo.getPropInfo(idPropName));
+
+            final Function<T, ID> idExtractorFunc = idPropNameList.size() == 1 ? it -> idPropInfo.getPropValue(it) : it -> {
+                final Seid entityId = Seid.of(ClassUtil.getSimpleClassName(cls));
+
+                for (PropInfo propInfo : idPropInfos) {
+                    entityId.set(propInfo.name, propInfo.getPropValue(it));
+                }
+
+                return (ID) entityId;
+            };
+
+            final Map<ID, List<T>> idEntityMap = StreamEx.of(entities).groupTo(idExtractorFunc, Fn.identity());
+
+            final Collection<String> selectPropNames = getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
+
+            final List<T> dbEntities = batchGet(idEntityMap.keySet(), selectPropNames, batchSize);
+
+            if (N.isNullOrEmpty(dbEntities)) {
+                return 0;
+            } else {
+                final boolean isDirtyMarker = DirtyMarkerUtil.isDirtyMarker(cls);
+
+                return dbEntities.stream().mapToInt(dbEntity -> {
+                    final ID id = idExtractorFunc.apply(dbEntity);
+                    final List<T> tmp = idEntityMap.get(id);
+
+                    if (N.notNullOrEmpty(tmp)) {
+                        for (T entity : tmp) {
+                            N.merge(dbEntity, entity, propNamesToRefresh);
+
+                            if (isDirtyMarker) {
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propNamesToRefresh, false);
+                            }
+                        }
+                    }
+
+                    return N.size(tmp);
+                }).sum();
             }
         }
 
@@ -14774,6 +14987,16 @@ public final class JdbcUtil {
 
     static Object[] getParameterArray(final SP sp) {
         return N.isNullOrEmpty(sp.parameters) ? N.EMPTY_OBJECT_ARRAY : sp.parameters.toArray();
+    }
+
+    static Collection<String> getRefreshSelectPropNames(Collection<String> propNamesToRefresh, final List<String> idPropNameList) {
+        if (propNamesToRefresh.containsAll(idPropNameList)) {
+            return propNamesToRefresh;
+        } else {
+            final Collection<String> selectPropNames = new HashSet<>(propNamesToRefresh);
+            selectPropNames.addAll(idPropNameList);
+            return selectPropNames;
+        }
     }
 
     static <R> BiRowMapper<R> toBiRowMapper(final RowMapper<R> rowMapper) {

@@ -22,6 +22,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
@@ -48,6 +49,34 @@ import com.landawn.abacus.util.stream.LongStream;
 import com.landawn.abacus.util.stream.Stream;
 
 public class DaoTest {
+
+    @Test
+    public void test_refresh() throws Exception {
+
+        List<User> users = IntStream.range(1, 1000)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                .toList();
+
+        List<Long> ids = userDao.batchInsertWithId(users);
+        assertEquals(users.size(), ids.size());
+
+        List<User> dbUsers = userDao.batchGet(ids).stream().map(it -> N.copy(it)).collect(Collectors.toList());
+
+        dbUsers.forEach(it -> it.setFirstName(N.uuid()));
+
+        userDao.batchRefresh(dbUsers, N.asList("lastName"));
+        assertFalse(N.equals(userDao.batchGet(ids), dbUsers));
+
+        userDao.batchRefresh(dbUsers, N.asList("firstName"));
+        assertTrue(N.equals(userDao.batchGet(ids), dbUsers));
+
+        dbUsers.forEach(it -> it.setFirstName(N.uuid()));
+
+        userDao.batchRefresh(dbUsers);
+        assertTrue(N.equals(userDao.batchGet(ids), dbUsers));
+
+        userDao.batchDelete(dbUsers);
+    }
 
     @Test
     public void test_define() throws Exception {
