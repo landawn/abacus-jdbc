@@ -8520,6 +8520,18 @@ public final class JdbcUtil {
         }
 
         /**
+        *
+        * @param ids
+        * @param batchSize
+        * @return
+        * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
+        * @throws SQLException the SQL exception
+        */
+        default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws DuplicatedResultException, SQLException {
+            return batchGet(ids, (Collection<String>) null, batchSize);
+        }
+
+        /**
          *
          *
          * @param ids
@@ -8651,8 +8663,9 @@ public final class JdbcUtil {
                 insert(entity);
                 return entity;
             } else {
+                final Class<?> cls = entity.getClass();
                 @SuppressWarnings("deprecation")
-                final List<String> idPropNameList = ClassUtil.getIdFieldNames(targetEntityClass());
+                final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls);
                 N.merge(entity, dbEntity, false, N.newHashSet(idPropNameList));
                 update(dbEntity);
                 return dbEntity;
@@ -8667,9 +8680,11 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default T upsert(final T entity) throws SQLException {
+            final Class<?> cls = entity.getClass();
             @SuppressWarnings("deprecation")
-            final List<String> idPropNameList = ClassUtil.getIdFieldNames(targetEntityClass());
-            final T dbEntity = idPropNameList.size() == 1 ? gett((ID) ClassUtil.getPropValue(entity, idPropNameList.get(0))) : gett((ID) entity);
+            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+            final T dbEntity = gett(JdbcUtil.extractId(entity, cls, idPropNameList, entityInfo));
 
             if (dbEntity == null) {
                 insert(entity);
@@ -8679,6 +8694,65 @@ public final class JdbcUtil {
                 update(dbEntity);
                 return dbEntity;
             }
+        }
+
+        /**
+         * 
+         * @param entities
+         * @return
+         * @throws SQLException
+         */
+        default List<T> batchUpsert(final Collection<? extends T> entities) throws SQLException {
+            return batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         * 
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws SQLException
+         */
+        default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws SQLException {
+            N.checkArgPositive(batchSize, "batchSize");
+
+            if (N.isNullOrEmpty(entities)) {
+                return new ArrayList<>();
+            }
+
+            final T first = N.firstOrNullIfEmpty(entities);
+            final Class<?> cls = first.getClass();
+            @SuppressWarnings("deprecation")
+            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+
+            final Function<T, ID> idExtractorFunc = createIdExtractor(cls, idPropNameList, entityInfo);
+            final List<ID> ids = N.map(entities, idExtractorFunc);
+
+            final List<T> dbEntities = batchGet(ids, batchSize);
+
+            final Map<ID, T> dbIdEntityMap = StreamEx.of(dbEntities).toMap(idExtractorFunc, Fn.identity(), Fn.ignoringMerger());
+            final Map<Boolean, List<T>> map = StreamEx.of(entities).groupTo(it -> dbIdEntityMap.containsKey(idExtractorFunc.apply(it)), Fn.identity());
+            final List<T> entitiesToUpdate = map.get(true);
+            final List<T> entitiesToInsert = map.get(false);
+
+            if (N.notNullOrEmpty(entitiesToInsert)) {
+                batchInsert(entitiesToInsert, batchSize);
+            }
+
+            if (N.notNullOrEmpty(entitiesToUpdate)) {
+                final Set<String> idPropNameSet = N.newHashSet(idPropNameList);
+
+                final List<T> dbEntitiesToUpdate = StreamEx.of(entitiesToUpdate)
+                        .map(it -> N.merge(it, dbIdEntityMap.get(idExtractorFunc.apply(it)), false, idPropNameSet))
+                        .toList();
+
+                batchUpdate(dbEntitiesToUpdate);
+
+                entitiesToInsert.addAll(dbEntitiesToUpdate);
+            }
+
+            return entitiesToInsert;
         }
 
         /**
@@ -8710,20 +8784,7 @@ public final class JdbcUtil {
             final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
-            ID id = null;
-
-            if (idPropNameList.size() == 1) {
-                id = entityInfo.getPropInfo(idPropNameList.get(0)).getPropValue(entity);
-            } else {
-                Seid entityId = Seid.of(ClassUtil.getSimpleClassName(cls));
-
-                for (String idPropName : idPropNameList) {
-                    entityId.set(idPropName, entityInfo.getPropInfo(idPropName).getPropValue(entity));
-                }
-
-                id = (ID) entityId;
-            }
-
+            final ID id = extractId(entity, cls, idPropNameList, entityInfo);
             final Collection<String> selectPropNames = getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
             final T dbEntity = gett(id, selectPropNames);
@@ -8793,6 +8854,7 @@ public final class JdbcUtil {
         @SuppressWarnings("deprecation")
         default int batchRefresh(final Collection<? extends T> entities, Collection<String> propNamesToRefresh, final int batchSize) throws SQLException {
             N.checkArgNotNullOrEmpty(propNamesToRefresh, "propNamesToRefresh");
+            N.checkArgPositive(batchSize, "batchSize");
 
             if (N.isNullOrEmpty(entities)) {
                 return 0;
@@ -8803,21 +8865,8 @@ public final class JdbcUtil {
             final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
-            final PropInfo idPropInfo = idPropNameList.size() == 1 ? entityInfo.getPropInfo(idPropNameList.get(0)) : null;
-            final List<PropInfo> idPropInfos = idPropNameList.size() == 1 ? null : N.map(idPropNameList, idPropName -> entityInfo.getPropInfo(idPropName));
-
-            final Function<T, ID> idExtractorFunc = idPropNameList.size() == 1 ? it -> idPropInfo.getPropValue(it) : it -> {
-                final Seid entityId = Seid.of(ClassUtil.getSimpleClassName(cls));
-
-                for (PropInfo propInfo : idPropInfos) {
-                    entityId.set(propInfo.name, propInfo.getPropValue(it));
-                }
-
-                return (ID) entityId;
-            };
-
+            final Function<T, ID> idExtractorFunc = createIdExtractor(cls, idPropNameList, entityInfo);
             final Map<ID, List<T>> idEntityMap = StreamEx.of(entities).groupTo(idExtractorFunc, Fn.identity());
-
             final Collection<String> selectPropNames = getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
             final List<T> dbEntities = batchGet(idEntityMap.keySet(), selectPropNames, batchSize);
@@ -9381,6 +9430,35 @@ public final class JdbcUtil {
         @Deprecated
         @Override
         default T upsert(final T entity) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * 
+         * @param entities
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Override
+        @Deprecated
+        default List<T> batchUpsert(final Collection<? extends T> entities) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * 
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation 
+         */
+        @Override
+        @Deprecated
+        default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -11914,7 +11992,7 @@ public final class JdbcUtil {
          * @param entity
          * @param cond to verify if the record exists or not.
          * @return
-         * @throws UncheckedSQLException
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {
@@ -12117,6 +12195,19 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param ids
+         * @param batchSize
+         * @return
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws DuplicatedResultException, UncheckedSQLException {
+            return batchGet(ids, (Collection<String>) null, batchSize);
+        }
+
+        /**
+         *
          *
          * @param ids
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
@@ -12247,6 +12338,7 @@ public final class JdbcUtil {
          * @param entity
          * @param cond to verify if the record exists or not.
          * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {
@@ -12258,8 +12350,9 @@ public final class JdbcUtil {
                 insert(entity);
                 return entity;
             } else {
+                final Class<?> cls = entity.getClass();
                 @SuppressWarnings("deprecation")
-                final List<String> idPropNameList = ClassUtil.getIdFieldNames(targetEntityClass());
+                final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls);
                 N.merge(entity, dbEntity, false, N.newHashSet(idPropNameList));
                 update(dbEntity);
                 return dbEntity;
@@ -12271,12 +12364,15 @@ public final class JdbcUtil {
          *
          * @param entity
          * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         default T upsert(final T entity) throws UncheckedSQLException {
+            final Class<?> cls = entity.getClass();
             @SuppressWarnings("deprecation")
-            final List<String> idPropNameList = ClassUtil.getIdFieldNames(targetEntityClass());
-            final T dbEntity = idPropNameList.size() == 1 ? gett((ID) ClassUtil.getPropValue(entity, idPropNameList.get(0))) : gett((ID) entity);
+            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+            final T dbEntity = gett(JdbcUtil.extractId(entity, cls, idPropNameList, entityInfo));
 
             if (dbEntity == null) {
                 insert(entity);
@@ -12286,6 +12382,67 @@ public final class JdbcUtil {
                 update(dbEntity);
                 return dbEntity;
             }
+        }
+
+        /**
+         * 
+         * @param entities
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        default List<T> batchUpsert(final Collection<? extends T> entities) throws UncheckedSQLException {
+            return batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+        }
+
+        /**
+         * 
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException {
+            N.checkArgPositive(batchSize, "batchSize");
+
+            if (N.isNullOrEmpty(entities)) {
+                return new ArrayList<>();
+            }
+
+            final T first = N.firstOrNullIfEmpty(entities);
+            final Class<?> cls = first.getClass();
+            @SuppressWarnings("deprecation")
+            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+
+            final Function<T, ID> idExtractorFunc = createIdExtractor(cls, idPropNameList, entityInfo);
+            final List<ID> ids = N.map(entities, idExtractorFunc);
+
+            final List<T> dbEntities = batchGet(ids, batchSize);
+
+            final Map<ID, T> dbIdEntityMap = StreamEx.of(dbEntities).toMap(idExtractorFunc, Fn.identity(), Fn.ignoringMerger());
+            final Map<Boolean, List<T>> map = StreamEx.of(entities).groupTo(it -> dbIdEntityMap.containsKey(idExtractorFunc.apply(it)), Fn.identity());
+            final List<T> entitiesToUpdate = map.get(true);
+            final List<T> entitiesToInsert = map.get(false);
+
+            if (N.notNullOrEmpty(entitiesToInsert)) {
+                batchInsert(entitiesToInsert, batchSize);
+            }
+
+            if (N.notNullOrEmpty(entitiesToUpdate)) {
+                final Set<String> idPropNameSet = N.newHashSet(idPropNameList);
+
+                final List<T> dbEntitiesToUpdate = StreamEx.of(entitiesToUpdate)
+                        .map(it -> N.merge(it, dbIdEntityMap.get(idExtractorFunc.apply(it)), false, idPropNameSet))
+                        .toList();
+
+                batchUpdate(dbEntitiesToUpdate);
+
+                entitiesToInsert.addAll(dbEntitiesToUpdate);
+            }
+
+            return entitiesToInsert;
         }
 
         /**
@@ -12319,20 +12476,7 @@ public final class JdbcUtil {
             final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
-            ID id = null;
-
-            if (idPropNameList.size() == 1) {
-                id = entityInfo.getPropInfo(idPropNameList.get(0)).getPropValue(entity);
-            } else {
-                Seid entityId = Seid.of(ClassUtil.getSimpleClassName(cls));
-
-                for (String idPropName : idPropNameList) {
-                    entityId.set(idPropName, entityInfo.getPropInfo(idPropName).getPropValue(entity));
-                }
-
-                id = (ID) entityId;
-            }
-
+            final ID id = extractId(entity, cls, idPropNameList, entityInfo);
             final Collection<String> selectPropNames = getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
             final T dbEntity = gett(id, selectPropNames);
@@ -12407,6 +12551,7 @@ public final class JdbcUtil {
         default int batchRefresh(final Collection<? extends T> entities, Collection<String> propNamesToRefresh, final int batchSize)
                 throws UncheckedSQLException {
             N.checkArgNotNullOrEmpty(propNamesToRefresh, "propNamesToRefresh");
+            N.checkArgPositive(batchSize, "batchSize");
 
             if (N.isNullOrEmpty(entities)) {
                 return 0;
@@ -12417,21 +12562,8 @@ public final class JdbcUtil {
             final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
-            final PropInfo idPropInfo = idPropNameList.size() == 1 ? entityInfo.getPropInfo(idPropNameList.get(0)) : null;
-            final List<PropInfo> idPropInfos = idPropNameList.size() == 1 ? null : N.map(idPropNameList, idPropName -> entityInfo.getPropInfo(idPropName));
-
-            final Function<T, ID> idExtractorFunc = idPropNameList.size() == 1 ? it -> idPropInfo.getPropValue(it) : it -> {
-                final Seid entityId = Seid.of(ClassUtil.getSimpleClassName(cls));
-
-                for (PropInfo propInfo : idPropInfos) {
-                    entityId.set(propInfo.name, propInfo.getPropValue(it));
-                }
-
-                return (ID) entityId;
-            };
-
+            final Function<T, ID> idExtractorFunc = createIdExtractor(cls, idPropNameList, entityInfo);
             final Map<ID, List<T>> idEntityMap = StreamEx.of(entities).groupTo(idExtractorFunc, Fn.identity());
-
             final Collection<String> selectPropNames = getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
             final List<T> dbEntities = batchGet(idEntityMap.keySet(), selectPropNames, batchSize);
@@ -13013,6 +13145,35 @@ public final class JdbcUtil {
         @Deprecated
         @Override
         default T upsert(final T entity) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * 
+         * @param entities
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Override
+        @Deprecated
+        default List<T> batchUpsert(final Collection<? extends T> entities) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * 
+         * @param entities
+         * @param batchSize
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation 
+         */
+        @Override
+        @Deprecated
+        default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException, UncheckedSQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -14996,6 +15157,42 @@ public final class JdbcUtil {
             final Collection<String> selectPropNames = new HashSet<>(propNamesToRefresh);
             selectPropNames.addAll(idPropNameList);
             return selectPropNames;
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    static <T, ID> ID extractId(final T entity, final Class<?> cls, final List<String> idPropNameList, final EntityInfo entityInfo) {
+        if (idPropNameList.size() == 1) {
+            return entityInfo.getPropInfo(idPropNameList.get(0)).getPropValue(entity);
+        } else {
+            Seid entityId = Seid.of(ClassUtil.getSimpleClassName(cls));
+
+            for (String idPropName : idPropNameList) {
+                entityId.set(idPropName, entityInfo.getPropInfo(idPropName).getPropValue(entity));
+            }
+
+            return (ID) entityId;
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    static <T, ID> Function<T, ID> createIdExtractor(final Class<?> cls, final List<String> idPropNameList, final EntityInfo entityInfo) {
+        if (idPropNameList.size() == 1) {
+            final PropInfo idPropInfo = entityInfo.getPropInfo(idPropNameList.get(0));
+
+            return it -> idPropInfo.getPropValue(it);
+        } else {
+            final List<PropInfo> idPropInfos = N.map(idPropNameList, idPropName -> entityInfo.getPropInfo(idPropName));
+
+            return it -> {
+                final Seid entityId = Seid.of(ClassUtil.getSimpleClassName(cls));
+
+                for (PropInfo propInfo : idPropInfos) {
+                    entityId.set(propInfo.name, propInfo.getPropValue(it));
+                }
+
+                return (ID) entityId;
+            };
         }
     }
 

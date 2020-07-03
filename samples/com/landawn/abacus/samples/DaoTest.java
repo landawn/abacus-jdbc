@@ -39,6 +39,7 @@ import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.Pair;
 import com.landawn.abacus.util.Profiler;
 import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
@@ -47,8 +48,31 @@ import com.landawn.abacus.util.SQLTransaction;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.LongStream;
 import com.landawn.abacus.util.stream.Stream;
+import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 public class DaoTest {
+
+    @Test
+    public void test_batchUpsert() throws Exception {
+
+        List<User> users = IntStream.range(1, 1000)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                .toList();
+
+        userDao.batchInsertWithId(users.subList(0, 499));
+
+        users.forEach(it -> it.setFirstName(N.uuid().substring(0, 32)));
+
+        userDao.batchUpsert(users);
+
+        final List<User> dbUsers = userDao.list(CF.gt("id", 0));
+
+        assertEquals(users.size(), StreamEx.of(users).innerJoin(dbUsers, it -> it.getFirstName(), Pair::of).count());
+
+        dbUsers.forEach(Fn.println());
+
+        userDao.batchDelete(dbUsers);
+    }
 
     @Test
     public void test_refresh() throws Exception {
