@@ -6477,6 +6477,17 @@ public final class JdbcUtil {
             boolean addLimitForSingleQuery() default false;
         }
 
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(ElementType.FIELD)
+        public static @interface SqlField {
+
+            /**
+             *
+             * @return
+             */
+            String id() default ""; // default will be field name.
+        }
+
         /**
          * The Interface Select.
          * 

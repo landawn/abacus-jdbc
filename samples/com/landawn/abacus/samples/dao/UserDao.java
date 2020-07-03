@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 
+import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.samples.dao.handler.UserDaoHandlerA;
 import com.landawn.abacus.samples.entity.User;
@@ -18,6 +19,7 @@ import com.landawn.abacus.util.JdbcUtil.Dao.RefreshCache;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Propagation;
 import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.stream.Stream;
 
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
@@ -133,7 +135,10 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     @NamedSelect(sql = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}", op = OP.exists)
     boolean isThere(@Define("tableName") String tableName, @Define("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
 
-    @Select("select * from user where id > ?")
+    @SqlField
+    String sql_listToSet = PSC.selectFrom(User.class).where(CF.gt("id")).sql();
+
+    @Select(id = "sql_listToSet")
     Set<User> listToSet(int id) throws SQLException;
 
     @Select("select * from user where id > ?")

@@ -73,6 +73,7 @@ import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.Dao;
 import com.landawn.abacus.util.JdbcUtil.Dao.OP;
 import com.landawn.abacus.util.JdbcUtil.Dao.OutParameter;
+import com.landawn.abacus.util.JdbcUtil.Dao.SqlField;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
@@ -1232,7 +1233,16 @@ final class DaoUtil {
         final Logger daoLogger = LoggerFactory.getLogger(daoInterface);
 
         final javax.sql.DataSource primaryDataSource = ds;
-        final SQLMapper nonNullSQLMapper = sqlMapper == null ? new SQLMapper() : sqlMapper;
+        final SQLMapper newSQLMapper = new SQLMapper();
+
+        {
+            if (sqlMapper != null && sqlMapper.keySet().size() > 0) {
+                for (String sqlKey : sqlMapper.keySet()) {
+                    newSQLMapper.add(sqlKey, sqlMapper.get(sqlKey).sql(), sqlMapper.getAttrs(sqlKey));
+                }
+            }
+        }
+
         final Executor nonNullExecutor = executor == null ? JdbcUtil.asyncExecutor.getExecutor() : executor;
         final AsyncExecutor asyncExecutor = new AsyncExecutor(nonNullExecutor);
         final boolean isUnchecked = JdbcUtil.UncheckedDao.class.isAssignableFrom(daoInterface);
@@ -1248,6 +1258,21 @@ final class DaoUtil {
                 .map(it -> it.addLimitForSingleQuery())
                 .first()
                 .orElse(false);
+
+        final Map<String, String> sqlFieldMap = StreamEx.of(allInterfaces)
+                .flatMapp(it -> it.getDeclaredFields())
+                .filter(it -> it.isAnnotationPresent(SqlField.class))
+                .map(it -> Tuple.of(it, it.getAnnotation(SqlField.class)))
+                .toMap(it -> N.isNullOrEmpty(it._2.id()) ? it._1.getName() : it._2.id(), Fn.ff(it -> (String) (it._1.get(null))));
+
+        if (!N.disjoint(newSQLMapper.keySet(), sqlFieldMap.keySet())) {
+            throw new IllegalArgumentException(
+                    "Duplicated sql keys: " + N.commonSet(newSQLMapper.keySet(), sqlFieldMap.keySet()) + " defined by both SQLMapper and SqlField");
+        }
+
+        for (Map.Entry<String, String> entry : sqlFieldMap.entrySet()) {
+            newSQLMapper.add(entry.getKey(), ParsedSql.parse(entry.getValue()));
+        }
 
         java.lang.reflect.Type[] typeArguments = null;
 
@@ -1517,11 +1542,11 @@ final class DaoUtil {
                                     + " on method: " + fullClassMethodName);
                 }
 
-                if (sqlMapper == null) {
+                if (newSQLMapper == null || newSQLMapper.keySet().size() == 0) {
                     sqlList = Stream.of(sqlsAnno.value()).filter(Fn.notNullOrEmpty()).toList();
                 } else {
                     sqlList = Stream.of(sqlsAnno.value())
-                            .map(it -> sqlMapper.get(it) == null ? it : sqlMapper.get(it).sql())
+                            .map(it -> newSQLMapper.get(it) == null ? it : newSQLMapper.get(it).sql())
                             .filter(Fn.notNullOrEmpty())
                             .toList();
                 }
@@ -1559,7 +1584,7 @@ final class DaoUtil {
             } else if (methodName.equals("dataSource") && javax.sql.DataSource.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> primaryDataSource;
             } else if (methodName.equals("sqlMapper") && SQLMapper.class.isAssignableFrom(returnType) && paramLen == 0) {
-                call = (proxy, args) -> nonNullSQLMapper;
+                call = (proxy, args) -> newSQLMapper;
             } else if (methodName.equals("cacheSql") && void.class.isAssignableFrom(returnType) && paramLen == 2 && paramTypes[0].equals(String.class)
                     && paramTypes[1].equals(String.class)) {
                 call = (proxy, args) -> {
@@ -2991,7 +3016,7 @@ final class DaoUtil {
 
                     final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
 
-                    final QueryInfo queryInfo = sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno, sqlMapper);
+                    final QueryInfo queryInfo = sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno, newSQLMapper);
                     final String query = N.checkArgNotNullOrEmpty(queryInfo.sql, "sql can't be null or empty");
                     final int queryTimeout = queryInfo.queryTimeout;
                     final int fetchSize = queryInfo.fetchSize;
