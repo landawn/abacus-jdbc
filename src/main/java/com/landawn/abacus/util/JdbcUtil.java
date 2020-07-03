@@ -4086,6 +4086,11 @@ public final class JdbcUtil {
         return (propValue == null) || (propValue instanceof Number && (((Number) propValue).longValue() == 0));
     }
 
+
+    static <ID> boolean isAllNullIds(List<ID> ids) {
+        return N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(JdbcUtil::isDefaultIdPropValue);
+    }
+
     @Beta
     public static void run(final Throwables.Runnable<Exception> sqlAction) {
         try {
@@ -8368,6 +8373,10 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     public static interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
+
+        default BiRowMapper<ID> idExtractor() {
+            return null;
+        }
 
         /**
          *

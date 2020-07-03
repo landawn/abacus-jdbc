@@ -1438,7 +1438,7 @@ final class DaoUtil {
         final Tuple3<BiRowMapper<Object>, Function<Object, Object>, BiConsumer<Object, Object>> tp3 = JdbcUtil.getIdGeneratorGetterSetter(daoInterface,
                 entityClass, namingPolicy, idClass);
 
-        final BiRowMapper<Object> keyExtractor = tp3._1;
+        final BiRowMapper<Object> idExtractor = tp3._1;
         final Function<Object, Object> idGetter = tp3._2;
         final BiConsumer<Object, Object> idSetter = tp3._3;
 
@@ -2234,6 +2234,7 @@ final class DaoUtil {
                 } else if (declaringClass.equals(JdbcUtil.CrudDao.class) || declaringClass.equals(JdbcUtil.UncheckedCrudDao.class)) {
                     if (methodName.equals("insert") && paramLen == 1) {
                         call = (proxy, args) -> {
+                            final BiRowMapper<Object> keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor);
                             final Object entity = args[0];
 
                             ParsedSql namedInsertSQL = null;
@@ -2265,6 +2266,7 @@ final class DaoUtil {
                         };
                     } else if (methodName.equals("insert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[1])) {
                         call = (proxy, args) -> {
+                            final BiRowMapper<Object> keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor);
                             final Object entity = args[0];
                             final Collection<String> propNamesToInsert = (Collection<String>) args[1];
                             N.checkArgNotNullOrEmpty(propNamesToInsert, "propNamesToInsert");
@@ -2285,6 +2287,7 @@ final class DaoUtil {
                         };
                     } else if (methodName.equals("insert") && paramLen == 2 && String.class.equals(paramTypes[0])) {
                         call = (proxy, args) -> {
+                            final BiRowMapper<Object> keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor);
                             final String namedInsertSQL = (String) args[0];
                             final Object entity = args[1];
 
@@ -2303,6 +2306,7 @@ final class DaoUtil {
                     } else if (methodName.equals("batchInsert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
                             && int.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
+                            final BiRowMapper<Object> keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor);
                             final Collection<?> entities = (Collection<Object>) args[0];
                             final int batchSize = (Integer) args[1];
                             N.checkArgPositive(batchSize, "batchSize");
@@ -2334,7 +2338,7 @@ final class DaoUtil {
                                 }
                             }
 
-                            if (N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(Fn.isNull())) {
+                            if (JdbcUtil.isAllNullIds(ids)) {
                                 ids = new ArrayList<>();
                             }
 
@@ -2368,6 +2372,7 @@ final class DaoUtil {
                     } else if (methodName.equals("batchInsert") && paramLen == 3 && Collection.class.isAssignableFrom(paramTypes[0])
                             && Collection.class.isAssignableFrom(paramTypes[1]) && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
+                            final BiRowMapper<Object> keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor);
                             final Collection<?> entities = (Collection<Object>) args[0];
 
                             final Collection<String> propNamesToInsert = (Collection<String>) args[1];
@@ -2402,7 +2407,7 @@ final class DaoUtil {
                                 }
                             }
 
-                            if (N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(Fn.isNull())) {
+                            if (JdbcUtil.isAllNullIds(ids)) {
                                 ids = new ArrayList<>();
                             }
 
@@ -2436,6 +2441,7 @@ final class DaoUtil {
                     } else if (methodName.equals("batchInsert") && paramLen == 3 && String.class.equals(paramTypes[0])
                             && Collection.class.isAssignableFrom(paramTypes[1]) && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
+                            final BiRowMapper<Object> keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor);
                             final String namedInsertSQL = (String) args[0];
                             final Collection<?> entities = (Collection<Object>) args[1];
                             final int batchSize = (Integer) args[2];
@@ -2466,7 +2472,7 @@ final class DaoUtil {
                                 }
                             }
 
-                            if (N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(Fn.isNull())) {
+                            if (JdbcUtil.isAllNullIds(ids)) {
                                 ids = new ArrayList<>();
                             }
 
@@ -3265,6 +3271,8 @@ final class DaoUtil {
                             }
 
                             call = (proxy, args) -> {
+                                final BiRowMapper<Object> keyExtractor = isCrudDao ? N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor)
+                                        : idExtractor;
                                 final boolean isEntity = stmtParamLen == 1 && args[stmtParamIndexes[0]] != null
                                         && ClassUtil.isEntity(args[stmtParamIndexes[0]].getClass());
                                 final Object entity = isEntity ? args[stmtParamIndexes[0]] : null;
@@ -3291,6 +3299,8 @@ final class DaoUtil {
                             }
 
                             call = (proxy, args) -> {
+                                final BiRowMapper<Object> keyExtractor = isCrudDao ? N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor)
+                                        : idExtractor;
                                 final Collection<Object> batchParameters = (Collection) args[stmtParamIndexes[0]];
                                 int batchSize = tmpBatchSize;
 
@@ -3321,7 +3331,7 @@ final class DaoUtil {
                                                         .addBatchParameters(batchParameters);
                                     }
 
-                                    ids = preparedQuery.batchInsert();
+                                    ids = preparedQuery.batchInsert(keyExtractor);
                                 } else {
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
@@ -3333,12 +3343,12 @@ final class DaoUtil {
                                             if (isSingleParameter) {
                                                 ids = ExceptionalStream.of(batchParameters)
                                                         .splitToList(batchSize) //
-                                                        .flattMap(bp -> preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).batchInsert())
+                                                        .flattMap(bp -> preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).batchInsert(keyExtractor))
                                                         .toList();
                                             } else {
                                                 ids = ExceptionalStream.of((Collection<List<?>>) (Collection) batchParameters)
                                                         .splitToList(batchSize) //
-                                                        .flattMap(bp -> preparedQuery.addBatchParameters(bp).batchInsert())
+                                                        .flattMap(bp -> preparedQuery.addBatchParameters(bp).batchInsert(keyExtractor))
                                                         .toList();
                                             }
                                         }
@@ -3351,7 +3361,7 @@ final class DaoUtil {
 
                                 final boolean isEntity = ClassUtil.isEntity(N.firstOrNullIfEmpty(batchParameters).getClass());
 
-                                if (N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(Fn.isNull())) {
+                                if (JdbcUtil.isAllNullIds(ids)) {
                                     ids = new ArrayList<>();
                                 }
 
