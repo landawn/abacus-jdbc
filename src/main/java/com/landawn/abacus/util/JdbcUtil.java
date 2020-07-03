@@ -4293,11 +4293,6 @@ public final class JdbcUtil {
             }
         };
 
-        /**
-         *
-         * @param preparedQuery
-         * @throws SQLException the SQL exception
-         */
         @Override
         void accept(QS preparedQuery) throws SQLException;
     }
@@ -4321,12 +4316,6 @@ public final class JdbcUtil {
             }
         };
 
-        /**
-         *
-         * @param preparedQuery
-         * @param param
-         * @throws SQLException the SQL exception
-         */
         @Override
         void accept(QS preparedQuery, T param) throws SQLException;
     }
@@ -4347,13 +4336,6 @@ public final class JdbcUtil {
             }
         };
 
-        /**
-         *
-         * @param parsedSql
-         * @param preparedQuery
-         * @param param
-         * @throws SQLException the SQL exception
-         */
         @Override
         void accept(ParsedSql parsedSql, QS preparedQuery, T param) throws SQLException;
     }
@@ -4366,7 +4348,6 @@ public final class JdbcUtil {
     @FunctionalInterface
     public static interface ResultExtractor<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
-        /** The Constant TO_DATA_SET. */
         ResultExtractor<DataSet> TO_DATA_SET = new ResultExtractor<DataSet>() {
             @Override
             public DataSet apply(final ResultSet rs) throws SQLException {
@@ -4374,12 +4355,6 @@ public final class JdbcUtil {
             }
         };
 
-        /**
-         *
-         * @param rs
-         * @return
-         * @throws SQLException the SQL exception
-         */
         @Override
         T apply(ResultSet rs) throws SQLException;
 
@@ -4675,13 +4650,6 @@ public final class JdbcUtil {
     @FunctionalInterface
     public static interface BiResultExtractor<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
 
-        /**
-         *
-         * @param rs
-         * @param columnLabels
-         * @return
-         * @throws SQLException the SQL exception
-         */
         @Override
         T apply(ResultSet rs, List<String> columnLabels) throws SQLException;
 
@@ -4991,12 +4959,6 @@ public final class JdbcUtil {
     @FunctionalInterface
     public static interface RowMapper<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
-        /**
-         *
-         * @param rs
-         * @return generally should not return {@code null}.
-         * @throws SQLException the SQL exception
-         */
         @Override
         T apply(ResultSet rs) throws SQLException;
 
@@ -5494,13 +5456,6 @@ public final class JdbcUtil {
             }
         };
 
-        /**
-         *
-         * @param rs
-         * @param columnLabels
-         * @return generally should not return {@code null}.
-         * @throws SQLException the SQL exception
-         */
         @Override
         T apply(ResultSet rs, List<String> columnLabels) throws SQLException;
 
@@ -6028,13 +5983,17 @@ public final class JdbcUtil {
         static final RowConsumer DO_NOTHING = rs -> {
         };
 
-        /**
-         *
-         * @param rs
-         * @throws SQLException the SQL exception
-         */
         @Override
         void accept(ResultSet rs) throws SQLException;
+
+        default RowConsumer andThen(final Throwables.Consumer<? super ResultSet, SQLException> after) {
+            N.checkArgNotNull(after);
+
+            return rs -> {
+                accept(rs);
+                after.accept(rs);
+            };
+        }
     }
 
     /**
@@ -6046,14 +6005,17 @@ public final class JdbcUtil {
         static final BiRowConsumer DO_NOTHING = (rs, cls) -> {
         };
 
-        /**
-         *
-         * @param rs
-         * @param columnLabels
-         * @throws SQLException the SQL exception
-         */
         @Override
         void accept(ResultSet rs, List<String> columnLabels) throws SQLException;
+
+        default BiRowConsumer andThen(final Throwables.BiConsumer<? super ResultSet, ? super List<String>, SQLException> after) {
+            N.checkArgNotNull(after);
+
+            return (rs, cls) -> {
+                accept(rs, cls);
+                after.accept(rs, cls);
+            };
+        }
     }
 
     /**
@@ -6076,19 +6038,23 @@ public final class JdbcUtil {
         /** The Constant ALWAYS_FALSE. */
         RowFilter ALWAYS_FALSE = new RowFilter() {
             @Override
-            public boolean test(ResultSet rs) throws SQLException {
+            public boolean test(final ResultSet rs) throws SQLException {
                 return false;
             }
         };
 
-        /**
-         *
-         * @param rs
-         * @return true, if successful
-         * @throws SQLException the SQL exception
-         */
         @Override
-        boolean test(ResultSet rs) throws SQLException;
+        boolean test(final ResultSet rs) throws SQLException;
+
+        default RowFilter negate() {
+            return rs -> !test(rs);
+        }
+
+        default RowFilter and(final Throwables.Predicate<? super ResultSet, SQLException> other) {
+            N.checkArgNotNull(other);
+
+            return rs -> test(rs) && other.test(rs);
+        }
     }
 
     /**
@@ -6115,15 +6081,18 @@ public final class JdbcUtil {
             }
         };
 
-        /**
-         *
-         * @param rs
-         * @param columnLabels
-         * @return true, if successful
-         * @throws SQLException the SQL exception
-         */
         @Override
         boolean test(ResultSet rs, List<String> columnLabels) throws SQLException;
+
+        default BiRowFilter negate() {
+            return (rs, cls) -> !test(rs, cls);
+        }
+
+        default BiRowFilter and(final Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException> other) {
+            N.checkArgNotNull(other);
+
+            return (rs, cls) -> test(rs, cls) && other.test(rs, cls);
+        }
     }
 
     static final ObjectPool<Type<?>, Columns.ColumnGetter<?>> COLUMN_GETTER_POOL = new ObjectPool<>(1024);
