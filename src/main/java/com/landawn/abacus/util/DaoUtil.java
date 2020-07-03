@@ -733,7 +733,7 @@ final class DaoUtil {
         }
 
         if (hasRowMapperOrExtractor) {
-            if (!(op == OP.get || op == OP.findFirst || op == OP.list || op == OP.stream)) {
+            if (!(op == OP.get || op == OP.findFirst || op == OP.list || op == OP.query || op == OP.stream || op == OP.DEFAULT)) {
                 throw new UnsupportedOperationException("RowMapper/ResultExtractor is not supported by OP: " + op + " in method: " + fullClassMethodName);
             }
 

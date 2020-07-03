@@ -485,7 +485,11 @@ public class DaoTest {
 
         userDao.listToCollection(0).forEach(Fn.println());
 
-        assertEquals(1, userDao.listToSet(0).size());
+        assertEquals(1, userDao.listToCollection(0).size());
+
+        //    userDao.list(0, RowFilter.ALWAYS_TRUE, RowMapper.builder().toList()).forEach(Fn.println());
+        //
+        //    assertEquals(1, userDao.list(0, RowFilter.ALWAYS_TRUE, RowMapper.builder().toList()).size());
 
         userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 

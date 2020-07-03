@@ -138,4 +138,7 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 
     @Select("select * from user where id > ?")
     Queue<User> listToCollection(int id) throws SQLException;
+
+    //    @Select("select * from user where id > ?")
+    //    Queue<List<Object>> list(int id, RowFilter rowFilter, RowMapper<List<Object>> rowMapper) throws SQLException;
 }
