@@ -2331,7 +2331,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @param <V> the value type
      * @param targetClass
      * @return
-     * @throws DuplicatedResultException if more than one record found.
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException the SQL exception
      */
     public <V> Nullable<V> queryForUniqueResult(Class<V> targetClass) throws DuplicatedResultException, SQLException {
@@ -2359,7 +2359,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @param <V> the value type
      * @param targetClass
      * @return
-     * @throws DuplicatedResultException if more than one record found.
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException the SQL exception
      */
     public <V> Optional<V> queryForUniqueNonNull(Class<V> targetClass) throws DuplicatedResultException, SQLException {

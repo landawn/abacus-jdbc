@@ -6318,10 +6318,10 @@ public final class JdbcUtil {
      *      <ul>
      *          <li>If the return type of the method is {@code List} and one of below conditions is matched, {@code PreparedQuery#list(RowMapper/BiRowMapper)} will be called:</li>
      *          <ul>
-     *              <li>The return type of the method is raw {@code List} without parameterized type, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"}.</li>
+     *              <li>The return type of the method is raw {@code List} without parameterized type, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"/"findOnlyOne"}.</li>
      *          </ul>
      *          <ul>
-     *              <li>The last parameter type is raw {@code RowMapper/BiRowMapper} without parameterized type, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"}.</li>
+     *              <li>The last parameter type is raw {@code RowMapper/BiRowMapper} without parameterized type, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"/"findOnlyOne"}.</li>
      *          </ul>
      *          <ul>
      *              <li>The return type of the method is generic {@code List} with parameterized type and The last parameter type is generic {@code RowMapper/BiRowMapper} with parameterized types, but They're not same.</li>
@@ -6368,7 +6368,7 @@ public final class JdbcUtil {
      *          <li>Or else if the return type of the method is {@code OptionalBoolean/Byte/.../Double}, {@code PreparedQuery#queryForBoolean/Byte/...Double()} will called.</li>
      *      </ul>
      *      <ul>
-     *          <li>Or else if the return type of the method is {@code List}, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"}, {@code PreparedQuery#list(Class)} will be called.</li>
+     *          <li>Or else if the return type of the method is {@code List}, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"/"findOnlyOne"}, {@code PreparedQuery#list(Class)} will be called.</li>
      *      </ul>
      *      <ul>
      *          <li>Or else if the return type of the method is {@code boolean/Boolean}, and the method name starts with {@code "exist"/"exists"/"has"}, {@code PreparedQuery#exist()} will be called.</li>
@@ -6446,7 +6446,7 @@ public final class JdbcUtil {
         @Target(value = { ElementType.TYPE })
         static @interface Config {
             /**
-             * Single query method includes: queryForSingleXxx/queryForUniqueResult/findFirst/exists/count...
+             * Single query method includes: queryForSingleXxx/queryForUniqueResult/findFirst/findOnlyOne/exists/count...
              * 
              * @return
              */
@@ -7232,6 +7232,7 @@ public final class JdbcUtil {
             exists,
             get,
             findFirst,
+            findOnlyOne,
             list,
 
             /**
@@ -7762,6 +7763,67 @@ public final class JdbcUtil {
         <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper) throws SQLException;
 
         /**
+         *
+         * @param cond
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws SQLException the SQL exception
+         */
+        Optional<T> findOnlyOne(final Condition cond) throws DuplicatedResultException, SQLException;
+
+        /**
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws SQLException the SQL exception
+         */
+        <R> Optional<R> findOnlyOne(final Condition cond, final RowMapper<R> rowMapper) throws DuplicatedResultException, SQLException;
+
+        /**
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws SQLException the SQL exception
+         */
+        <R> Optional<R> findOnlyOne(final Condition cond, final BiRowMapper<R> rowMapper) throws DuplicatedResultException, SQLException;
+
+        /**
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param cond
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws SQLException the SQL exception
+         */
+        Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicatedResultException, SQLException;
+
+        /**
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws SQLException the SQL exception
+         */
+        <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final RowMapper<R> rowMapper)
+                throws DuplicatedResultException, SQLException;
+
+        /**
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws SQLException the SQL exception
+         */
+        <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper)
+                throws DuplicatedResultException, SQLException;
+
+        /**
          * Query for boolean.
          *
          * @param singleSelectPropName
@@ -7901,7 +7963,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws DuplicatedResultException if more than one record found.
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
          */
         <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -7914,7 +7976,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws DuplicatedResultException if more than one record found.
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
          */
         <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
@@ -8295,7 +8357,7 @@ public final class JdbcUtil {
         default T upsert(final T entity, final Condition cond) throws SQLException {
             N.checkArgNotNull(cond, "cond");
 
-            final T dbEntity = findFirst(cond).orNull();
+            final T dbEntity = findOnlyOne(cond).orNull();
 
             if (dbEntity == null) {
                 save(entity);
@@ -8508,9 +8570,10 @@ public final class JdbcUtil {
          *
          * @param id
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
          */
-        default Optional<T> get(final ID id) throws SQLException {
+        default Optional<T> get(final ID id) throws DuplicatedResultException, SQLException {
             return Optional.of(gett(id));
         }
 
@@ -8519,9 +8582,10 @@ public final class JdbcUtil {
          * @param id
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
          */
-        default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws SQLException {
+        default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, SQLException {
             return Optional.of(gett(id, selectPropNames));
         }
 
@@ -8530,9 +8594,10 @@ public final class JdbcUtil {
          *
          * @param id
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
          */
-        T gett(final ID id) throws SQLException;
+        T gett(final ID id) throws DuplicatedResultException, SQLException;
 
         /**
          * Gets the t.
@@ -8540,9 +8605,10 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          *
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
          */
-        T gett(final ID id, final Collection<String> selectPropNames) throws SQLException;
+        T gett(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, SQLException;
 
         /**
          *
@@ -8694,7 +8760,7 @@ public final class JdbcUtil {
         default T upsert(final T entity, final Condition cond) throws SQLException {
             N.checkArgNotNull(cond, "cond");
 
-            final T dbEntity = findFirst(cond).orNull();
+            final T dbEntity = findOnlyOne(cond).orNull();
 
             if (dbEntity == null) {
                 insert(entity);
@@ -9940,6 +10006,68 @@ public final class JdbcUtil {
             return result;
         }
 
+        /**
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param joinEntitiesToLoad
+         * @param cond
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws SQLException the SQL exception
+         */
+        default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond)
+                throws DuplicatedResultException, SQLException {
+            final Optional<T> result = getDao(this).findOnlyOne(selectPropNames, cond);
+
+            if (result.isPresent()) {
+                loadJoinEntities(result.get(), joinEntitiesToLoad);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param joinEntitiesToLoad
+         * @param cond
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws SQLException the SQL exception
+         */
+        default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<? extends Class<?>> joinEntitiesToLoad, final Condition cond)
+                throws DuplicatedResultException, SQLException {
+            final Optional<T> result = getDao(this).findOnlyOne(selectPropNames, cond);
+
+            if (result.isPresent()) {
+                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    loadJoinEntities(result.get(), joinEntityClass);
+                }
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param includeAllJoinEntities
+         * @param cond
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws SQLException the SQL exception
+         */
+        default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond)
+                throws DuplicatedResultException, SQLException {
+            final Optional<T> result = getDao(this).findOnlyOne(selectPropNames, cond);
+
+            if (includeAllJoinEntities && result.isPresent()) {
+                loadAllJoinEntities(result.get());
+            }
+
+            return result;
+        }
+
         /** 
          *
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
@@ -10854,10 +10982,11 @@ public final class JdbcUtil {
          * @param id
          * @param joinEntitiesToLoad
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
          */
         @Beta
-        default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws SQLException {
+        default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
             return Optional.of(gett(id, joinEntitiesToLoad));
         }
 
@@ -10866,10 +10995,11 @@ public final class JdbcUtil {
          * @param id
          * @param includeAllJoinEntities
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
          */
         @Beta
-        default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws SQLException {
+        default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException {
             return Optional.of(gett(id, includeAllJoinEntities));
         }
 
@@ -10879,10 +11009,12 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException
          */
         @Beta
-        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws SQLException {
+        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
+                throws DuplicatedResultException, SQLException {
             return Optional.of(gett(id, selectPropNames, joinEntitiesToLoad));
         }
 
@@ -10892,10 +11024,12 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException
          */
         @Beta
-        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws SQLException {
+        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
+                throws DuplicatedResultException, SQLException {
             return Optional.of(gett(id, selectPropNames, joinEntitiesToLoad));
         }
 
@@ -10905,10 +11039,12 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException
          */
         @Beta
-        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws SQLException {
+        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
+                throws DuplicatedResultException, SQLException {
             return Optional.of(gett(id, selectPropNames, includeAllJoinEntities));
         }
 
@@ -10917,10 +11053,11 @@ public final class JdbcUtil {
          * @param id
          * @param joinEntitiesToLoad
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
          */
         @Beta
-        default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws SQLException {
+        default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
             final T result = getCrudDao(this).gett(id);
 
             if (result != null) {
@@ -10935,10 +11072,11 @@ public final class JdbcUtil {
          * @param id
          * @param includeAllJoinEntities
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
          */
         @Beta
-        default T gett(final ID id, final boolean includeAllJoinEntities) throws SQLException {
+        default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException {
             final T result = getCrudDao(this).gett(id);
 
             if (result != null && includeAllJoinEntities) {
@@ -10954,10 +11092,12 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException
          */
         @Beta
-        default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws SQLException {
+        default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
+                throws DuplicatedResultException, SQLException {
             final T result = getCrudDao(this).gett(id, selectPropNames);
 
             if (result != null) {
@@ -10973,10 +11113,12 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException
          */
         @Beta
-        default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws SQLException {
+        default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
+                throws DuplicatedResultException, SQLException {
             final T result = getCrudDao(this).gett(id, selectPropNames);
 
             if (result != null) {
@@ -10994,10 +11136,12 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException
          */
         @Beta
-        default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws SQLException {
+        default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
+                throws DuplicatedResultException, SQLException {
             final T result = getCrudDao(this).gett(id, selectPropNames);
 
             if (result != null && includeAllJoinEntities) {
@@ -11013,10 +11157,11 @@ public final class JdbcUtil {
          * @param ids
          * @param joinEntitiesToLoad
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException the SQL exception
          */
         @Beta
-        default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws SQLException {
+        default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
             return batchGet(ids, null, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
         }
 
@@ -11026,10 +11171,11 @@ public final class JdbcUtil {
          * @param ids
          * @param includeAllJoinEntities
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException the SQL exception
          */
         @Beta
-        default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws SQLException {
+        default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException {
             return batchGet(ids, null, JdbcUtil.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
         }
 
@@ -11040,11 +11186,12 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException the SQL exception
          */
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
-                throws SQLException {
+                throws DuplicatedResultException, SQLException {
             return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
         }
 
@@ -11055,11 +11202,12 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException the SQL exception
          */
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames,
-                final Collection<? extends Class<?>> joinEntitiesToLoad) throws SQLException {
+                final Collection<? extends Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
             return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
         }
 
@@ -11070,11 +11218,12 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException the SQL exception
          */
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
-                throws SQLException {
+                throws DuplicatedResultException, SQLException {
             return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
         }
 
@@ -11086,11 +11235,12 @@ public final class JdbcUtil {
          * @param batchSize
          * @param joinEntitiesToLoad
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException the SQL exception
          */
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
-                final Class<?> joinEntitiesToLoad) throws SQLException {
+                final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
             final List<T> result = getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
             if (N.notNullOrEmpty(result)) {
@@ -11112,11 +11262,12 @@ public final class JdbcUtil {
          * @param batchSize
          * @param joinEntitiesToLoad
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException the SQL exception
          */
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
-                final Collection<? extends Class<?>> joinEntitiesToLoad) throws SQLException {
+                final Collection<? extends Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
             final List<T> result = getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
             if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {
@@ -11144,11 +11295,12 @@ public final class JdbcUtil {
          * @param batchSize
          * @param includeAllJoinEntities
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException the SQL exception
          */
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
-                final boolean includeAllJoinEntities) throws SQLException {
+                final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException {
             final List<T> result = getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
             if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
@@ -11610,6 +11762,73 @@ public final class JdbcUtil {
         <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper) throws UncheckedSQLException;
 
         /**
+         *
+         * @param cond
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        Optional<T> findOnlyOne(final Condition cond) throws DuplicatedResultException, UncheckedSQLException;
+
+        /**
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        <R> Optional<R> findOnlyOne(final Condition cond, final RowMapper<R> rowMapper) throws DuplicatedResultException, UncheckedSQLException;
+
+        /**
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        <R> Optional<R> findOnlyOne(final Condition cond, final BiRowMapper<R> rowMapper) throws DuplicatedResultException, UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param cond
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicatedResultException, UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final RowMapper<R> rowMapper)
+                throws DuplicatedResultException, UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param cond
+         * @param rowMapper
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper)
+                throws DuplicatedResultException, UncheckedSQLException;
+
+        /**
          * Query for boolean.
          *
          * @param singleSelectPropName
@@ -11763,7 +11982,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws DuplicatedResultException if more than one record found.
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
@@ -11778,7 +11997,7 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
-         * @throws DuplicatedResultException if more than one record found.
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
@@ -12048,7 +12267,7 @@ public final class JdbcUtil {
         default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {
             N.checkArgNotNull(cond, "cond");
 
-            final T dbEntity = findFirst(cond).orNull();
+            final T dbEntity = findOnlyOne(cond).orNull();
 
             if (dbEntity == null) {
                 save(entity);
@@ -12204,10 +12423,11 @@ public final class JdbcUtil {
          *
          * @param id
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
-        default Optional<T> get(final ID id) throws UncheckedSQLException {
+        default Optional<T> get(final ID id) throws DuplicatedResultException, UncheckedSQLException {
             return Optional.of(gett(id));
         }
 
@@ -12216,10 +12436,11 @@ public final class JdbcUtil {
          * @param id
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
-        default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws UncheckedSQLException {
+        default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, UncheckedSQLException {
             return Optional.of(gett(id, selectPropNames));
         }
 
@@ -12228,10 +12449,11 @@ public final class JdbcUtil {
          *
          * @param id
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
-        T gett(final ID id) throws UncheckedSQLException;
+        T gett(final ID id) throws DuplicatedResultException, UncheckedSQLException;
 
         /**
          * Gets the t.
@@ -12239,10 +12461,11 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          *
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
-        T gett(final ID id, final Collection<String> selectPropNames) throws UncheckedSQLException;
+        T gett(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, UncheckedSQLException;
 
         /**
          *
@@ -12408,7 +12631,7 @@ public final class JdbcUtil {
         default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {
             N.checkArgNotNull(cond, "cond");
 
-            final T dbEntity = findFirst(cond).orNull();
+            final T dbEntity = findOnlyOne(cond).orNull();
 
             if (dbEntity == null) {
                 insert(entity);
@@ -13657,6 +13880,71 @@ public final class JdbcUtil {
             return result;
         }
 
+        /**
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param joinEntitiesToLoad
+         * @param cond
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond)
+                throws DuplicatedResultException, UncheckedSQLException {
+            final Optional<T> result = getDao(this).findOnlyOne(selectPropNames, cond);
+
+            if (result.isPresent()) {
+                loadJoinEntities(result.get(), joinEntitiesToLoad);
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param joinEntitiesToLoad
+         * @param cond
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<? extends Class<?>> joinEntitiesToLoad, final Condition cond)
+                throws DuplicatedResultException, UncheckedSQLException {
+            final Optional<T> result = getDao(this).findOnlyOne(selectPropNames, cond);
+
+            if (result.isPresent()) {
+                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    loadJoinEntities(result.get(), joinEntityClass);
+                }
+            }
+
+            return result;
+        }
+
+        /**
+         *
+         * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+         * @param includeAllJoinEntities
+         * @param cond
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond)
+                throws DuplicatedResultException, UncheckedSQLException {
+            final Optional<T> result = getDao(this).findOnlyOne(selectPropNames, cond);
+
+            if (includeAllJoinEntities && result.isPresent()) {
+                loadAllJoinEntities(result.get());
+            }
+
+            return result;
+        }
+
         /** 
          *
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
@@ -14637,11 +14925,12 @@ public final class JdbcUtil {
          * @param id
          * @param joinEntitiesToLoad
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Beta
         @Override
-        default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
+        default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
             return Optional.of(gett(id, joinEntitiesToLoad));
         }
 
@@ -14650,11 +14939,12 @@ public final class JdbcUtil {
          * @param id
          * @param includeAllJoinEntities
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Beta
         @Override
-        default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws UncheckedSQLException {
+        default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException {
             return Optional.of(gett(id, includeAllJoinEntities));
         }
 
@@ -14664,11 +14954,13 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException
          */
         @Beta
         @Override
-        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
+        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
+                throws DuplicatedResultException, UncheckedSQLException {
             return Optional.of(gett(id, selectPropNames, joinEntitiesToLoad));
         }
 
@@ -14678,12 +14970,13 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException
          */
         @Beta
         @Override
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
-                throws UncheckedSQLException {
+                throws DuplicatedResultException, UncheckedSQLException {
             return Optional.of(gett(id, selectPropNames, joinEntitiesToLoad));
         }
 
@@ -14693,11 +14986,13 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException
          */
         @Beta
         @Override
-        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws UncheckedSQLException {
+        default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
+                throws DuplicatedResultException, UncheckedSQLException {
             return Optional.of(gett(id, selectPropNames, includeAllJoinEntities));
         }
 
@@ -14706,11 +15001,12 @@ public final class JdbcUtil {
          * @param id
          * @param joinEntitiesToLoad
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Beta
         @Override
-        default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
+        default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
             final T result = getCrudDao(this).gett(id);
 
             if (result != null) {
@@ -14725,11 +15021,12 @@ public final class JdbcUtil {
          * @param id
          * @param includeAllJoinEntities
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Beta
         @Override
-        default T gett(final ID id, final boolean includeAllJoinEntities) throws UncheckedSQLException {
+        default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException {
             final T result = getCrudDao(this).gett(id);
 
             if (result != null && includeAllJoinEntities) {
@@ -14745,11 +15042,13 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException
          */
         @Beta
         @Override
-        default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
+        default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
+                throws DuplicatedResultException, UncheckedSQLException {
             final T result = getCrudDao(this).gett(id, selectPropNames);
 
             if (result != null) {
@@ -14765,11 +15064,13 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException
          */
         @Beta
         @Override
-        default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws UncheckedSQLException {
+        default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
+                throws DuplicatedResultException, UncheckedSQLException {
             final T result = getCrudDao(this).gett(id, selectPropNames);
 
             if (result != null) {
@@ -14787,11 +15088,13 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
          * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws UncheckedSQLException
          */
         @Beta
         @Override
-        default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws UncheckedSQLException {
+        default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
+                throws DuplicatedResultException, UncheckedSQLException {
             final T result = getCrudDao(this).gett(id, selectPropNames);
 
             if (result != null && includeAllJoinEntities) {
@@ -14806,11 +15109,13 @@ public final class JdbcUtil {
          * @param ids
          * @param joinEntitiesToLoad
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         @Beta
-        default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
+        default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad)
+                throws DuplicatedResultException, UncheckedSQLException {
             return batchGet(ids, null, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
         }
 
@@ -14820,11 +15125,13 @@ public final class JdbcUtil {
          * @param ids
          * @param includeAllJoinEntities
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         @Beta
-        default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws UncheckedSQLException {
+        default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities)
+                throws DuplicatedResultException, UncheckedSQLException {
             return batchGet(ids, null, JdbcUtil.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
         }
 
@@ -14835,12 +15142,13 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
-                throws UncheckedSQLException {
+                throws DuplicatedResultException, UncheckedSQLException {
             return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
         }
 
@@ -14851,12 +15159,13 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames,
-                final Collection<? extends Class<?>> joinEntitiesToLoad) throws UncheckedSQLException {
+                final Collection<? extends Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
             return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
         }
 
@@ -14867,12 +15176,13 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
-                throws UncheckedSQLException {
+                throws DuplicatedResultException, UncheckedSQLException {
             return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
         }
 
@@ -14884,12 +15194,13 @@ public final class JdbcUtil {
          * @param batchSize
          * @param joinEntitiesToLoad
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
-                final Class<?> joinEntitiesToLoad) throws UncheckedSQLException {
+                final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
             final List<T> result = getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
             if (N.notNullOrEmpty(result)) {
@@ -14911,12 +15222,13 @@ public final class JdbcUtil {
          * @param batchSize
          * @param joinEntitiesToLoad
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
-                final Collection<? extends Class<?>> joinEntitiesToLoad) throws UncheckedSQLException {
+                final Collection<? extends Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
             final List<T> result = getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
             if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {
@@ -14943,12 +15255,13 @@ public final class JdbcUtil {
          * @param batchSize
          * @param includeAllJoinEntities
          * @return 
+         * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
         @Beta
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
-                final boolean includeAllJoinEntities) throws UncheckedSQLException {
+                final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException {
             final List<T> result = getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
             if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
