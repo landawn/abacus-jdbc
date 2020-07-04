@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.EntityId;
+import com.landawn.abacus.condition.ConditionFactory.CB;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.samples.entity.Address;
 import com.landawn.abacus.samples.entity.Device;
@@ -548,6 +549,8 @@ public class DaoTest {
         userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
         userDao.allUsers().map(e -> e.getFirstName() + " " + e.getLastName()).forEach(Fn.println());
+
+        userDao.delete(CB.where(CF.ge("id", 0)).limit(10000));
 
         userDao.deleteById(100L);
     }
