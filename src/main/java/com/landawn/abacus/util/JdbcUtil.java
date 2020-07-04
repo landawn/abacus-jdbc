@@ -8704,7 +8704,7 @@ public final class JdbcUtil {
             @SuppressWarnings("deprecation")
             final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
-            final T dbEntity = gett(JdbcUtil.extractId(entity, cls, idPropNameList, entityInfo));
+            final T dbEntity = gett(JdbcUtil.extractId(entity, idPropNameList, entityInfo));
 
             if (dbEntity == null) {
                 insert(entity);
@@ -8746,7 +8746,7 @@ public final class JdbcUtil {
             final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
-            final Function<T, ID> idExtractorFunc = createIdExtractor(cls, idPropNameList, entityInfo);
+            final Function<T, ID> idExtractorFunc = createIdExtractor(idPropNameList, entityInfo);
             final List<ID> ids = N.map(entities, idExtractorFunc);
 
             final List<T> dbEntities = batchGet(ids, batchSize);
@@ -8817,7 +8817,7 @@ public final class JdbcUtil {
             final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
-            final ID id = extractId(entity, cls, idPropNameList, entityInfo);
+            final ID id = extractId(entity, idPropNameList, entityInfo);
             final Collection<String> selectPropNames = getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
             final T dbEntity = gett(id, selectPropNames);
@@ -8898,7 +8898,7 @@ public final class JdbcUtil {
             final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
-            final Function<T, ID> idExtractorFunc = createIdExtractor(cls, idPropNameList, entityInfo);
+            final Function<T, ID> idExtractorFunc = createIdExtractor(idPropNameList, entityInfo);
             final Map<ID, List<T>> idEntityMap = StreamEx.of(entities).groupTo(idExtractorFunc, Fn.identity());
             final Collection<String> selectPropNames = getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
@@ -12419,7 +12419,7 @@ public final class JdbcUtil {
             @SuppressWarnings("deprecation")
             final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
-            final T dbEntity = gett(JdbcUtil.extractId(entity, cls, idPropNameList, entityInfo));
+            final T dbEntity = gett(JdbcUtil.extractId(entity, idPropNameList, entityInfo));
 
             if (dbEntity == null) {
                 insert(entity);
@@ -12463,7 +12463,7 @@ public final class JdbcUtil {
             final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
-            final Function<T, ID> idExtractorFunc = createIdExtractor(cls, idPropNameList, entityInfo);
+            final Function<T, ID> idExtractorFunc = createIdExtractor(idPropNameList, entityInfo);
             final List<ID> ids = N.map(entities, idExtractorFunc);
 
             final List<T> dbEntities = batchGet(ids, batchSize);
@@ -12536,7 +12536,7 @@ public final class JdbcUtil {
             final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
-            final ID id = extractId(entity, cls, idPropNameList, entityInfo);
+            final ID id = extractId(entity, idPropNameList, entityInfo);
             final Collection<String> selectPropNames = getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
             final T dbEntity = gett(id, selectPropNames);
@@ -12622,7 +12622,7 @@ public final class JdbcUtil {
             final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
-            final Function<T, ID> idExtractorFunc = createIdExtractor(cls, idPropNameList, entityInfo);
+            final Function<T, ID> idExtractorFunc = createIdExtractor(idPropNameList, entityInfo);
             final Map<ID, List<T>> idEntityMap = StreamEx.of(entities).groupTo(idExtractorFunc, Fn.identity());
             final Collection<String> selectPropNames = getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
@@ -15221,11 +15221,11 @@ public final class JdbcUtil {
     }
 
     @SuppressWarnings("deprecation")
-    static <T, ID> ID extractId(final T entity, final Class<?> cls, final List<String> idPropNameList, final EntityInfo entityInfo) {
+    static <T, ID> ID extractId(final T entity, final List<String> idPropNameList, final EntityInfo entityInfo) {
         if (idPropNameList.size() == 1) {
             return entityInfo.getPropInfo(idPropNameList.get(0)).getPropValue(entity);
         } else {
-            Seid entityId = Seid.of(ClassUtil.getSimpleClassName(cls));
+            final Seid entityId = Seid.of(entityInfo.simpleClassName);
 
             for (String idPropName : idPropNameList) {
                 entityId.set(idPropName, entityInfo.getPropInfo(idPropName).getPropValue(entity));
@@ -15236,7 +15236,7 @@ public final class JdbcUtil {
     }
 
     @SuppressWarnings("deprecation")
-    static <T, ID> Function<T, ID> createIdExtractor(final Class<?> cls, final List<String> idPropNameList, final EntityInfo entityInfo) {
+    static <T, ID> Function<T, ID> createIdExtractor(final List<String> idPropNameList, final EntityInfo entityInfo) {
         if (idPropNameList.size() == 1) {
             final PropInfo idPropInfo = entityInfo.getPropInfo(idPropNameList.get(0));
 
@@ -15245,7 +15245,7 @@ public final class JdbcUtil {
             final List<PropInfo> idPropInfos = N.map(idPropNameList, idPropName -> entityInfo.getPropInfo(idPropName));
 
             return it -> {
-                final Seid entityId = Seid.of(ClassUtil.getSimpleClassName(cls));
+                final Seid entityId = Seid.of(entityInfo.simpleClassName);
 
                 for (PropInfo propInfo : idPropInfos) {
                     entityId.set(propInfo.name, propInfo.getPropValue(it));

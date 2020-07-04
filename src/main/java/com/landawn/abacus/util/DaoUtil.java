@@ -1235,15 +1235,7 @@ final class DaoUtil {
         final Logger daoLogger = LoggerFactory.getLogger(daoInterface);
 
         final javax.sql.DataSource primaryDataSource = ds;
-        final SQLMapper newSQLMapper = new SQLMapper();
-
-        {
-            if (sqlMapper != null && sqlMapper.keySet().size() > 0) {
-                for (String sqlKey : sqlMapper.keySet()) {
-                    newSQLMapper.add(sqlKey, sqlMapper.get(sqlKey).sql(), sqlMapper.getAttrs(sqlKey));
-                }
-            }
-        }
+        final SQLMapper newSQLMapper = sqlMapper == null ? new SQLMapper() : sqlMapper.copy();
 
         final Executor nonNullExecutor = executor == null ? JdbcUtil.asyncExecutor.getExecutor() : executor;
         final AsyncExecutor asyncExecutor = new AsyncExecutor(nonNullExecutor);
@@ -1545,7 +1537,7 @@ final class DaoUtil {
                                     + " on method: " + fullClassMethodName);
                 }
 
-                if (newSQLMapper == null || newSQLMapper.keySet().size() == 0) {
+                if (newSQLMapper.isEmpty()) {
                     sqlList = Stream.of(sqlsAnno.value()).filter(Fn.notNullOrEmpty()).toList();
                 } else {
                     sqlList = Stream.of(sqlsAnno.value())
