@@ -54,6 +54,7 @@ import com.landawn.abacus.cache.CacheFactory;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.condition.Criteria;
+import com.landawn.abacus.condition.Limit;
 import com.landawn.abacus.core.DirtyMarkerUtil;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -1228,8 +1229,33 @@ final class DaoImpl {
         return preparedQuery;
     }
 
-    private static Condition appendLimit(final Condition cond, final int count, final DBVersion dbVersion) {
+    private static Condition handleLimit(final Condition cond, final int count, final DBVersion dbVersion) {
+        if (count < 0) {
+            return cond;
+        }
+
         if (cond instanceof Criteria && ((Criteria) cond).getLimit() != null) {
+            final Criteria criteria = (Criteria) cond;
+            final Limit limit = criteria.getLimit();
+
+            switch (dbVersion) {
+                case ORACLE:
+                case SQL_SERVER:
+                case DB2:
+
+                    if (limit.getCount() > 0 && limit.getOffset() > 0) {
+                        criteria.limit("OFFSET " + limit.getOffset() + " ROWS FETCH NEXT " + limit.getCount() + " ROWS ONLY");
+                    } else if (limit.getCount() > 0) {
+                        criteria.limit("FETCH FIRST " + limit.getCount() + " ROWS ONLY");
+                    } else if (limit.getOffset() > 0) {
+                        criteria.limit("OFFSET " + limit.getOffset() + " ROWS");
+                    }
+
+                    break;
+
+                default:
+            }
+
             return cond;
         }
 
@@ -1863,21 +1889,21 @@ final class DaoImpl {
                     } else if (methodName.equals("exists") && paramLen == 1 && Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply(SQLBuilder._1, cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).exists();
                         };
                     } else if (methodName.equals("count") && paramLen == 1 && Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply(SQLBuilder.COUNT_ALL, cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForInt().orZero();
                         };
                     } else if (methodName.equals("findFirst") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst(entityClass);
                         };
@@ -1885,7 +1911,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst((RowMapper) args[1]);
                         };
@@ -1893,7 +1919,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst((BiRowMapper) args[1]);
                         };
@@ -1901,7 +1927,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst(entityClass);
                         };
@@ -1909,7 +1935,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst((RowMapper) args[2]);
                         };
@@ -1917,14 +1943,14 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst((BiRowMapper) args[2]);
                         };
                     } else if (methodName.equals("findOnlyOne") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 2, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get(entityClass);
                         };
@@ -1932,7 +1958,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 2, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get((RowMapper) args[1]);
                         };
@@ -1940,7 +1966,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 2, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get((BiRowMapper) args[1]);
                         };
@@ -1948,7 +1974,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 2, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get(entityClass);
                         };
@@ -1956,7 +1982,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 2, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get((RowMapper) args[2]);
                         };
@@ -1964,7 +1990,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 2, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get((BiRowMapper) args[2]);
                         };
@@ -1972,7 +1998,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForBoolean();
                         };
@@ -1980,7 +2006,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForChar();
                         };
@@ -1988,7 +2014,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForByte();
                         };
@@ -1996,7 +2022,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForShort();
                         };
@@ -2004,7 +2030,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForInt();
                         };
@@ -2012,7 +2038,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForLong();
                         };
@@ -2020,7 +2046,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForFloat();
                         };
@@ -2028,7 +2054,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForDouble();
                         };
@@ -2036,7 +2062,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForString();
                         };
@@ -2044,7 +2070,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForDate();
                         };
@@ -2052,7 +2078,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForTime();
                         };
@@ -2060,7 +2086,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForTimestamp();
                         };
@@ -2068,7 +2094,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[2];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForSingleResult((Class) args[0]);
                         };
@@ -2076,7 +2102,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[2];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForSingleNonNull((Class) args[0]);
                         };
@@ -2084,7 +2110,7 @@ final class DaoImpl {
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[2];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 2, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).queryForUniqueResult((Class) args[0]);
                         };
@@ -2092,24 +2118,30 @@ final class DaoImpl {
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[2];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 2, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).queryForUniqueNonNull((Class) args[0]);
                         };
                     } else if (methodName.equals("query") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).query();
                         };
                     } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).query();
                         };
                     } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.ResultExtractor.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2118,7 +2150,9 @@ final class DaoImpl {
                     } else if (methodName.equals("query") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.ResultExtractor.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2127,7 +2161,9 @@ final class DaoImpl {
                     } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(BiResultExtractor.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2136,7 +2172,9 @@ final class DaoImpl {
                     } else if (methodName.equals("query") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(BiResultExtractor.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2144,17 +2182,23 @@ final class DaoImpl {
                         };
                     } else if (methodName.equals("list") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).list(entityClass);
                         };
                     } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).list((RowMapper) args[1]);
                         };
                     } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2163,7 +2207,9 @@ final class DaoImpl {
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.RowFilter.class) && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2172,7 +2218,9 @@ final class DaoImpl {
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.BiRowFilter.class) && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2180,19 +2228,25 @@ final class DaoImpl {
                         };
                     } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).list(entityClass);
                         };
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).list((RowMapper) args[2]);
                         };
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2201,7 +2255,9 @@ final class DaoImpl {
                     } else if (methodName.equals("list") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.RowFilter.class) && paramTypes[3].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2210,7 +2266,9 @@ final class DaoImpl {
                     } else if (methodName.equals("list") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.BiRowFilter.class) && paramTypes[3].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2218,7 +2276,9 @@ final class DaoImpl {
                         };
                     } else if (methodName.equals("stream") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2229,7 +2289,9 @@ final class DaoImpl {
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2241,7 +2303,9 @@ final class DaoImpl {
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2253,7 +2317,9 @@ final class DaoImpl {
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.RowFilter.class) && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2265,7 +2331,9 @@ final class DaoImpl {
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.BiRowFilter.class) && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2277,7 +2345,9 @@ final class DaoImpl {
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2289,7 +2359,9 @@ final class DaoImpl {
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2301,7 +2373,9 @@ final class DaoImpl {
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2313,7 +2387,9 @@ final class DaoImpl {
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.RowFilter.class) && paramTypes[3].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2325,7 +2401,9 @@ final class DaoImpl {
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.BiRowFilter.class) && paramTypes[3].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
