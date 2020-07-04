@@ -28,7 +28,7 @@ import com.landawn.abacus.util.stream.Stream;
 @CacheResult(transfer = "none")
 @Cache(capacity = 1000, evictDelay = 6000)
 @RefreshCache
-@Dao.Config(addLimitForSingleQuery = true)
+@Dao.Config(addLimitForSingleQuery = true, callGenerateIdForInsert = true)
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
 
     @NonDBOperation

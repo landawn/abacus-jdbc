@@ -168,10 +168,10 @@ public class DaoTest {
 
     @Test
     public void test_cache() throws SQLException {
-        long id = userDao.generateId();
-        User user = User.builder().id(id).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        User user = User.builder().firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
+        long id = user.getId();
         User userFromDB = userDao.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
