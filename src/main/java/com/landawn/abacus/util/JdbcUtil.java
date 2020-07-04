@@ -6457,7 +6457,7 @@ public final class JdbcUtil {
              * 
              * @return
              */
-            boolean callGenerateIdForInsert() default false;
+            boolean callGenerateIdForInsertIfIdNotSet() default false;
 
             /**
              * flag to call {@code generateId} for {@code CrudDao.insert(String sql, T entity), CrudDao.batchInsert(String sql, Collection<T> entities)} if the ids are not set or set with default value.
@@ -6465,7 +6465,7 @@ public final class JdbcUtil {
              * 
              * @return
              */
-            boolean callGenerateIdForInsertWithSql() default false;
+            boolean callGenerateIdForInsertWithSqlIfIdNotSet() default false;
         }
 
         @Retention(RetentionPolicy.RUNTIME)

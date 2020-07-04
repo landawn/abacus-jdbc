@@ -1258,14 +1258,14 @@ final class DaoImpl {
         final boolean callGenerateIdForInsert = StreamEx.of(allInterfaces)
                 .flatMapp(cls -> cls.getAnnotations())
                 .select(Dao.Config.class)
-                .map(it -> it.callGenerateIdForInsert())
+                .map(it -> it.callGenerateIdForInsertIfIdNotSet())
                 .first()
                 .orElse(false);
 
         final boolean callGenerateIdForInsertWithSql = StreamEx.of(allInterfaces)
                 .flatMapp(cls -> cls.getAnnotations())
                 .select(Dao.Config.class)
-                .map(it -> it.callGenerateIdForInsertWithSql())
+                .map(it -> it.callGenerateIdForInsertWithSqlIfIdNotSet())
                 .first()
                 .orElse(false);
 
