@@ -71,6 +71,7 @@ import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.Dao;
+import com.landawn.abacus.util.JdbcUtil.Dao.NonDBOperation;
 import com.landawn.abacus.util.JdbcUtil.Dao.OP;
 import com.landawn.abacus.util.JdbcUtil.Dao.OutParameter;
 import com.landawn.abacus.util.JdbcUtil.Dao.SqlField;
@@ -86,6 +87,7 @@ import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.u.Holder;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -1438,6 +1440,7 @@ final class DaoUtil {
         final Tuple3<BiRowMapper<Object>, Function<Object, Object>, BiConsumer<Object, Object>> tp3 = JdbcUtil.getIdGeneratorGetterSetter(daoInterface,
                 entityClass, namingPolicy, idClass);
 
+        final Holder<BiRowMapper<Object>> idExtractorHolder = new Holder<>();
         final BiRowMapper<Object> idExtractor = tp3._1;
         final Function<Object, Object> idGetter = tp3._2;
         final BiConsumer<Object, Object> idSetter = tp3._3;
@@ -2234,7 +2237,7 @@ final class DaoUtil {
                 } else if (declaringClass.equals(JdbcUtil.CrudDao.class) || declaringClass.equals(JdbcUtil.UncheckedCrudDao.class)) {
                     if (methodName.equals("insert") && paramLen == 1) {
                         call = (proxy, args) -> {
-                            final BiRowMapper<Object> keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor);
+                            final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final Object entity = args[0];
 
                             ParsedSql namedInsertSQL = null;
@@ -2266,7 +2269,7 @@ final class DaoUtil {
                         };
                     } else if (methodName.equals("insert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[1])) {
                         call = (proxy, args) -> {
-                            final BiRowMapper<Object> keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor);
+                            final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final Object entity = args[0];
                             final Collection<String> propNamesToInsert = (Collection<String>) args[1];
                             N.checkArgNotNullOrEmpty(propNamesToInsert, "propNamesToInsert");
@@ -2287,7 +2290,7 @@ final class DaoUtil {
                         };
                     } else if (methodName.equals("insert") && paramLen == 2 && String.class.equals(paramTypes[0])) {
                         call = (proxy, args) -> {
-                            final BiRowMapper<Object> keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor);
+                            final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final String namedInsertSQL = (String) args[0];
                             final Object entity = args[1];
 
@@ -2306,7 +2309,7 @@ final class DaoUtil {
                     } else if (methodName.equals("batchInsert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
                             && int.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
-                            final BiRowMapper<Object> keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor);
+                            final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final Collection<?> entities = (Collection<Object>) args[0];
                             final int batchSize = (Integer) args[1];
                             N.checkArgPositive(batchSize, "batchSize");
@@ -2372,7 +2375,7 @@ final class DaoUtil {
                     } else if (methodName.equals("batchInsert") && paramLen == 3 && Collection.class.isAssignableFrom(paramTypes[0])
                             && Collection.class.isAssignableFrom(paramTypes[1]) && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
-                            final BiRowMapper<Object> keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor);
+                            final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final Collection<?> entities = (Collection<Object>) args[0];
 
                             final Collection<String> propNamesToInsert = (Collection<String>) args[1];
@@ -2441,7 +2444,7 @@ final class DaoUtil {
                     } else if (methodName.equals("batchInsert") && paramLen == 3 && String.class.equals(paramTypes[0])
                             && Collection.class.isAssignableFrom(paramTypes[1]) && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
-                            final BiRowMapper<Object> keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor);
+                            final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final String namedInsertSQL = (String) args[0];
                             final Collection<?> entities = (Collection<Object>) args[1];
                             final int batchSize = (Integer) args[2];
@@ -3271,8 +3274,7 @@ final class DaoUtil {
                             }
 
                             call = (proxy, args) -> {
-                                final BiRowMapper<Object> keyExtractor = isCrudDao ? N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor)
-                                        : idExtractor;
+                                final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                                 final boolean isEntity = stmtParamLen == 1 && args[stmtParamIndexes[0]] != null
                                         && ClassUtil.isEntity(args[stmtParamIndexes[0]].getClass());
                                 final Object entity = isEntity ? args[stmtParamIndexes[0]] : null;
@@ -3299,8 +3301,7 @@ final class DaoUtil {
                             }
 
                             call = (proxy, args) -> {
-                                final BiRowMapper<Object> keyExtractor = isCrudDao ? N.defaultIfNull(((JdbcUtil.CrudDao) proxy).idExtractor(), idExtractor)
-                                        : idExtractor;
+                                final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                                 final Collection<Object> batchParameters = (Collection) args[stmtParamIndexes[0]];
                                 int batchSize = tmpBatchSize;
 
@@ -3557,7 +3558,7 @@ final class DaoUtil {
                 }
             }
 
-            final boolean isNonDBOperation = StreamEx.of(m.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(DaoUtil.NonDBOperation.class));
+            final boolean isNonDBOperation = StreamEx.of(m.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(NonDBOperation.class));
 
             if (isNonDBOperation) {
                 nonDBOperationSet.add(m);
@@ -3946,6 +3947,24 @@ final class DaoUtil {
         return daoInstance;
     }
 
+    @SuppressWarnings("rawtypes")
+    private static BiRowMapper<Object> getIdExtractor(final Holder<BiRowMapper<Object>> idExtractorHolder, final BiRowMapper<Object> defaultIdExtractor,
+            final Dao dao) {
+        BiRowMapper<Object> keyExtractor = idExtractorHolder.value();
+
+        if (keyExtractor == null) {
+            if (dao instanceof JdbcUtil.CrudDao) {
+                keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) dao).idExtractor(), defaultIdExtractor);
+            } else {
+                keyExtractor = defaultIdExtractor;
+            }
+
+            idExtractorHolder.setValue(keyExtractor);
+        }
+
+        return keyExtractor;
+    }
+
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.METHOD)
     static @interface OutParameterList {
@@ -3958,14 +3977,7 @@ final class DaoUtil {
         Dao.Handler[] value();
     }
 
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(value = { ElementType.METHOD })
-    static @interface NonDBOperation {
-
-    }
-
     static final class QueryInfo {
-
         final String sql;
         final int queryTimeout;
         final int fetchSize;

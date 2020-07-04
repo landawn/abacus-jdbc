@@ -168,21 +168,22 @@ public class DaoTest {
 
     @Test
     public void test_cache() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        long id = userDao.generateId();
+        User user = User.builder().id(id).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
-        User userFromDB = userDao.gett(100L);
+        User userFromDB = userDao.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        Profiler.run(1, 10000, 1, () -> userDao.gett(100L)).printResult();
+        Profiler.run(1, 10000, 1, () -> userDao.gett(id)).printResult();
 
         userDao.delete(userFromDB);
 
-        Profiler.run(1, 10000, 1, () -> userDao.gett(100L)).printResult();
+        Profiler.run(1, 10000, 1, () -> userDao.gett(id)).printResult();
 
         userDao.delete(userFromDB);
     }

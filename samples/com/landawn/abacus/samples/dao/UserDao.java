@@ -30,6 +30,13 @@ import com.landawn.abacus.util.stream.Stream;
 @RefreshCache
 @Dao.Config(addLimitForSingleQuery = true)
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
+
+    @NonDBOperation
+    @Override
+    default Long generateId() {
+        return System.currentTimeMillis();
+    }
+
     @NamedInsert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
     void insertWithId(User user) throws SQLException;
 

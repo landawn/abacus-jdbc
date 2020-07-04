@@ -71,11 +71,11 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Columns.ColumnGetter;
 import com.landawn.abacus.util.Columns.ColumnOne;
-import com.landawn.abacus.util.DaoUtil.NonDBOperation;
 import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
 import com.landawn.abacus.util.ExceptionalStream.StreamE;
 import com.landawn.abacus.util.Fn.BiConsumers;
 import com.landawn.abacus.util.Fn.Suppliers;
+import com.landawn.abacus.util.JdbcUtil.Dao.NonDBOperation;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.SQLTransaction.CreatedBy;
@@ -7200,6 +7200,12 @@ public final class JdbcUtil {
             boolean value() default false;
         }
 
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(value = { ElementType.METHOD })
+        static @interface NonDBOperation {
+
+        }
+
         /**
          * 
          * @see The operations in {@code AbstractPreparedQuery}
@@ -8374,8 +8380,22 @@ public final class JdbcUtil {
      */
     public static interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
 
+        @NonDBOperation
         default BiRowMapper<ID> idExtractor() {
             return null;
+        }
+
+        /**
+         * 
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @NonDBOperation
+        default ID generateId() throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
         }
 
         /**
@@ -8736,20 +8756,33 @@ public final class JdbcUtil {
             final List<T> entitiesToUpdate = map.get(true);
             final List<T> entitiesToInsert = map.get(false);
 
-            if (N.notNullOrEmpty(entitiesToInsert)) {
-                batchInsert(entitiesToInsert, batchSize);
-            }
+            final SQLTransaction tran = N.notNullOrEmpty(entitiesToInsert) && N.notNullOrEmpty(entitiesToUpdate) ? JdbcUtil.beginTransaction(dataSource())
+                    : null;
 
-            if (N.notNullOrEmpty(entitiesToUpdate)) {
-                final Set<String> idPropNameSet = N.newHashSet(idPropNameList);
+            try {
+                if (N.notNullOrEmpty(entitiesToInsert)) {
+                    batchInsert(entitiesToInsert, batchSize);
+                }
 
-                final List<T> dbEntitiesToUpdate = StreamEx.of(entitiesToUpdate)
-                        .map(it -> N.merge(it, dbIdEntityMap.get(idExtractorFunc.apply(it)), false, idPropNameSet))
-                        .toList();
+                if (N.notNullOrEmpty(entitiesToUpdate)) {
+                    final Set<String> idPropNameSet = N.newHashSet(idPropNameList);
 
-                batchUpdate(dbEntitiesToUpdate);
+                    final List<T> dbEntitiesToUpdate = StreamEx.of(entitiesToUpdate)
+                            .map(it -> N.merge(it, dbIdEntityMap.get(idExtractorFunc.apply(it)), false, idPropNameSet))
+                            .toList();
 
-                entitiesToInsert.addAll(dbEntitiesToUpdate);
+                    batchUpdate(dbEntitiesToUpdate);
+
+                    entitiesToInsert.addAll(dbEntitiesToUpdate);
+                }
+
+                if (tran != null) {
+                    tran.commit();
+                }
+            } finally {
+                if (tran != null) {
+                    tran.rollbackIfNotCommitted();
+                }
             }
 
             return entitiesToInsert;
@@ -12038,6 +12071,20 @@ public final class JdbcUtil {
             extends UncheckedDao<T, SB, TD>, CrudDao<T, ID, SB, TD> {
 
         /**
+         * 
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException the unchecked SQL exception
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @NonDBOperation
+        @Override
+        default ID generateId() throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
          *
          * @param entityToInsert
          * @return
@@ -12426,20 +12473,33 @@ public final class JdbcUtil {
             final List<T> entitiesToUpdate = map.get(true);
             final List<T> entitiesToInsert = map.get(false);
 
-            if (N.notNullOrEmpty(entitiesToInsert)) {
-                batchInsert(entitiesToInsert, batchSize);
-            }
+            final SQLTransaction tran = N.notNullOrEmpty(entitiesToInsert) && N.notNullOrEmpty(entitiesToUpdate) ? JdbcUtil.beginTransaction(dataSource())
+                    : null;
 
-            if (N.notNullOrEmpty(entitiesToUpdate)) {
-                final Set<String> idPropNameSet = N.newHashSet(idPropNameList);
+            try {
+                if (N.notNullOrEmpty(entitiesToInsert)) {
+                    batchInsert(entitiesToInsert, batchSize);
+                }
 
-                final List<T> dbEntitiesToUpdate = StreamEx.of(entitiesToUpdate)
-                        .map(it -> N.merge(it, dbIdEntityMap.get(idExtractorFunc.apply(it)), false, idPropNameSet))
-                        .toList();
+                if (N.notNullOrEmpty(entitiesToUpdate)) {
+                    final Set<String> idPropNameSet = N.newHashSet(idPropNameList);
 
-                batchUpdate(dbEntitiesToUpdate);
+                    final List<T> dbEntitiesToUpdate = StreamEx.of(entitiesToUpdate)
+                            .map(it -> N.merge(it, dbIdEntityMap.get(idExtractorFunc.apply(it)), false, idPropNameSet))
+                            .toList();
 
-                entitiesToInsert.addAll(dbEntitiesToUpdate);
+                    batchUpdate(dbEntitiesToUpdate);
+
+                    entitiesToInsert.addAll(dbEntitiesToUpdate);
+                }
+
+                if (tran != null) {
+                    tran.commit();
+                }
+            } finally {
+                if (tran != null) {
+                    tran.rollbackIfNotCommitted();
+                }
             }
 
             return entitiesToInsert;
