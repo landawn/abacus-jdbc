@@ -6451,6 +6451,21 @@ public final class JdbcUtil {
              * @return
              */
             boolean addLimitForSingleQuery() default false;
+
+            /**
+             * flag to call {@code generateId} for {@code CrudDao.insert(T entity), CrudDao.batchInsert(Collection<T> entities)} if the ids are not set or set with default value.
+             * 
+             * @return
+             */
+            boolean callGenerateIdForInsert() default false;
+
+            /**
+             * flag to call {@code generateId} for {@code CrudDao.insert(String sql, T entity), CrudDao.batchInsert(String sql, Collection<T> entities)} if the ids are not set or set with default value.
+             * 
+             * 
+             * @return
+             */
+            boolean callGenerateIdForInsertWithSql() default false;
         }
 
         @Retention(RetentionPolicy.RUNTIME)
@@ -6934,7 +6949,7 @@ public final class JdbcUtil {
 
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
-        @Repeatable(DaoUtil.OutParameterList.class)
+        @Repeatable(DaoImpl.OutParameterList.class)
         public @interface OutParameter {
             /**
              *
@@ -7071,7 +7086,7 @@ public final class JdbcUtil {
 
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.METHOD, ElementType.TYPE })
-        @Repeatable(DaoUtil.HandlerList.class)
+        @Repeatable(DaoImpl.HandlerList.class)
         public static @interface Handler {
             String qualifier() default "";
 
@@ -15620,6 +15635,6 @@ public final class JdbcUtil {
     @Deprecated
     public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
             final SQLMapper sqlMapper, final Cache<String, Object> cache, final Executor executor) {
-        return DaoUtil.createDao(daoInterface, ds, sqlMapper, cache, executor);
+        return DaoImpl.createDao(daoInterface, ds, sqlMapper, cache, executor);
     }
 }

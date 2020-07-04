@@ -70,6 +70,7 @@ import com.landawn.abacus.util.Fn.IntFunctions;
 import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
+import com.landawn.abacus.util.JdbcUtil.CrudDao;
 import com.landawn.abacus.util.JdbcUtil.Dao;
 import com.landawn.abacus.util.JdbcUtil.Dao.NonDBOperation;
 import com.landawn.abacus.util.JdbcUtil.Dao.OP;
@@ -109,9 +110,9 @@ import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 @SuppressWarnings("deprecation")
-final class DaoUtil {
+final class DaoImpl {
 
-    private DaoUtil() {
+    private DaoImpl() {
         // singleton for utility class.
     }
 
@@ -1254,6 +1255,20 @@ final class DaoUtil {
                 .first()
                 .orElse(false);
 
+        final boolean callGenerateIdForInsert = StreamEx.of(allInterfaces)
+                .flatMapp(cls -> cls.getAnnotations())
+                .select(Dao.Config.class)
+                .map(it -> it.callGenerateIdForInsert())
+                .first()
+                .orElse(false);
+
+        final boolean callGenerateIdForInsertWithSql = StreamEx.of(allInterfaces)
+                .flatMapp(cls -> cls.getAnnotations())
+                .select(Dao.Config.class)
+                .map(it -> it.callGenerateIdForInsertWithSql())
+                .first()
+                .orElse(false);
+
         final Map<String, String> sqlFieldMap = StreamEx.of(allInterfaces)
                 .flatMapp(it -> it.getDeclaredFields())
                 .filter(it -> it.isAnnotationPresent(SqlField.class))
@@ -1493,9 +1508,9 @@ final class DaoUtil {
         final List<Dao.Handler> daoClassHandlerList = StreamEx.of(allInterfaces)
                 .reversed()
                 .flatMapp(cls -> cls.getAnnotations())
-                .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoUtil.HandlerList.class))
+                .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoImpl.HandlerList.class))
                 .flattMap(
-                        anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno) : N.asList(((DaoUtil.HandlerList) anno).value()))
+                        anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno) : N.asList(((DaoImpl.HandlerList) anno).value()))
                 .toList();
 
         final Dao.Cache daoClassCacheAnno = StreamEx.of(allInterfaces).flatMapp(cls -> cls.getAnnotations()).select(Dao.Cache.class).first().orNull();
@@ -2235,13 +2250,17 @@ final class DaoUtil {
 
                             ParsedSql namedInsertSQL = null;
 
+                            if (callGenerateIdForInsert && isDefaultIdTester.test(idGetter.apply(entity))) {
+                                idSetter.accept(((JdbcUtil.CrudDao) proxy).generateId(), entity);
+                            }
+
                             if (isDirtyMarker) {
                                 final Collection<String> propNamesToInsert = SQLBuilder.getInsertPropNames(entity, null);
                                 N.checkArgNotNullOrEmpty(propNamesToInsert, "propNamesToInsert");
 
                                 namedInsertSQL = ParsedSql.parse(namedInsertSQLBuilderFunc.apply(propNamesToInsert).sql());
                             } else {
-                                if (isDefaultIdTester.test(idGetter.apply(entity))) {
+                                if (callGenerateIdForInsert == false && isDefaultIdTester.test(idGetter.apply(entity))) {
                                     namedInsertSQL = namedInsertWithoutIdSQL;
                                 } else {
                                     namedInsertSQL = namedInsertWithIdSQL;
@@ -2267,6 +2286,14 @@ final class DaoUtil {
                             final Collection<String> propNamesToInsert = (Collection<String>) args[1];
                             N.checkArgNotNullOrEmpty(propNamesToInsert, "propNamesToInsert");
 
+                            if (callGenerateIdForInsert) {
+                                if (!N.disjoint(propNamesToInsert, idPropNameSet)) {
+                                    if (isDefaultIdTester.test(idGetter.apply(entity))) {
+                                        idSetter.accept(((JdbcUtil.CrudDao) proxy).generateId(), entity);
+                                    }
+                                }
+                            }
+
                             final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToInsert).sql();
 
                             final Object id = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
@@ -2286,6 +2313,12 @@ final class DaoUtil {
                             final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final String namedInsertSQL = (String) args[0];
                             final Object entity = args[1];
+
+                            if (callGenerateIdForInsertWithSql) {
+                                if (isDefaultIdTester.test(idGetter.apply(entity))) {
+                                    idSetter.accept(((JdbcUtil.CrudDao) proxy).generateId(), entity);
+                                }
+                            }
 
                             final Object id = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
                                     .setParameters(entity)
@@ -2311,8 +2344,19 @@ final class DaoUtil {
                                 return 0;
                             }
 
-                            final boolean isDefaultIdPropValue = isDefaultIdTester.test(idGetter.apply(N.firstOrNullIfEmpty(entities)));
-                            final ParsedSql namedInsertSQL = isDefaultIdPropValue ? namedInsertWithoutIdSQL : namedInsertWithIdSQL;
+                            final Object first = N.firstOrNullIfEmpty(entities);
+                            final boolean isDefaultIdPropValue = isDefaultIdTester.test(idGetter.apply(first));
+
+                            if (isDefaultIdPropValue && callGenerateIdForInsert) {
+                                final CrudDao crudDao = (JdbcUtil.CrudDao) proxy;
+
+                                for (Object entity : entities) {
+                                    idSetter.accept(crudDao.generateId(), entity);
+                                }
+                            }
+
+                            final ParsedSql namedInsertSQL = isDefaultIdPropValue && callGenerateIdForInsert == false ? namedInsertWithoutIdSQL
+                                    : namedInsertWithIdSQL;
                             List<Object> ids = null;
 
                             if (entities.size() <= batchSize) {
@@ -2381,6 +2425,20 @@ final class DaoUtil {
                                 return 0;
                             }
 
+                            final Object first = N.firstOrNullIfEmpty(entities);
+
+                            if (callGenerateIdForInsert) {
+                                if (!N.disjoint(propNamesToInsert, idPropNameSet)) {
+                                    if (isDefaultIdTester.test(idGetter.apply(first))) {
+                                        final CrudDao crudDao = (JdbcUtil.CrudDao) proxy;
+
+                                        for (Object entity : entities) {
+                                            idSetter.accept(crudDao.generateId(), entity);
+                                        }
+                                    }
+                                }
+                            }
+
                             final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToInsert).sql();
                             List<Object> ids = null;
 
@@ -2445,6 +2503,18 @@ final class DaoUtil {
 
                             if (N.isNullOrEmpty(entities)) {
                                 return 0;
+                            }
+
+                            final Object first = N.firstOrNullIfEmpty(entities);
+
+                            if (callGenerateIdForInsertWithSql) {
+                                if (isDefaultIdTester.test(idGetter.apply(first))) {
+                                    final CrudDao crudDao = (JdbcUtil.CrudDao) proxy;
+
+                                    for (Object entity : entities) {
+                                        idSetter.accept(crudDao.generateId(), entity);
+                                    }
+                                }
                             }
 
                             List<Object> ids = null;
@@ -2921,28 +2991,29 @@ final class DaoUtil {
                             if (N.isNullOrEmpty(entities)) {
                                 // Do nothing.
                             } else if (entities.size() == 1) {
-                                final Object entity = N.firstOrNullIfEmpty(entities);
+                                final Object first = N.firstOrNullIfEmpty(entities);
+
                                 final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                         .getSelectSQLBuilderAndParamSetter(sbc);
 
-                                final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
+                                final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(first, tp._2);
 
                                 if (propJoinInfo.joinPropInfo.type.isCollection()) {
                                     final List<?> propEntities = preparedQuery.list(propJoinInfo.referencedEntityClass);
 
                                     if (propJoinInfo.joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
-                                        propJoinInfo.joinPropInfo.setPropValue(entity, propEntities);
+                                        propJoinInfo.joinPropInfo.setPropValue(first, propEntities);
                                     } else {
                                         final Collection<Object> c = (Collection) N.newInstance(propJoinInfo.joinPropInfo.clazz);
                                         c.addAll(propEntities);
-                                        propJoinInfo.joinPropInfo.setPropValue(entity, c);
+                                        propJoinInfo.joinPropInfo.setPropValue(first, c);
                                     }
                                 } else {
-                                    propJoinInfo.joinPropInfo.setPropValue(entity, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orNull());
+                                    propJoinInfo.joinPropInfo.setPropValue(first, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orNull());
                                 }
 
                                 if (isDirtyMarker) {
-                                    DirtyMarkerUtil.markDirty((DirtyMarker) entity, propJoinInfo.joinPropInfo.name, false);
+                                    DirtyMarkerUtil.markDirty((DirtyMarker) first, propJoinInfo.joinPropInfo.name, false);
                                 }
                             } else {
                                 final Tuple2<BiFunction<Collection<String>, Integer, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
@@ -3150,7 +3221,7 @@ final class DaoUtil {
 
                     final List<Dao.OutParameter> outParameterList = StreamEx.of(m.getAnnotations())
                             .select(Dao.OutParameter.class)
-                            .append(StreamEx.of(m.getAnnotations()).select(DaoUtil.OutParameterList.class).flatMapp(e -> e.value()))
+                            .append(StreamEx.of(m.getAnnotations()).select(DaoImpl.OutParameterList.class).flatMapp(e -> e.value()))
                             .toList();
 
                     if (N.notNullOrEmpty(outParameterList)) {
@@ -3871,9 +3942,9 @@ final class DaoUtil {
                 }
 
                 final List<JdbcUtil.Handler<?>> handlerList = StreamEx.of(m.getAnnotations())
-                        .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoUtil.HandlerList.class))
+                        .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoImpl.HandlerList.class))
                         .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
-                                : N.asList(((DaoUtil.HandlerList) anno).value()))
+                                : N.asList(((DaoImpl.HandlerList) anno).value()))
                         .prepend(StreamEx.of(daoClassHandlerList).filter(h -> StreamEx.of(h.filter()).anyMatch(filterByMethodName)))
                         .map(handlerAnno -> N.notNullOrEmpty(handlerAnno.qualifier()) ? HandlerFactory.get(handlerAnno.qualifier())
                                 : HandlerFactory.getOrCreate(handlerAnno.type()))
