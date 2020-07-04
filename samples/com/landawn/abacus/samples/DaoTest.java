@@ -653,7 +653,7 @@ public class DaoTest {
     public void test_joinedBy_2() throws SQLException {
         final List<User> users = new ArrayList<>();
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1999; i++) {
             User user = User.builder().id(100 + i).firstName("Forrest").lastName("Gump").email("123@email.com").build();
             userDao.insertWithId(user);
 

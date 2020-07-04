@@ -123,6 +123,8 @@ public final class JdbcUtil {
 
     public static final int DEFAULT_BATCH_SIZE = 200;
 
+    static final int MAX_BATCH_SIZE = 1000;
+
     // ...
     static final String CURRENT_DIR_PATH = "./";
 

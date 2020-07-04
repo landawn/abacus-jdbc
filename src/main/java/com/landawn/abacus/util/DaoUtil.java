@@ -625,7 +625,8 @@ final class DaoUtil {
                 return false;
             }
 
-            return !(method.getName().startsWith("get") || method.getName().startsWith("findFirst") || method.getName().startsWith("findOne"));
+            return !(method.getName().startsWith("get") || method.getName().startsWith("findFirst") || method.getName().startsWith("findOne")
+                    || method.getName().startsWith("selectFirst") || method.getName().startsWith("selectOne"));
         } else {
             return false;
         }
@@ -2947,22 +2948,25 @@ final class DaoUtil {
                                 final Tuple2<BiFunction<Collection<String>, Integer, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
                                         .getSelectSQLBuilderAndParamSetterForBatch(sbc);
 
-                                if (propJoinInfo.isManyToManyJoin()) {
-                                    final BiRowMapper<Object> biRowMapper = BiRowMapper.to(propJoinInfo.referencedEntityClass, true);
-                                    final BiRowMapper<Pair<Object, Object>> pairBiRowMapper = (rs, cls) -> Pair.of(rs.getObject(1), biRowMapper.apply(rs, cls));
+                                ExceptionalStream.of(entities).splitToList(JdbcUtil.MAX_BATCH_SIZE).forEach(bp -> {
+                                    if (propJoinInfo.isManyToManyJoin()) {
+                                        final BiRowMapper<Object> biRowMapper = BiRowMapper.to(propJoinInfo.referencedEntityClass, true);
+                                        final BiRowMapper<Pair<Object, Object>> pairBiRowMapper = (rs, cls) -> Pair.of(rs.getObject(1),
+                                                biRowMapper.apply(rs, cls));
 
-                                    final List<Pair<Object, Object>> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
-                                            .setParameters(entities, tp._2)
-                                            .list(pairBiRowMapper);
+                                        final List<Pair<Object, Object>> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, bp.size()))
+                                                .setParameters(bp, tp._2)
+                                                .list(pairBiRowMapper);
 
-                                    propJoinInfo.setJoinPropEntities(entities, Stream.of(joinPropEntities).groupTo(it -> it.left, it -> it.right));
-                                } else {
-                                    final List<?> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
-                                            .setParameters(entities, tp._2)
-                                            .list(propJoinInfo.referencedEntityClass);
+                                        propJoinInfo.setJoinPropEntities(bp, Stream.of(joinPropEntities).groupTo(it -> it.left, it -> it.right));
+                                    } else {
+                                        final List<?> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, bp.size()))
+                                                .setParameters(bp, tp._2)
+                                                .list(propJoinInfo.referencedEntityClass);
 
-                                    propJoinInfo.setJoinPropEntities(entities, joinPropEntities);
-                                }
+                                        propJoinInfo.setJoinPropEntities(bp, joinPropEntities);
+                                    }
+                                });
                             }
 
                             return null;
@@ -2990,7 +2994,12 @@ final class DaoUtil {
                             } else if (entities.size() == 1) {
                                 return proxy.prepareQuery(tp._1).setParameters(N.firstOrNullIfEmpty(entities), tp._2).update();
                             } else {
-                                return proxy.prepareQuery(tp._1).addBatchParametters(entities, tp._2).update();
+                                final long result = ExceptionalStream.of(entities)
+                                        .splitToList(JdbcUtil.MAX_BATCH_SIZE)
+                                        .sumInt(bp -> proxy.prepareQuery(tp._1).addBatchParametters(bp, tp._2).update())
+                                        .orZero();
+
+                                return N.toIntExact(result);
                             }
                         };
                     } else {
