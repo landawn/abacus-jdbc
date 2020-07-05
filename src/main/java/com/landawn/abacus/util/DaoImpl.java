@@ -143,15 +143,11 @@ final class DaoImpl {
             if (N.notNullOrEmpty(tmp.id())) {
                 final String id = tmp.id();
 
-                if (sqlMapper == null) {
-                    throw new IllegalArgumentException("No SQLMapper is defined or passed for id: " + id);
+                if (sqlMapper == null || sqlMapper.get(id) == null) {
+                    throw new IllegalArgumentException("No predefined sql found by id: " + id);
                 }
 
                 sql = sqlMapper.get(id).getParameterizedSql();
-
-                if (N.isNullOrEmpty(sql)) {
-                    throw new IllegalArgumentException("No sql is found in SQLMapper by id: " + id);
-                }
 
                 final Map<String, String> attrs = sqlMapper.getAttrs(id);
 
@@ -1310,6 +1306,24 @@ final class DaoImpl {
         return cachekey;
     }
 
+    @SuppressWarnings("rawtypes")
+    private static BiRowMapper<Object> getIdExtractor(final Holder<BiRowMapper<Object>> idExtractorHolder, final BiRowMapper<Object> defaultIdExtractor,
+            final Dao dao) {
+        BiRowMapper<Object> keyExtractor = idExtractorHolder.value();
+
+        if (keyExtractor == null) {
+            if (dao instanceof JdbcUtil.CrudDao) {
+                keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) dao).idExtractor(), defaultIdExtractor);
+            } else {
+                keyExtractor = defaultIdExtractor;
+            }
+
+            idExtractorHolder.setValue(keyExtractor);
+        }
+
+        return keyExtractor;
+    }
+
     @SuppressWarnings({ "rawtypes" })
     static <T, SB extends SQLBuilder, TD extends JdbcUtil.Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
             final SQLMapper sqlMapper, final Cache<String, Object> daoCache, final Executor executor) {
@@ -1339,6 +1353,7 @@ final class DaoImpl {
         final List<Class<?>> allInterfaces = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface)).prepend(daoInterface).toList();
 
         final DBVersion dbVersion = JdbcUtil.getDBVersion(ds);
+
         final boolean addLimitForSingleQuery = StreamEx.of(allInterfaces)
                 .flatMapp(cls -> cls.getAnnotations())
                 .select(Dao.Config.class)
@@ -1362,9 +1377,17 @@ final class DaoImpl {
 
         final Map<String, String> sqlFieldMap = StreamEx.of(allInterfaces)
                 .flatMapp(it -> it.getDeclaredFields())
+                .append(StreamEx.of(allInterfaces).flatMapp(it -> it.getDeclaredClasses()).flatMapp(it -> it.getDeclaredFields()))
                 .filter(it -> it.isAnnotationPresent(SqlField.class))
-                .map(it -> Tuple.of(it, it.getAnnotation(SqlField.class)))
-                .toMap(it -> N.isNullOrEmpty(it._2.id()) ? it._1.getName() : it._2.id(), Fn.ff(it -> (String) (it._1.get(null))));
+                .onEach(it -> N.checkArgument(Modifier.isFinal(it.getModifiers()) && Modifier.isFinal(it.getModifiers()) && String.class.equals(it.getType()),
+                        "Field annotated with @SqlField must be static&final String. but {} is not.", it))
+                .onEach(it -> it.setAccessible(true))
+                .map(it -> Tuple.of(it.getAnnotation(SqlField.class), it))
+                .map(it -> Tuple.of(N.isNullOrEmpty(it._1.id()) ? it._2.getName() : it._1.id(), it._2))
+                .distinctBy(it -> it._1, (a, b) -> {
+                    throw new IllegalArgumentException("Two fields annotated with @SqlField have the same id (or name): " + a + "," + b);
+                })
+                .toMap(it -> it._1, Fn.ff(it -> (String) (it._2.get(null))));
 
         if (!N.disjoint(newSQLMapper.keySet(), sqlFieldMap.keySet())) {
             throw new IllegalArgumentException(
@@ -4206,24 +4229,6 @@ final class DaoImpl {
         daoPool.put(key, daoInstance);
 
         return daoInstance;
-    }
-
-    @SuppressWarnings("rawtypes")
-    private static BiRowMapper<Object> getIdExtractor(final Holder<BiRowMapper<Object>> idExtractorHolder, final BiRowMapper<Object> defaultIdExtractor,
-            final Dao dao) {
-        BiRowMapper<Object> keyExtractor = idExtractorHolder.value();
-
-        if (keyExtractor == null) {
-            if (dao instanceof JdbcUtil.CrudDao) {
-                keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) dao).idExtractor(), defaultIdExtractor);
-            } else {
-                keyExtractor = defaultIdExtractor;
-            }
-
-            idExtractorHolder.setValue(keyExtractor);
-        }
-
-        return keyExtractor;
     }
 
     @Retention(RetentionPolicy.RUNTIME)

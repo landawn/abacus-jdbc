@@ -142,9 +142,6 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     @NamedSelect(sql = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}", op = OP.exists)
     boolean isThere(@Define("tableName") String tableName, @Define("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
 
-    @SqlField
-    String sql_listToSet = PSC.selectFrom(User.class).where(CF.gt("id")).sql();
-
     @Select(id = "sql_listToSet")
     Set<User> listToSet(int id) throws SQLException;
 
@@ -153,4 +150,10 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 
     //    @Select("select * from user where id > ?")
     //    Queue<List<Object>> list(int id, RowFilter rowFilter, RowMapper<List<Object>> rowMapper) throws SQLException;
+
+    static final class SqlTable {
+
+        @SqlField
+        static final String sql_listToSet = PSC.selectFrom(User.class).where(CF.gt("id")).sql();
+    }
 }
