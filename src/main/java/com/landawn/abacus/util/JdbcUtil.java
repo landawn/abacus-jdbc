@@ -4093,6 +4093,43 @@ public final class JdbcUtil {
         return N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(JdbcUtil::isDefaultIdPropValue);
     }
 
+    public static Collection<String> getInsertPropNames(final Object entity) {
+        return getInsertPropNames(entity, null);
+    }
+
+    public static Collection<String> getInsertPropNames(final Object entity, final Set<String> excludedPropNames) {
+        return SQLBuilder.getInsertPropNames(entity, excludedPropNames);
+    }
+
+    public static Collection<String> getInsertPropNames(final Class<?> entityClass) {
+        return getInsertPropNames(entityClass, null);
+    }
+
+    public static Collection<String> getInsertPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
+        return SQLBuilder.getInsertPropNames(entityClass, excludedPropNames);
+    }
+
+    public static Collection<String> getSelectPropNames(final Class<?> entityClass) {
+        return getSelectPropNames(entityClass, null);
+    }
+
+    public static Collection<String> getSelectPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
+        return getSelectPropNames(entityClass, false, excludedPropNames);
+    }
+
+    public static Collection<String> getSelectPropNames(final Class<?> entityClass, final boolean includeSubEntityProperties,
+            final Set<String> excludedPropNames) {
+        return SQLBuilder.getSelectPropNames(entityClass, includeSubEntityProperties, excludedPropNames);
+    }
+
+    public static Collection<String> getUpdatePropNames(final Class<?> entityClass) {
+        return getUpdatePropNames(entityClass, null);
+    }
+
+    public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
+        return SQLBuilder.getUpdatePropNames(entityClass, excludedPropNames);
+    }
+
     @Beta
     public static void run(final Throwables.Runnable<Exception> sqlAction) {
         try {
