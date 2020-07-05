@@ -59,7 +59,7 @@ userDao.deleteById(100L);
 
 ```
 
-Abacus-jdbc provides the best APIs, which you won't find in other libraries, for preparing query/setting parameters/extracting(map) result. A lot of DB operations can be done through Dao/CrudDao without writing a single method.
+Abacus-jdbc provides the best APIs, which you won't find in other libraries, for preparing query/setting parameters/extracting(map) result. A lot of DB operations can be done through Dao/CrudDao without writing a single data access method.
 
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
