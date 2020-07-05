@@ -24,7 +24,7 @@ Hope it will bring you the programming experiences: coding with SQL/DB is just l
 [Mapper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Mapper_view.html)? Please refer to branch: [sql_executor_mapper](https://github.com/landawn/abacus-jdbc/tree/sql_executor_mapper)
 
 
-## Why abacus-jdbc:
+## Why abacus-jdbc?
 
 * Work with sql statements
 ```java
