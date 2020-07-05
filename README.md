@@ -5,7 +5,6 @@
 
 Hope it will bring you the programming experiences: coding with SQL/DB is just like coding with Collections.
 
-
 ## Features:
 
 
@@ -23,6 +22,43 @@ Hope it will bring you the programming experiences: coding with SQL/DB is just l
 
 * Looking for: [SQLExecutor](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/SQLExecutor_view.html), 
 [Mapper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Mapper_view.html)? Please refer to branch: [sql_executor_mapper](https://github.com/landawn/abacus-jdbc/tree/sql_executor_mapper)
+
+
+## Why abacus-jdbc:
+
+* Work with sql statements
+```java
+String query = "SELECT  first_name, last_name fROM account WHERE first_Name = ?";
+Optional<Account> account = JdbcUtil.prepareQuery(query)
+  .setString(1, "Tom") // setInt/setString/setDate/...
+  // OR .setParaemeters(entity/map) for named query.
+  // OR .setParameters(stmt -> {}) by functional interface.
+  // ........
+  .get(Account.class); // findFirst(Account.class/RowMapper)/list/.../query(ResultExtractor).../queryForInt/String/...
+  // Or .stream(Account.class/RowMapper).filter/map/collect/...
+```
+
+* Work with Dao:
+```java
+public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+   // ...
+    @NamedInsert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
+    void insertWithId(User user) throws SQLException;
+}
+
+User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+userDao.insertWithId(user);
+
+User userFromDB = userDao.gett(100L);
+System.out.println(userFromDB);
+
+userDao.stream(CF.eq("firstName", "Forrest")).filter(it -> it.getLastName().equals("Gump"));
+userDao.deleteById(100L);
+
+```
+
+Abacus-jdbc provides the best APIs to prepare query/set parameters/extract(map) result. A lot of DB operations can be done through Dao/CrudDao without writing a single method.
+
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
 
