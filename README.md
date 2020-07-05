@@ -1,7 +1,7 @@
 # abacus-jdbc
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc/1.20.28.svg)](https://search.maven.org/artifact/com.landawn/abacus-jdbc/1.20.28/jar)
-[![Javadocs](https://img.shields.io/badge/javadoc-1.20.28-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/1.20.28/index.html)
+[![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc/1.20.29.svg)](https://search.maven.org/artifact/com.landawn/abacus-jdbc/1.20.29/jar)
+[![Javadocs](https://img.shields.io/badge/javadoc-1.20.29-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/1.20.29/index.html)
 
 Hope it will bring you the programming experiences: coding with SQL/DB is just like coding with Collections.
 
@@ -32,7 +32,7 @@ Hope it will bring you the programming experiences: coding with SQL/DB is just l
 * Gradle:
 ```gradle
 // JDK 1.8 or above:
-compile 'com.landawn:abacus-jdbc:1.20.28'
+compile 'com.landawn:abacus-jdbc:1.20.29'
 ```
 
 ## User Guide:
