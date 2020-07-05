@@ -54,6 +54,7 @@ import com.landawn.abacus.cache.CacheFactory;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.condition.Criteria;
+import com.landawn.abacus.condition.Limit;
 import com.landawn.abacus.core.DirtyMarkerUtil;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -70,9 +71,12 @@ import com.landawn.abacus.util.Fn.IntFunctions;
 import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
+import com.landawn.abacus.util.JdbcUtil.CrudDao;
 import com.landawn.abacus.util.JdbcUtil.Dao;
+import com.landawn.abacus.util.JdbcUtil.Dao.NonDBOperation;
 import com.landawn.abacus.util.JdbcUtil.Dao.OP;
 import com.landawn.abacus.util.JdbcUtil.Dao.OutParameter;
+import com.landawn.abacus.util.JdbcUtil.Dao.SqlField;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
@@ -85,6 +89,7 @@ import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.u.Holder;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -106,9 +111,9 @@ import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 @SuppressWarnings("deprecation")
-final class DaoUtil {
+final class DaoImpl {
 
-    private DaoUtil() {
+    private DaoImpl() {
         // singleton for utility class.
     }
 
@@ -570,6 +575,9 @@ final class DaoUtil {
         }
     }
 
+    private static final Set<String> singleQueryPrefix = N.asSet("get", "findFirst", "findOne", "findOnlyOne", "selectFirst", "selectOne", "selectOnlyOne",
+            "exist", "has", "is");
+
     /**
      * Checks if is list query.
      *
@@ -577,6 +585,7 @@ final class DaoUtil {
      * @return true, if is list query
      */
     private static boolean isListQuery(final Method method, final OP op, final String fullClassMethodName) {
+        final String methodName = method.getName();
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
         final int paramLen = paramTypes.length;
@@ -622,7 +631,7 @@ final class DaoUtil {
                 return false;
             }
 
-            return !(method.getName().startsWith("get") || method.getName().startsWith("findFirst") || method.getName().startsWith("findOne"));
+            return singleQueryPrefix.stream().noneMatch(it -> methodName.startsWith(it));
         } else {
             return false;
         }
@@ -657,6 +666,14 @@ final class DaoUtil {
                 && ((methodName.startsWith("exists") && (methodName.length() == 6 || Character.isUpperCase(methodName.charAt(6))))
                         || (methodName.startsWith("exist") && (methodName.length() == 5 || Character.isUpperCase(methodName.charAt(5))))
                         || (methodName.startsWith("has") && (methodName.length() == 3 || Character.isUpperCase(methodName.charAt(3)))));
+    }
+
+    private static boolean isFindOnlyOne(final Method method, final OP op) {
+        if (op == OP.findOnlyOne) {
+            return true;
+        }
+
+        return method.getName().startsWith("findOnlyOne");
     }
 
     @SuppressWarnings("rawtypes")
@@ -700,7 +717,7 @@ final class DaoUtil {
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         }
 
-        if ((op == OP.get || op == OP.findFirst) && Nullable.class.isAssignableFrom(returnType)) {
+        if ((op == OP.get || op == OP.findFirst || op == OP.findOnlyOne) && Nullable.class.isAssignableFrom(returnType)) {
             throw new UnsupportedOperationException(
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         }
@@ -722,7 +739,7 @@ final class DaoUtil {
         }
 
         if (Optional.class.isAssignableFrom(returnType)
-                && !(op == OP.get || op == OP.findFirst || op == OP.queryForSingle || op == OP.queryForUnique || op == OP.DEFAULT)) {
+                && !(op == OP.get || op == OP.findFirst || op == OP.findOnlyOne || op == OP.queryForSingle || op == OP.queryForUnique || op == OP.DEFAULT)) {
             throw new UnsupportedOperationException(
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         }
@@ -733,7 +750,7 @@ final class DaoUtil {
         }
 
         if (hasRowMapperOrExtractor) {
-            if (!(op == OP.get || op == OP.findFirst || op == OP.list || op == OP.stream)) {
+            if (!(op == OP.get || op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.query || op == OP.stream || op == OP.DEFAULT)) {
                 throw new UnsupportedOperationException("RowMapper/ResultExtractor is not supported by OP: " + op + " in method: " + fullClassMethodName);
             }
 
@@ -762,10 +779,19 @@ final class DaoUtil {
                     if (op == OP.get) {
                         return (preparedQuery, args) -> (R) preparedQuery.get((RowMapper) args[paramLen - 1]);
                     } else {
-                        if (hasRowFilter) {
-                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]);
+                        if (isFindOnlyOne(method, op)) {
+                            if (hasRowFilter) {
+                                return (preparedQuery,
+                                        args) -> (R) preparedQuery.stream((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]).onlyOne();
+                            } else {
+                                return (preparedQuery, args) -> (R) preparedQuery.get((RowMapper) args[paramLen - 1]);
+                            }
                         } else {
-                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowMapper) args[paramLen - 1]);
+                            if (hasRowFilter) {
+                                return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]);
+                            } else {
+                                return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowMapper) args[paramLen - 1]);
+                            }
                         }
                     }
                 } else if (ExceptionalStream.class.isAssignableFrom(returnType)) {
@@ -787,13 +813,25 @@ final class DaoUtil {
                     }
 
                     if (op == OP.get) {
-                        return (preparedQuery, args) -> (R) preparedQuery.gett((RowMapper) args[paramLen - 1]);
+                        return (preparedQuery, args) -> (R) preparedQuery.get((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
                     } else {
-                        if (hasRowFilter) {
-                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1])
-                                    .orElse(N.defaultValueOf(returnType));
+                        if (isFindOnlyOne(method, op)) {
+                            if (hasRowFilter) {
+                                return (preparedQuery,
+                                        args) -> (R) preparedQuery.stream((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1])
+                                                .onlyOne()
+                                                .orElse(N.defaultValueOf(returnType));
+                            } else {
+                                return (preparedQuery, args) -> (R) preparedQuery.get((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                            }
                         } else {
-                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                            if (hasRowFilter) {
+                                return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1])
+                                        .orElse(N.defaultValueOf(returnType));
+                            } else {
+                                return (preparedQuery,
+                                        args) -> (R) preparedQuery.findFirst((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                            }
                         }
                     }
                 }
@@ -818,10 +856,19 @@ final class DaoUtil {
                     if (op == OP.get) {
                         return (preparedQuery, args) -> (R) preparedQuery.get((BiRowMapper) args[paramLen - 1]);
                     } else {
-                        if (hasRowFilter) {
-                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1]);
+                        if (isFindOnlyOne(method, op)) {
+                            if (hasRowFilter) {
+                                return (preparedQuery,
+                                        args) -> (R) preparedQuery.stream((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1]).onlyOne();
+                            } else {
+                                return (preparedQuery, args) -> (R) preparedQuery.get((BiRowMapper) args[paramLen - 1]);
+                            }
                         } else {
-                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowMapper) args[paramLen - 1]);
+                            if (hasRowFilter) {
+                                return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1]);
+                            } else {
+                                return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowMapper) args[paramLen - 1]);
+                            }
                         }
                     }
                 } else if (ExceptionalStream.class.isAssignableFrom(returnType)) {
@@ -844,13 +891,25 @@ final class DaoUtil {
                     }
 
                     if (op == OP.get) {
-                        return (preparedQuery, args) -> (R) preparedQuery.gett((BiRowMapper) args[paramLen - 1]);
+                        return (preparedQuery, args) -> (R) preparedQuery.get((BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
                     } else {
-                        if (hasRowFilter) {
-                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1])
-                                    .orElse(N.defaultValueOf(returnType));
+                        if (isFindOnlyOne(method, op)) {
+                            if (hasRowFilter) {
+                                return (preparedQuery,
+                                        args) -> (R) preparedQuery.stream((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1])
+                                                .onlyOne()
+                                                .orElse(N.defaultValueOf(returnType));
+                            } else {
+                                return (preparedQuery, args) -> (R) preparedQuery.get((BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                            }
                         } else {
-                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                            if (hasRowFilter) {
+                                return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1])
+                                        .orElse(N.defaultValueOf(returnType));
+                            } else {
+                                return (preparedQuery,
+                                        args) -> (R) preparedQuery.findFirst((BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                            }
                         }
                     }
                 }
@@ -906,6 +965,8 @@ final class DaoUtil {
                     return (preparedQuery, args) -> (R) preparedQuery.get(BiRowMapper.to(eleType));
                 } else if (op == OP.findFirst) {
                     return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(eleType));
+                } else if (op == OP.findOnlyOne) {
+                    return (preparedQuery, args) -> (R) preparedQuery.get(BiRowMapper.to(eleType));
                 } else if (op == OP.queryForSingle) {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(eleType);
                 } else if (op == OP.queryForUnique) {
@@ -913,7 +974,11 @@ final class DaoUtil {
                 } else {
                     if (ClassUtil.isEntity(eleType) || Map.class.isAssignableFrom(eleType) || List.class.isAssignableFrom(eleType)
                             || Object[].class.isAssignableFrom(eleType)) {
-                        return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(eleType));
+                        if (isFindOnlyOne(method, op)) {
+                            return (preparedQuery, args) -> (R) preparedQuery.get(BiRowMapper.to(eleType));
+                        } else {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(eleType));
+                        }
                     } else {
                         return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(eleType);
                     }
@@ -931,6 +996,8 @@ final class DaoUtil {
             return (preparedQuery, args) -> (R) preparedQuery.gett(BiRowMapper.to(returnType));
         } else if (op == OP.findFirst) {
             return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(returnType)).orNull();
+        } else if (op == OP.findOnlyOne) {
+            return (preparedQuery, args) -> (R) preparedQuery.gett(BiRowMapper.to(returnType));
         } else if (op == OP.queryForSingle) {
             return createSingleQueryFunction(returnType);
         } else if (op == OP.queryForUnique) {
@@ -938,7 +1005,11 @@ final class DaoUtil {
         } else {
             if (ClassUtil.isEntity(returnType) || Map.class.isAssignableFrom(returnType) || List.class.isAssignableFrom(returnType)
                     || Object[].class.isAssignableFrom(returnType)) {
-                return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(returnType)).orNull();
+                if (isFindOnlyOne(method, op)) {
+                    return (preparedQuery, args) -> (R) preparedQuery.get(BiRowMapper.to(returnType)).orNull();
+                } else {
+                    return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(returnType)).orNull();
+                }
             } else {
                 return createSingleQueryFunction(returnType);
             }
@@ -1158,8 +1229,33 @@ final class DaoUtil {
         return preparedQuery;
     }
 
-    private static Condition appendLimit(final Condition cond, final int count, final DBVersion dbVersion) {
+    private static Condition handleLimit(final Condition cond, final int count, final DBVersion dbVersion) {
+        if (count < 0) {
+            return cond;
+        }
+
         if (cond instanceof Criteria && ((Criteria) cond).getLimit() != null) {
+            final Criteria criteria = (Criteria) cond;
+            final Limit limit = criteria.getLimit();
+
+            switch (dbVersion) {
+                case ORACLE:
+                case SQL_SERVER:
+                case DB2:
+
+                    if (limit.getCount() > 0 && limit.getOffset() > 0) {
+                        criteria.limit("OFFSET " + limit.getOffset() + " ROWS FETCH NEXT " + limit.getCount() + " ROWS ONLY");
+                    } else if (limit.getCount() > 0) {
+                        criteria.limit("FETCH FIRST " + limit.getCount() + " ROWS ONLY");
+                    } else if (limit.getOffset() > 0) {
+                        criteria.limit("OFFSET " + limit.getOffset() + " ROWS");
+                    }
+
+                    break;
+
+                default:
+            }
+
             return cond;
         }
 
@@ -1232,7 +1328,8 @@ final class DaoUtil {
         final Logger daoLogger = LoggerFactory.getLogger(daoInterface);
 
         final javax.sql.DataSource primaryDataSource = ds;
-        final SQLMapper nonNullSQLMapper = sqlMapper == null ? new SQLMapper() : sqlMapper;
+        final SQLMapper newSQLMapper = sqlMapper == null ? new SQLMapper() : sqlMapper.copy();
+
         final Executor nonNullExecutor = executor == null ? JdbcUtil.asyncExecutor.getExecutor() : executor;
         final AsyncExecutor asyncExecutor = new AsyncExecutor(nonNullExecutor);
         final boolean isUnchecked = JdbcUtil.UncheckedDao.class.isAssignableFrom(daoInterface);
@@ -1248,6 +1345,35 @@ final class DaoUtil {
                 .map(it -> it.addLimitForSingleQuery())
                 .first()
                 .orElse(false);
+
+        final boolean callGenerateIdForInsert = StreamEx.of(allInterfaces)
+                .flatMapp(cls -> cls.getAnnotations())
+                .select(Dao.Config.class)
+                .map(it -> it.callGenerateIdForInsertIfIdNotSet())
+                .first()
+                .orElse(false);
+
+        final boolean callGenerateIdForInsertWithSql = StreamEx.of(allInterfaces)
+                .flatMapp(cls -> cls.getAnnotations())
+                .select(Dao.Config.class)
+                .map(it -> it.callGenerateIdForInsertWithSqlIfIdNotSet())
+                .first()
+                .orElse(false);
+
+        final Map<String, String> sqlFieldMap = StreamEx.of(allInterfaces)
+                .flatMapp(it -> it.getDeclaredFields())
+                .filter(it -> it.isAnnotationPresent(SqlField.class))
+                .map(it -> Tuple.of(it, it.getAnnotation(SqlField.class)))
+                .toMap(it -> N.isNullOrEmpty(it._2.id()) ? it._1.getName() : it._2.id(), Fn.ff(it -> (String) (it._1.get(null))));
+
+        if (!N.disjoint(newSQLMapper.keySet(), sqlFieldMap.keySet())) {
+            throw new IllegalArgumentException(
+                    "Duplicated sql keys: " + N.commonSet(newSQLMapper.keySet(), sqlFieldMap.keySet()) + " defined by both SQLMapper and SqlField");
+        }
+
+        for (Map.Entry<String, String> entry : sqlFieldMap.entrySet()) {
+            newSQLMapper.add(entry.getKey(), ParsedSql.parse(entry.getValue()));
+        }
 
         java.lang.reflect.Type[] typeArguments = null;
 
@@ -1413,7 +1539,8 @@ final class DaoUtil {
         final Tuple3<BiRowMapper<Object>, Function<Object, Object>, BiConsumer<Object, Object>> tp3 = JdbcUtil.getIdGeneratorGetterSetter(daoInterface,
                 entityClass, namingPolicy, idClass);
 
-        final BiRowMapper<Object> keyExtractor = tp3._1;
+        final Holder<BiRowMapper<Object>> idExtractorHolder = new Holder<>();
+        final BiRowMapper<Object> idExtractor = tp3._1;
         final Function<Object, Object> idGetter = tp3._2;
         final BiConsumer<Object, Object> idSetter = tp3._3;
 
@@ -1472,9 +1599,9 @@ final class DaoUtil {
         final List<Dao.Handler> daoClassHandlerList = StreamEx.of(allInterfaces)
                 .reversed()
                 .flatMapp(cls -> cls.getAnnotations())
-                .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoUtil.HandlerList.class))
+                .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoImpl.HandlerList.class))
                 .flattMap(
-                        anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno) : N.asList(((DaoUtil.HandlerList) anno).value()))
+                        anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno) : N.asList(((DaoImpl.HandlerList) anno).value()))
                 .toList();
 
         final Dao.Cache daoClassCacheAnno = StreamEx.of(allInterfaces).flatMapp(cls -> cls.getAnnotations()).select(Dao.Cache.class).first().orNull();
@@ -1517,11 +1644,11 @@ final class DaoUtil {
                                     + " on method: " + fullClassMethodName);
                 }
 
-                if (sqlMapper == null) {
+                if (newSQLMapper.isEmpty()) {
                     sqlList = Stream.of(sqlsAnno.value()).filter(Fn.notNullOrEmpty()).toList();
                 } else {
                     sqlList = Stream.of(sqlsAnno.value())
-                            .map(it -> sqlMapper.get(it) == null ? it : sqlMapper.get(it).sql())
+                            .map(it -> newSQLMapper.get(it) == null ? it : newSQLMapper.get(it).sql())
                             .filter(Fn.notNullOrEmpty())
                             .toList();
                 }
@@ -1559,7 +1686,7 @@ final class DaoUtil {
             } else if (methodName.equals("dataSource") && javax.sql.DataSource.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> primaryDataSource;
             } else if (methodName.equals("sqlMapper") && SQLMapper.class.isAssignableFrom(returnType) && paramLen == 0) {
-                call = (proxy, args) -> nonNullSQLMapper;
+                call = (proxy, args) -> newSQLMapper;
             } else if (methodName.equals("cacheSql") && void.class.isAssignableFrom(returnType) && paramLen == 2 && paramTypes[0].equals(String.class)
                     && paramTypes[1].equals(String.class)) {
                 call = (proxy, args) -> {
@@ -1762,21 +1889,21 @@ final class DaoUtil {
                     } else if (methodName.equals("exists") && paramLen == 1 && Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply(SQLBuilder._1, cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).exists();
                         };
                     } else if (methodName.equals("count") && paramLen == 1 && Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply(SQLBuilder.COUNT_ALL, cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForInt().orZero();
                         };
                     } else if (methodName.equals("findFirst") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst(entityClass);
                         };
@@ -1784,7 +1911,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst((RowMapper) args[1]);
                         };
@@ -1792,7 +1919,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst((BiRowMapper) args[1]);
                         };
@@ -1800,7 +1927,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst(entityClass);
                         };
@@ -1808,7 +1935,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst((RowMapper) args[2]);
                         };
@@ -1816,15 +1943,62 @@ final class DaoUtil {
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst((BiRowMapper) args[2]);
+                        };
+                    } else if (methodName.equals("findOnlyOne") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get(entityClass);
+                        };
+                    } else if (methodName.equals("findOnlyOne") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                            && paramTypes[1].equals(RowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get((RowMapper) args[1]);
+                        };
+                    } else if (methodName.equals("findOnlyOne") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                            && paramTypes[1].equals(BiRowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get((BiRowMapper) args[1]);
+                        };
+                    } else if (methodName.equals("findOnlyOne") && paramLen == 2 && paramTypes[0].equals(Collection.class)
+                            && paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get(entityClass);
+                        };
+                    } else if (methodName.equals("findOnlyOne") && paramLen == 3 && paramTypes[0].equals(Collection.class)
+                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(RowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get((RowMapper) args[2]);
+                        };
+                    } else if (methodName.equals("findOnlyOne") && paramLen == 3 && paramTypes[0].equals(Collection.class)
+                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(BiRowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get((BiRowMapper) args[2]);
                         };
                     } else if (methodName.equals("queryForBoolean") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForBoolean();
                         };
@@ -1832,7 +2006,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForChar();
                         };
@@ -1840,7 +2014,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForByte();
                         };
@@ -1848,7 +2022,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForShort();
                         };
@@ -1856,7 +2030,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForInt();
                         };
@@ -1864,7 +2038,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForLong();
                         };
@@ -1872,7 +2046,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForFloat();
                         };
@@ -1880,7 +2054,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForDouble();
                         };
@@ -1888,7 +2062,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForString();
                         };
@@ -1896,7 +2070,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForDate();
                         };
@@ -1904,7 +2078,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForTime();
                         };
@@ -1912,7 +2086,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForTimestamp();
                         };
@@ -1920,7 +2094,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[2];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForSingleResult((Class) args[0]);
                         };
@@ -1928,7 +2102,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[2];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 1, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForSingleNonNull((Class) args[0]);
                         };
@@ -1936,7 +2110,7 @@ final class DaoUtil {
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[2];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 2, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).queryForUniqueResult((Class) args[0]);
                         };
@@ -1944,24 +2118,30 @@ final class DaoUtil {
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[2];
-                            final Condition cond = addLimitForSingleQuery ? appendLimit(condArg, 2, dbVersion) : condArg;
+                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], cond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).queryForUniqueNonNull((Class) args[0]);
                         };
                     } else if (methodName.equals("query") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).query();
                         };
                     } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).query();
                         };
                     } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.ResultExtractor.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -1970,7 +2150,9 @@ final class DaoUtil {
                     } else if (methodName.equals("query") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.ResultExtractor.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -1979,7 +2161,9 @@ final class DaoUtil {
                     } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(BiResultExtractor.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -1988,7 +2172,9 @@ final class DaoUtil {
                     } else if (methodName.equals("query") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(BiResultExtractor.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -1996,17 +2182,23 @@ final class DaoUtil {
                         };
                     } else if (methodName.equals("list") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).list(entityClass);
                         };
                     } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).list((RowMapper) args[1]);
                         };
                     } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2015,7 +2207,9 @@ final class DaoUtil {
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.RowFilter.class) && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2024,7 +2218,9 @@ final class DaoUtil {
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.BiRowFilter.class) && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2032,19 +2228,25 @@ final class DaoUtil {
                         };
                     } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).list(entityClass);
                         };
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).list((RowMapper) args[2]);
                         };
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2053,7 +2255,9 @@ final class DaoUtil {
                     } else if (methodName.equals("list") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.RowFilter.class) && paramTypes[3].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2062,7 +2266,9 @@ final class DaoUtil {
                     } else if (methodName.equals("list") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.BiRowFilter.class) && paramTypes[3].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
@@ -2070,7 +2276,9 @@ final class DaoUtil {
                         };
                     } else if (methodName.equals("stream") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2081,7 +2289,9 @@ final class DaoUtil {
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2093,7 +2303,9 @@ final class DaoUtil {
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2105,7 +2317,9 @@ final class DaoUtil {
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.RowFilter.class) && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2117,7 +2331,9 @@ final class DaoUtil {
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.BiRowFilter.class) && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectFromSQLBuilderFunc.apply((Condition) args[0]);
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2129,7 +2345,9 @@ final class DaoUtil {
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2141,7 +2359,9 @@ final class DaoUtil {
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2153,7 +2373,9 @@ final class DaoUtil {
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2165,7 +2387,9 @@ final class DaoUtil {
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.RowFilter.class) && paramTypes[3].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2177,7 +2401,9 @@ final class DaoUtil {
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.BiRowFilter.class) && paramTypes[3].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], (Condition) args[1]).pair();
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
@@ -2209,9 +2435,14 @@ final class DaoUtil {
                 } else if (declaringClass.equals(JdbcUtil.CrudDao.class) || declaringClass.equals(JdbcUtil.UncheckedCrudDao.class)) {
                     if (methodName.equals("insert") && paramLen == 1) {
                         call = (proxy, args) -> {
+                            final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final Object entity = args[0];
 
                             ParsedSql namedInsertSQL = null;
+
+                            if (callGenerateIdForInsert && isDefaultIdTester.test(idGetter.apply(entity))) {
+                                idSetter.accept(((JdbcUtil.CrudDao) proxy).generateId(), entity);
+                            }
 
                             if (isDirtyMarker) {
                                 final Collection<String> propNamesToInsert = SQLBuilder.getInsertPropNames(entity, null);
@@ -2219,7 +2450,7 @@ final class DaoUtil {
 
                                 namedInsertSQL = ParsedSql.parse(namedInsertSQLBuilderFunc.apply(propNamesToInsert).sql());
                             } else {
-                                if (isDefaultIdTester.test(idGetter.apply(entity))) {
+                                if (callGenerateIdForInsert == false && isDefaultIdTester.test(idGetter.apply(entity))) {
                                     namedInsertSQL = namedInsertWithoutIdSQL;
                                 } else {
                                     namedInsertSQL = namedInsertWithIdSQL;
@@ -2240,9 +2471,18 @@ final class DaoUtil {
                         };
                     } else if (methodName.equals("insert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[1])) {
                         call = (proxy, args) -> {
+                            final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final Object entity = args[0];
                             final Collection<String> propNamesToInsert = (Collection<String>) args[1];
                             N.checkArgNotNullOrEmpty(propNamesToInsert, "propNamesToInsert");
+
+                            if (callGenerateIdForInsert) {
+                                if (!N.disjoint(propNamesToInsert, idPropNameSet)) {
+                                    if (isDefaultIdTester.test(idGetter.apply(entity))) {
+                                        idSetter.accept(((JdbcUtil.CrudDao) proxy).generateId(), entity);
+                                    }
+                                }
+                            }
 
                             final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToInsert).sql();
 
@@ -2260,8 +2500,15 @@ final class DaoUtil {
                         };
                     } else if (methodName.equals("insert") && paramLen == 2 && String.class.equals(paramTypes[0])) {
                         call = (proxy, args) -> {
+                            final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final String namedInsertSQL = (String) args[0];
                             final Object entity = args[1];
+
+                            if (callGenerateIdForInsertWithSql) {
+                                if (isDefaultIdTester.test(idGetter.apply(entity))) {
+                                    idSetter.accept(((JdbcUtil.CrudDao) proxy).generateId(), entity);
+                                }
+                            }
 
                             final Object id = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
                                     .setParameters(entity)
@@ -2278,6 +2525,7 @@ final class DaoUtil {
                     } else if (methodName.equals("batchInsert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
                             && int.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
+                            final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final Collection<?> entities = (Collection<Object>) args[0];
                             final int batchSize = (Integer) args[1];
                             N.checkArgPositive(batchSize, "batchSize");
@@ -2286,8 +2534,19 @@ final class DaoUtil {
                                 return 0;
                             }
 
-                            final boolean isDefaultIdPropValue = isDefaultIdTester.test(idGetter.apply(N.firstOrNullIfEmpty(entities)));
-                            final ParsedSql namedInsertSQL = isDefaultIdPropValue ? namedInsertWithoutIdSQL : namedInsertWithIdSQL;
+                            final Object first = N.firstOrNullIfEmpty(entities);
+                            final boolean isDefaultIdPropValue = isDefaultIdTester.test(idGetter.apply(first));
+
+                            if (isDefaultIdPropValue && callGenerateIdForInsert) {
+                                final CrudDao crudDao = (JdbcUtil.CrudDao) proxy;
+
+                                for (Object entity : entities) {
+                                    idSetter.accept(crudDao.generateId(), entity);
+                                }
+                            }
+
+                            final ParsedSql namedInsertSQL = isDefaultIdPropValue && callGenerateIdForInsert == false ? namedInsertWithoutIdSQL
+                                    : namedInsertWithIdSQL;
                             List<Object> ids = null;
 
                             if (entities.size() <= batchSize) {
@@ -2309,7 +2568,7 @@ final class DaoUtil {
                                 }
                             }
 
-                            if (N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(Fn.isNull())) {
+                            if (JdbcUtil.isAllNullIds(ids)) {
                                 ids = new ArrayList<>();
                             }
 
@@ -2343,6 +2602,7 @@ final class DaoUtil {
                     } else if (methodName.equals("batchInsert") && paramLen == 3 && Collection.class.isAssignableFrom(paramTypes[0])
                             && Collection.class.isAssignableFrom(paramTypes[1]) && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
+                            final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final Collection<?> entities = (Collection<Object>) args[0];
 
                             final Collection<String> propNamesToInsert = (Collection<String>) args[1];
@@ -2353,6 +2613,20 @@ final class DaoUtil {
 
                             if (N.isNullOrEmpty(entities)) {
                                 return 0;
+                            }
+
+                            final Object first = N.firstOrNullIfEmpty(entities);
+
+                            if (callGenerateIdForInsert) {
+                                if (!N.disjoint(propNamesToInsert, idPropNameSet)) {
+                                    if (isDefaultIdTester.test(idGetter.apply(first))) {
+                                        final CrudDao crudDao = (JdbcUtil.CrudDao) proxy;
+
+                                        for (Object entity : entities) {
+                                            idSetter.accept(crudDao.generateId(), entity);
+                                        }
+                                    }
+                                }
                             }
 
                             final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToInsert).sql();
@@ -2377,7 +2651,7 @@ final class DaoUtil {
                                 }
                             }
 
-                            if (N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(Fn.isNull())) {
+                            if (JdbcUtil.isAllNullIds(ids)) {
                                 ids = new ArrayList<>();
                             }
 
@@ -2411,6 +2685,7 @@ final class DaoUtil {
                     } else if (methodName.equals("batchInsert") && paramLen == 3 && String.class.equals(paramTypes[0])
                             && Collection.class.isAssignableFrom(paramTypes[1]) && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
+                            final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final String namedInsertSQL = (String) args[0];
                             final Collection<?> entities = (Collection<Object>) args[1];
                             final int batchSize = (Integer) args[2];
@@ -2418,6 +2693,18 @@ final class DaoUtil {
 
                             if (N.isNullOrEmpty(entities)) {
                                 return 0;
+                            }
+
+                            final Object first = N.firstOrNullIfEmpty(entities);
+
+                            if (callGenerateIdForInsertWithSql) {
+                                if (isDefaultIdTester.test(idGetter.apply(first))) {
+                                    final CrudDao crudDao = (JdbcUtil.CrudDao) proxy;
+
+                                    for (Object entity : entities) {
+                                        idSetter.accept(crudDao.generateId(), entity);
+                                    }
+                                }
                             }
 
                             List<Object> ids = null;
@@ -2441,7 +2728,7 @@ final class DaoUtil {
                                 }
                             }
 
-                            if (N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(Fn.isNull())) {
+                            if (JdbcUtil.isAllNullIds(ids)) {
                                 ids = new ArrayList<>();
                             }
 
@@ -2894,49 +3181,53 @@ final class DaoUtil {
                             if (N.isNullOrEmpty(entities)) {
                                 // Do nothing.
                             } else if (entities.size() == 1) {
-                                final Object entity = N.firstOrNullIfEmpty(entities);
+                                final Object first = N.firstOrNullIfEmpty(entities);
+
                                 final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                         .getSelectSQLBuilderAndParamSetter(sbc);
 
-                                final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
+                                final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(first, tp._2);
 
                                 if (propJoinInfo.joinPropInfo.type.isCollection()) {
                                     final List<?> propEntities = preparedQuery.list(propJoinInfo.referencedEntityClass);
 
                                     if (propJoinInfo.joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
-                                        propJoinInfo.joinPropInfo.setPropValue(entity, propEntities);
+                                        propJoinInfo.joinPropInfo.setPropValue(first, propEntities);
                                     } else {
                                         final Collection<Object> c = (Collection) N.newInstance(propJoinInfo.joinPropInfo.clazz);
                                         c.addAll(propEntities);
-                                        propJoinInfo.joinPropInfo.setPropValue(entity, c);
+                                        propJoinInfo.joinPropInfo.setPropValue(first, c);
                                     }
                                 } else {
-                                    propJoinInfo.joinPropInfo.setPropValue(entity, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orNull());
+                                    propJoinInfo.joinPropInfo.setPropValue(first, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orNull());
                                 }
 
                                 if (isDirtyMarker) {
-                                    DirtyMarkerUtil.markDirty((DirtyMarker) entity, propJoinInfo.joinPropInfo.name, false);
+                                    DirtyMarkerUtil.markDirty((DirtyMarker) first, propJoinInfo.joinPropInfo.name, false);
                                 }
                             } else {
                                 final Tuple2<BiFunction<Collection<String>, Integer, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
                                         .getSelectSQLBuilderAndParamSetterForBatch(sbc);
 
-                                if (propJoinInfo.isManyToManyJoin()) {
-                                    final BiRowMapper<Object> biRowMapper = BiRowMapper.to(propJoinInfo.referencedEntityClass, true);
-                                    final BiRowMapper<Pair<Object, Object>> pairBiRowMapper = (rs, cls) -> Pair.of(rs.getObject(1), biRowMapper.apply(rs, cls));
+                                ExceptionalStream.of(entities).splitToList(JdbcUtil.MAX_BATCH_SIZE).forEach(bp -> {
+                                    if (propJoinInfo.isManyToManyJoin()) {
+                                        final BiRowMapper<Object> biRowMapper = BiRowMapper.to(propJoinInfo.referencedEntityClass, true);
+                                        final BiRowMapper<Pair<Object, Object>> pairBiRowMapper = (rs, cls) -> Pair.of(rs.getObject(1),
+                                                biRowMapper.apply(rs, cls));
 
-                                    final List<Pair<Object, Object>> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
-                                            .setParameters(entities, tp._2)
-                                            .list(pairBiRowMapper);
+                                        final List<Pair<Object, Object>> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, bp.size()))
+                                                .setParameters(bp, tp._2)
+                                                .list(pairBiRowMapper);
 
-                                    propJoinInfo.setJoinPropEntities(entities, Stream.of(joinPropEntities).groupTo(it -> it.left, it -> it.right));
-                                } else {
-                                    final List<?> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, entities.size()))
-                                            .setParameters(entities, tp._2)
-                                            .list(propJoinInfo.referencedEntityClass);
+                                        propJoinInfo.setJoinPropEntities(bp, Stream.of(joinPropEntities).groupTo(it -> it.left, it -> it.right));
+                                    } else {
+                                        final List<?> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, bp.size()))
+                                                .setParameters(bp, tp._2)
+                                                .list(propJoinInfo.referencedEntityClass);
 
-                                    propJoinInfo.setJoinPropEntities(entities, joinPropEntities);
-                                }
+                                        propJoinInfo.setJoinPropEntities(bp, joinPropEntities);
+                                    }
+                                });
                             }
 
                             return null;
@@ -2964,7 +3255,12 @@ final class DaoUtil {
                             } else if (entities.size() == 1) {
                                 return proxy.prepareQuery(tp._1).setParameters(N.firstOrNullIfEmpty(entities), tp._2).update();
                             } else {
-                                return proxy.prepareQuery(tp._1).addBatchParametters(entities, tp._2).update();
+                                final long result = ExceptionalStream.of(entities)
+                                        .splitToList(JdbcUtil.MAX_BATCH_SIZE)
+                                        .sumInt(bp -> proxy.prepareQuery(tp._1).addBatchParametters(bp, tp._2).update())
+                                        .orZero();
+
+                                return N.toIntExact(result);
                             }
                         };
                     } else {
@@ -2991,7 +3287,7 @@ final class DaoUtil {
 
                     final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
 
-                    final QueryInfo queryInfo = sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno, sqlMapper);
+                    final QueryInfo queryInfo = sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno, newSQLMapper);
                     final String query = N.checkArgNotNullOrEmpty(queryInfo.sql, "sql can't be null or empty");
                     final int queryTimeout = queryInfo.queryTimeout;
                     final int fetchSize = queryInfo.fetchSize;
@@ -3115,7 +3411,7 @@ final class DaoUtil {
 
                     final List<Dao.OutParameter> outParameterList = StreamEx.of(m.getAnnotations())
                             .select(Dao.OutParameter.class)
-                            .append(StreamEx.of(m.getAnnotations()).select(DaoUtil.OutParameterList.class).flatMapp(e -> e.value()))
+                            .append(StreamEx.of(m.getAnnotations()).select(DaoImpl.OutParameterList.class).flatMapp(e -> e.value()))
                             .toList();
 
                     if (N.notNullOrEmpty(outParameterList)) {
@@ -3190,7 +3486,7 @@ final class DaoUtil {
                         if (fetchSize <= 0) {
                             if (op == OP.exists || isExistsQuery(m, op, fullClassMethodName) || op == OP.findFirst || op == OP.queryForSingle) {
                                 tmpFetchSize = 1;
-                            } else if (op == OP.get || op == OP.queryForUnique) {
+                            } else if (op == OP.get || op == OP.findOnlyOne || op == OP.queryForUnique) {
                                 tmpFetchSize = 2;
                             } else if (op == OP.list || isListQuery(m, op, fullClassMethodName) || op == OP.query || op == OP.stream) {
                                 // skip.
@@ -3240,6 +3536,7 @@ final class DaoUtil {
                             }
 
                             call = (proxy, args) -> {
+                                final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                                 final boolean isEntity = stmtParamLen == 1 && args[stmtParamIndexes[0]] != null
                                         && ClassUtil.isEntity(args[stmtParamIndexes[0]].getClass());
                                 final Object entity = isEntity ? args[stmtParamIndexes[0]] : null;
@@ -3266,6 +3563,7 @@ final class DaoUtil {
                             }
 
                             call = (proxy, args) -> {
+                                final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                                 final Collection<Object> batchParameters = (Collection) args[stmtParamIndexes[0]];
                                 int batchSize = tmpBatchSize;
 
@@ -3296,7 +3594,7 @@ final class DaoUtil {
                                                         .addBatchParameters(batchParameters);
                                     }
 
-                                    ids = preparedQuery.batchInsert();
+                                    ids = preparedQuery.batchInsert(keyExtractor);
                                 } else {
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
@@ -3308,12 +3606,12 @@ final class DaoUtil {
                                             if (isSingleParameter) {
                                                 ids = ExceptionalStream.of(batchParameters)
                                                         .splitToList(batchSize) //
-                                                        .flattMap(bp -> preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).batchInsert())
+                                                        .flattMap(bp -> preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).batchInsert(keyExtractor))
                                                         .toList();
                                             } else {
                                                 ids = ExceptionalStream.of((Collection<List<?>>) (Collection) batchParameters)
                                                         .splitToList(batchSize) //
-                                                        .flattMap(bp -> preparedQuery.addBatchParameters(bp).batchInsert())
+                                                        .flattMap(bp -> preparedQuery.addBatchParameters(bp).batchInsert(keyExtractor))
                                                         .toList();
                                             }
                                         }
@@ -3326,7 +3624,7 @@ final class DaoUtil {
 
                                 final boolean isEntity = ClassUtil.isEntity(N.firstOrNullIfEmpty(batchParameters).getClass());
 
-                                if (N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(Fn.isNull())) {
+                                if (JdbcUtil.isAllNullIds(ids)) {
                                     ids = new ArrayList<>();
                                 }
 
@@ -3522,7 +3820,7 @@ final class DaoUtil {
                 }
             }
 
-            final boolean isNonDBOperation = StreamEx.of(m.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(DaoUtil.NonDBOperation.class));
+            final boolean isNonDBOperation = StreamEx.of(m.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(NonDBOperation.class));
 
             if (isNonDBOperation) {
                 nonDBOperationSet.add(m);
@@ -3834,9 +4132,9 @@ final class DaoUtil {
                 }
 
                 final List<JdbcUtil.Handler<?>> handlerList = StreamEx.of(m.getAnnotations())
-                        .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoUtil.HandlerList.class))
+                        .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(DaoImpl.HandlerList.class))
                         .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
-                                : N.asList(((DaoUtil.HandlerList) anno).value()))
+                                : N.asList(((DaoImpl.HandlerList) anno).value()))
                         .prepend(StreamEx.of(daoClassHandlerList).filter(h -> StreamEx.of(h.filter()).anyMatch(filterByMethodName)))
                         .map(handlerAnno -> N.notNullOrEmpty(handlerAnno.qualifier()) ? HandlerFactory.get(handlerAnno.qualifier())
                                 : HandlerFactory.getOrCreate(handlerAnno.type()))
@@ -3911,6 +4209,24 @@ final class DaoUtil {
         return daoInstance;
     }
 
+    @SuppressWarnings("rawtypes")
+    private static BiRowMapper<Object> getIdExtractor(final Holder<BiRowMapper<Object>> idExtractorHolder, final BiRowMapper<Object> defaultIdExtractor,
+            final Dao dao) {
+        BiRowMapper<Object> keyExtractor = idExtractorHolder.value();
+
+        if (keyExtractor == null) {
+            if (dao instanceof JdbcUtil.CrudDao) {
+                keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) dao).idExtractor(), defaultIdExtractor);
+            } else {
+                keyExtractor = defaultIdExtractor;
+            }
+
+            idExtractorHolder.setValue(keyExtractor);
+        }
+
+        return keyExtractor;
+    }
+
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.METHOD)
     static @interface OutParameterList {
@@ -3923,14 +4239,7 @@ final class DaoUtil {
         Dao.Handler[] value();
     }
 
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(value = { ElementType.METHOD })
-    static @interface NonDBOperation {
-
-    }
-
     static final class QueryInfo {
-
         final String sql;
         final int queryTimeout;
         final int fetchSize;
