@@ -77,7 +77,7 @@ public class PreparedQueryTest {
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .get(JdbcUtil.RowMapper.builder()
+                .findOnlyOne(JdbcUtil.RowMapper.builder()
                         .get(1, (columnIndex, rs) -> rs.getLong(columnIndex))
                         .get(3, (columnIndex, rs) -> rs.getString(columnIndex))
                         .get(6, (columnIndex, rs) -> rs.getDate(columnIndex))
@@ -86,12 +86,12 @@ public class PreparedQueryTest {
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .get(JdbcUtil.RowMapper.builder().getInt(1).get(3, (columnIndex, rs) -> rs.getString(columnIndex)).getTime(6).toArray())
+                .findOnlyOne(JdbcUtil.RowMapper.builder().getInt(1).get(3, (columnIndex, rs) -> rs.getString(columnIndex)).getTime(6).toArray())
                 .ifPresent(System.out::println);
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .get(BiRowMapper.builder()
+                .findOnlyOne(BiRowMapper.builder()
                         .get("id", (columnIndex, rs) -> rs.getLong(columnIndex))
                         .get("firstName", (columnIndex, rs) -> rs.getString(columnIndex))
                         .getTimestamp("createTime")
@@ -100,12 +100,12 @@ public class PreparedQueryTest {
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .get(BiRowMapper.builder().getLong("id").get("firstName", (columnIndex, rs) -> rs.getString(columnIndex)).getTime("createTime").to(List.class))
+                .findOnlyOne(BiRowMapper.builder().getLong("id").get("firstName", (columnIndex, rs) -> rs.getString(columnIndex)).getTime("createTime").to(List.class))
                 .ifPresent(System.out::println);
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .get(BiRowMapper.builder()
+                .findOnlyOne(BiRowMapper.builder()
                         .get("id", (columnIndex, rs) -> rs.getLong(columnIndex))
                         .get("firstName", (columnIndex, rs) -> rs.getString(columnIndex))
                         .getDate("createTime")

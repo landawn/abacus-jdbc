@@ -773,14 +773,14 @@ final class DaoImpl {
                     }
                 } else if (Optional.class.isAssignableFrom(returnType)) {
                     if (op == OP.get) {
-                        return (preparedQuery, args) -> (R) preparedQuery.get((RowMapper) args[paramLen - 1]);
+                        return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne((RowMapper) args[paramLen - 1]);
                     } else {
                         if (isFindOnlyOne(method, op)) {
                             if (hasRowFilter) {
                                 return (preparedQuery,
                                         args) -> (R) preparedQuery.stream((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]).onlyOne();
                             } else {
-                                return (preparedQuery, args) -> (R) preparedQuery.get((RowMapper) args[paramLen - 1]);
+                                return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne((RowMapper) args[paramLen - 1]);
                             }
                         } else {
                             if (hasRowFilter) {
@@ -809,7 +809,7 @@ final class DaoImpl {
                     }
 
                     if (op == OP.get) {
-                        return (preparedQuery, args) -> (R) preparedQuery.get((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                        return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
                     } else {
                         if (isFindOnlyOne(method, op)) {
                             if (hasRowFilter) {
@@ -818,7 +818,8 @@ final class DaoImpl {
                                                 .onlyOne()
                                                 .orElse(N.defaultValueOf(returnType));
                             } else {
-                                return (preparedQuery, args) -> (R) preparedQuery.get((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                                return (preparedQuery,
+                                        args) -> (R) preparedQuery.findOnlyOne((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
                             }
                         } else {
                             if (hasRowFilter) {
@@ -850,14 +851,14 @@ final class DaoImpl {
                     }
                 } else if (Optional.class.isAssignableFrom(returnType)) {
                     if (op == OP.get) {
-                        return (preparedQuery, args) -> (R) preparedQuery.get((BiRowMapper) args[paramLen - 1]);
+                        return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne((BiRowMapper) args[paramLen - 1]);
                     } else {
                         if (isFindOnlyOne(method, op)) {
                             if (hasRowFilter) {
                                 return (preparedQuery,
                                         args) -> (R) preparedQuery.stream((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1]).onlyOne();
                             } else {
-                                return (preparedQuery, args) -> (R) preparedQuery.get((BiRowMapper) args[paramLen - 1]);
+                                return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne((BiRowMapper) args[paramLen - 1]);
                             }
                         } else {
                             if (hasRowFilter) {
@@ -887,7 +888,7 @@ final class DaoImpl {
                     }
 
                     if (op == OP.get) {
-                        return (preparedQuery, args) -> (R) preparedQuery.get((BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                        return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne((BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
                     } else {
                         if (isFindOnlyOne(method, op)) {
                             if (hasRowFilter) {
@@ -896,7 +897,8 @@ final class DaoImpl {
                                                 .onlyOne()
                                                 .orElse(N.defaultValueOf(returnType));
                             } else {
-                                return (preparedQuery, args) -> (R) preparedQuery.get((BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                                return (preparedQuery,
+                                        args) -> (R) preparedQuery.findOnlyOne((BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
                             }
                         } else {
                             if (hasRowFilter) {
@@ -958,11 +960,11 @@ final class DaoImpl {
                 }
             } else {
                 if (op == OP.get) {
-                    return (preparedQuery, args) -> (R) preparedQuery.get(BiRowMapper.to(eleType));
+                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(eleType));
                 } else if (op == OP.findFirst) {
                     return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(eleType));
                 } else if (op == OP.findOnlyOne) {
-                    return (preparedQuery, args) -> (R) preparedQuery.get(BiRowMapper.to(eleType));
+                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(eleType));
                 } else if (op == OP.queryForSingle) {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(eleType);
                 } else if (op == OP.queryForUnique) {
@@ -971,7 +973,7 @@ final class DaoImpl {
                     if (ClassUtil.isEntity(eleType) || Map.class.isAssignableFrom(eleType) || List.class.isAssignableFrom(eleType)
                             || Object[].class.isAssignableFrom(eleType)) {
                         if (isFindOnlyOne(method, op)) {
-                            return (preparedQuery, args) -> (R) preparedQuery.get(BiRowMapper.to(eleType));
+                            return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(eleType));
                         } else {
                             return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(eleType));
                         }
@@ -989,11 +991,11 @@ final class DaoImpl {
                 return (preparedQuery, args) -> (R) preparedQuery.stream(eleType).unchecked();
             }
         } else if (op == OP.get) {
-            return (preparedQuery, args) -> (R) preparedQuery.gett(BiRowMapper.to(returnType));
+            return (preparedQuery, args) -> (R) preparedQuery.findOnlyOneOrNull(BiRowMapper.to(returnType));
         } else if (op == OP.findFirst) {
             return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(returnType)).orNull();
         } else if (op == OP.findOnlyOne) {
-            return (preparedQuery, args) -> (R) preparedQuery.gett(BiRowMapper.to(returnType));
+            return (preparedQuery, args) -> (R) preparedQuery.findOnlyOneOrNull(BiRowMapper.to(returnType));
         } else if (op == OP.queryForSingle) {
             return createSingleQueryFunction(returnType);
         } else if (op == OP.queryForUnique) {
@@ -1002,7 +1004,7 @@ final class DaoImpl {
             if (ClassUtil.isEntity(returnType) || Map.class.isAssignableFrom(returnType) || List.class.isAssignableFrom(returnType)
                     || Object[].class.isAssignableFrom(returnType)) {
                 if (isFindOnlyOne(method, op)) {
-                    return (preparedQuery, args) -> (R) preparedQuery.get(BiRowMapper.to(returnType)).orNull();
+                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(returnType)).orNull();
                 } else {
                     return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(returnType)).orNull();
                 }
@@ -1975,7 +1977,7 @@ final class DaoImpl {
                             final Condition condArg = (Condition) args[0];
                             final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get(entityClass);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).findOnlyOne(entityClass);
                         };
                     } else if (methodName.equals("findOnlyOne") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(RowMapper.class)) {
@@ -1983,7 +1985,7 @@ final class DaoImpl {
                             final Condition condArg = (Condition) args[0];
                             final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get((RowMapper) args[1]);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).findOnlyOne((RowMapper) args[1]);
                         };
                     } else if (methodName.equals("findOnlyOne") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(BiRowMapper.class)) {
@@ -1991,7 +1993,7 @@ final class DaoImpl {
                             final Condition condArg = (Condition) args[0];
                             final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get((BiRowMapper) args[1]);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).findOnlyOne((BiRowMapper) args[1]);
                         };
                     } else if (methodName.equals("findOnlyOne") && paramLen == 2 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class)) {
@@ -1999,7 +2001,7 @@ final class DaoImpl {
                             final Condition condArg = (Condition) args[1];
                             final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get(entityClass);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).findOnlyOne(entityClass);
                         };
                     } else if (methodName.equals("findOnlyOne") && paramLen == 3 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(RowMapper.class)) {
@@ -2007,7 +2009,7 @@ final class DaoImpl {
                             final Condition condArg = (Condition) args[1];
                             final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get((RowMapper) args[2]);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).findOnlyOne((RowMapper) args[2]);
                         };
                     } else if (methodName.equals("findOnlyOne") && paramLen == 3 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(BiRowMapper.class)) {
@@ -2015,7 +2017,7 @@ final class DaoImpl {
                             final Condition condArg = (Condition) args[1];
                             final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).get((BiRowMapper) args[2]);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).findOnlyOne((BiRowMapper) args[2]);
                         };
                     } else if (methodName.equals("queryForBoolean") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
@@ -2784,20 +2786,25 @@ final class DaoImpl {
                         };
                     } else if (methodName.equals("gett")) {
                         if (paramLen == 1) {
-                            call = (proxy,
-                                    args) -> proxy.prepareNamedQuery(namedGetByIdSQL).setFetchSize(2).settParameters(args[0], idParamSetter).gett(entityClass);
+                            call = (proxy, args) -> proxy.prepareNamedQuery(namedGetByIdSQL)
+                                    .setFetchSize(2)
+                                    .settParameters(args[0], idParamSetter)
+                                    .findOnlyOneOrNull(entityClass);
                         } else {
                             call = (proxy, args) -> {
                                 final Collection<String> selectPropNames = (Collection<String>) args[1];
 
                                 if (N.isNullOrEmpty(selectPropNames)) {
-                                    return proxy.prepareNamedQuery(namedGetByIdSQL).setFetchSize(2).settParameters(args[0], idParamSetter).gett(entityClass);
+                                    return proxy.prepareNamedQuery(namedGetByIdSQL)
+                                            .setFetchSize(2)
+                                            .settParameters(args[0], idParamSetter)
+                                            .findOnlyOneOrNull(entityClass);
 
                                 } else {
                                     return proxy.prepareNamedQuery(namedSelectSQLBuilderFunc.apply(selectPropNames, idCond).sql())
                                             .setFetchSize(2)
                                             .settParameters(args[0], idParamSetter)
-                                            .gett(entityClass);
+                                            .findOnlyOneOrNull(entityClass);
                                 }
                             };
                         }

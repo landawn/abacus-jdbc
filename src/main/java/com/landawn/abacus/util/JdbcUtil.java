@@ -1633,7 +1633,7 @@ public final class JdbcUtil {
      * @param ds
      * @param sql
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code PreparedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      * @see #getConnection(javax.sql.DataSource)
@@ -1759,7 +1759,7 @@ public final class JdbcUtil {
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param sql
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code PreparedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      */
@@ -1916,7 +1916,7 @@ public final class JdbcUtil {
      * @param ds
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      * @see #getConnection(javax.sql.DataSource)
@@ -2050,7 +2050,7 @@ public final class JdbcUtil {
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      */
@@ -2217,7 +2217,7 @@ public final class JdbcUtil {
      * @param ds
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      * @see #getConnection(javax.sql.DataSource)
@@ -2349,7 +2349,7 @@ public final class JdbcUtil {
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      */
@@ -2405,7 +2405,7 @@ public final class JdbcUtil {
      * @param ds
      * @param sql
      * @param stmtCreator the created {@code CallableStatement} will be closed after any execution methods in {@code PreparedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      * @see #getConnection(javax.sql.DataSource)
@@ -2467,7 +2467,7 @@ public final class JdbcUtil {
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param sql
      * @param stmtCreator the created {@code CallableStatement} will be closed after any execution methods in {@code PreparedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      */

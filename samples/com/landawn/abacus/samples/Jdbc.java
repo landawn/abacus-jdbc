@@ -233,7 +233,7 @@ public class Jdbc {
         sql = PSC.selectFrom(User.class).where("id = ?").sql();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .get(User.class) // or findFirst/list/stream/... a lot more we can do.
+                .findOnlyOne(User.class) // or findFirst/list/stream/... a lot more we can do.
                 .ifPresent(System.out::println);
 
         sql = PSC.update(User.class).set("firstName", "lastName").where("id = ?").sql();
