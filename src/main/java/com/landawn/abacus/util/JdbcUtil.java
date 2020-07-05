@@ -8309,6 +8309,20 @@ public final class JdbcUtil {
             return stream(N.asList(singleSelectPropName), cond, rowMapper);
         }
 
+        // Will it cause confusion if it's called in transaction?
+        /**
+         * lazy-execution, lazy-fetch.
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @param rowMapper
+         * @return
+         */
+        default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final RowFilter rowFilter,
+                final RowMapper<R> rowMapper) {
+            return stream(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
+        }
+
         /**
          *
          * @param propName

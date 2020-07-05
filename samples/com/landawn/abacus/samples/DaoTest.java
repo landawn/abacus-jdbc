@@ -54,6 +54,29 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 public class DaoTest {
 
     @Test
+    public void test_parallel() throws Exception {
+
+        List<User> users = IntStream.range(1, 1000)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                .toList();
+
+        userDao.batchInsertWithId(users);
+
+        List<User> dbUsers = LongStream.range(1, 1000)
+                .boxed()
+                .parallel()
+                .map(Fn.ff(it -> userDao.gett(it)))
+                .onEach(it -> it.setCreateTime(null))
+                .sortedBy(it -> it.getId())
+                .toList();
+
+        assertEquals(users.get(0), dbUsers.get(0));
+        assertTrue(N.equals(users, dbUsers));
+
+        userDao.delete(CF.alwaysTrue());
+    }
+
+    @Test
     public void test_batchUpsert() throws Exception {
 
         List<User> users = IntStream.range(1, 1000)
