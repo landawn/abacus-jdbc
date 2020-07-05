@@ -754,7 +754,7 @@ final class DaoImpl {
                 throw new UnsupportedOperationException("RowMapper/ResultExtractor is not supported by OP: " + op + " in method: " + fullClassMethodName);
             }
 
-            if (hasRowFilter && (op == OP.get || op == OP.query)) {
+            if (hasRowFilter && (op == OP.get || op == OP.findFirst || op == OP.findOnlyOne || op == OP.query || op == OP.DEFAULT)) {
                 throw new UnsupportedOperationException("RowFilter is not supported by OP: " + op + " in method: " + fullClassMethodName);
             }
 
@@ -2204,8 +2204,8 @@ final class DaoImpl {
                                     .setParameters(sp.parameters)
                                     .list((BiRowMapper) args[1]);
                         };
-                    } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class)
-                            && paramTypes[1].equals(JdbcUtil.RowFilter.class) && paramTypes[2].equals(RowMapper.class)) {
+                    } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(RowFilter.class)
+                            && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
                             final Condition cond = handleLimit(condArg, -1, dbVersion);
@@ -2213,10 +2213,10 @@ final class DaoImpl {
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
-                                    .list((JdbcUtil.RowFilter) args[1], (RowMapper) args[2]);
+                                    .list((RowFilter) args[1], (RowMapper) args[2]);
                         };
-                    } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class)
-                            && paramTypes[1].equals(JdbcUtil.BiRowFilter.class) && paramTypes[2].equals(BiRowMapper.class)) {
+                    } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(BiRowFilter.class)
+                            && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
                             final Condition cond = handleLimit(condArg, -1, dbVersion);
@@ -2224,7 +2224,7 @@ final class DaoImpl {
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
-                                    .list((JdbcUtil.BiRowFilter) args[1], (BiRowMapper) args[2]);
+                                    .list((BiRowFilter) args[1], (BiRowMapper) args[2]);
                         };
                     } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
@@ -2253,7 +2253,7 @@ final class DaoImpl {
                                     .list((BiRowMapper) args[2]);
                         };
                     } else if (methodName.equals("list") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
-                            && paramTypes[2].equals(JdbcUtil.RowFilter.class) && paramTypes[3].equals(RowMapper.class)) {
+                            && paramTypes[2].equals(RowFilter.class) && paramTypes[3].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
                             final Condition cond = handleLimit(condArg, -1, dbVersion);
@@ -2261,10 +2261,10 @@ final class DaoImpl {
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
-                                    .list((JdbcUtil.RowFilter) args[2], (RowMapper) args[3]);
+                                    .list((RowFilter) args[2], (RowMapper) args[3]);
                         };
                     } else if (methodName.equals("list") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
-                            && paramTypes[2].equals(JdbcUtil.BiRowFilter.class) && paramTypes[3].equals(BiRowMapper.class)) {
+                            && paramTypes[2].equals(BiRowFilter.class) && paramTypes[3].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
                             final Condition cond = handleLimit(condArg, -1, dbVersion);
@@ -2272,7 +2272,7 @@ final class DaoImpl {
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
-                                    .list((JdbcUtil.BiRowFilter) args[2], (BiRowMapper) args[3]);
+                                    .list((BiRowFilter) args[2], (BiRowMapper) args[3]);
                         };
                     } else if (methodName.equals("stream") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
@@ -2314,8 +2314,8 @@ final class DaoImpl {
 
                             return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
-                    } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
-                            && paramTypes[1].equals(JdbcUtil.RowFilter.class) && paramTypes[2].equals(RowMapper.class)) {
+                    } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(RowFilter.class)
+                            && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
                             final Condition cond = handleLimit(condArg, -1, dbVersion);
@@ -2324,12 +2324,12 @@ final class DaoImpl {
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
-                                    .stream((JdbcUtil.RowFilter) args[1], (RowMapper) args[2]);
+                                    .stream((RowFilter) args[1], (RowMapper) args[2]);
 
                             return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
-                    } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
-                            && paramTypes[1].equals(JdbcUtil.BiRowFilter.class) && paramTypes[2].equals(BiRowMapper.class)) {
+                    } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(BiRowFilter.class)
+                            && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[0];
                             final Condition cond = handleLimit(condArg, -1, dbVersion);
@@ -2338,7 +2338,7 @@ final class DaoImpl {
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
-                                    .stream((JdbcUtil.BiRowFilter) args[1], (BiRowMapper) args[2]);
+                                    .stream((BiRowFilter) args[1], (BiRowMapper) args[2]);
 
                             return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
@@ -2385,7 +2385,7 @@ final class DaoImpl {
                             return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
-                            && paramTypes[2].equals(JdbcUtil.RowFilter.class) && paramTypes[3].equals(RowMapper.class)) {
+                            && paramTypes[2].equals(RowFilter.class) && paramTypes[3].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
                             final Condition cond = handleLimit(condArg, -1, dbVersion);
@@ -2394,12 +2394,12 @@ final class DaoImpl {
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
-                                    .stream((JdbcUtil.RowFilter) args[2], (RowMapper) args[3]);
+                                    .stream((RowFilter) args[2], (RowMapper) args[3]);
 
                             return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
-                            && paramTypes[2].equals(JdbcUtil.BiRowFilter.class) && paramTypes[3].equals(BiRowMapper.class)) {
+                            && paramTypes[2].equals(BiRowFilter.class) && paramTypes[3].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
                             final Condition condArg = (Condition) args[1];
                             final Condition cond = handleLimit(condArg, -1, dbVersion);
@@ -2408,7 +2408,7 @@ final class DaoImpl {
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .setParameters(sp.parameters)
-                                    .stream((JdbcUtil.BiRowFilter) args[2], (BiRowMapper) args[3]);
+                                    .stream((BiRowFilter) args[2], (BiRowMapper) args[3]);
 
                             return ExceptionalStream.of(supplier).flatMap(it -> it.get());
                         };
@@ -3326,8 +3326,7 @@ final class DaoImpl {
                                 "RowMapper/ResultExtractor must be the last parameter but not in method: " + fullClassMethodName);
                     }
 
-                    final Predicate<Class<?>> isRowFilter = it -> JdbcUtil.RowFilter.class.isAssignableFrom(it)
-                            || JdbcUtil.BiRowFilter.class.isAssignableFrom(it);
+                    final Predicate<Class<?>> isRowFilter = it -> RowFilter.class.isAssignableFrom(it) || BiRowFilter.class.isAssignableFrom(it);
 
                     final int[] tmp2 = IntStreamEx.of(tmp).filter(i -> !isRowFilter.test(paramTypes[i])).toArray();
 
@@ -3350,8 +3349,8 @@ final class DaoImpl {
 
                     final boolean hasRowMapperOrResultExtractor = paramLen > 0 && isRowMapperOrResultExtractor.test(lastParamType);
 
-                    final boolean hasRowFilter = paramLen >= 2 && (JdbcUtil.RowFilter.class.isAssignableFrom(paramTypes[paramLen - 2])
-                            || JdbcUtil.BiRowFilter.class.isAssignableFrom(paramTypes[paramLen - 2]));
+                    final boolean hasRowFilter = paramLen >= 2
+                            && (RowFilter.class.isAssignableFrom(paramTypes[paramLen - 2]) || BiRowFilter.class.isAssignableFrom(paramTypes[paramLen - 2]));
 
                     if (hasRowFilter && !hasRowMapperOrResultExtractor) {
                         throw new UnsupportedOperationException(

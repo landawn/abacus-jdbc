@@ -50,6 +50,7 @@ import com.landawn.abacus.util.JdbcUtil.ParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowConsumer;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
+import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.StringUtil.Strings;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
@@ -2459,7 +2460,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws DuplicatedResultException If there are more than one record found by the query
      * @throws SQLException the SQL exception
      */
-    public <T> Optional<T> get(JdbcUtil.RowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
+    public <T> Optional<T> get(RowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
         return Optional.of(gett(rowMapper));
     }
 
@@ -2514,7 +2515,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws DuplicatedResultException If there are more than one record found by the query
      * @throws SQLException the SQL exception
      */
-    public <T> T gett(JdbcUtil.RowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
+    public <T> T gett(RowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -2596,7 +2597,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public <T> Optional<T> findFirst(JdbcUtil.RowMapper<T> rowMapper) throws SQLException {
+    public <T> Optional<T> findFirst(RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -2614,8 +2615,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @param rowMapper
      * @return
      * @throws SQLException the SQL exception
+     * @deprecated Use {@link stream(RowFilter, RowMapper).first()} instead.
      */
-    public <T> Optional<T> findFirst(final RowFilter rowFilter, JdbcUtil.RowMapper<T> rowMapper) throws SQLException {
+    @Deprecated
+    public <T> Optional<T> findFirst(final RowFilter rowFilter, RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -2658,7 +2661,9 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @param rowMapper
      * @return
      * @throws SQLException the SQL exception
+     * @deprecated Use {@link stream(BiRowFilter, BiRowMapper).first()} instead.
      */
+    @Deprecated
     public <T> Optional<T> findFirst(final BiRowFilter rowFilter, BiRowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
@@ -2711,7 +2716,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public <T> List<T> list(JdbcUtil.RowMapper<T> rowMapper) throws SQLException {
+    public <T> List<T> list(RowMapper<T> rowMapper) throws SQLException {
         return list(rowMapper, Integer.MAX_VALUE);
     }
 
@@ -2725,7 +2730,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @deprecated the result size should be limited in database server side by sql scripts.
      */
     @Deprecated
-    public <T> List<T> list(JdbcUtil.RowMapper<T> rowMapper, int maxResult) throws SQLException {
+    public <T> List<T> list(RowMapper<T> rowMapper, int maxResult) throws SQLException {
         return list(RowFilter.ALWAYS_TRUE, rowMapper, maxResult);
     }
 
@@ -2737,7 +2742,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public <T> List<T> list(final RowFilter rowFilter, JdbcUtil.RowMapper<T> rowMapper) throws SQLException {
+    public <T> List<T> list(final RowFilter rowFilter, RowMapper<T> rowMapper) throws SQLException {
         return list(rowFilter, rowMapper, Integer.MAX_VALUE);
     }
 
@@ -2750,7 +2755,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public <T> List<T> list(final RowFilter rowFilter, JdbcUtil.RowMapper<T> rowMapper, int maxResult) throws SQLException {
+    public <T> List<T> list(final RowFilter rowFilter, RowMapper<T> rowMapper, int maxResult) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         checkArg(maxResult >= 0, "'maxResult' can' be negative: " + maxResult);
@@ -2863,7 +2868,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public <T> ExceptionalStream<T, SQLException> stream(final JdbcUtil.RowMapper<T> rowMapper) throws SQLException {
+    public <T> ExceptionalStream<T, SQLException> stream(final RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -3075,7 +3080,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException
      */
-    public <T> ExceptionalStream<T, SQLException> stream(final RowFilter rowFilter, final JdbcUtil.RowMapper<T> rowMapper) throws SQLException {
+    public <T> ExceptionalStream<T, SQLException> stream(final RowFilter rowFilter, final RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -3645,7 +3650,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     public <ID> Optional<ID> insert() throws SQLException {
-        return insert((JdbcUtil.RowMapper<ID>) JdbcUtil.SINGLE_GENERATED_KEY_EXTRACTOR);
+        return insert((RowMapper<ID>) JdbcUtil.SINGLE_GENERATED_KEY_EXTRACTOR);
     }
 
     /**
@@ -3656,7 +3661,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     @SuppressWarnings("deprecation")
-    public <ID> Optional<ID> insert(final JdbcUtil.RowMapper<ID> autoGeneratedKeyExtractor) throws SQLException {
+    public <ID> Optional<ID> insert(final RowMapper<ID> autoGeneratedKeyExtractor) throws SQLException {
         assertNotClosed();
 
         try {
@@ -3707,7 +3712,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     public <ID> List<ID> batchInsert() throws SQLException {
-        return batchInsert((JdbcUtil.RowMapper<ID>) JdbcUtil.SINGLE_GENERATED_KEY_EXTRACTOR);
+        return batchInsert((RowMapper<ID>) JdbcUtil.SINGLE_GENERATED_KEY_EXTRACTOR);
     }
 
     /**
@@ -3717,7 +3722,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public <ID> List<ID> batchInsert(final JdbcUtil.RowMapper<ID> autoGeneratedKeyExtractor) throws SQLException {
+    public <ID> List<ID> batchInsert(final RowMapper<ID> autoGeneratedKeyExtractor) throws SQLException {
         assertNotClosed();
 
         try {
