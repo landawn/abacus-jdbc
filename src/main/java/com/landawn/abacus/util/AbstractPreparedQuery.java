@@ -65,7 +65,7 @@ import com.landawn.abacus.util.u.OptionalShort;
 
 /**
  * The backed {@code PreparedStatement/CallableStatement} will be closed by default
- * after any execution methods(which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/...).
+ * after any execution methods(which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...).
  * except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
  *
  * <br />
@@ -2445,11 +2445,13 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @param <T>
      * @param targetClass
      * @return
-     * @throws DuplicatedResultException If there are more than one record found by the query
+     * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException the SQL exception
+     * @deprecated replaced by {@code findOnlyOne}.
      */
+    @Deprecated
     public <T> Optional<T> get(final Class<T> targetClass) throws DuplicatedResultException, SQLException {
-        return Optional.of(gett(targetClass));
+        return Optional.ofNullable(gett(targetClass));
     }
 
     /**
@@ -2457,11 +2459,13 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @param <T>
      * @param rowMapper
      * @return
-     * @throws DuplicatedResultException If there are more than one record found by the query
+     * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException the SQL exception
+     * @deprecated replaced by {@code findOnlyOne}.
      */
+    @Deprecated
     public <T> Optional<T> get(RowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
-        return Optional.of(gett(rowMapper));
+        return Optional.ofNullable(gett(rowMapper));
     }
 
     /**
@@ -2469,11 +2473,13 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @param <T>
      * @param rowMapper
      * @return
-     * @throws DuplicatedResultException If there are more than one record found by the query
+     * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException the SQL exception
+     * @deprecated replaced by {@code findOnlyOne}. 
      */
+    @Deprecated
     public <T> Optional<T> get(BiRowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
-        return Optional.of(gett(rowMapper));
+        return Optional.ofNullable(gett(rowMapper));
     }
 
     /**
@@ -2482,10 +2488,91 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @param <T>
      * @param targetClass
      * @return
-     * @throws DuplicatedResultException If there are more than one record found by the query
+     * @throws DuplicatedResultException If More than one record found by the query
+     * @throws SQLException the SQL exception
+     * @deprecated replaced by {@code findOnlyOneOrNull}. 
+     */
+    @Deprecated
+    public <T> T gett(final Class<T> targetClass) throws DuplicatedResultException, SQLException {
+        return findOnlyOneOrNull(targetClass);
+    }
+
+    /**
+     * Gets the t.
+     *
+     * @param <T>
+     * @param rowMapper
+     * @return
+     * @throws DuplicatedResultException If More than one record found by the query
+     * @throws SQLException the SQL exception
+     * @deprecated replaced by {@code findOnlyOneOrNull}. 
+     */
+    @Deprecated
+    public <T> T gett(RowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
+        return findOnlyOneOrNull(rowMapper);
+    }
+
+    /**
+     * Gets the t.
+     *
+     * @param <T>
+     * @param rowMapper
+     * @return
+     * @throws DuplicatedResultException If More than one record found by the query
+     * @throws SQLException the SQL exception
+     * @deprecated replaced by {@code findOnlyOneOrNull}. 
+     */
+    @Deprecated
+    public <T> T gett(BiRowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
+        return findOnlyOneOrNull(rowMapper);
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param targetClass
+     * @return
+     * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException the SQL exception
      */
-    public <T> T gett(final Class<T> targetClass) throws DuplicatedResultException, SQLException {
+    public <T> Optional<T> findOnlyOne(final Class<T> targetClass) throws DuplicatedResultException, SQLException {
+        return Optional.ofNullable(findOnlyOneOrNull(targetClass));
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param rowMapper
+     * @return
+     * @throws DuplicatedResultException If More than one record found by the query
+     * @throws SQLException the SQL exception
+     */
+    public <T> Optional<T> findOnlyOne(RowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
+        return Optional.ofNullable(findOnlyOneOrNull(rowMapper));
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param rowMapper
+     * @return
+     * @throws DuplicatedResultException If More than one record found by the query
+     * @throws SQLException the SQL exception
+     */
+    public <T> Optional<T> findOnlyOne(BiRowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
+        return Optional.ofNullable(findOnlyOneOrNull(rowMapper));
+    }
+
+    /**
+     * Gets the t.
+     *
+     * @param <T>
+     * @param targetClass
+     * @return
+     * @throws DuplicatedResultException If More than one record found by the query
+     * @throws SQLException the SQL exception
+     */
+    public <T> T findOnlyOneOrNull(final Class<T> targetClass) throws DuplicatedResultException, SQLException {
         checkArgNotNull(targetClass, "targetClass");
         assertNotClosed();
 
@@ -2494,7 +2581,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
                 final T result = Objects.requireNonNull(get(targetClass, rs));
 
                 if (rs.next()) {
-                    throw new DuplicatedResultException("There are more than one record found by the query");
+                    throw new DuplicatedResultException("More than one record found by the query");
                 }
 
                 return result;
@@ -2512,10 +2599,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @param <T>
      * @param rowMapper
      * @return
-     * @throws DuplicatedResultException If there are more than one record found by the query
+     * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException the SQL exception
      */
-    public <T> T gett(RowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
+    public <T> T findOnlyOneOrNull(RowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -2524,7 +2611,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
                 final T result = Objects.requireNonNull(rowMapper.apply(rs));
 
                 if (rs.next()) {
-                    throw new DuplicatedResultException("There are more than one record found by the query");
+                    throw new DuplicatedResultException("More than one record found by the query");
                 }
 
                 return result;
@@ -2543,10 +2630,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @param <T>
      * @param rowMapper
      * @return
-     * @throws DuplicatedResultException If there are more than one record found by the query
+     * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException the SQL exception
      */
-    public <T> T gett(BiRowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
+    public <T> T findOnlyOneOrNull(BiRowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -2555,7 +2642,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
                 final T result = Objects.requireNonNull(rowMapper.apply(rs, JdbcUtil.getColumnLabelList(rs)));
 
                 if (rs.next()) {
-                    throw new DuplicatedResultException("There are more than one record found by the query");
+                    throw new DuplicatedResultException("More than one record found by the query");
                 }
 
                 return result;
@@ -2576,15 +2663,76 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     public <T> Optional<T> findFirst(final Class<T> targetClass) throws SQLException {
+        return Optional.ofNullable(findFirstOrNull(targetClass));
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param rowMapper
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public <T> Optional<T> findFirst(RowMapper<T> rowMapper) throws SQLException {
+        return Optional.ofNullable(findFirstOrNull(rowMapper));
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     * @throws SQLException the SQL exception
+     * @deprecated Use {@link stream(RowFilter, RowMapper).first()} instead.
+     */
+    @Deprecated
+    public <T> Optional<T> findFirst(final RowFilter rowFilter, RowMapper<T> rowMapper) throws SQLException {
+        return Optional.ofNullable(findFirstOrNull(rowFilter, rowMapper));
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param rowMapper
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public <T> Optional<T> findFirst(BiRowMapper<T> rowMapper) throws SQLException {
+        return Optional.ofNullable(findFirstOrNull(rowMapper));
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     * @throws SQLException the SQL exception
+     * @deprecated Use {@link stream(BiRowFilter, BiRowMapper).first()} instead.
+     */
+    @Deprecated
+    public <T> Optional<T> findFirst(final BiRowFilter rowFilter, BiRowMapper<T> rowMapper) throws SQLException {
+        return Optional.ofNullable(findFirstOrNull(rowFilter, rowMapper));
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param targetClass
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public <T> T findFirstOrNull(final Class<T> targetClass) throws SQLException {
         checkArgNotNull(targetClass, "targetClass");
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
             if (rs.next()) {
-                return Optional.of(get(targetClass, rs));
-            } else {
-                return Optional.empty();
+                return Objects.requireNonNull(get(targetClass, rs));
             }
+
+            return null;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -2597,12 +2745,16 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public <T> Optional<T> findFirst(RowMapper<T> rowMapper) throws SQLException {
+    public <T> T findFirstOrNull(RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Optional.of(rowMapper.apply(rs)) : Optional.<T> empty();
+            if (rs.next()) {
+                return Objects.requireNonNull(rowMapper.apply(rs));
+            }
+
+            return null;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -2618,7 +2770,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @deprecated Use {@link stream(RowFilter, RowMapper).first()} instead.
      */
     @Deprecated
-    public <T> Optional<T> findFirst(final RowFilter rowFilter, RowMapper<T> rowMapper) throws SQLException {
+    public <T> T findFirstOrNull(final RowFilter rowFilter, RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -2626,11 +2778,11 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         try (ResultSet rs = executeQuery()) {
             while (rs.next()) {
                 if (rowFilter.test(rs)) {
-                    return Optional.of(rowMapper.apply(rs));
+                    return Objects.requireNonNull(rowMapper.apply(rs));
                 }
             }
 
-            return Optional.empty();
+            return null;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -2643,12 +2795,16 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public <T> Optional<T> findFirst(BiRowMapper<T> rowMapper) throws SQLException {
+    public <T> T findFirstOrNull(BiRowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Optional.of(rowMapper.apply(rs, JdbcUtil.getColumnLabelList(rs))) : Optional.<T> empty();
+            if (rs.next()) {
+                return Objects.requireNonNull(rowMapper.apply(rs, JdbcUtil.getColumnLabelList(rs)));
+            } else {
+                return null;
+            }
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -2664,7 +2820,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @deprecated Use {@link stream(BiRowFilter, BiRowMapper).first()} instead.
      */
     @Deprecated
-    public <T> Optional<T> findFirst(final BiRowFilter rowFilter, BiRowMapper<T> rowMapper) throws SQLException {
+    public <T> T findFirstOrNull(final BiRowFilter rowFilter, BiRowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -2674,11 +2830,11 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
 
             while (rs.next()) {
                 if (rowFilter.test(rs, columnLabels)) {
-                    return Optional.of(rowMapper.apply(rs, columnLabels));
+                    return Objects.requireNonNull(rowMapper.apply(rs, columnLabels));
                 }
             }
 
-            return Optional.empty();
+            return null;
         } finally {
             closeAfterExecutionIfAllowed();
         }

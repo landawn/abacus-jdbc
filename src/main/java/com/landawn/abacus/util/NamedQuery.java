@@ -37,7 +37,7 @@ import com.landawn.abacus.util.JdbcUtil.TriParametersSetter;
 
 /**
  * The backed {@code PreparedStatement/CallableStatement} will be closed by default
- * after any execution methods(which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/...).
+ * after any execution methods(which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...).
  * except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
  *
  * <br />

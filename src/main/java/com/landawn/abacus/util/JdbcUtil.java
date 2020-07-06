@@ -541,7 +541,6 @@ public final class JdbcUtil {
     //        return sqlDataSource instanceof DataSource ? ((DataSource) sqlDataSource) : new SimpleDataSource(sqlDataSource);
     //    }
 
-
     /**
      * Creates the connection.
      *
@@ -1906,7 +1905,7 @@ public final class JdbcUtil {
      * @param ds
      * @param sql
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code PreparedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      * @see #getConnection(javax.sql.DataSource)
@@ -2032,7 +2031,7 @@ public final class JdbcUtil {
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param sql
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code PreparedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      */
@@ -2189,7 +2188,7 @@ public final class JdbcUtil {
      * @param ds
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      * @see #getConnection(javax.sql.DataSource)
@@ -2323,7 +2322,7 @@ public final class JdbcUtil {
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      */
@@ -2490,7 +2489,7 @@ public final class JdbcUtil {
      * @param ds
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      * @see #getConnection(javax.sql.DataSource)
@@ -2622,7 +2621,7 @@ public final class JdbcUtil {
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      */
@@ -2678,7 +2677,7 @@ public final class JdbcUtil {
      * @param ds
      * @param sql
      * @param stmtCreator the created {@code CallableStatement} will be closed after any execution methods in {@code PreparedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      * @see #getConnection(javax.sql.DataSource)
@@ -2740,7 +2739,7 @@ public final class JdbcUtil {
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param sql
      * @param stmtCreator the created {@code CallableStatement} will be closed after any execution methods in {@code PreparedQuery/PreparedCallableQuery} is called.
-     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/list/execute/....
+     * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException the SQL exception
      */
@@ -4364,6 +4363,43 @@ public final class JdbcUtil {
 
     static <ID> boolean isAllNullIds(List<ID> ids) {
         return N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(JdbcUtil::isDefaultIdPropValue);
+    }
+
+    public static Collection<String> getInsertPropNames(final Object entity) {
+        return getInsertPropNames(entity, null);
+    }
+
+    public static Collection<String> getInsertPropNames(final Object entity, final Set<String> excludedPropNames) {
+        return SQLBuilder.getInsertPropNames(entity, excludedPropNames);
+    }
+
+    public static Collection<String> getInsertPropNames(final Class<?> entityClass) {
+        return getInsertPropNames(entityClass, null);
+    }
+
+    public static Collection<String> getInsertPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
+        return SQLBuilder.getInsertPropNames(entityClass, excludedPropNames);
+    }
+
+    public static Collection<String> getSelectPropNames(final Class<?> entityClass) {
+        return getSelectPropNames(entityClass, null);
+    }
+
+    public static Collection<String> getSelectPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
+        return getSelectPropNames(entityClass, false, excludedPropNames);
+    }
+
+    public static Collection<String> getSelectPropNames(final Class<?> entityClass, final boolean includeSubEntityProperties,
+            final Set<String> excludedPropNames) {
+        return SQLBuilder.getSelectPropNames(entityClass, includeSubEntityProperties, excludedPropNames);
+    }
+
+    public static Collection<String> getUpdatePropNames(final Class<?> entityClass) {
+        return getUpdatePropNames(entityClass, null);
+    }
+
+    public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
+        return SQLBuilder.getUpdatePropNames(entityClass, excludedPropNames);
     }
 
     @Beta
@@ -8582,6 +8618,20 @@ public final class JdbcUtil {
             return stream(N.asList(singleSelectPropName), cond, rowMapper);
         }
 
+        // Will it cause confusion if it's called in transaction?
+        /**
+         * lazy-execution, lazy-fetch.
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @param rowMapper
+         * @return
+         */
+        default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final RowFilter rowFilter,
+                final RowMapper<R> rowMapper) {
+            return stream(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
+        }
+
         /**
          *
          * @param propName
@@ -8847,7 +8897,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default Optional<T> get(final ID id) throws DuplicatedResultException, SQLException {
-            return Optional.of(gett(id));
+            return Optional.ofNullable(gett(id));
         }
 
         /**
@@ -8859,7 +8909,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, SQLException {
-            return Optional.of(gett(id, selectPropNames));
+            return Optional.ofNullable(gett(id, selectPropNames));
         }
 
         /**
@@ -11260,7 +11310,7 @@ public final class JdbcUtil {
          */
         @Beta
         default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
-            return Optional.of(gett(id, joinEntitiesToLoad));
+            return Optional.ofNullable(gett(id, joinEntitiesToLoad));
         }
 
         /**
@@ -11273,7 +11323,7 @@ public final class JdbcUtil {
          */
         @Beta
         default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException {
-            return Optional.of(gett(id, includeAllJoinEntities));
+            return Optional.ofNullable(gett(id, includeAllJoinEntities));
         }
 
         /**
@@ -11288,7 +11338,7 @@ public final class JdbcUtil {
         @Beta
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
                 throws DuplicatedResultException, SQLException {
-            return Optional.of(gett(id, selectPropNames, joinEntitiesToLoad));
+            return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
         }
 
         /**
@@ -11303,7 +11353,7 @@ public final class JdbcUtil {
         @Beta
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
                 throws DuplicatedResultException, SQLException {
-            return Optional.of(gett(id, selectPropNames, joinEntitiesToLoad));
+            return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
         }
 
         /**
@@ -11318,7 +11368,7 @@ public final class JdbcUtil {
         @Beta
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
                 throws DuplicatedResultException, SQLException {
-            return Optional.of(gett(id, selectPropNames, includeAllJoinEntities));
+            return Optional.ofNullable(gett(id, selectPropNames, includeAllJoinEntities));
         }
 
         /**
@@ -12701,7 +12751,7 @@ public final class JdbcUtil {
          */
         @Override
         default Optional<T> get(final ID id) throws DuplicatedResultException, UncheckedSQLException {
-            return Optional.of(gett(id));
+            return Optional.ofNullable(gett(id));
         }
 
         /**
@@ -12714,7 +12764,7 @@ public final class JdbcUtil {
          */
         @Override
         default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, UncheckedSQLException {
-            return Optional.of(gett(id, selectPropNames));
+            return Optional.ofNullable(gett(id, selectPropNames));
         }
 
         /**
@@ -15204,7 +15254,7 @@ public final class JdbcUtil {
         @Beta
         @Override
         default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
-            return Optional.of(gett(id, joinEntitiesToLoad));
+            return Optional.ofNullable(gett(id, joinEntitiesToLoad));
         }
 
         /**
@@ -15218,7 +15268,7 @@ public final class JdbcUtil {
         @Beta
         @Override
         default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException {
-            return Optional.of(gett(id, includeAllJoinEntities));
+            return Optional.ofNullable(gett(id, includeAllJoinEntities));
         }
 
         /**
@@ -15234,7 +15284,7 @@ public final class JdbcUtil {
         @Override
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
                 throws DuplicatedResultException, UncheckedSQLException {
-            return Optional.of(gett(id, selectPropNames, joinEntitiesToLoad));
+            return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
         }
 
         /**
@@ -15250,7 +15300,7 @@ public final class JdbcUtil {
         @Override
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
                 throws DuplicatedResultException, UncheckedSQLException {
-            return Optional.of(gett(id, selectPropNames, joinEntitiesToLoad));
+            return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
         }
 
         /**
@@ -15266,7 +15316,7 @@ public final class JdbcUtil {
         @Override
         default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
                 throws DuplicatedResultException, UncheckedSQLException {
-            return Optional.of(gett(id, selectPropNames, includeAllJoinEntities));
+            return Optional.ofNullable(gett(id, selectPropNames, includeAllJoinEntities));
         }
 
         /**
@@ -16224,4 +16274,3 @@ public final class JdbcUtil {
         return DaoImpl.createDao(daoInterface, ds, sqlMapper, cache, executor);
     }
 }
-
