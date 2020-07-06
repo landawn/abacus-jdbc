@@ -100,7 +100,11 @@ public class PreparedQueryTest {
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .findOnlyOne(BiRowMapper.builder().getLong("id").get("firstName", (columnIndex, rs) -> rs.getString(columnIndex)).getTime("createTime").to(List.class))
+                .findOnlyOne(BiRowMapper.builder()
+                        .getLong("id")
+                        .get("firstName", (columnIndex, rs) -> rs.getString(columnIndex))
+                        .getTime("createTime")
+                        .to(List.class))
                 .ifPresent(System.out::println);
 
         JdbcUtil.prepareQuery(dataSource, sql) //
