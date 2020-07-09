@@ -28,16 +28,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import com.landawn.abacus.DataSet;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
+import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.ParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.u.Holder;
-import com.landawn.abacus.util.u.Optional;
 
 /**
  * The backed {@code PreparedStatement/CallableStatement} will be closed by default
@@ -1039,13 +1040,25 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     }
 
     /**
+     * 
+     * @return an empty {@code DataSet} if there is no {@code ResultSet} returned from the procedure.
+     */
+    @Override
+    public DataSet query() throws SQLException {
+        final DataSet ds = query(ResultExtractor.TO_DATA_SET);
+
+        return ds == null ? N.newEmptyDataSet() : ds;
+    }
+
+    /**
      *
      * @param <R>
      * @param resultExtrator
-     * @return
+     * @return {@code null} if there is no {@code ResultSet} returned from the procedure.
      * @throws SQLException the SQL exception
      */
-    public <R> Optional<R> call(final ResultExtractor<R> resultExtrator) throws SQLException {
+    @Override
+    public <R> R query(final ResultExtractor<R> resultExtrator) throws SQLException {
         checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
@@ -1056,7 +1069,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
             while (ret || updateCount != -1) {
                 if (ret) {
                     try (ResultSet rs = stmt.getResultSet()) {
-                        return Optional.of(checkNotResultSet(resultExtrator.apply(rs)));
+                        return checkNotResultSet(resultExtrator.apply(rs));
                     }
                 } else {
                     ret = stmt.getMoreResults();
@@ -1064,13 +1077,47 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                 }
             }
 
-            return Optional.<R> empty();
+            return null;
         } finally {
             closeAfterExecutionIfAllowed();
         }
     }
 
-    public <T> ExceptionalStream<T, SQLException> callToStream(final BiRowMapper<T> rowMapper) throws SQLException {
+    /**
+     *
+     * @param <R>
+     * @param resultExtrator
+     * @return {@code null} if there is no {@code ResultSet} returned from the procedure.
+     * @throws SQLException the SQL exception
+     */
+    @Override
+    public <R> R query(final BiResultExtractor<R> resultExtrator) throws SQLException {
+        checkArgNotNull(resultExtrator, "resultExtrator");
+        assertNotClosed();
+
+        try {
+            boolean ret = JdbcUtil.execute(stmt);
+            int updateCount = stmt.getUpdateCount();
+
+            while (ret || updateCount != -1) {
+                if (ret) {
+                    try (ResultSet rs = stmt.getResultSet()) {
+                        return checkNotResultSet(resultExtrator.apply(rs, JdbcUtil.getColumnLabelList(rs)));
+                    }
+                } else {
+                    ret = stmt.getMoreResults();
+                    updateCount = stmt.getUpdateCount();
+                }
+            }
+
+            return null;
+        } finally {
+            closeAfterExecutionIfAllowed();
+        }
+    }
+
+    @Override
+    public <T> ExceptionalStream<T, SQLException> stream(final BiRowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
