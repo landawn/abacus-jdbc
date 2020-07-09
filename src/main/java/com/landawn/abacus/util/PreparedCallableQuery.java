@@ -1084,21 +1084,21 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                             try {
                                 internalIter = new ExceptionalIterator<ResultSet, SQLException>() {
                                     private final Holder<ResultSet> resultSetHolder = new Holder<>();
-                                    private boolean ret = JdbcUtil.execute(stmt);
+                                    private boolean isNextResultSet = JdbcUtil.execute(stmt);
                                     private int updateCount = stmt.getUpdateCount();
 
                                     @Override
                                     public boolean hasNext() throws SQLException {
                                         if (resultSetHolder.isNull()) {
-                                            while (ret || updateCount != -1) {
-                                                if (ret) {
+                                            while (isNextResultSet || updateCount != -1) {
+                                                if (isNextResultSet) {
                                                     resultSetHolder.setValue(stmt.getResultSet());
-                                                    ret = false;
+                                                    isNextResultSet = false;
                                                     updateCount = 0;
 
                                                     break;
                                                 } else {
-                                                    ret = stmt.getMoreResults();
+                                                    isNextResultSet = stmt.getMoreResults();
                                                     updateCount = stmt.getUpdateCount();
                                                 }
                                             }
