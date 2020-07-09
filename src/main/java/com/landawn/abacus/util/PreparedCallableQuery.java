@@ -1094,7 +1094,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                                                 if (isNextResultSet) {
                                                     resultSetHolder.setValue(stmt.getResultSet());
                                                     isNextResultSet = false;
-                                                    updateCount = 0;
+                                                    updateCount = 0; // for next loop.
 
                                                     break;
                                                 } else {
