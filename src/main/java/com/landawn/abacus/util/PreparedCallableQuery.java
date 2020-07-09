@@ -36,10 +36,6 @@ import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.ParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
-import com.landawn.abacus.util.Tuple.Tuple2;
-import com.landawn.abacus.util.Tuple.Tuple3;
-import com.landawn.abacus.util.Tuple.Tuple4;
-import com.landawn.abacus.util.Tuple.Tuple5;
 import com.landawn.abacus.util.u.Holder;
 import com.landawn.abacus.util.u.Optional;
 
@@ -1050,244 +1046,28 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public <R> Optional<R> call(final ResultExtractor<R> resultExtrator) throws SQLException {
-        checkArgNotNull(resultExtrator, "resultExtrator1");
+        checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
         try {
-            if (JdbcUtil.execute(stmt)) {
-                if (stmt.getUpdateCount() == -1) {
+            boolean ret = JdbcUtil.execute(stmt);
+            int updateCount = stmt.getUpdateCount();
+
+            while (ret || updateCount != -1) {
+                if (ret) {
                     try (ResultSet rs = stmt.getResultSet()) {
                         return Optional.of(checkNotResultSet(resultExtrator.apply(rs)));
                     }
+                } else {
+                    ret = stmt.getMoreResults();
+                    updateCount = stmt.getUpdateCount();
                 }
             }
+
+            return Optional.<R> empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
-
-        return Optional.empty();
-    }
-
-    /**
-     *
-     * @param <R1>
-     * @param <R2>
-     * @param resultExtrator1
-     * @param resultExtrator2
-     * @return
-     * @throws SQLException the SQL exception
-     */
-    public <R1, R2> Tuple2<Optional<R1>, Optional<R2>> call(final ResultExtractor<R1> resultExtrator1, final ResultExtractor<R2> resultExtrator2)
-            throws SQLException {
-        checkArgNotNull(resultExtrator1, "resultExtrator1");
-        checkArgNotNull(resultExtrator2, "resultExtrator2");
-        assertNotClosed();
-
-        Optional<R1> result1 = Optional.empty();
-        Optional<R2> result2 = Optional.empty();
-
-        try {
-            if (JdbcUtil.execute(stmt)) {
-                if (stmt.getUpdateCount() == -1) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        result1 = Optional.of(checkNotResultSet(resultExtrator1.apply(rs)));
-                    }
-                }
-
-                if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        result2 = Optional.of(checkNotResultSet(resultExtrator2.apply(rs)));
-                    }
-                }
-            }
-        } finally {
-            closeAfterExecutionIfAllowed();
-        }
-
-        return Tuple.of(result1, result2);
-    }
-
-    /**
-     *
-     * @param <R1>
-     * @param <R2>
-     * @param <R3>
-     * @param resultExtrator1
-     * @param resultExtrator2
-     * @param resultExtrator3
-     * @return
-     * @throws SQLException the SQL exception
-     */
-    public <R1, R2, R3> Tuple3<Optional<R1>, Optional<R2>, Optional<R3>> call(final ResultExtractor<R1> resultExtrator1,
-            final ResultExtractor<R2> resultExtrator2, final ResultExtractor<R3> resultExtrator3) throws SQLException {
-        checkArgNotNull(resultExtrator1, "resultExtrator1");
-        checkArgNotNull(resultExtrator2, "resultExtrator2");
-        checkArgNotNull(resultExtrator3, "resultExtrator3");
-        assertNotClosed();
-
-        Optional<R1> result1 = Optional.empty();
-        Optional<R2> result2 = Optional.empty();
-        Optional<R3> result3 = Optional.empty();
-
-        try {
-            if (JdbcUtil.execute(stmt)) {
-                if (stmt.getUpdateCount() == -1) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        result1 = Optional.of(checkNotResultSet(resultExtrator1.apply(rs)));
-                    }
-                }
-
-                if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        result2 = Optional.of(checkNotResultSet(resultExtrator2.apply(rs)));
-                    }
-                }
-
-                if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        result3 = Optional.of(checkNotResultSet(resultExtrator3.apply(rs)));
-                    }
-                }
-            }
-        } finally {
-            closeAfterExecutionIfAllowed();
-        }
-
-        return Tuple.of(result1, result2, result3);
-    }
-
-    /**
-     *
-     * @param <R1>
-     * @param <R2>
-     * @param <R3>
-     * @param <R4>
-     * @param resultExtrator1
-     * @param resultExtrator2
-     * @param resultExtrator3
-     * @param resultExtrator4
-     * @return
-     * @throws SQLException the SQL exception
-     * @deprecated may try {@link #callToStream(BiRowMapper)}
-     */
-    @Deprecated
-    public <R1, R2, R3, R4> Tuple4<Optional<R1>, Optional<R2>, Optional<R3>, Optional<R4>> call(final ResultExtractor<R1> resultExtrator1,
-            final ResultExtractor<R2> resultExtrator2, final ResultExtractor<R3> resultExtrator3, final ResultExtractor<R4> resultExtrator4)
-            throws SQLException {
-        checkArgNotNull(resultExtrator1, "resultExtrator1");
-        checkArgNotNull(resultExtrator2, "resultExtrator2");
-        checkArgNotNull(resultExtrator3, "resultExtrator3");
-        checkArgNotNull(resultExtrator4, "resultExtrator4");
-        assertNotClosed();
-
-        Optional<R1> result1 = Optional.empty();
-        Optional<R2> result2 = Optional.empty();
-        Optional<R3> result3 = Optional.empty();
-        Optional<R4> result4 = Optional.empty();
-
-        try {
-            if (JdbcUtil.execute(stmt)) {
-                if (stmt.getUpdateCount() == -1) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        result1 = Optional.of(checkNotResultSet(resultExtrator1.apply(rs)));
-                    }
-                }
-
-                if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        result2 = Optional.of(checkNotResultSet(resultExtrator2.apply(rs)));
-                    }
-                }
-
-                if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        result3 = Optional.of(checkNotResultSet(resultExtrator3.apply(rs)));
-                    }
-                }
-
-                if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        result4 = Optional.of(checkNotResultSet(resultExtrator4.apply(rs)));
-                    }
-                }
-            }
-        } finally {
-            closeAfterExecutionIfAllowed();
-        }
-
-        return Tuple.of(result1, result2, result3, result4);
-    }
-
-    /**
-     *
-     * @param <R1>
-     * @param <R2>
-     * @param <R3>
-     * @param <R4>
-     * @param <R5>
-     * @param resultExtrator1
-     * @param resultExtrator2
-     * @param resultExtrator3
-     * @param resultExtrator4
-     * @param resultExtrator5
-     * @return
-     * @throws SQLException the SQL exception
-     * @deprecated may try {@link #callToStream(BiRowMapper)}
-     */
-    @Deprecated
-    public <R1, R2, R3, R4, R5> Tuple5<Optional<R1>, Optional<R2>, Optional<R3>, Optional<R4>, Optional<R5>> call(final ResultExtractor<R1> resultExtrator1,
-            final ResultExtractor<R2> resultExtrator2, final ResultExtractor<R3> resultExtrator3, final ResultExtractor<R4> resultExtrator4,
-            final ResultExtractor<R5> resultExtrator5) throws SQLException {
-        checkArgNotNull(resultExtrator1, "resultExtrator1");
-        checkArgNotNull(resultExtrator2, "resultExtrator2");
-        checkArgNotNull(resultExtrator3, "resultExtrator3");
-        checkArgNotNull(resultExtrator4, "resultExtrator4");
-        checkArgNotNull(resultExtrator5, "resultExtrator5");
-        assertNotClosed();
-
-        Optional<R1> result1 = Optional.empty();
-        Optional<R2> result2 = Optional.empty();
-        Optional<R3> result3 = Optional.empty();
-        Optional<R4> result4 = Optional.empty();
-        Optional<R5> result5 = Optional.empty();
-
-        try {
-            if (JdbcUtil.execute(stmt)) {
-                if (stmt.getUpdateCount() == -1) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        result1 = Optional.of(checkNotResultSet(resultExtrator1.apply(rs)));
-                    }
-                }
-
-                if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        result2 = Optional.of(checkNotResultSet(resultExtrator2.apply(rs)));
-                    }
-                }
-
-                if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        result3 = Optional.of(checkNotResultSet(resultExtrator3.apply(rs)));
-                    }
-                }
-
-                if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        result4 = Optional.of(checkNotResultSet(resultExtrator4.apply(rs)));
-                    }
-                }
-
-                if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        result5 = Optional.of(checkNotResultSet(resultExtrator5.apply(rs)));
-                    }
-                }
-            }
-        } finally {
-            closeAfterExecutionIfAllowed();
-        }
-
-        return Tuple.of(result1, result2, result3, result4, result5);
     }
 
     public <T> ExceptionalStream<T, SQLException> callToStream(final BiRowMapper<T> rowMapper) throws SQLException {
@@ -1301,23 +1081,26 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                     @Override
                     public ExceptionalIterator<ResultSet, SQLException> get() throws SQLException {
                         if (internalIter == null) {
-                            final Holder<ResultSet> resultSetHolder = new Holder<>();
-
                             try {
-                                if (JdbcUtil.execute(stmt)) {
-                                    if (stmt.getUpdateCount() == -1) {
-                                        resultSetHolder.setValue(stmt.getResultSet());
-                                    }
-                                }
-
-                                final boolean hasResult = resultSetHolder.isNotNull();
-
                                 internalIter = new ExceptionalIterator<ResultSet, SQLException>() {
+                                    private final Holder<ResultSet> resultSetHolder = new Holder<>();
+                                    private boolean ret = JdbcUtil.execute(stmt);
+                                    private int updateCount = stmt.getUpdateCount();
+
                                     @Override
                                     public boolean hasNext() throws SQLException {
-                                        if (resultSetHolder.isNull() && hasResult) {
-                                            if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
-                                                resultSetHolder.setValue(stmt.getResultSet());
+                                        if (resultSetHolder.isNull()) {
+                                            while (ret || updateCount != -1) {
+                                                if (ret) {
+                                                    resultSetHolder.setValue(stmt.getResultSet());
+                                                    ret = false;
+                                                    updateCount = 0;
+
+                                                    break;
+                                                } else {
+                                                    ret = stmt.getMoreResults();
+                                                    updateCount = stmt.getUpdateCount();
+                                                }
                                             }
                                         }
 
