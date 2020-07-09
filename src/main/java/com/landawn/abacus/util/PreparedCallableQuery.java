@@ -26,17 +26,21 @@ import java.sql.SQLException;
 import java.sql.SQLType;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
+import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.ParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.Tuple.Tuple4;
 import com.landawn.abacus.util.Tuple.Tuple5;
+import com.landawn.abacus.util.u.Holder;
 import com.landawn.abacus.util.u.Optional;
 
 /**
@@ -1040,20 +1044,20 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
 
     /**
      *
-     * @param <R1>
-     * @param resultExtrator1
+     * @param <R>
+     * @param resultExtrator
      * @return
      * @throws SQLException the SQL exception
      */
-    public <R1> Optional<R1> call(final ResultExtractor<R1> resultExtrator1) throws SQLException {
-        checkArgNotNull(resultExtrator1, "resultExtrator1");
+    public <R> Optional<R> call(final ResultExtractor<R> resultExtrator) throws SQLException {
+        checkArgNotNull(resultExtrator, "resultExtrator1");
         assertNotClosed();
 
         try {
             if (JdbcUtil.execute(stmt)) {
                 if (stmt.getUpdateCount() == -1) {
                     try (ResultSet rs = stmt.getResultSet()) {
-                        return Optional.of(checkNotResultSet(resultExtrator1.apply(rs)));
+                        return Optional.of(checkNotResultSet(resultExtrator.apply(rs)));
                     }
                 }
             }
@@ -1164,7 +1168,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param resultExtrator4
      * @return
      * @throws SQLException the SQL exception
+     * @deprecated may try {@link #callToStream(BiRowMapper)}
      */
+    @Deprecated
     public <R1, R2, R3, R4> Tuple4<Optional<R1>, Optional<R2>, Optional<R3>, Optional<R4>> call(final ResultExtractor<R1> resultExtrator1,
             final ResultExtractor<R2> resultExtrator2, final ResultExtractor<R3> resultExtrator3, final ResultExtractor<R4> resultExtrator4)
             throws SQLException {
@@ -1226,7 +1232,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param resultExtrator5
      * @return
      * @throws SQLException the SQL exception
+     * @deprecated may try {@link #callToStream(BiRowMapper)}
      */
+    @Deprecated
     public <R1, R2, R3, R4, R5> Tuple5<Optional<R1>, Optional<R2>, Optional<R3>, Optional<R4>, Optional<R5>> call(final ResultExtractor<R1> resultExtrator1,
             final ResultExtractor<R2> resultExtrator2, final ResultExtractor<R3> resultExtrator3, final ResultExtractor<R4> resultExtrator4,
             final ResultExtractor<R5> resultExtrator5) throws SQLException {
@@ -1280,6 +1288,81 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         }
 
         return Tuple.of(result1, result2, result3, result4, result5);
+    }
+
+    public <T> ExceptionalStream<T, SQLException> callToStream(final BiRowMapper<T> rowMapper) throws SQLException {
+        checkArgNotNull(rowMapper, "rowMapper");
+        assertNotClosed();
+
+        final ExceptionalIterator<ResultSet, SQLException> lazyIter = ExceptionalIterator
+                .of(new Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException>() {
+                    private ExceptionalIterator<ResultSet, SQLException> internalIter;
+
+                    @Override
+                    public ExceptionalIterator<ResultSet, SQLException> get() throws SQLException {
+                        if (internalIter == null) {
+                            final Holder<ResultSet> resultSetHolder = new Holder<>();
+
+                            try {
+                                if (JdbcUtil.execute(stmt)) {
+                                    if (stmt.getUpdateCount() == -1) {
+                                        resultSetHolder.setValue(stmt.getResultSet());
+                                    }
+                                }
+
+                                final boolean hasResult = resultSetHolder.isNotNull();
+
+                                internalIter = new ExceptionalIterator<ResultSet, SQLException>() {
+                                    @Override
+                                    public boolean hasNext() throws SQLException {
+                                        if (resultSetHolder.isNull() && hasResult) {
+                                            if (stmt.getMoreResults() && stmt.getUpdateCount() == -1) {
+                                                resultSetHolder.setValue(stmt.getResultSet());
+                                            }
+                                        }
+
+                                        return resultSetHolder.isNotNull();
+                                    }
+
+                                    @Override
+                                    public ResultSet next() throws SQLException {
+                                        if (hasNext() == false) {
+                                            throw new NoSuchElementException();
+                                        }
+
+                                        return resultSetHolder.getAndSet(null);
+                                    }
+
+                                    @Override
+                                    public void close() throws SQLException {
+                                        try {
+                                            if (resultSetHolder.isNotNull()) {
+                                                JdbcUtil.closeQuietly(resultSetHolder.getAndSet(null));
+                                            }
+                                        } finally {
+                                            closeAfterExecutionIfAllowed();
+                                        }
+                                    }
+                                };
+                            } finally {
+                                if (internalIter == null) {
+                                    closeAfterExecutionIfAllowed();
+                                }
+                            }
+                        }
+
+                        return internalIter;
+                    }
+                });
+
+        return ExceptionalStream.newStream(lazyIter)
+                .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
+                .onClose(new Throwables.Runnable<SQLException>() {
+                    @Override
+                    public void run() throws SQLException {
+                        lazyIter.close();
+                    }
+                });
     }
 
 }
