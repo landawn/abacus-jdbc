@@ -844,9 +844,11 @@ public class DaoTest {
         // String query = "select e.employee_id AS \"employeeId\", e.first_name AS \"firstName\", p.project_id AS \"projects.projectId\", p.title AS \"projects.title\" from employee e, employee_project ep left join project p on employee_id = ep.employee_id AND ep.project_id = p.project_id";
 
         String query = PSC.select(Employee.class, true)
-                .from("employee e, employee_project ep")
+                .from("employee e")
+                .leftJoin("employee_project ep")
+                .on("employee_id = ep.employee_id")
                 .leftJoin("project")
-                .on("employee_id = ep.employee_id AND ep.project_id = project.project_id")
+                .on("ep.project_id = project.project_id")
                 .sql();
 
         List<Employee> employees = employeeDao.prepareQuery(query).query().toMergedEntities(Employee.class);

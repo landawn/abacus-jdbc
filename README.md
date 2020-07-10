@@ -1,7 +1,7 @@
 # abacus-jdbc
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc.svg)](https://maven-badges.herokuapp.com/maven-central/com.landawn/abacus-jdbc/)
-[![Javadocs](https://img.shields.io/badge/javadoc-2.5.9-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/2.5.9/index.html)
+[![Javadocs](https://img.shields.io/badge/javadoc-2.5.10-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/2.5.10/index.html)
 
 Hope it will bring you the programming experiences: coding with SQL/DB is just like coding with Collections.
 
@@ -69,7 +69,7 @@ Abacus-jdbc provides the best APIs, which you won't find in other libraries, for
 * Gradle:
 ```gradle
 // JDK 1.8 or above:
-compile 'com.landawn:abacus-jdbc:2.5.9'
+compile 'com.landawn:abacus-jdbc:2.5.10'
 ```
 
 ## User Guide:
