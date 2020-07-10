@@ -105,6 +105,7 @@ import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.SQLTransaction.CreatedBy;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.u.Holder;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -4113,6 +4114,124 @@ public final class JdbcUtil {
         return stream(resultSet, rowMapper);
     }
 
+    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowMapper<T> rowMapper) {
+        N.checkArgNotNull(stmt, "stmt");
+        N.checkArgNotNull(rowMapper, "rowMapper");
+
+        final Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException> supplier = iterateResultSets(stmt);
+
+        return ExceptionalStream.of(Array.asList(supplier), SQLException.class)
+                .flatMap(it -> ExceptionalStream.newStream(it.get()))
+                .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
+                .onClose(() -> supplier.get().close());
+    }
+
+    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowMapper<T> rowMapper) {
+        N.checkArgNotNull(stmt, "stmt");
+        N.checkArgNotNull(rowMapper, "rowMapper");
+
+        final Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException> supplier = iterateResultSets(stmt);
+
+        return ExceptionalStream.of(Array.asList(supplier), SQLException.class)
+                .flatMap(it -> ExceptionalStream.newStream(it.get()))
+                .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
+                .onClose(() -> supplier.get().close());
+    }
+
+    static Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException> iterateResultSets(final Statement stmt) {
+        return new Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException>() {
+            private ExceptionalIterator<ResultSet, SQLException> internalIter;
+
+            @Override
+            public ExceptionalIterator<ResultSet, SQLException> get() throws SQLException {
+                if (internalIter == null) {
+                    internalIter = new ExceptionalIterator<ResultSet, SQLException>() {
+                        private final Holder<ResultSet> resultSetHolder = new Holder<>();
+                        private int updateCount = stmt.getUpdateCount();
+                        private boolean isNextResultSet = updateCount == -1 ? true : false;
+
+                        @Override
+                        public boolean hasNext() throws SQLException {
+                            if (resultSetHolder.isNull()) {
+                                while (isNextResultSet || updateCount != -1) {
+                                    if (isNextResultSet) {
+                                        resultSetHolder.setValue(stmt.getResultSet());
+                                        isNextResultSet = false;
+                                        updateCount = 0; // for next loop.
+
+                                        break;
+                                    } else {
+                                        isNextResultSet = stmt.getMoreResults();
+                                        updateCount = stmt.getUpdateCount();
+                                    }
+                                }
+                            }
+
+                            return resultSetHolder.isNotNull();
+                        }
+
+                        @Override
+                        public ResultSet next() throws SQLException {
+                            if (hasNext() == false) {
+                                throw new NoSuchElementException();
+                            }
+
+                            return resultSetHolder.getAndSet(null);
+                        }
+
+                        @Override
+                        public void close() throws SQLException {
+                            if (resultSetHolder.isNotNull()) {
+                                JdbcUtil.closeQuietly(resultSetHolder.getAndSet(null));
+                            }
+                        }
+                    };
+                }
+
+                return internalIter;
+            }
+        };
+    }
+
+    /**
+     *
+     * @param stmt
+     * @param outputParameterCount
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public static List<Object> getOutputParameters(final CallableStatement stmt, final int outputParameterCount) throws SQLException {
+        N.checkArgNotNull(stmt, "stmt");
+        N.checkArgNotNegative(outputParameterCount, "outputParameterCount");
+
+        final List<Object> result = new ArrayList<>(outputParameterCount);
+        Object value = null;
+
+        for (int i = 1; i <= outputParameterCount; i++) {
+            value = stmt.getObject(i);
+
+            if (value instanceof ResultSet) {
+                final ResultSet rs = (ResultSet) value;
+
+                try {
+                    value = result.add(JdbcUtil.extractData(rs));
+                } finally {
+                    JdbcUtil.closeQuietly(rs);
+                }
+            } else if (value instanceof Blob) {
+                Blob blob = (Blob) value;
+                value = blob.getBytes(1, (int) blob.length());
+            } else if (value instanceof Clob) {
+                Clob clob = (Clob) value;
+                value = clob.getSubString(1, (int) clob.length());
+            }
+
+            result.add(value);
+        }
+
+        return result;
+    }
+
     /**
      * Does table exist.
      *
@@ -4667,6 +4786,10 @@ public final class JdbcUtil {
         ResultExtractor<DataSet> TO_DATA_SET = new ResultExtractor<DataSet>() {
             @Override
             public DataSet apply(final ResultSet rs) throws SQLException {
+                if (rs == null) {
+                    return N.newEmptyDataSet();
+                }
+
                 return JdbcUtil.extractData(rs);
             }
         };

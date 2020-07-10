@@ -3790,7 +3790,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    private ResultSet executeQuery() throws SQLException {
+    protected ResultSet executeQuery() throws SQLException {
         if (!isFetchDirectionSet) {
             stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
         }
