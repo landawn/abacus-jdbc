@@ -3965,7 +3965,12 @@ public final class JdbcUtil {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
-        final ExceptionalIterator<T, SQLException> iter = new ExceptionalIterator<T, SQLException>() {
+        return ExceptionalStream.newStream(iterate(resultSet, rowMapper, null));
+    }
+
+    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final RowMapper<T> rowMapper,
+            final Throwables.Runnable<SQLException> onClose) {
+        return new ExceptionalIterator<T, SQLException>() {
             private boolean hasNext;
 
             @Override
@@ -3998,9 +4003,73 @@ public final class JdbcUtil {
 
                 hasNext = false;
             }
-        };
 
-        return ExceptionalStream.newStream(iter);
+            @Override
+            public long count() throws SQLException {
+                long cnt = hasNext ? 1 : 0;
+                hasNext = false;
+
+                while (resultSet.next()) {
+                    cnt++;
+                }
+
+                return cnt;
+            }
+
+            @Override
+            public void close() throws SQLException {
+                if (onClose != null) {
+                    onClose.run();
+                }
+            }
+        };
+    }
+
+    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<T> rowMapper) {
+        N.checkArgNotNull(resultSet, "resultSet");
+        N.checkArgNotNull(rowFilter, "rowFilter");
+        N.checkArgNotNull(rowMapper, "rowMapper");
+
+        return ExceptionalStream.newStream(iterate(resultSet, rowFilter, rowMapper, null));
+    }
+
+    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<T> rowMapper,
+            final Throwables.Runnable<SQLException> onClose) {
+        return new ExceptionalIterator<T, SQLException>() {
+            private boolean hasNext;
+
+            @Override
+            public boolean hasNext() throws SQLException {
+                if (hasNext == false) {
+                    while (resultSet.next()) {
+                        if (rowFilter.test(resultSet)) {
+                            hasNext = true;
+                            break;
+                        }
+                    }
+                }
+
+                return hasNext;
+            }
+
+            @Override
+            public T next() throws SQLException {
+                if (hasNext() == false) {
+                    throw new NoSuchElementException();
+                }
+
+                hasNext = false;
+
+                return rowMapper.apply(resultSet);
+            }
+
+            @Override
+            public void close() throws SQLException {
+                if (onClose != null) {
+                    onClose.run();
+                }
+            }
+        };
     }
 
     /**
@@ -4015,7 +4084,12 @@ public final class JdbcUtil {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
-        final ExceptionalIterator<T, SQLException> iter = new ExceptionalIterator<T, SQLException>() {
+        return ExceptionalStream.newStream(iterate(resultSet, rowMapper, null));
+    }
+
+    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowMapper<T> rowMapper,
+            final Throwables.Runnable<SQLException> onClose) {
+        return new ExceptionalIterator<T, SQLException>() {
             private List<String> columnLabels = null;
             private boolean hasNext;
 
@@ -4056,7 +4130,8 @@ public final class JdbcUtil {
 
             @Override
             public long count() throws SQLException {
-                long cnt = 0;
+                long cnt = hasNext ? 1 : 0;
+                hasNext = false;
 
                 while (resultSet.next()) {
                     cnt++;
@@ -4064,9 +4139,66 @@ public final class JdbcUtil {
 
                 return cnt;
             }
-        };
 
-        return ExceptionalStream.newStream(iter);
+            @Override
+            public void close() throws SQLException {
+                if (onClose != null) {
+                    onClose.run();
+                }
+            }
+        };
+    }
+
+    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) {
+        N.checkArgNotNull(resultSet, "resultSet");
+        N.checkArgNotNull(rowFilter, "rowFilter");
+        N.checkArgNotNull(rowMapper, "rowMapper");
+
+        return ExceptionalStream.newStream(iterate(resultSet, rowFilter, rowMapper, null));
+    }
+
+    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper,
+            final Throwables.Runnable<SQLException> onClose) {
+        return new ExceptionalIterator<T, SQLException>() {
+            private List<String> columnLabels = null;
+            private boolean hasNext;
+
+            @Override
+            public boolean hasNext() throws SQLException {
+                if (columnLabels == null) {
+                    columnLabels = JdbcUtil.getColumnLabelList(resultSet);
+                }
+
+                if (hasNext == false) {
+                    while (resultSet.next()) {
+                        if (rowFilter.test(resultSet, columnLabels)) {
+                            hasNext = true;
+                            break;
+                        }
+                    }
+                }
+
+                return hasNext;
+            }
+
+            @Override
+            public T next() throws SQLException {
+                if (hasNext() == false) {
+                    throw new NoSuchElementException();
+                }
+
+                hasNext = false;
+
+                return rowMapper.apply(resultSet, columnLabels);
+            }
+
+            @Override
+            public void close() throws SQLException {
+                if (onClose != null) {
+                    onClose.run();
+                }
+            }
+        };
     }
 
     /**
@@ -4126,6 +4258,19 @@ public final class JdbcUtil {
                 .onClose(() -> supplier.get().close());
     }
 
+    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowFilter rowFilter, final RowMapper<T> rowMapper) {
+        N.checkArgNotNull(stmt, "stmt");
+        N.checkArgNotNull(rowFilter, "rowFilter");
+        N.checkArgNotNull(rowMapper, "rowMapper");
+
+        final Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException> supplier = iterateResultSets(stmt);
+
+        return ExceptionalStream.of(Array.asList(supplier), SQLException.class)
+                .flatMap(it -> ExceptionalStream.newStream(it.get()))
+                .flatMap(rs -> JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
+                .onClose(() -> supplier.get().close());
+    }
+
     public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowMapper<T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -4135,6 +4280,20 @@ public final class JdbcUtil {
         return ExceptionalStream.of(Array.asList(supplier), SQLException.class)
                 .flatMap(it -> ExceptionalStream.newStream(it.get()))
                 .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
+                .onClose(() -> supplier.get().close());
+    }
+
+    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter,
+            final BiRowMapper<T> rowMapper) {
+        N.checkArgNotNull(stmt, "stmt");
+        N.checkArgNotNull(rowFilter, "rowFilter");
+        N.checkArgNotNull(rowMapper, "rowMapper");
+
+        final Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException> supplier = iterateResultSets(stmt);
+
+        return ExceptionalStream.of(Array.asList(supplier), SQLException.class)
+                .flatMap(it -> ExceptionalStream.newStream(it.get()))
+                .flatMap(rs -> JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
                 .onClose(() -> supplier.get().close());
     }
 

@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 
@@ -40,7 +39,6 @@ import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
-import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowConsumer;
@@ -2089,7 +2087,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         }
     }
 
-    private static final Type<Character> charType = TypeFactory.getType(char.class);
+    static final Type<Character> charType = TypeFactory.getType(char.class);
 
     /**
      * Query for char.
@@ -3028,94 +3026,12 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
-        final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
-                .of(new Throwables.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
-                    private ExceptionalIterator<T, SQLException> internalIter;
+        final Throwables.Supplier<ResultSet, SQLException> supplier = () -> executeQuery();
 
-                    @Override
-                    public ExceptionalIterator<T, SQLException> get() throws SQLException {
-                        if (internalIter == null) {
-                            ResultSet rs = null;
-
-                            try {
-                                rs = executeQuery();
-                                final ResultSet resultSet = rs;
-
-                                internalIter = new ExceptionalIterator<T, SQLException>() {
-                                    private boolean hasNext;
-
-                                    @Override
-                                    public boolean hasNext() throws SQLException {
-                                        if (hasNext == false) {
-                                            hasNext = resultSet.next();
-                                        }
-
-                                        return hasNext;
-                                    }
-
-                                    @Override
-                                    public T next() throws SQLException {
-                                        if (hasNext() == false) {
-                                            throw new NoSuchElementException();
-                                        }
-
-                                        hasNext = false;
-
-                                        return rowMapper.apply(resultSet);
-                                    }
-
-                                    @Override
-                                    public void skip(long n) throws SQLException {
-                                        N.checkArgNotNegative(n, "n");
-
-                                        final long m = hasNext ? n - 1 : n;
-                                        hasNext = false;
-
-                                        JdbcUtil.skip(resultSet, m);
-                                    }
-
-                                    @Override
-                                    public long count() throws SQLException {
-                                        long cnt = hasNext ? 1 : 0;
-                                        hasNext = false;
-
-                                        while (resultSet.next()) {
-                                            cnt++;
-                                        }
-
-                                        return cnt;
-                                    }
-
-                                    @Override
-                                    public void close() throws SQLException {
-                                        try {
-                                            JdbcUtil.closeQuietly(resultSet);
-                                        } finally {
-                                            closeAfterExecutionIfAllowed();
-                                        }
-                                    }
-                                };
-                            } finally {
-                                if (internalIter == null) {
-                                    try {
-                                        JdbcUtil.closeQuietly(rs);
-                                    } finally {
-                                        closeAfterExecutionIfAllowed();
-                                    }
-                                }
-                            }
-                        }
-
-                        return internalIter;
-                    }
-                });
-
-        return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
-            @Override
-            public void run() throws SQLException {
-                lazyIter.close();
-            }
-        });
+        return ExceptionalStream.just(supplier, SQLException.class)
+                .map(it -> it.get())
+                .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
+                .onClose(() -> closeAfterExecutionIfAllowed());
     }
 
     // Will it cause confusion if it's called in transaction?
@@ -3131,99 +3047,12 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
-        final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
-                .of(new Throwables.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
-                    private ExceptionalIterator<T, SQLException> internalIter;
+        final Throwables.Supplier<ResultSet, SQLException> supplier = () -> executeQuery();
 
-                    @Override
-                    public ExceptionalIterator<T, SQLException> get() throws SQLException {
-                        if (internalIter == null) {
-                            ResultSet rs = null;
-
-                            try {
-                                rs = executeQuery();
-                                final ResultSet resultSet = rs;
-
-                                internalIter = new ExceptionalIterator<T, SQLException>() {
-                                    private List<String> columnLabels = null;
-                                    private boolean hasNext;
-
-                                    @Override
-                                    public boolean hasNext() throws SQLException {
-                                        if (hasNext == false) {
-                                            hasNext = resultSet.next();
-                                        }
-
-                                        return hasNext;
-                                    }
-
-                                    @Override
-                                    public T next() throws SQLException {
-                                        if (hasNext() == false) {
-                                            throw new NoSuchElementException();
-                                        }
-
-                                        hasNext = false;
-
-                                        if (columnLabels == null) {
-                                            columnLabels = JdbcUtil.getColumnLabelList(resultSet);
-                                        }
-
-                                        return rowMapper.apply(resultSet, columnLabels);
-                                    }
-
-                                    @Override
-                                    public void skip(long n) throws SQLException {
-                                        N.checkArgNotNegative(n, "n");
-
-                                        final long m = hasNext ? n - 1 : n;
-                                        hasNext = false;
-
-                                        JdbcUtil.skip(resultSet, m);
-                                    }
-
-                                    @Override
-                                    public long count() throws SQLException {
-                                        long cnt = hasNext ? 1 : 0;
-                                        hasNext = false;
-
-                                        while (resultSet.next()) {
-                                            cnt++;
-                                        }
-
-                                        return cnt;
-                                    }
-
-                                    @Override
-                                    public void close() throws SQLException {
-                                        try {
-                                            JdbcUtil.closeQuietly(resultSet);
-                                        } finally {
-                                            closeAfterExecutionIfAllowed();
-                                        }
-                                    }
-                                };
-                            } finally {
-                                if (internalIter == null) {
-                                    try {
-                                        JdbcUtil.closeQuietly(rs);
-                                    } finally {
-                                        closeAfterExecutionIfAllowed();
-                                    }
-                                }
-                            }
-                        }
-
-                        return internalIter;
-                    }
-                });
-
-        return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
-            @Override
-            public void run() throws SQLException {
-                lazyIter.close();
-            }
-        });
+        return ExceptionalStream.just(supplier, SQLException.class)
+                .map(it -> it.get())
+                .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
+                .onClose(() -> closeAfterExecutionIfAllowed());
     }
 
     // Will it cause confusion if it's called in transaction?
@@ -3241,77 +3070,12 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
-        final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
-                .of(new Throwables.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
-                    private ExceptionalIterator<T, SQLException> internalIter;
+        final Throwables.Supplier<ResultSet, SQLException> supplier = () -> executeQuery();
 
-                    @Override
-                    public ExceptionalIterator<T, SQLException> get() throws SQLException {
-                        if (internalIter == null) {
-                            ResultSet rs = null;
-
-                            try {
-                                rs = executeQuery();
-                                final ResultSet resultSet = rs;
-
-                                internalIter = new ExceptionalIterator<T, SQLException>() {
-                                    private boolean hasNext;
-
-                                    @Override
-                                    public boolean hasNext() throws SQLException {
-                                        if (hasNext == false) {
-                                            while (resultSet.next()) {
-                                                if (rowFilter.test(resultSet)) {
-                                                    hasNext = true;
-                                                    break;
-                                                }
-                                            }
-                                        }
-
-                                        return hasNext;
-                                    }
-
-                                    @Override
-                                    public T next() throws SQLException {
-                                        if (hasNext() == false) {
-                                            throw new NoSuchElementException();
-                                        }
-
-                                        hasNext = false;
-
-                                        return rowMapper.apply(resultSet);
-                                    }
-
-                                    @Override
-                                    public void close() throws SQLException {
-                                        try {
-                                            JdbcUtil.closeQuietly(resultSet);
-                                        } finally {
-                                            closeAfterExecutionIfAllowed();
-                                        }
-                                    }
-                                };
-                            } finally {
-                                if (internalIter == null) {
-                                    try {
-                                        JdbcUtil.closeQuietly(rs);
-                                    } finally {
-                                        closeAfterExecutionIfAllowed();
-                                    }
-                                }
-                            }
-                        }
-
-                        return internalIter;
-                    }
-                });
-
-        return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
-            @Override
-            public void run() throws SQLException {
-                lazyIter.close();
-            }
-        });
+        return ExceptionalStream.just(supplier, SQLException.class)
+                .map(it -> it.get())
+                .flatMap(rs -> JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
+                .onClose(() -> closeAfterExecutionIfAllowed());
     }
 
     // Will it cause confusion if it's called in transaction?
@@ -3329,82 +3093,12 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
-        final ExceptionalIterator<T, SQLException> lazyIter = ExceptionalIterator
-                .of(new Throwables.Supplier<ExceptionalIterator<T, SQLException>, SQLException>() {
-                    private ExceptionalIterator<T, SQLException> internalIter;
+        final Throwables.Supplier<ResultSet, SQLException> supplier = () -> executeQuery();
 
-                    @Override
-                    public ExceptionalIterator<T, SQLException> get() throws SQLException {
-                        if (internalIter == null) {
-                            ResultSet rs = null;
-
-                            try {
-                                rs = executeQuery();
-                                final ResultSet resultSet = rs;
-
-                                internalIter = new ExceptionalIterator<T, SQLException>() {
-                                    private List<String> columnLabels = null;
-                                    private boolean hasNext;
-
-                                    @Override
-                                    public boolean hasNext() throws SQLException {
-                                        if (columnLabels == null) {
-                                            columnLabels = JdbcUtil.getColumnLabelList(resultSet);
-                                        }
-
-                                        if (hasNext == false) {
-                                            while (resultSet.next()) {
-                                                if (rowFilter.test(resultSet, columnLabels)) {
-                                                    hasNext = true;
-                                                    break;
-                                                }
-                                            }
-                                        }
-
-                                        return hasNext;
-                                    }
-
-                                    @Override
-                                    public T next() throws SQLException {
-                                        if (hasNext() == false) {
-                                            throw new NoSuchElementException();
-                                        }
-
-                                        hasNext = false;
-
-                                        return rowMapper.apply(resultSet, columnLabels);
-                                    }
-
-                                    @Override
-                                    public void close() throws SQLException {
-                                        try {
-                                            JdbcUtil.closeQuietly(resultSet);
-                                        } finally {
-                                            closeAfterExecutionIfAllowed();
-                                        }
-                                    }
-                                };
-                            } finally {
-                                if (internalIter == null) {
-                                    try {
-                                        JdbcUtil.closeQuietly(rs);
-                                    } finally {
-                                        closeAfterExecutionIfAllowed();
-                                    }
-                                }
-                            }
-                        }
-
-                        return internalIter;
-                    }
-                });
-
-        return ExceptionalStream.newStream(lazyIter).onClose(new Throwables.Runnable<SQLException>() {
-            @Override
-            public void run() throws SQLException {
-                lazyIter.close();
-            }
-        });
+        return ExceptionalStream.just(supplier, SQLException.class)
+                .map(it -> it.get())
+                .flatMap(rs -> JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
+                .onClose(() -> closeAfterExecutionIfAllowed());
     }
 
     /**

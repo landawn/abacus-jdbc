@@ -3335,7 +3335,7 @@ final class DaoImpl {
                     final Predicate<Class<?>> isRowMapperOrResultExtractor = it -> JdbcUtil.ResultExtractor.class.isAssignableFrom(it)
                             || BiResultExtractor.class.isAssignableFrom(it) || RowMapper.class.isAssignableFrom(it) || BiRowMapper.class.isAssignableFrom(it);
 
-                    if (isNamedQuery) {
+                    if (isNamedQuery || isCall) {
                         // @Bind parameters are not always required for named query. It's not required if parameter is Entity/Map/EnityId/...
                         //    if (IntStreamEx.range(0, paramLen)
                         //            .noneMatch(i -> StreamEx.of(m.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(Dao.Bind.class)))) {
