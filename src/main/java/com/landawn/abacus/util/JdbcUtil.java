@@ -101,6 +101,7 @@ import com.landawn.abacus.util.Fn.BiConsumers;
 import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.JdbcUtil.Dao.NonDBOperation;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
+import com.landawn.abacus.util.PreparedCallableQuery.OutParam;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.SQLTransaction.CreatedBy;
 import com.landawn.abacus.util.Tuple.Tuple2;
@@ -4359,15 +4360,19 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException the SQL exception
      */
-    public static List<Object> getOutputParameters(final CallableStatement stmt, final int outputParameterCount) throws SQLException {
+    public static List<Object> getOutParameters(final CallableStatement stmt, final List<OutParam> outputParameters) throws SQLException {
         N.checkArgNotNull(stmt, "stmt");
-        N.checkArgNotNegative(outputParameterCount, "outputParameterCount");
 
-        final List<Object> result = new ArrayList<>(outputParameterCount);
+        if (N.isNullOrEmpty(outputParameters)) {
+            return new ArrayList<>();
+        }
+
+        final List<Object> result = new ArrayList<>(outputParameters.size());
         Object value = null;
 
-        for (int i = 1; i <= outputParameterCount; i++) {
-            value = stmt.getObject(i);
+        for (OutParam outputParameter : outputParameters) {
+            value = outputParameter.getParameterIndex() > 0 ? stmt.getObject(outputParameter.getParameterIndex())
+                    : stmt.getObject(outputParameter.getParameterName());
 
             if (value instanceof ResultSet) {
                 final ResultSet rs = (ResultSet) value;

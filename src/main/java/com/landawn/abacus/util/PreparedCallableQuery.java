@@ -24,18 +24,25 @@ import java.sql.CallableStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLType;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
+import com.landawn.abacus.util.JdbcUtil.ParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * The backed {@code PreparedStatement/CallableStatement} will be closed by default
@@ -69,7 +76,7 @@ import com.landawn.abacus.util.JdbcUtil.RowMapper;
 public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStatement, PreparedCallableQuery> {
 
     final CallableStatement stmt;
-    int outParameterCount = 0;
+    List<OutParam> outParams;
 
     PreparedCallableQuery(CallableStatement stmt) {
         super(stmt);
@@ -818,9 +825,18 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      */
     public PreparedCallableQuery registerOutParameter(int parameterIndex, int sqlType) throws SQLException {
         stmt.registerOutParameter(parameterIndex, sqlType);
-        outParameterCount++;
+
+        addOutputParameters(new OutParam(parameterIndex, null, sqlType, null, -1));
 
         return this;
+    }
+
+    private void addOutputParameters(OutParam outputParameter) {
+        if (outParams == null) {
+            outParams = new ArrayList<>();
+        }
+
+        outParams.add(outputParameter);
     }
 
     /**
@@ -834,7 +850,8 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      */
     public PreparedCallableQuery registerOutParameter(int parameterIndex, int sqlType, int scale) throws SQLException {
         stmt.registerOutParameter(parameterIndex, sqlType, scale);
-        outParameterCount++;
+
+        addOutputParameters(new OutParam(parameterIndex, null, sqlType, null, scale));
 
         return this;
     }
@@ -850,7 +867,8 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      */
     public PreparedCallableQuery registerOutParameter(int parameterIndex, int sqlType, String typeName) throws SQLException {
         stmt.registerOutParameter(parameterIndex, sqlType, typeName);
-        outParameterCount++;
+
+        addOutputParameters(new OutParam(parameterIndex, null, sqlType, typeName, -1));
 
         return this;
     }
@@ -865,7 +883,8 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      */
     public PreparedCallableQuery registerOutParameter(String parameterName, int sqlType) throws SQLException {
         stmt.registerOutParameter(parameterName, sqlType);
-        outParameterCount++;
+
+        addOutputParameters(new OutParam(-1, parameterName, sqlType, null, -1));
 
         return this;
     }
@@ -881,7 +900,8 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      */
     public PreparedCallableQuery registerOutParameter(String parameterName, int sqlType, int scale) throws SQLException {
         stmt.registerOutParameter(parameterName, sqlType, scale);
-        outParameterCount++;
+
+        addOutputParameters(new OutParam(-1, parameterName, sqlType, null, scale));
 
         return this;
     }
@@ -897,7 +917,8 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      */
     public PreparedCallableQuery registerOutParameter(String parameterName, int sqlType, String typeName) throws SQLException {
         stmt.registerOutParameter(parameterName, sqlType, typeName);
-        outParameterCount++;
+
+        addOutputParameters(new OutParam(-1, parameterName, sqlType, typeName, -1));
 
         return this;
     }
@@ -912,7 +933,8 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      */
     public PreparedCallableQuery registerOutParameter(int parameterIndex, SQLType sqlType) throws SQLException {
         stmt.registerOutParameter(parameterIndex, sqlType);
-        outParameterCount++;
+
+        addOutputParameters(new OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), null, -1));
 
         return this;
     }
@@ -928,7 +950,8 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      */
     public PreparedCallableQuery registerOutParameter(int parameterIndex, SQLType sqlType, int scale) throws SQLException {
         stmt.registerOutParameter(parameterIndex, sqlType, scale);
-        outParameterCount++;
+
+        addOutputParameters(new OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), null, scale));
 
         return this;
     }
@@ -944,7 +967,8 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      */
     public PreparedCallableQuery registerOutParameter(int parameterIndex, SQLType sqlType, String typeName) throws SQLException {
         stmt.registerOutParameter(parameterIndex, sqlType, typeName);
-        outParameterCount++;
+
+        addOutputParameters(new OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), typeName, -1));
 
         return this;
     }
@@ -959,7 +983,8 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      */
     public PreparedCallableQuery registerOutParameter(String parameterName, SQLType sqlType) throws SQLException {
         stmt.registerOutParameter(parameterName, sqlType);
-        outParameterCount++;
+
+        addOutputParameters(new OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), null, -1));
 
         return this;
     }
@@ -975,7 +1000,8 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      */
     public PreparedCallableQuery registerOutParameter(String parameterName, SQLType sqlType, int scale) throws SQLException {
         stmt.registerOutParameter(parameterName, sqlType, scale);
-        outParameterCount++;
+
+        addOutputParameters(new OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), null, scale));
 
         return this;
     }
@@ -991,7 +1017,8 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      */
     public PreparedCallableQuery registerOutParameter(String parameterName, SQLType sqlType, String typeName) throws SQLException {
         stmt.registerOutParameter(parameterName, sqlType, typeName);
-        outParameterCount++;
+
+        addOutputParameters(new OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), typeName, -1));
 
         return this;
     }
@@ -1003,14 +1030,13 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return
      * @throws SQLException the SQL exception
      */
-    public PreparedCallableQuery registerOutParameters(final Throwables.Function<? super CallableStatement, Integer, SQLException> register)
-            throws SQLException {
+    public PreparedCallableQuery registerOutParameters(final ParametersSetter<? super PreparedCallableQuery> register) throws SQLException {
         checkArgNotNull(register, "register");
 
         boolean noException = false;
 
         try {
-            outParameterCount += register.apply(stmt);
+            register.accept(this);
 
             noException = true;
         } finally {
@@ -1031,14 +1057,14 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return
      * @throws SQLException the SQL exception
      */
-    public <T> PreparedCallableQuery registerOutParameters(final T parameter,
-            final Throwables.BiFunction<? super CallableStatement, ? super T, Integer, SQLException> register) throws SQLException {
+    public <T> PreparedCallableQuery registerOutParameters(final T parameter, final BiParametersSetter<? super PreparedCallableQuery, ? super T> register)
+            throws SQLException {
         checkArgNotNull(register, "register");
 
         boolean noException = false;
 
         try {
-            outParameterCount += register.apply(stmt, parameter);
+            register.accept(this, parameter);
 
             noException = true;
         } finally {
@@ -1078,7 +1104,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param getter
      * @return
      * @throws SQLException the SQL exception
-     * @see JdbcUtil#getOutputParameters(CallableStatement, int)
+     * @see JdbcUtil#getOutParameters(CallableStatement, int)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */
@@ -1094,7 +1120,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param getter
      * @return
      * @throws SQLException the SQL exception
-     * @see JdbcUtil#getOutputParameters(CallableStatement, int)
+     * @see JdbcUtil#getOutParameters(CallableStatement, int)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */
@@ -1107,22 +1133,23 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * Execute then apply.
      *
      * @param <R>
-     * @param getter the first parameter is {@code isFirstResultSet}, the second one is {@code outParameterCount} and third one is the executed {@code CallableStatement}.
+     * @param getter the first parameter is {@code isFirstResultSet}, the second one is {@code outParametes} and third one is the executed {@code CallableStatement}.
      * @return
      * @throws SQLException the SQL exception
-     * @see JdbcUtil#getOutputParameters(CallableStatement, int)
+     * @see JdbcUtil#getOutParameters(CallableStatement, int)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */
-    public <R> R executeThenApply(final Throwables.TriFunction<Boolean, Integer, ? super CallableStatement, ? extends R, SQLException> getter)
+    public <R> R executeThenApply(final Throwables.TriFunction<Boolean, List<OutParam>, ? super CallableStatement, ? extends R, SQLException> getter)
             throws SQLException {
         checkArgNotNull(getter, "getter");
         assertNotClosed();
 
         try {
             final boolean isFirstResultSet = JdbcUtil.execute(stmt);
+            outParams = outParams == null ? N.<OutParam> emptyList() : outParams;
 
-            return getter.apply(isFirstResultSet, outParameterCount, stmt);
+            return getter.apply(isFirstResultSet, outParams, stmt);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1133,7 +1160,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      *
      * @param consumer
      * @throws SQLException the SQL exception
-     * @see JdbcUtil#getOutputParameters(CallableStatement, int)
+     * @see JdbcUtil#getOutParameters(CallableStatement, int)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */
@@ -1147,7 +1174,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      *
      * @param consumer
      * @throws SQLException the SQL exception
-     * @see JdbcUtil#getOutputParameters(CallableStatement, int)
+     * @see JdbcUtil#getOutParameters(CallableStatement, int)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */
@@ -1160,21 +1187,22 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * Execute then apply.
      *
      * @param <R>
-     * @param consumer the first parameter is {@code isFirstResultSet}, the second one is {@code outParameterCount} and third one is the executed {@code CallableStatement}.
+     * @param consumer the first parameter is {@code isFirstResultSet}, the second one is {@code outParametes} and third one is the executed {@code CallableStatement}.
      * @return
      * @throws SQLException the SQL exception
-     * @see JdbcUtil#getOutputParameters(CallableStatement, int)
+     * @see JdbcUtil#getOutParameters(CallableStatement, int)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */
-    public void executeThenAccept(final Throwables.TriConsumer<Boolean, Integer, ? super CallableStatement, SQLException> consumer) throws SQLException {
+    public void executeThenAccept(final Throwables.TriConsumer<Boolean, List<OutParam>, ? super CallableStatement, SQLException> consumer) throws SQLException {
         checkArgNotNull(consumer, "consumer");
         assertNotClosed();
 
         try {
             final boolean isFirstResultSet = JdbcUtil.execute(stmt);
+            outParams = outParams == null ? N.<OutParam> emptyList() : outParams;
 
-            consumer.accept(isFirstResultSet, outParameterCount, stmt);
+            consumer.accept(isFirstResultSet, outParams, stmt);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1237,7 +1265,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         try {
             JdbcUtil.execute(stmt);
 
-            return JdbcUtil.getOutputParameters(stmt, outParameterCount);
+            return JdbcUtil.getOutParameters(stmt, outParams);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1266,7 +1294,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                 }
             }
 
-            return Pair.of(JdbcUtil.getOutputParameters(stmt, outParameterCount), result);
+            return Pair.of(JdbcUtil.getOutParameters(stmt, outParams), result);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1295,9 +1323,20 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                 }
             }
 
-            return Pair.of(JdbcUtil.getOutputParameters(stmt, outParameterCount), result);
+            return Pair.of(JdbcUtil.getOutParameters(stmt, outParams), result);
         } finally {
             closeAfterExecutionIfAllowed();
         }
+    }
+
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Data
+    public static class OutParam {
+        private int parameterIndex;
+        private String parameterName;
+        private int sqlType;
+        private String typeName;
+        private int scale;
     }
 }
