@@ -3920,8 +3920,16 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         }
     }
 
-    private void closeStatement() {
+    /**
+     * @see JdbcUtil#execute(PreparedStatement)
+     * @see JdbcUtil#executeUpdate(PreparedStatement)
+     * @see JdbcUtil#executeUpdate(PreparedStatement)
+     * @see JdbcUtil#clearParameters(PreparedStatement)
+     */
+    protected void closeStatement() {
         try {
+            // stmt.clearParameters(); // cleared by JdbcUtil.clearParameters(stmt) after stmt.execute/executeQuery/executeUpdate.
+
             if (defaultFetchDirection >= 0) {
                 stmt.setFetchDirection(defaultFetchDirection);
             }
