@@ -37,14 +37,12 @@ import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
+import com.landawn.abacus.util.JdbcUtil.OutParam;
+import com.landawn.abacus.util.JdbcUtil.OutParamResult;
 import com.landawn.abacus.util.JdbcUtil.ParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * The backed {@code PreparedStatement/CallableStatement} will be closed by default
@@ -1215,7 +1213,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public List<Object> executeAndGetOutParameters() throws SQLException {
+    public OutParamResult executeAndGetOutParameters() throws SQLException {
         assertNotClosed();
 
         try {
@@ -1293,7 +1291,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code DataSet} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public Pair<DataSet, List<Object>> queryAndGetOutParameters() throws SQLException {
+    public Pair<DataSet, OutParamResult> queryAndGetOutParameters() throws SQLException {
         return queryAndGetOutParameters(ResultExtractor.TO_DATA_SET);
     }
 
@@ -1304,7 +1302,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code R} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <R> Pair<R, List<Object>> queryAndGetOutParameters(final ResultExtractor<R> resultExtrator) throws SQLException {
+    public <R> Pair<R, OutParamResult> queryAndGetOutParameters(final ResultExtractor<R> resultExtrator) throws SQLException {
         checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
@@ -1333,7 +1331,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code R} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <R> Pair<R, List<Object>> queryAndGetOutParameters(final BiResultExtractor<R> resultExtrator) throws SQLException {
+    public <R> Pair<R, OutParamResult> queryAndGetOutParameters(final BiResultExtractor<R> resultExtrator) throws SQLException {
         checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
@@ -1360,7 +1358,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return a list of {@code DataSet} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public Pair<List<DataSet>, List<Object>> queryAllAndGetOutParameters() throws SQLException {
+    public Pair<List<DataSet>, OutParamResult> queryAllAndGetOutParameters() throws SQLException {
         return queryAllAndGetOutParameters(ResultExtractor.TO_DATA_SET);
     }
 
@@ -1371,7 +1369,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <R> Pair<List<R>, List<Object>> queryAllAndGetOutParameters(final ResultExtractor<R> resultExtrator) throws SQLException {
+    public <R> Pair<List<R>, OutParamResult> queryAllAndGetOutParameters(final ResultExtractor<R> resultExtrator) throws SQLException {
         checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
@@ -1399,7 +1397,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <R> Pair<List<R>, List<Object>> queryAllAndGetOutParameters(final BiResultExtractor<R> resultExtrator) throws SQLException {
+    public <R> Pair<List<R>, OutParamResult> queryAllAndGetOutParameters(final BiResultExtractor<R> resultExtrator) throws SQLException {
         checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
@@ -1427,7 +1425,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, List<Object>> listAndGetOutParameters(final Class<T> targetClass) throws SQLException {
+    public <T> Pair<List<T>, OutParamResult> listAndGetOutParameters(final Class<T> targetClass) throws SQLException {
         checkArgNotNull(targetClass, "targetClass");
 
         return listAndGetOutParameters(BiRowMapper.to(targetClass));
@@ -1440,7 +1438,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, List<Object>> listAndGetOutParameters(final RowMapper<T> rowMapper) throws SQLException {
+    public <T> Pair<List<T>, OutParamResult> listAndGetOutParameters(final RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -1468,7 +1466,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, List<Object>> listAndGetOutParameters(final RowFilter rowFilter, final RowMapper<T> rowMapper) throws SQLException {
+    public <T> Pair<List<T>, OutParamResult> listAndGetOutParameters(final RowFilter rowFilter, final RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -1498,7 +1496,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, List<Object>> listAndGetOutParameters(final BiRowMapper<T> rowMapper) throws SQLException {
+    public <T> Pair<List<T>, OutParamResult> listAndGetOutParameters(final BiRowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -1528,7 +1526,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, List<Object>> listAndGetOutParameters(final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) throws SQLException {
+    public <T> Pair<List<T>, OutParamResult> listAndGetOutParameters(final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -1657,7 +1655,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, List<Object>> listAllAndGetOutParameters(final Class<T> targetClass) throws SQLException {
+    public <T> Pair<List<T>, OutParamResult> listAllAndGetOutParameters(final Class<T> targetClass) throws SQLException {
         checkArgNotNull(targetClass, "targetClass");
 
         return listAllAndGetOutParameters(BiRowMapper.to(targetClass));
@@ -1670,7 +1668,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, List<Object>> listAllAndGetOutParameters(final RowMapper<T> rowMapper) throws SQLException {
+    public <T> Pair<List<T>, OutParamResult> listAllAndGetOutParameters(final RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -1693,7 +1691,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, List<Object>> listAllAndGetOutParameters(final RowFilter rowFilter, final RowMapper<T> rowMapper) throws SQLException {
+    public <T> Pair<List<T>, OutParamResult> listAllAndGetOutParameters(final RowFilter rowFilter, final RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -1716,7 +1714,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, List<Object>> listAllAndGetOutParameters(final BiRowMapper<T> rowMapper) throws SQLException {
+    public <T> Pair<List<T>, OutParamResult> listAllAndGetOutParameters(final BiRowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -1739,7 +1737,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, List<Object>> listAllAndGetOutParameters(final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) throws SQLException {
+    public <T> Pair<List<T>, OutParamResult> listAllAndGetOutParameters(final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -1859,16 +1857,5 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         } finally {
             super.closeStatement();
         }
-    }
-
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Data
-    public static class OutParam {
-        private int parameterIndex;
-        private String parameterName;
-        private int sqlType;
-        private String typeName;
-        private int scale;
     }
 }
