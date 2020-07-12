@@ -4651,23 +4651,23 @@ public final class JdbcUtil {
     /**
      *
      * @param stmt
-     * @param outputParams
+     * @param outParams
      * @return
      * @throws SQLException the SQL exception
      */
-    public static OutParamResult getOutParameters(final CallableStatement stmt, final List<OutParam> outputParams) throws SQLException {
+    public static OutParamResult getOutParameters(final CallableStatement stmt, final List<OutParam> outParams) throws SQLException {
         N.checkArgNotNull(stmt, "stmt");
 
-        if (N.isNullOrEmpty(outputParams)) {
+        if (N.isNullOrEmpty(outParams)) {
             return new OutParamResult(N.<OutParam> emptyList(), N.<Object, Object> emptyMap());
         }
 
-        final Map<Object, Object> outParamValues = new LinkedHashMap<>(outputParams.size());
+        final Map<Object, Object> outParamValues = new LinkedHashMap<>(outParams.size());
         OutParameterGetter outParameterGetter = null;
         Object key = null;
         Object value = null;
 
-        for (OutParam outParam : outputParams) {
+        for (OutParam outParam : outParams) {
             outParameterGetter = sqlTypeGetterMap.getOrDefault(outParam.getSqlType(), objOutParameterGetter);
 
             key = outParam.getParameterIndex() > 0 ? outParam.getParameterIndex() : outParam.getParameterName();
@@ -4697,7 +4697,7 @@ public final class JdbcUtil {
             outParamValues.put(key, value);
         }
 
-        return new OutParamResult(outputParams, outParamValues);
+        return new OutParamResult(outParams, outParamValues);
     }
 
     /**
