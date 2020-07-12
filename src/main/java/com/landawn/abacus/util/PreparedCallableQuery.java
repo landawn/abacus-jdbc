@@ -826,17 +826,17 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     public PreparedCallableQuery registerOutParameter(int parameterIndex, int sqlType) throws SQLException {
         stmt.registerOutParameter(parameterIndex, sqlType);
 
-        addOutputParameters(new OutParam(parameterIndex, null, sqlType, null, -1));
+        addOutParameters(new OutParam(parameterIndex, null, sqlType, null, -1));
 
         return this;
     }
 
-    private void addOutputParameters(OutParam outputParameter) {
+    private void addOutParameters(OutParam outParameter) {
         if (outParams == null) {
             outParams = new ArrayList<>();
         }
 
-        outParams.add(outputParameter);
+        outParams.add(outParameter);
     }
 
     /**
@@ -851,7 +851,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     public PreparedCallableQuery registerOutParameter(int parameterIndex, int sqlType, int scale) throws SQLException {
         stmt.registerOutParameter(parameterIndex, sqlType, scale);
 
-        addOutputParameters(new OutParam(parameterIndex, null, sqlType, null, scale));
+        addOutParameters(new OutParam(parameterIndex, null, sqlType, null, scale));
 
         return this;
     }
@@ -868,7 +868,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     public PreparedCallableQuery registerOutParameter(int parameterIndex, int sqlType, String typeName) throws SQLException {
         stmt.registerOutParameter(parameterIndex, sqlType, typeName);
 
-        addOutputParameters(new OutParam(parameterIndex, null, sqlType, typeName, -1));
+        addOutParameters(new OutParam(parameterIndex, null, sqlType, typeName, -1));
 
         return this;
     }
@@ -884,7 +884,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     public PreparedCallableQuery registerOutParameter(String parameterName, int sqlType) throws SQLException {
         stmt.registerOutParameter(parameterName, sqlType);
 
-        addOutputParameters(new OutParam(-1, parameterName, sqlType, null, -1));
+        addOutParameters(new OutParam(-1, parameterName, sqlType, null, -1));
 
         return this;
     }
@@ -901,7 +901,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     public PreparedCallableQuery registerOutParameter(String parameterName, int sqlType, int scale) throws SQLException {
         stmt.registerOutParameter(parameterName, sqlType, scale);
 
-        addOutputParameters(new OutParam(-1, parameterName, sqlType, null, scale));
+        addOutParameters(new OutParam(-1, parameterName, sqlType, null, scale));
 
         return this;
     }
@@ -918,7 +918,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     public PreparedCallableQuery registerOutParameter(String parameterName, int sqlType, String typeName) throws SQLException {
         stmt.registerOutParameter(parameterName, sqlType, typeName);
 
-        addOutputParameters(new OutParam(-1, parameterName, sqlType, typeName, -1));
+        addOutParameters(new OutParam(-1, parameterName, sqlType, typeName, -1));
 
         return this;
     }
@@ -934,7 +934,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     public PreparedCallableQuery registerOutParameter(int parameterIndex, SQLType sqlType) throws SQLException {
         stmt.registerOutParameter(parameterIndex, sqlType);
 
-        addOutputParameters(new OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), null, -1));
+        addOutParameters(new OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), null, -1));
 
         return this;
     }
@@ -951,7 +951,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     public PreparedCallableQuery registerOutParameter(int parameterIndex, SQLType sqlType, int scale) throws SQLException {
         stmt.registerOutParameter(parameterIndex, sqlType, scale);
 
-        addOutputParameters(new OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), null, scale));
+        addOutParameters(new OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), null, scale));
 
         return this;
     }
@@ -968,7 +968,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     public PreparedCallableQuery registerOutParameter(int parameterIndex, SQLType sqlType, String typeName) throws SQLException {
         stmt.registerOutParameter(parameterIndex, sqlType, typeName);
 
-        addOutputParameters(new OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), typeName, -1));
+        addOutParameters(new OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), typeName, -1));
 
         return this;
     }
@@ -984,7 +984,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     public PreparedCallableQuery registerOutParameter(String parameterName, SQLType sqlType) throws SQLException {
         stmt.registerOutParameter(parameterName, sqlType);
 
-        addOutputParameters(new OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), null, -1));
+        addOutParameters(new OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), null, -1));
 
         return this;
     }
@@ -1001,7 +1001,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     public PreparedCallableQuery registerOutParameter(String parameterName, SQLType sqlType, int scale) throws SQLException {
         stmt.registerOutParameter(parameterName, sqlType, scale);
 
-        addOutputParameters(new OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), null, scale));
+        addOutParameters(new OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), null, scale));
 
         return this;
     }
@@ -1018,7 +1018,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     public PreparedCallableQuery registerOutParameter(String parameterName, SQLType sqlType, String typeName) throws SQLException {
         stmt.registerOutParameter(parameterName, sqlType, typeName);
 
-        addOutputParameters(new OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), typeName, -1));
+        addOutParameters(new OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), typeName, -1));
 
         return this;
     }
