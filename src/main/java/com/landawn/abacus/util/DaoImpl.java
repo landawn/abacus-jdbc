@@ -586,7 +586,7 @@ final class DaoImpl {
         final Class<?> returnType = method.getReturnType();
         final int paramLen = paramTypes.length;
 
-        if (op == OP.list) {
+        if (op == OP.list || op == OP.listAll) {
             if (Collection.class.equals(returnType) || !(Collection.class.isAssignableFrom(returnType))) {
                 throw new UnsupportedOperationException(
                         "The result type of list OP must be sub type of Collection, can't be: " + returnType + " in method: " + fullClassMethodName);
@@ -697,10 +697,12 @@ final class DaoImpl {
 
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Method method,
-            final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final OP op, final String fullClassMethodName) {
-        method.getName();
+            final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final OP op, final boolean isCall, final String fullClassMethodName) {
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
+        final Class<?> firstReturnEleType = getFirstReturnEleType(method);
+        final Class<?> firstReturnEleEleType = getFirstReturnEleEleType(method);
+
         final int paramLen = paramTypes.length;
         final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
         final boolean isListQuery = isListQuery(method, op, fullClassMethodName);
@@ -745,12 +747,257 @@ final class DaoImpl {
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         }
 
+        if (isCall) {
+            if (op == OP.executeAndGetOutParameters) {
+                if (!List.class.isAssignableFrom(returnType)) {
+                    throw new UnsupportedOperationException(
+                            "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+                }
+
+                return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).executeAndGetOutParameters();
+            } else if (op == OP.listAll) {
+                if (Pair.class.isAssignableFrom(returnType)) {
+                    if (firstReturnEleType == null || !List.class.isAssignableFrom(firstReturnEleType)) {
+                        throw new UnsupportedOperationException(
+                                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+                    }
+
+                    if (hasRowMapperOrExtractor) {
+                        if (RowMapper.class.isAssignableFrom(lastParamType)) {
+                            if (hasRowFilter) {
+                                return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery)
+                                        .listAllAndGetOutParameters((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]);
+                            } else {
+                                return (preparedQuery,
+                                        args) -> (R) ((PreparedCallableQuery) preparedQuery).listAllAndGetOutParameters((RowMapper) args[paramLen - 1]);
+                            }
+                        } else if (BiRowMapper.class.isAssignableFrom(lastParamType)) {
+                            if (hasRowFilter) {
+                                return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery)
+                                        .listAllAndGetOutParameters((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1]);
+                            } else {
+                                return (preparedQuery,
+                                        args) -> (R) ((PreparedCallableQuery) preparedQuery).listAllAndGetOutParameters((BiRowMapper) args[paramLen - 1]);
+                            }
+                        } else {
+                            throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
+                                    + " is not supported the specified op: " + op);
+                        }
+                    } else {
+                        if (firstReturnEleEleType == null) {
+                            throw new UnsupportedOperationException(
+                                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+                        }
+
+                        return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).listAllAndGetOutParameters(firstReturnEleEleType);
+                    }
+                } else {
+                    if (!List.class.isAssignableFrom(returnType)) {
+                        throw new UnsupportedOperationException(
+                                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+                    }
+
+                    if (hasRowMapperOrExtractor) {
+                        if (RowMapper.class.isAssignableFrom(lastParamType)) {
+                            if (hasRowFilter) {
+                                return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).listAll((RowFilter) args[paramLen - 2],
+                                        (RowMapper) args[paramLen - 1]);
+                            } else {
+                                return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).listAll((RowMapper) args[paramLen - 1]);
+                            }
+                        } else if (BiRowMapper.class.isAssignableFrom(lastParamType)) {
+                            if (hasRowFilter) {
+                                return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).listAll((BiRowFilter) args[paramLen - 2],
+                                        (BiRowMapper) args[paramLen - 1]);
+                            } else {
+                                return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).listAll((BiRowMapper) args[paramLen - 1]);
+                            }
+                        } else {
+                            throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
+                                    + " is not supported the specified op: " + op);
+                        }
+                    } else {
+                        if (firstReturnEleType == null) {
+                            throw new UnsupportedOperationException(
+                                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+                        }
+
+                        return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).listAll(firstReturnEleType);
+                    }
+                }
+            } else if (op == OP.queryAll) {
+                if (Pair.class.isAssignableFrom(returnType)) {
+                    if (firstReturnEleType == null || !List.class.isAssignableFrom(firstReturnEleType)) {
+                        throw new UnsupportedOperationException(
+                                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+                    }
+
+                    if (hasRowMapperOrExtractor) {
+                        if (ResultExtractor.class.isAssignableFrom(lastParamType)) {
+                            return (preparedQuery,
+                                    args) -> (R) ((PreparedCallableQuery) preparedQuery).queryAllAndGetOutParameters((ResultExtractor) args[paramLen - 1]);
+                        } else if (BiResultExtractor.class.isAssignableFrom(lastParamType)) {
+                            return (preparedQuery,
+                                    args) -> (R) ((PreparedCallableQuery) preparedQuery).queryAllAndGetOutParameters((BiResultExtractor) args[paramLen - 1]);
+                        } else {
+                            throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
+                                    + " is not supported the specified op: " + op);
+                        }
+                    } else {
+                        if (firstReturnEleEleType == null || !DataSet.class.isAssignableFrom(firstReturnEleEleType)) {
+                            throw new UnsupportedOperationException(
+                                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+                        }
+
+                        return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).queryAllAndGetOutParameters();
+                    }
+
+                } else {
+                    if (!List.class.isAssignableFrom(returnType)) {
+                        throw new UnsupportedOperationException(
+                                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+                    }
+
+                    if (hasRowMapperOrExtractor) {
+                        if (ResultExtractor.class.isAssignableFrom(lastParamType)) {
+                            return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).queryAll((ResultExtractor) args[paramLen - 1]);
+                        } else if (BiResultExtractor.class.isAssignableFrom(lastParamType)) {
+                            return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).queryAll((BiResultExtractor) args[paramLen - 1]);
+                        } else {
+                            throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
+                                    + " is not supported the specified op: " + op);
+                        }
+                    } else {
+                        if (firstReturnEleType == null || !DataSet.class.isAssignableFrom(firstReturnEleType)) {
+                            throw new UnsupportedOperationException(
+                                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+                        }
+
+                        return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).queryAll();
+                    }
+                }
+            } else if (op == OP.streamAll) {
+                if (!(ExceptionalStream.class.isAssignableFrom(returnType) || Stream.class.isAssignableFrom(returnType))) {
+                    throw new UnsupportedOperationException(
+                            "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+                }
+
+                final boolean unchecked = Stream.class.isAssignableFrom(returnType);
+
+                if (hasRowMapperOrExtractor) {
+                    if (RowMapper.class.isAssignableFrom(lastParamType)) {
+                        if (hasRowFilter) {
+                            if (unchecked) {
+                                return (preparedQuery,
+                                        args) -> (R) ((PreparedCallableQuery) preparedQuery)
+                                                .streamAll((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1])
+                                                .unchecked();
+                            } else {
+                                return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).streamAll((RowFilter) args[paramLen - 2],
+                                        (RowMapper) args[paramLen - 1]);
+                            }
+                        } else {
+                            if (unchecked) {
+                                return (preparedQuery,
+                                        args) -> (R) ((PreparedCallableQuery) preparedQuery).streamAll((RowMapper) args[paramLen - 1]).unchecked();
+                            } else {
+                                return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).streamAll((RowMapper) args[paramLen - 1]);
+                            }
+                        }
+                    } else if (BiRowMapper.class.isAssignableFrom(lastParamType)) {
+                        if (hasRowFilter) {
+                            if (unchecked) {
+                                return (preparedQuery,
+                                        args) -> (R) ((PreparedCallableQuery) preparedQuery)
+                                                .streamAll((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1])
+                                                .unchecked();
+                            } else {
+                                return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).streamAll((BiRowFilter) args[paramLen - 2],
+                                        (BiRowMapper) args[paramLen - 1]);
+                            }
+                        } else {
+                            if (unchecked) {
+                                return (preparedQuery,
+                                        args) -> (R) ((PreparedCallableQuery) preparedQuery).streamAll((BiRowMapper) args[paramLen - 1]).unchecked();
+                            } else {
+                                return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).streamAll((BiRowMapper) args[paramLen - 1]);
+                            }
+                        }
+                    } else {
+                        throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
+                                + " is not supported the specified op: " + op);
+                    }
+                } else {
+                    if (firstReturnEleType == null) {
+                        throw new UnsupportedOperationException(
+                                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+                    }
+
+                    if (unchecked) {
+                        return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).streamAll(firstReturnEleType).unchecked();
+                    } else {
+                        return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).streamAll(firstReturnEleType);
+                    }
+                }
+            }
+
+            if (Pair.class.isAssignableFrom(returnType)) {
+                if (op == OP.list || op == OP.query || op == OP.DEFAULT) {
+                    if (firstReturnEleType == null || !List.class.isAssignableFrom(firstReturnEleType)) {
+                        throw new UnsupportedOperationException(
+                                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+                    }
+
+                    if (hasRowMapperOrExtractor) {
+                        if (RowMapper.class.isAssignableFrom(lastParamType)) {
+                            if (hasRowFilter) {
+                                return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery)
+                                        .listAndGetOutParameters((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]);
+                            } else {
+                                return (preparedQuery,
+                                        args) -> (R) ((PreparedCallableQuery) preparedQuery).listAndGetOutParameters((RowMapper) args[paramLen - 1]);
+                            }
+                        } else if (BiRowMapper.class.isAssignableFrom(lastParamType)) {
+                            if (hasRowFilter) {
+                                return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery)
+                                        .listAndGetOutParameters((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1]);
+                            } else {
+                                return (preparedQuery,
+                                        args) -> (R) ((PreparedCallableQuery) preparedQuery).listAndGetOutParameters((BiRowMapper) args[paramLen - 1]);
+                            }
+                        } else if (ResultExtractor.class.isAssignableFrom(lastParamType)) {
+                            return (preparedQuery,
+                                    args) -> (R) ((PreparedCallableQuery) preparedQuery).queryAndGetOutParameters((ResultExtractor) args[paramLen - 1]);
+                        } else if (BiResultExtractor.class.isAssignableFrom(lastParamType)) {
+                            return (preparedQuery,
+                                    args) -> (R) ((PreparedCallableQuery) preparedQuery).queryAndGetOutParameters((BiResultExtractor) args[paramLen - 1]);
+                        } else {
+                            throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
+                                    + " is not supported the specified op: " + op);
+                        }
+                    } else {
+                        if (firstReturnEleEleType == null) {
+                            throw new UnsupportedOperationException(
+                                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+                        }
+
+                        if (DataSet.class.isAssignableFrom(firstReturnEleEleType)) {
+                            return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).queryAndGetOutParameters();
+                        } else {
+                            return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).listAndGetOutParameters(firstReturnEleEleType);
+                        }
+                    }
+                }
+            }
+        }
+
         if (hasRowMapperOrExtractor) {
-            if (!(op == OP.get || op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.query || op == OP.stream || op == OP.DEFAULT)) {
+            if (!(op == OP.get || op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll
+                    || op == OP.stream || op == OP.streamAll || op == OP.DEFAULT)) {
                 throw new UnsupportedOperationException("RowMapper/ResultExtractor is not supported by OP: " + op + " in method: " + fullClassMethodName);
             }
 
-            if (hasRowFilter && (op == OP.get || op == OP.findFirst || op == OP.findOnlyOne || op == OP.query || op == OP.DEFAULT)) {
+            if (hasRowFilter && (op == OP.get || op == OP.findFirst || op == OP.findOnlyOne || op == OP.query || op == OP.queryAll || op == OP.DEFAULT)) {
                 throw new UnsupportedOperationException("RowFilter is not supported by OP: " + op + " in method: " + fullClassMethodName);
             }
 
@@ -938,57 +1185,51 @@ final class DaoImpl {
         } else if (isExists) {
             return (preparedQuery, args) -> (R) (Boolean) preparedQuery.exists();
         } else if (isListQuery) {
-            final Class<?> eleType = getReturnEleType(method);
-
             if (returnType.equals(List.class)) {
-                return (preparedQuery, args) -> (R) preparedQuery.list(eleType);
+                return (preparedQuery, args) -> (R) preparedQuery.list(firstReturnEleType);
             } else {
-                return (preparedQuery, args) -> (R) preparedQuery.stream(eleType).toCollection(() -> N.newInstance(returnType));
+                return (preparedQuery, args) -> (R) preparedQuery.stream(firstReturnEleType).toCollection(() -> N.newInstance(returnType));
             }
         } else if (DataSet.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.query();
         } else if (Optional.class.isAssignableFrom(returnType) || Nullable.class.isAssignableFrom(returnType)) {
-            final Class<?> eleType = getReturnEleType(method);
-
             if (Nullable.class.isAssignableFrom(returnType)) {
                 if (op == OP.queryForSingle) {
-                    return (preparedQuery, args) -> (R) preparedQuery.queryForSingleResult(eleType);
+                    return (preparedQuery, args) -> (R) preparedQuery.queryForSingleResult(firstReturnEleType);
                 } else if (op == OP.queryForUnique) {
-                    return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueResult(eleType);
+                    return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueResult(firstReturnEleType);
                 } else {
-                    return (preparedQuery, args) -> (R) preparedQuery.queryForSingleResult(eleType);
+                    return (preparedQuery, args) -> (R) preparedQuery.queryForSingleResult(firstReturnEleType);
                 }
             } else {
                 if (op == OP.get) {
-                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(eleType));
+                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(firstReturnEleType));
                 } else if (op == OP.findFirst) {
-                    return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(eleType));
+                    return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(firstReturnEleType));
                 } else if (op == OP.findOnlyOne) {
-                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(eleType));
+                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(firstReturnEleType));
                 } else if (op == OP.queryForSingle) {
-                    return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(eleType);
+                    return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(firstReturnEleType);
                 } else if (op == OP.queryForUnique) {
-                    return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueNonNull(eleType);
+                    return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueNonNull(firstReturnEleType);
                 } else {
-                    if (ClassUtil.isEntity(eleType) || Map.class.isAssignableFrom(eleType) || List.class.isAssignableFrom(eleType)
-                            || Object[].class.isAssignableFrom(eleType)) {
+                    if (ClassUtil.isEntity(firstReturnEleType) || Map.class.isAssignableFrom(firstReturnEleType)
+                            || List.class.isAssignableFrom(firstReturnEleType) || Object[].class.isAssignableFrom(firstReturnEleType)) {
                         if (isFindOnlyOne(method, op)) {
-                            return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(eleType));
+                            return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(firstReturnEleType));
                         } else {
-                            return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(eleType));
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(firstReturnEleType));
                         }
                     } else {
-                        return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(eleType);
+                        return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(firstReturnEleType);
                     }
                 }
             }
         } else if (ExceptionalStream.class.isAssignableFrom(returnType) || Stream.class.isAssignableFrom(returnType)) {
-            final Class<?> eleType = getReturnEleType(method);
-
             if (ExceptionalStream.class.isAssignableFrom(returnType)) {
-                return (preparedQuery, args) -> (R) preparedQuery.stream(eleType);
+                return (preparedQuery, args) -> (R) preparedQuery.stream(firstReturnEleType);
             } else {
-                return (preparedQuery, args) -> (R) preparedQuery.stream(eleType).unchecked();
+                return (preparedQuery, args) -> (R) preparedQuery.stream(firstReturnEleType).unchecked();
             }
         } else if (op == OP.get) {
             return (preparedQuery, args) -> (R) preparedQuery.findOnlyOneOrNull(BiRowMapper.to(returnType));
@@ -1014,13 +1255,44 @@ final class DaoImpl {
         }
     }
 
-    private static Class<?> getReturnEleType(final Method method) {
-        final ParameterizedType parameterizedReturnType = (ParameterizedType) method.getGenericReturnType();
+    private static Class<?> getFirstReturnEleType(final Method method) {
+        final java.lang.reflect.Type genericReturnType = method.getGenericReturnType();
 
-        final Class<?> eleType = parameterizedReturnType.getActualTypeArguments()[0] instanceof Class
-                ? (Class<?>) parameterizedReturnType.getActualTypeArguments()[0]
-                : (Class<?>) ((ParameterizedType) parameterizedReturnType.getActualTypeArguments()[0]).getRawType();
-        return eleType;
+        final ParameterizedType parameterizedReturnType = genericReturnType instanceof ParameterizedType ? (ParameterizedType) genericReturnType : null;
+
+        final java.lang.reflect.Type firstActualTypeArgument = parameterizedReturnType == null
+                || N.isNullOrEmpty(parameterizedReturnType.getActualTypeArguments()) ? null : parameterizedReturnType.getActualTypeArguments()[0];
+
+        final Class<?> firstReturnEleType = firstActualTypeArgument == null ? null
+                : (firstActualTypeArgument instanceof Class ? (Class<?>) firstActualTypeArgument
+                        : (firstActualTypeArgument instanceof ParameterizedType && ((ParameterizedType) firstActualTypeArgument).getRawType() instanceof Class
+                                ? (Class<?>) ((ParameterizedType) firstActualTypeArgument).getRawType()
+                                : null));
+        return firstReturnEleType;
+    }
+
+    private static Class<?> getFirstReturnEleEleType(final Method method) {
+        final java.lang.reflect.Type genericReturnType = method.getGenericReturnType();
+
+        final ParameterizedType parameterizedReturnType = genericReturnType instanceof ParameterizedType ? (ParameterizedType) genericReturnType : null;
+
+        final java.lang.reflect.Type firstActualTypeArgument = parameterizedReturnType == null
+                || N.isNullOrEmpty(parameterizedReturnType.getActualTypeArguments()) ? null : parameterizedReturnType.getActualTypeArguments()[0];
+
+        if (firstActualTypeArgument == null || !(firstActualTypeArgument instanceof ParameterizedType)
+                || N.isNullOrEmpty(((ParameterizedType) firstActualTypeArgument).getActualTypeArguments())) {
+            return null;
+        }
+
+        final java.lang.reflect.Type firstReturnEleEleType = ((ParameterizedType) firstActualTypeArgument).getActualTypeArguments()[0];
+
+        final Class<?> firstReturnEleEleClass = firstReturnEleEleType == null ? null
+                : (firstReturnEleEleType instanceof Class ? (Class<?>) firstReturnEleEleType
+                        : (firstReturnEleEleType instanceof ParameterizedType && ((ParameterizedType) firstReturnEleEleType).getRawType() instanceof Class
+                                ? (Class<?>) ((ParameterizedType) firstReturnEleEleType).getRawType()
+                                : null));
+
+        return firstReturnEleEleClass;
     }
 
     @SuppressWarnings("rawtypes")
@@ -3335,7 +3607,7 @@ final class DaoImpl {
                     final Predicate<Class<?>> isRowMapperOrResultExtractor = it -> JdbcUtil.ResultExtractor.class.isAssignableFrom(it)
                             || BiResultExtractor.class.isAssignableFrom(it) || RowMapper.class.isAssignableFrom(it) || BiRowMapper.class.isAssignableFrom(it);
 
-                    if (isNamedQuery) {
+                    if (isNamedQuery || isCall) {
                         // @Bind parameters are not always required for named query. It's not required if parameter is Entity/Map/EnityId/...
                         //    if (IntStreamEx.range(0, paramLen)
                         //            .noneMatch(i -> StreamEx.of(m.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(Dao.Bind.class)))) {
@@ -3382,12 +3654,14 @@ final class DaoImpl {
                     final boolean hasRowFilter = paramLen >= 2
                             && (RowFilter.class.isAssignableFrom(paramTypes[paramLen - 2]) || BiRowFilter.class.isAssignableFrom(paramTypes[paramLen - 2]));
 
-                    if (hasRowFilter && !hasRowMapperOrResultExtractor) {
+                    if (hasRowFilter && !(hasRowMapperOrResultExtractor
+                            && (RowMapper.class.isAssignableFrom(lastParamType) || BiRowMapper.class.isAssignableFrom(lastParamType)))) {
                         throw new UnsupportedOperationException(
                                 "Parameter 'RowFilter/BiRowFilter' is not supported without last paramere to be 'RowMapper/BiRowMapper' in method: "
                                         + fullClassMethodName);
                     }
 
+                    // TODO may enable it later.
                     if (hasRowMapperOrResultExtractor) {
                         throw new UnsupportedOperationException(
                                 "Retrieving result/record by 'ResultExtractor/BiResultExtractor/RowMapper/BiRowMapper' is not enabled at present. Can't use it in method: "
@@ -3456,6 +3730,12 @@ final class DaoImpl {
                         }
                     }
 
+                    if ((op == OP.listAll || op == OP.queryAll || op == OP.streamAll || op == OP.executeAndGetOutParameters) && !isCall) {
+                        throw new UnsupportedOperationException(
+                                "Op.listAll/queryAll/streamAll/executeAndGetOutParameters are only supported by method annotated with @Call but method: "
+                                        + fullClassMethodName + " is not annotated with @Call");
+                    }
+
                     if (isBatch) {
                         if (!((stmtParamLen == 1 && Collection.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])) || (stmtParamLen == 2
                                 && Collection.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) && int.class.equals(paramTypes[stmtParamIndexes[1]])))) {
@@ -3505,7 +3785,7 @@ final class DaoImpl {
                             || (isCall && !isUpdateReturnType)) {
 
                         final Throwables.BiFunction<AbstractPreparedQuery, Object[], T, Exception> queryFunc = createQueryFunctionByMethod(m,
-                                hasRowMapperOrResultExtractor, hasRowFilter, op, fullClassMethodName);
+                                hasRowMapperOrResultExtractor, hasRowFilter, op, isCall, fullClassMethodName);
 
                         // Getting ClassCastException. Not sure why query result is being casted Dao. It seems there is a bug in JDk compiler.
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
@@ -3517,13 +3797,16 @@ final class DaoImpl {
                                 tmpFetchSize = 1;
                             } else if (op == OP.get || op == OP.findOnlyOne || op == OP.queryForUnique) {
                                 tmpFetchSize = 2;
-                            } else if (op == OP.list || isListQuery(m, op, fullClassMethodName) || op == OP.query || op == OP.stream) {
+                            } else if (op == OP.list || op == OP.listAll || isListQuery(m, op, fullClassMethodName) || op == OP.query || op == OP.queryAll
+                                    || op == OP.stream || op == OP.streamAll) {
                                 // skip.
                             } else if (lastParamType != null
                                     && (ResultExtractor.class.isAssignableFrom(lastParamType) || BiResultExtractor.class.isAssignableFrom(lastParamType))) {
                                 // skip.
                             } else if (Stream.class.isAssignableFrom(returnType) || ExceptionalStream.class.isAssignableFrom(returnType)
                                     || DataSet.class.isAssignableFrom(returnType)) {
+                                // skip.
+                            } else if (isCall && Pair.class.isAssignableFrom(returnType)) {
                                 // skip.
                             } else {
                                 tmpFetchSize = 1;
