@@ -1423,6 +1423,19 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     /**
      * 
      * @param <T>
+     * @param targetClass
+     * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
+     * @throws SQLException
+     */
+    public <T> Pair<List<T>, List<Object>> listAndGetOutParameters(final Class<T> targetClass) throws SQLException {
+        checkArgNotNull(targetClass, "targetClass");
+
+        return listAndGetOutParameters(BiRowMapper.to(targetClass));
+    }
+
+    /**
+     * 
+     * @param <T>
      * @param rowMapper
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
@@ -1543,6 +1556,19 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     /**
      * 
      * @param <T>
+     * @param targetClass
+     * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure.
+     * @throws SQLException
+     */
+    public <T> List<T> listAll(final Class<T> targetClass) throws SQLException {
+        checkArgNotNull(targetClass, "targetClass");
+
+        return listAll(BiRowMapper.to(targetClass));
+    }
+
+    /**
+     * 
+     * @param <T>
      * @param rowMapper
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      * @throws SQLException
@@ -1622,6 +1648,19 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         } finally {
             closeAfterExecutionIfAllowed();
         }
+    }
+
+    /**
+     * 
+     * @param <T>
+     * @param targetClass
+     * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
+     * @throws SQLException
+     */
+    public <T> Pair<List<T>, List<Object>> listAllAndGetOutParameters(final Class<T> targetClass) throws SQLException {
+        checkArgNotNull(targetClass, "targetClass");
+
+        return listAllAndGetOutParameters(BiRowMapper.to(targetClass));
     }
 
     /**
@@ -1714,6 +1753,19 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         } finally {
             closeAfterExecutionIfAllowed();
         }
+    }
+
+    /**
+     * 
+     * @param <T>
+     * @param targetClass
+     * @return the {@code ExceptionalStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
+     * @throws SQLException
+     */
+    public <T> ExceptionalStream<T, SQLException> streamAll(final Class<T> targetClass) throws SQLException {
+        checkArgNotNull(targetClass, "targetClass");
+
+        return streamAll(BiRowMapper.to(targetClass));
     }
 
     /**
