@@ -3614,6 +3614,20 @@ final class DaoImpl {
                         //        throw new UnsupportedOperationException(
                         //                "@Bind parameters are required for named query but none is defined in method: " + fullClassMethodName);
                         //    }
+
+                        if (isNamedQuery) {
+                            final List<String> tmp = IntStreamEx.range(0, paramLen)
+                                    .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).select(Dao.Bind.class).first().orNull())
+                                    .skipNull()
+                                    .map(it -> it.value())
+                                    .filter(it -> query.indexOf(":" + it) < 0)
+                                    .toList();
+
+                            if (N.notNullOrEmpty(tmp)) {
+                                throw new IllegalArgumentException(
+                                        "Named parameters binded with names: " + tmp + " are not found the sql annotated in method: " + fullClassMethodName);
+                            }
+                        }
                     } else {
                         if (IntStreamEx.range(0, paramLen)
                                 .anyMatch(i -> StreamEx.of(m.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(Dao.Bind.class)))) {
@@ -3693,6 +3707,11 @@ final class DaoImpl {
                                     .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).select(Dao.Define.class).first().get().value())
                                     .map(it -> it.charAt(0) == '{' && it.charAt(it.length() - 1) == '}' ? it : "{" + it + "}")
                                     .toArray(IntFunctions.ofStringArray());
+
+                    if (N.notNullOrEmpty(defines) && N.anyMatch(defines, it -> query.indexOf(it) < 0)) {
+                        throw new IllegalArgumentException("Defines: " + N.filter(defines, it -> query.indexOf(it) < 0)
+                                + " are not found in sql annotated in method: " + fullClassMethodName);
+                    }
 
                     final int[] stmtParamIndexes = IntStreamEx.of(tmp3)
                             .filter(i -> StreamEx.of(m.getParameterAnnotations()[i]).noneMatch(it -> it.annotationType().equals(Dao.Define.class)))
