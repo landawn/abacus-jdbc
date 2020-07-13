@@ -26,6 +26,8 @@ Hope it will bring you the programming experiences: coding with SQL/DB is just l
 
 ## Why abacus-jdbc?
 
+Abacus-jdbc provides the best APIs, which you won't find in other libraries, for preparing query/setting parameters/extracting result. A lot of DB operations can be done through Dao/CrudDao without writing a single data access method.
+
 * Work with sql statements
 ```java
 String query = "SELECT  first_name, last_name fROM account WHERE first_Name = ?";
@@ -58,8 +60,6 @@ userDao.stream(CF.eq("firstName", "Forrest")).filter(it -> it.getLastName().equa
 userDao.deleteById(100L);
 
 ```
-
-Abacus-jdbc provides the best APIs, which you won't find in other libraries, for preparing query/setting parameters/extracting result. A lot of DB operations can be done through Dao/CrudDao without writing a single data access method.
 
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
