@@ -6,6 +6,7 @@ import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.PSC;
+import com.landawn.abacus.util.u;
 
 public class Hello {
 
@@ -18,5 +19,8 @@ public class Hello {
                 .sql();
 
         N.println(sql);
+        
+        N.println(u.Optional.class.getEnclosingClass());
+        N.println(String.class.getEnclosingClass());
     }
 }

@@ -672,6 +672,14 @@ final class DaoImpl {
         return method.getName().startsWith("findOnlyOne");
     }
 
+    private static final ImmutableSet<Class<?>> singleReturnTypeSet = ImmutableSet.of(u.Nullable.class, u.Optional.class, u.OptionalBoolean.class,
+            u.OptionalChar.class, u.OptionalByte.class, u.OptionalShort.class, u.OptionalInt.class, u.OptionalLong.class, u.OptionalDouble.class,
+            java.util.Optional.class, java.util.OptionalInt.class, java.util.OptionalLong.class, java.util.OptionalDouble.class);
+
+    private static boolean isSingleReturnType(final Class<?> returnType) {
+        return singleReturnTypeSet.contains(returnType);
+    }
+
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createSingleQueryFunction(final Class<?> returnType) {
         if (OptionalBoolean.class.isAssignableFrom(returnType)) {
@@ -715,7 +723,7 @@ final class DaoImpl {
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         }
 
-        if ((op == OP.get || op == OP.findFirst || op == OP.findOnlyOne) && Nullable.class.isAssignableFrom(returnType)) {
+        if ((op == OP.findFirst || op == OP.findOnlyOne) && Nullable.class.isAssignableFrom(returnType)) {
             throw new UnsupportedOperationException(
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         }
@@ -737,7 +745,7 @@ final class DaoImpl {
         }
 
         if (Optional.class.isAssignableFrom(returnType)
-                && !(op == OP.get || op == OP.findFirst || op == OP.findOnlyOne || op == OP.queryForSingle || op == OP.queryForUnique || op == OP.DEFAULT)) {
+                && !(op == OP.findFirst || op == OP.findOnlyOne || op == OP.queryForSingle || op == OP.queryForUnique || op == OP.DEFAULT)) {
             throw new UnsupportedOperationException(
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         }
@@ -756,7 +764,7 @@ final class DaoImpl {
 
                 return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).executeAndGetOutParameters();
             } else if (op == OP.listAll) {
-                if (Pair.class.isAssignableFrom(returnType)) {
+                if (Tuple2.class.isAssignableFrom(returnType)) {
                     if (firstReturnEleType == null || !List.class.isAssignableFrom(firstReturnEleType)) {
                         throw new UnsupportedOperationException(
                                 "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
@@ -826,7 +834,7 @@ final class DaoImpl {
                     }
                 }
             } else if (op == OP.queryAll) {
-                if (Pair.class.isAssignableFrom(returnType)) {
+                if (Tuple2.class.isAssignableFrom(returnType)) {
                     if (firstReturnEleType == null || !List.class.isAssignableFrom(firstReturnEleType)) {
                         throw new UnsupportedOperationException(
                                 "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
@@ -941,7 +949,7 @@ final class DaoImpl {
                 }
             }
 
-            if (Pair.class.isAssignableFrom(returnType)) {
+            if (Tuple2.class.isAssignableFrom(returnType)) {
                 if (op == OP.list || op == OP.query || op == OP.DEFAULT) {
                     if (firstReturnEleType == null || !List.class.isAssignableFrom(firstReturnEleType)) {
                         throw new UnsupportedOperationException(
@@ -992,12 +1000,12 @@ final class DaoImpl {
         }
 
         if (hasRowMapperOrExtractor) {
-            if (!(op == OP.get || op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll
-                    || op == OP.stream || op == OP.streamAll || op == OP.DEFAULT)) {
+            if (!(op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll || op == OP.stream
+                    || op == OP.streamAll || op == OP.DEFAULT)) {
                 throw new UnsupportedOperationException("RowMapper/ResultExtractor is not supported by OP: " + op + " in method: " + fullClassMethodName);
             }
 
-            if (hasRowFilter && (op == OP.get || op == OP.findFirst || op == OP.findOnlyOne || op == OP.query || op == OP.queryAll || op == OP.DEFAULT)) {
+            if (hasRowFilter && (op == OP.findFirst || op == OP.findOnlyOne || op == OP.query || op == OP.queryAll || op == OP.DEFAULT)) {
                 throw new UnsupportedOperationException("RowFilter is not supported by OP: " + op + " in method: " + fullClassMethodName);
             }
 
@@ -1019,22 +1027,17 @@ final class DaoImpl {
                         }
                     }
                 } else if (Optional.class.isAssignableFrom(returnType)) {
-                    if (op == OP.get) {
-                        return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne((RowMapper) args[paramLen - 1]);
-                    } else {
-                        if (isFindOnlyOne(method, op)) {
-                            if (hasRowFilter) {
-                                return (preparedQuery,
-                                        args) -> (R) preparedQuery.stream((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]).onlyOne();
-                            } else {
-                                return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne((RowMapper) args[paramLen - 1]);
-                            }
+                    if (isFindOnlyOne(method, op)) {
+                        if (hasRowFilter) {
+                            return (preparedQuery, args) -> (R) preparedQuery.stream((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]).onlyOne();
                         } else {
-                            if (hasRowFilter) {
-                                return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]);
-                            } else {
-                                return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowMapper) args[paramLen - 1]);
-                            }
+                            return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne((RowMapper) args[paramLen - 1]);
+                        }
+                    } else {
+                        if (hasRowFilter) {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1]);
+                        } else {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowMapper) args[paramLen - 1]);
                         }
                     }
                 } else if (ExceptionalStream.class.isAssignableFrom(returnType)) {
@@ -1055,27 +1058,21 @@ final class DaoImpl {
                                 "The return type of method: " + method.getName() + " can't be: " + returnType + " when RowMapper/BiRowMapper is specified");
                     }
 
-                    if (op == OP.get) {
-                        return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
-                    } else {
-                        if (isFindOnlyOne(method, op)) {
-                            if (hasRowFilter) {
-                                return (preparedQuery,
-                                        args) -> (R) preparedQuery.stream((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1])
-                                                .onlyOne()
-                                                .orElse(N.defaultValueOf(returnType));
-                            } else {
-                                return (preparedQuery,
-                                        args) -> (R) preparedQuery.findOnlyOne((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
-                            }
+                    if (isFindOnlyOne(method, op)) {
+                        if (hasRowFilter) {
+                            return (preparedQuery,
+                                    args) -> (R) preparedQuery.stream((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1])
+                                            .onlyOne()
+                                            .orElse(N.defaultValueOf(returnType));
                         } else {
-                            if (hasRowFilter) {
-                                return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1])
-                                        .orElse(N.defaultValueOf(returnType));
-                            } else {
-                                return (preparedQuery,
-                                        args) -> (R) preparedQuery.findFirst((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
-                            }
+                            return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                        }
+                    } else {
+                        if (hasRowFilter) {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowFilter) args[paramLen - 2], (RowMapper) args[paramLen - 1])
+                                    .orElse(N.defaultValueOf(returnType));
+                        } else {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
                         }
                     }
                 }
@@ -1097,22 +1094,18 @@ final class DaoImpl {
                         }
                     }
                 } else if (Optional.class.isAssignableFrom(returnType)) {
-                    if (op == OP.get) {
-                        return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne((BiRowMapper) args[paramLen - 1]);
-                    } else {
-                        if (isFindOnlyOne(method, op)) {
-                            if (hasRowFilter) {
-                                return (preparedQuery,
-                                        args) -> (R) preparedQuery.stream((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1]).onlyOne();
-                            } else {
-                                return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne((BiRowMapper) args[paramLen - 1]);
-                            }
+                    if (isFindOnlyOne(method, op)) {
+                        if (hasRowFilter) {
+                            return (preparedQuery,
+                                    args) -> (R) preparedQuery.stream((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1]).onlyOne();
                         } else {
-                            if (hasRowFilter) {
-                                return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1]);
-                            } else {
-                                return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowMapper) args[paramLen - 1]);
-                            }
+                            return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne((BiRowMapper) args[paramLen - 1]);
+                        }
+                    } else {
+                        if (hasRowFilter) {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1]);
+                        } else {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowMapper) args[paramLen - 1]);
                         }
                     }
                 } else if (ExceptionalStream.class.isAssignableFrom(returnType)) {
@@ -1134,27 +1127,22 @@ final class DaoImpl {
                                 "The return type of method: " + method.getName() + " can't be: " + returnType + " when RowMapper/BiRowMapper is specified");
                     }
 
-                    if (op == OP.get) {
-                        return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne((BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
-                    } else {
-                        if (isFindOnlyOne(method, op)) {
-                            if (hasRowFilter) {
-                                return (preparedQuery,
-                                        args) -> (R) preparedQuery.stream((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1])
-                                                .onlyOne()
-                                                .orElse(N.defaultValueOf(returnType));
-                            } else {
-                                return (preparedQuery,
-                                        args) -> (R) preparedQuery.findOnlyOne((BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
-                            }
+                    if (isFindOnlyOne(method, op)) {
+                        if (hasRowFilter) {
+                            return (preparedQuery,
+                                    args) -> (R) preparedQuery.stream((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1])
+                                            .onlyOne()
+                                            .orElse(N.defaultValueOf(returnType));
                         } else {
-                            if (hasRowFilter) {
-                                return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1])
-                                        .orElse(N.defaultValueOf(returnType));
-                            } else {
-                                return (preparedQuery,
-                                        args) -> (R) preparedQuery.findFirst((BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
-                            }
+                            return (preparedQuery,
+                                    args) -> (R) preparedQuery.findOnlyOne((BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
+                        }
+                    } else {
+                        if (hasRowFilter) {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowFilter) args[paramLen - 2], (BiRowMapper) args[paramLen - 1])
+                                    .orElse(N.defaultValueOf(returnType));
+                        } else {
+                            return (preparedQuery, args) -> (R) preparedQuery.findFirst((BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
                         }
                     }
                 }
@@ -1192,22 +1180,24 @@ final class DaoImpl {
             }
         } else if (DataSet.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.query();
+        } else if (ExceptionalStream.class.isAssignableFrom(returnType) || Stream.class.isAssignableFrom(returnType)) {
+            if (ExceptionalStream.class.isAssignableFrom(returnType)) {
+                return (preparedQuery, args) -> (R) preparedQuery.stream(firstReturnEleType);
+            } else {
+                return (preparedQuery, args) -> (R) preparedQuery.stream(firstReturnEleType).unchecked();
+            }
         } else if (Optional.class.isAssignableFrom(returnType) || Nullable.class.isAssignableFrom(returnType)) {
             if (Nullable.class.isAssignableFrom(returnType)) {
-                if (op == OP.queryForSingle) {
-                    return (preparedQuery, args) -> (R) preparedQuery.queryForSingleResult(firstReturnEleType);
-                } else if (op == OP.queryForUnique) {
+                if (op == OP.queryForUnique) {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueResult(firstReturnEleType);
                 } else {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForSingleResult(firstReturnEleType);
                 }
             } else {
-                if (op == OP.get) {
+                if (op == OP.findOnlyOne) {
                     return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(firstReturnEleType));
                 } else if (op == OP.findFirst) {
                     return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(firstReturnEleType));
-                } else if (op == OP.findOnlyOne) {
-                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(firstReturnEleType));
                 } else if (op == OP.queryForSingle) {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(firstReturnEleType);
                 } else if (op == OP.queryForUnique) {
@@ -1225,16 +1215,8 @@ final class DaoImpl {
                     }
                 }
             }
-        } else if (ExceptionalStream.class.isAssignableFrom(returnType) || Stream.class.isAssignableFrom(returnType)) {
-            if (ExceptionalStream.class.isAssignableFrom(returnType)) {
-                return (preparedQuery, args) -> (R) preparedQuery.stream(firstReturnEleType);
-            } else {
-                return (preparedQuery, args) -> (R) preparedQuery.stream(firstReturnEleType).unchecked();
-            }
-        } else if (op == OP.get) {
-            return (preparedQuery, args) -> (R) preparedQuery.findOnlyOneOrNull(BiRowMapper.to(returnType));
         } else if (op == OP.findFirst) {
-            return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(returnType)).orNull();
+            return (preparedQuery, args) -> (R) preparedQuery.findFirstOrNull(BiRowMapper.to(returnType));
         } else if (op == OP.findOnlyOne) {
             return (preparedQuery, args) -> (R) preparedQuery.findOnlyOneOrNull(BiRowMapper.to(returnType));
         } else if (op == OP.queryForSingle) {
@@ -1653,7 +1635,7 @@ final class DaoImpl {
                 .flatMapp(it -> it.getDeclaredFields())
                 .append(StreamEx.of(allInterfaces).flatMapp(it -> it.getDeclaredClasses()).flatMapp(it -> it.getDeclaredFields()))
                 .filter(it -> it.isAnnotationPresent(SqlField.class))
-                .onEach(it -> N.checkArgument(Modifier.isFinal(it.getModifiers()) && Modifier.isFinal(it.getModifiers()) && String.class.equals(it.getType()),
+                .onEach(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()) && String.class.equals(it.getType()),
                         "Field annotated with @SqlField must be static&final String. but {} is not.", it))
                 .onEach(it -> it.setAccessible(true))
                 .map(it -> Tuple.of(it.getAnnotation(SqlField.class), it))
@@ -3812,10 +3794,11 @@ final class DaoImpl {
                         int tmpFetchSize = fetchSize;
 
                         if (fetchSize <= 0) {
-                            if (op == OP.exists || isExistsQuery(m, op, fullClassMethodName) || op == OP.findFirst || op == OP.queryForSingle) {
-                                tmpFetchSize = 1;
-                            } else if (op == OP.get || op == OP.findOnlyOne || op == OP.queryForUnique) {
+                            if (op == OP.findOnlyOne || op == OP.queryForUnique) {
                                 tmpFetchSize = 2;
+                            } else if (op == OP.exists || isExistsQuery(m, op, fullClassMethodName) || op == OP.findFirst || op == OP.queryForSingle
+                                    || isSingleReturnType(returnType)) {
+                                tmpFetchSize = 1;
                             } else if (op == OP.list || op == OP.listAll || isListQuery(m, op, fullClassMethodName) || op == OP.query || op == OP.queryAll
                                     || op == OP.stream || op == OP.streamAll) {
                                 // skip.
@@ -3825,7 +3808,7 @@ final class DaoImpl {
                             } else if (Stream.class.isAssignableFrom(returnType) || ExceptionalStream.class.isAssignableFrom(returnType)
                                     || DataSet.class.isAssignableFrom(returnType)) {
                                 // skip.
-                            } else if (isCall && Pair.class.isAssignableFrom(returnType)) {
+                            } else if (isCall) {
                                 // skip.
                             } else {
                                 tmpFetchSize = 1;
