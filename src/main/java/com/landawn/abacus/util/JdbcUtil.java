@@ -551,6 +551,7 @@ public final class JdbcUtil {
     //        return sqlDataSource instanceof DataSource ? ((DataSource) sqlDataSource) : new SimpleDataSource(sqlDataSource);
     //    }
 
+
     /**
      * Creates the connection.
      *
@@ -3931,6 +3932,22 @@ public final class JdbcUtil {
         }
     }
 
+    static <R> R extractAndCloseResultSet(ResultSet rs, final ResultExtractor<R> resultExtrator) throws SQLException {
+        try {
+            return resultExtrator.apply(rs);
+        } finally {
+            closeQuietly(rs);
+        }
+    }
+
+    static <R> R extractAndCloseResultSet(ResultSet rs, final BiResultExtractor<R> resultExtrator) throws SQLException {
+        try {
+            return resultExtrator.apply(rs, getColumnLabelList(rs));
+        } finally {
+            closeQuietly(rs);
+        }
+    }
+
     /**
      * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished.
      *
@@ -5556,6 +5573,27 @@ public final class JdbcUtil {
             };
         }
 
+        static <T> ResultExtractor<List<T>> toList(final RowMapper<T> rowMapper) {
+            return toList(RowFilter.ALWAYS_TRUE, rowMapper);
+        }
+
+        static <T> ResultExtractor<List<T>> toList(final RowFilter rowFilter, RowMapper<T> rowMapper) {
+            return new ResultExtractor<List<T>>() {
+                @Override
+                public List<T> apply(final ResultSet rs) throws SQLException {
+                    final List<T> result = new ArrayList<>();
+
+                    while (rs.next()) {
+                        if (rowFilter.test(rs)) {
+                            result.add(rowMapper.apply(rs));
+                        }
+                    }
+
+                    return result;
+                }
+            };
+        }
+
         static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter) {
             return new ResultExtractor<DataSet>() {
                 @Override
@@ -5596,6 +5634,17 @@ public final class JdbcUtil {
     @FunctionalInterface
     public static interface BiResultExtractor<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
 
+        ResultExtractor<DataSet> TO_DATA_SET = new ResultExtractor<DataSet>() {
+            @Override
+            public DataSet apply(final ResultSet rs) throws SQLException {
+                if (rs == null) {
+                    return N.newEmptyDataSet();
+                }
+
+                return JdbcUtil.extractData(rs);
+            }
+        };
+
         @Override
         T apply(ResultSet rs, List<String> columnLabels) throws SQLException;
 
@@ -5603,6 +5652,10 @@ public final class JdbcUtil {
             N.checkArgNotNull(after);
 
             return (rs, columnLabels) -> after.apply(apply(rs, columnLabels));
+        }
+
+        static <R> BiResultExtractor<R> from(final ResultExtractor<R> resultExtractor) {
+            return (rs, columnLabels) -> resultExtractor.apply(rs);
         }
 
         /**
@@ -5828,7 +5881,7 @@ public final class JdbcUtil {
 
             return new BiResultExtractor<M>() {
                 @Override
-                public M apply(final ResultSet rs, List<String> columnLabels) throws SQLException {
+                public M apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                     final M result = supplier.get();
                     K key = null;
                     List<V> value = null;
@@ -5843,6 +5896,31 @@ public final class JdbcUtil {
                         }
 
                         value.add(valueExtractor.apply(rs, columnLabels));
+                    }
+
+                    return result;
+                }
+            };
+        }
+
+        static <T> BiResultExtractor<List<T>> toList(final Class<T> targetClass) {
+            return toList(BiRowMapper.to(targetClass));
+        }
+
+        static <T> BiResultExtractor<List<T>> toList(final BiRowMapper<T> rowMapper) {
+            return toList(BiRowFilter.ALWAYS_TRUE, rowMapper);
+        }
+
+        static <T> BiResultExtractor<List<T>> toList(final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) {
+            return new BiResultExtractor<List<T>>() {
+                @Override
+                public List<T> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                    final List<T> result = new ArrayList<>();
+
+                    while (rs.next()) {
+                        if (rowFilter.test(rs, columnLabels)) {
+                            result.add(rowMapper.apply(rs, columnLabels));
+                        }
                     }
 
                     return result;
@@ -8176,9 +8254,8 @@ public final class JdbcUtil {
          */
         public static enum OP {
             exists,
-            get,
-            findFirst,
             findOnlyOne,
+            findFirst,
             list,
 
             /**

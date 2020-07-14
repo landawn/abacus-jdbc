@@ -33,6 +33,7 @@ import com.landawn.abacus.DataSet;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
@@ -43,6 +44,9 @@ import com.landawn.abacus.util.JdbcUtil.ParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
+import com.landawn.abacus.util.Tuple.Tuple2;
+import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.Tuple.Tuple4;
 
 /**
  * The backed {@code PreparedStatement/CallableStatement} will be closed by default
@@ -1248,13 +1252,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         try {
             JdbcUtil.execute(stmt);
 
-            return ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(stmt)).map(rs -> {
-                try {
-                    return resultExtrator.apply(rs);
-                } finally {
-                    JdbcUtil.closeQuietly(rs);
-                }
-            }).toList();
+            return ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(stmt)).map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator)).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1274,13 +1272,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         try {
             JdbcUtil.execute(stmt);
 
-            return ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(stmt)).map(rs -> {
-                try {
-                    return resultExtrator.apply(rs, JdbcUtil.getColumnLabelList(rs));
-                } finally {
-                    JdbcUtil.closeQuietly(rs);
-                }
-            }).toList();
+            return ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(stmt)).map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator)).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1291,7 +1283,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code DataSet} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public Pair<DataSet, OutParamResult> queryAndGetOutParameters() throws SQLException {
+    public Tuple2<DataSet, OutParamResult> queryAndGetOutParameters() throws SQLException {
         return queryAndGetOutParameters(ResultExtractor.TO_DATA_SET);
     }
 
@@ -1302,7 +1294,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code R} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <R> Pair<R, OutParamResult> queryAndGetOutParameters(final ResultExtractor<R> resultExtrator) throws SQLException {
+    public <R> Tuple2<R, OutParamResult> queryAndGetOutParameters(final ResultExtractor<R> resultExtrator) throws SQLException {
         checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
@@ -1311,14 +1303,10 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
             final ResultSet rs = executeQuery();
 
             if (rs != null) {
-                try {
-                    result = resultExtrator.apply(rs);
-                } finally {
-                    JdbcUtil.closeQuietly(rs);
-                }
+                result = JdbcUtil.extractAndCloseResultSet(rs, resultExtrator);
             }
 
-            return Pair.of(result, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(result, JdbcUtil.getOutParameters(stmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1331,7 +1319,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code R} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <R> Pair<R, OutParamResult> queryAndGetOutParameters(final BiResultExtractor<R> resultExtrator) throws SQLException {
+    public <R> Tuple2<R, OutParamResult> queryAndGetOutParameters(final BiResultExtractor<R> resultExtrator) throws SQLException {
         checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
@@ -1341,13 +1329,13 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
 
             if (rs != null) {
                 try {
-                    result = resultExtrator.apply(rs, JdbcUtil.getColumnLabelList(rs));
+                    result = JdbcUtil.extractAndCloseResultSet(rs, resultExtrator);
                 } finally {
                     JdbcUtil.closeQuietly(rs);
                 }
             }
 
-            return Pair.of(result, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(result, JdbcUtil.getOutParameters(stmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1358,7 +1346,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return a list of {@code DataSet} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public Pair<List<DataSet>, OutParamResult> queryAllAndGetOutParameters() throws SQLException {
+    public Tuple2<List<DataSet>, OutParamResult> queryAllAndGetOutParameters() throws SQLException {
         return queryAllAndGetOutParameters(ResultExtractor.TO_DATA_SET);
     }
 
@@ -1369,22 +1357,18 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <R> Pair<List<R>, OutParamResult> queryAllAndGetOutParameters(final ResultExtractor<R> resultExtrator) throws SQLException {
+    public <R> Tuple2<List<R>, OutParamResult> queryAllAndGetOutParameters(final ResultExtractor<R> resultExtrator) throws SQLException {
         checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
         try {
             JdbcUtil.execute(stmt);
 
-            final List<R> resultList = ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(stmt)).map(rs -> {
-                try {
-                    return resultExtrator.apply(rs);
-                } finally {
-                    JdbcUtil.closeQuietly(rs);
-                }
-            }).toList();
+            final List<R> resultList = ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(stmt))
+                    .map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator))
+                    .toList();
 
-            return Pair.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1397,22 +1381,181 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <R> Pair<List<R>, OutParamResult> queryAllAndGetOutParameters(final BiResultExtractor<R> resultExtrator) throws SQLException {
+    public <R> Tuple2<List<R>, OutParamResult> queryAllAndGetOutParameters(final BiResultExtractor<R> resultExtrator) throws SQLException {
         checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
         try {
             JdbcUtil.execute(stmt);
 
-            final List<R> resultList = ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(stmt)).map(rs -> {
-                try {
-                    return resultExtrator.apply(rs, JdbcUtil.getColumnLabelList(rs));
-                } finally {
-                    JdbcUtil.closeQuietly(rs);
-                }
-            }).toList();
+            final List<R> resultList = ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(stmt))
+                    .map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator))
+                    .toList();
 
-            return Pair.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
+        } finally {
+            closeAfterExecutionIfAllowed();
+        }
+    }
+
+    /**
+     * 
+     * @param <R1>
+     * @param <R2>
+     * @param resultExtrator1
+     * @param resultExtrator2
+     * @return {@code R1/R2} extracted from the first two {@code ResultSets} returned by the executed procedure.
+     * @throws SQLException
+     */
+    public <R1, R2> Tuple2<R1, R2> query2(final BiResultExtractor<R1> resultExtrator1, final BiResultExtractor<R2> resultExtrator2) throws SQLException {
+        checkArgNotNull(resultExtrator1, "resultExtrator1");
+        checkArgNotNull(resultExtrator2, "resultExtrator2");
+        assertNotClosed();
+
+        try {
+            JdbcUtil.execute(stmt);
+
+            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(stmt);
+
+            R1 result1 = null;
+            R2 result2 = null;
+
+            if (iter.hasNext()) {
+                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtrator1);
+            }
+
+            if (iter.hasNext()) {
+                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtrator2);
+            }
+
+            return Tuple.of(result1, result2);
+        } finally {
+            closeAfterExecutionIfAllowed();
+        }
+    }
+
+    /**
+     * 
+     * @param <R1>
+     * @param <R2>
+     * @param resultExtrator1
+     * @param resultExtrator2
+     * @return {@code R1/R2} extracted from the first two {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
+     * @throws SQLException
+     */
+    public <R1, R2> Tuple3<R1, R2, OutParamResult> query2AndGetOutParameters(final BiResultExtractor<R1> resultExtrator1,
+            final BiResultExtractor<R2> resultExtrator2) throws SQLException {
+        checkArgNotNull(resultExtrator1, "resultExtrator1");
+        checkArgNotNull(resultExtrator2, "resultExtrator2");
+        assertNotClosed();
+
+        try {
+            JdbcUtil.execute(stmt);
+
+            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(stmt);
+
+            R1 result1 = null;
+            R2 result2 = null;
+
+            if (iter.hasNext()) {
+                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtrator1);
+            }
+
+            if (iter.hasNext()) {
+                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtrator2);
+            }
+
+            return Tuple.of(result1, result2, JdbcUtil.getOutParameters(stmt, outParams));
+        } finally {
+            closeAfterExecutionIfAllowed();
+        }
+    }
+
+    /**
+     * 
+     * @param <R1>
+     * @param <R2>
+     * @param <R3>
+     * @param resultExtrator1
+     * @param resultExtrator2
+     * @param resultExtrator3
+     * @return {@code R1/R2/R3} extracted from the first three {@code ResultSets} returned by the executed procedure.
+     * @throws SQLException
+     */
+    public <R1, R2, R3> Tuple3<R1, R2, R3> query3(final BiResultExtractor<R1> resultExtrator1, final BiResultExtractor<R2> resultExtrator2,
+            final BiResultExtractor<R3> resultExtrator3) throws SQLException {
+        checkArgNotNull(resultExtrator1, "resultExtrator1");
+        checkArgNotNull(resultExtrator2, "resultExtrator2");
+        checkArgNotNull(resultExtrator3, "resultExtrator3");
+        assertNotClosed();
+
+        try {
+            JdbcUtil.execute(stmt);
+
+            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(stmt);
+
+            R1 result1 = null;
+            R2 result2 = null;
+            R3 result3 = null;
+
+            if (iter.hasNext()) {
+                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtrator1);
+            }
+
+            if (iter.hasNext()) {
+                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtrator2);
+            }
+
+            if (iter.hasNext()) {
+                result3 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtrator3);
+            }
+
+            return Tuple.of(result1, result2, result3);
+        } finally {
+            closeAfterExecutionIfAllowed();
+        }
+    }
+
+    /**
+     * 
+     * @param <R1>
+     * @param <R2>
+     * @param <R3>
+     * @param resultExtrator1
+     * @param resultExtrator2
+     * @param resultExtrator3
+     * @return {@code R1/R2/R3} extracted from the first three {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
+     * @throws SQLException
+     */
+    public <R1, R2, R3> Tuple4<R1, R2, R3, OutParamResult> query3AndGetOutParameters(final BiResultExtractor<R1> resultExtrator1,
+            final BiResultExtractor<R2> resultExtrator2, final BiResultExtractor<R3> resultExtrator3) throws SQLException {
+        checkArgNotNull(resultExtrator1, "resultExtrator1");
+        checkArgNotNull(resultExtrator2, "resultExtrator2");
+        checkArgNotNull(resultExtrator3, "resultExtrator3");
+        assertNotClosed();
+
+        try {
+            JdbcUtil.execute(stmt);
+
+            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(stmt);
+
+            R1 result1 = null;
+            R2 result2 = null;
+            R3 result3 = null;
+
+            if (iter.hasNext()) {
+                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtrator1);
+            }
+
+            if (iter.hasNext()) {
+                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtrator2);
+            }
+
+            if (iter.hasNext()) {
+                result3 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtrator3);
+            }
+
+            return Tuple.of(result1, result2, result3, JdbcUtil.getOutParameters(stmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1425,7 +1568,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, OutParamResult> listAndGetOutParameters(final Class<T> targetClass) throws SQLException {
+    public <T> Tuple2<List<T>, OutParamResult> listAndGetOutParameters(final Class<T> targetClass) throws SQLException {
         checkArgNotNull(targetClass, "targetClass");
 
         return listAndGetOutParameters(BiRowMapper.to(targetClass));
@@ -1438,7 +1581,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, OutParamResult> listAndGetOutParameters(final RowMapper<T> rowMapper) throws SQLException {
+    public <T> Tuple2<List<T>, OutParamResult> listAndGetOutParameters(final RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -1452,7 +1595,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                 }
             }
 
-            return Pair.of(result, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(result, JdbcUtil.getOutParameters(stmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1466,7 +1609,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, OutParamResult> listAndGetOutParameters(final RowFilter rowFilter, final RowMapper<T> rowMapper) throws SQLException {
+    public <T> Tuple2<List<T>, OutParamResult> listAndGetOutParameters(final RowFilter rowFilter, final RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -1483,7 +1626,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                 }
             }
 
-            return Pair.of(result, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(result, JdbcUtil.getOutParameters(stmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1496,7 +1639,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, OutParamResult> listAndGetOutParameters(final BiRowMapper<T> rowMapper) throws SQLException {
+    public <T> Tuple2<List<T>, OutParamResult> listAndGetOutParameters(final BiRowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -1512,7 +1655,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                 }
             }
 
-            return Pair.of(result, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(result, JdbcUtil.getOutParameters(stmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1526,7 +1669,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, OutParamResult> listAndGetOutParameters(final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) throws SQLException {
+    public <T> Tuple2<List<T>, OutParamResult> listAndGetOutParameters(final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -1545,7 +1688,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                 }
             }
 
-            return Pair.of(result, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(result, JdbcUtil.getOutParameters(stmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1655,7 +1798,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, OutParamResult> listAllAndGetOutParameters(final Class<T> targetClass) throws SQLException {
+    public <T> Tuple2<List<T>, OutParamResult> listAllAndGetOutParameters(final Class<T> targetClass) throws SQLException {
         checkArgNotNull(targetClass, "targetClass");
 
         return listAllAndGetOutParameters(BiRowMapper.to(targetClass));
@@ -1668,7 +1811,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, OutParamResult> listAllAndGetOutParameters(final RowMapper<T> rowMapper) throws SQLException {
+    public <T> Tuple2<List<T>, OutParamResult> listAllAndGetOutParameters(final RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -1677,7 +1820,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
 
             final List<T> resultList = JdbcUtil.streamAllResultSets(stmt, rowMapper).toList();
 
-            return Pair.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1691,7 +1834,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, OutParamResult> listAllAndGetOutParameters(final RowFilter rowFilter, final RowMapper<T> rowMapper) throws SQLException {
+    public <T> Tuple2<List<T>, OutParamResult> listAllAndGetOutParameters(final RowFilter rowFilter, final RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -1701,7 +1844,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
 
             final List<T> resultList = JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).toList();
 
-            return Pair.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1714,7 +1857,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, OutParamResult> listAllAndGetOutParameters(final BiRowMapper<T> rowMapper) throws SQLException {
+    public <T> Tuple2<List<T>, OutParamResult> listAllAndGetOutParameters(final BiRowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -1723,7 +1866,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
 
             final List<T> resultList = JdbcUtil.streamAllResultSets(stmt, rowMapper).toList();
 
-            return Pair.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1737,7 +1880,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Pair<List<T>, OutParamResult> listAllAndGetOutParameters(final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) throws SQLException {
+    public <T> Tuple2<List<T>, OutParamResult> listAllAndGetOutParameters(final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -1747,7 +1890,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
 
             final List<T> resultList = JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).toList();
 
-            return Pair.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
