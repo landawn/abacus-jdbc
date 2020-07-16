@@ -5054,6 +5054,10 @@ public final class JdbcUtil {
             return rs -> after.apply(apply(rs));
         }
 
+        default BiResultExtractor<T> toBiResultExtractor() {
+            return BiResultExtractor.from(this);
+        }
+
         /**
          *
          * @param <K> the key type
@@ -5382,6 +5386,8 @@ public final class JdbcUtil {
         }
 
         static <R> BiResultExtractor<R> from(final ResultExtractor<R> resultExtractor) {
+            N.checkArgNotNull(resultExtractor);
+
             return (rs, columnLabels) -> resultExtractor.apply(rs);
         }
 
@@ -5717,6 +5723,10 @@ public final class JdbcUtil {
             N.checkArgNotNull(after);
 
             return rs -> after.apply(apply(rs));
+        }
+
+        default BiRowMapper<T> toBiRowMapper() {
+            return BiRowMapper.from(this);
         }
 
         static RowMapperBuilder builder() {
@@ -6214,6 +6224,12 @@ public final class JdbcUtil {
             N.checkArgNotNull(after);
 
             return (rs, columnLabels) -> after.apply(apply(rs, columnLabels));
+        }
+
+        static <T> BiRowMapper<T> from(final RowMapper<T> rowMapper) {
+            N.checkArgNotNull(rowMapper);
+
+            return (rs, columnLabels) -> rowMapper.apply(rs);
         }
 
         /**
