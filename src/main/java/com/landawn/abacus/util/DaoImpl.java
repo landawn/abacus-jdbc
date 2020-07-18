@@ -1695,8 +1695,8 @@ final class DaoImpl {
                     throw new IllegalArgumentException("To support CRUD operations by extending CrudDao interface, the entity class: " + typeArguments[0]
                             + " must have at least one field annotated with @Id");
                 } else if (idFieldNames.size() == 1 && !SQLBuilder.class.isAssignableFrom((Class) typeArguments[1])) {
-                    if (!(Primitives.wrap((Class) typeArguments[1]))
-                            .isAssignableFrom(Primitives.wrap(ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType()))) {
+                    if (!(N.wrap((Class) typeArguments[1]))
+                            .isAssignableFrom(N.wrap(ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType()))) {
                         throw new IllegalArgumentException("The 'ID' type declared in Dao type parameters: " + typeArguments[1]
                                 + " is not assignable from the id property type in the entity class: "
                                 + ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType());
@@ -3850,7 +3850,7 @@ final class DaoImpl {
 
                         if (isBatch == false) {
                             if (!(returnType.isAssignableFrom(void.class) || idClass == null
-                                    || Primitives.wrap(idClass).isAssignableFrom(Primitives.wrap(returnType)) || returnType.isAssignableFrom(Optional.class))) {
+                                    || N.wrap(idClass).isAssignableFrom(N.wrap(returnType)) || returnType.isAssignableFrom(Optional.class))) {
                                 throw new UnsupportedOperationException("The return type of insert operations(" + fullClassMethodName
                                         + ") only can be: void or 'ID' type. It can't be: " + returnType);
                             }
@@ -3989,8 +3989,8 @@ final class DaoImpl {
                         }
 
                         final LongFunction<?> updateResultConvertor = void.class.equals(returnType) ? updatedRecordCount -> null
-                                : (Boolean.class.equals(Primitives.wrap(returnType)) ? updatedRecordCount -> updatedRecordCount > 0
-                                        : (Integer.class.equals(Primitives.wrap(returnType)) ? updatedRecordCount -> N.toIntExact(updatedRecordCount)
+                                : (Boolean.class.equals(N.wrap(returnType)) ? updatedRecordCount -> updatedRecordCount > 0
+                                        : (Integer.class.equals(N.wrap(returnType)) ? updatedRecordCount -> N.toIntExact(updatedRecordCount)
                                                 : LongFunction.identity()));
 
                         final boolean isLargeUpdate = op == OP.largeUpdate
