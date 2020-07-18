@@ -4189,7 +4189,7 @@ final class DaoImpl {
                             final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
                             final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
                             final long prevMinExecutionTimeForSqlPerfLog = hasPerfLogAnno ? SqlPerfLogConfig.minExecutionTimeForSqlPerfLog : -1;
-                            final int prevMaxSqlPerfLogLength = SqlPerfLogConfig.maxSqlLogLength;
+                            final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
 
                             if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
                                 JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
@@ -4209,7 +4209,7 @@ final class DaoImpl {
                                 }
 
                                 if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
-                                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxSqlPerfLogLength);
+                                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                 }
 
                                 if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
@@ -4228,7 +4228,7 @@ final class DaoImpl {
                         final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
                         final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
                         final long prevMinExecutionTimeForSqlPerfLog = hasPerfLogAnno ? SqlPerfLogConfig.minExecutionTimeForSqlPerfLog : -1;
-                        final int prevMaxSqlPerfLogLength = SqlPerfLogConfig.maxSqlLogLength;
+                        final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
 
                         if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
                             JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
@@ -4258,7 +4258,7 @@ final class DaoImpl {
                                     }
 
                                     if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
-                                        JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxSqlPerfLogLength);
+                                        JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                     }
 
                                     if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
@@ -4282,7 +4282,7 @@ final class DaoImpl {
                             final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
                             final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
                             final long prevMinExecutionTimeForSqlPerfLog = hasPerfLogAnno ? SqlPerfLogConfig.minExecutionTimeForSqlPerfLog : -1;
-                            final int prevMaxSqlPerfLogLength = SqlPerfLogConfig.maxSqlLogLength;
+                            final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
 
                             if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
                                 JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
@@ -4312,7 +4312,7 @@ final class DaoImpl {
                                         }
 
                                         if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
-                                            JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxSqlPerfLogLength);
+                                            JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                         }
 
                                         if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
@@ -4339,7 +4339,7 @@ final class DaoImpl {
                                 final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
                                 final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
                                 final long prevMinExecutionTimeForSqlPerfLog = hasPerfLogAnno ? SqlPerfLogConfig.minExecutionTimeForSqlPerfLog : -1;
-                                final int prevMaxSqlPerfLogLength = SqlPerfLogConfig.maxSqlLogLength;
+                                final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
 
                                 if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
                                     JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
@@ -4359,7 +4359,7 @@ final class DaoImpl {
                                     }
 
                                     if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
-                                        JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxSqlPerfLogLength);
+                                        JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                     }
 
                                     if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
