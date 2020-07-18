@@ -4556,24 +4556,24 @@ public final class JdbcUtil {
 
         SqlLogConfig(final boolean isEnabled, final int maxSqlLogLength) {
             this.isEnabled = isEnabled;
-            this.maxSqlLogLength = maxSqlLogLength < 0 ? DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
+            this.maxSqlLogLength = maxSqlLogLength <= 0 ? DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
             this.minExecutionTimeForSQLPerfLog = Long.MAX_VALUE;
         }
 
         SqlLogConfig(final long minExecutionTimeForSQLPerfLog, final int maxSqlLogLength) {
             this.minExecutionTimeForSQLPerfLog = minExecutionTimeForSQLPerfLog;
-            this.maxSqlLogLength = maxSqlLogLength < 0 ? DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
+            this.maxSqlLogLength = maxSqlLogLength <= 0 ? DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
             this.isEnabled = false;
         }
 
         void set(final boolean isEnabled, final int maxSqlLogLength) {
             this.isEnabled = isEnabled;
-            this.maxSqlLogLength = maxSqlLogLength < 0 ? DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
+            this.maxSqlLogLength = maxSqlLogLength <= 0 ? DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
         }
 
         void set(final long minExecutionTimeForSQLPerfLog, final int maxSqlLogLength) {
             this.minExecutionTimeForSQLPerfLog = minExecutionTimeForSQLPerfLog;
-            this.maxSqlLogLength = maxSqlLogLength < 0 ? DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
+            this.maxSqlLogLength = maxSqlLogLength <= 0 ? DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
         }
     }
 
