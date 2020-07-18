@@ -4217,66 +4217,13 @@ final class DaoImpl {
                                 }
                             }
                         };
-
                     } else {
                         // Do not need to do anything.
                     }
                 } else if (transactionalAnno.propagation() == Propagation.REQUIRED) {
-                    call = (proxy, args) -> {
-                        final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
-                        final boolean prevSqlLogEnabled = hasSqlLogAnno ? sqlLogConfig.isEnabled : false;
-                        final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                        final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
-                        final long prevMinExecutionTimeForSqlPerfLog = hasPerfLogAnno ? SqlPerfLogConfig.minExecutionTimeForSqlPerfLog : -1;
-                        final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
-
-                        if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
-                            JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
-                        }
-
-                        if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
-                            JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
-                        }
-
-                        final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
-
-                        final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
-                        Object result = null;
-
-                        try {
-                            result = tmp.apply(proxy, args);
-
-                            tran.commit();
-                        } finally {
-                            if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
-                                    || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
-                                try {
-                                    tran.rollbackIfNotCommitted();
-                                } finally {
-                                    if (hasPerfLogAnno && JdbcUtil.isDaoMethodPerfLogAllowed) {
-                                        logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
-                                    }
-
-                                    if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
-                                        JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
-                                    }
-
-                                    if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
-                                        JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
-                                    }
-                                }
-                            } else {
-                                tran.rollbackIfNotCommitted();
-                            }
-                        }
-
-                        return result;
-                    };
-                } else if (transactionalAnno.propagation() == Propagation.REQUIRES_NEW) {
-                    call = (proxy, args) -> {
-                        final javax.sql.DataSource dataSource = proxy.dataSource();
-
-                        return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
+                    if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
+                            || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
+                        call = (proxy, args) -> {
                             final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                             final boolean prevSqlLogEnabled = hasSqlLogAnno ? sqlLogConfig.isEnabled : false;
                             final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
@@ -4325,6 +4272,92 @@ final class DaoImpl {
                             }
 
                             return result;
+                        };
+                    } else {
+                        call = (proxy, args) -> {
+                            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                            Object result = null;
+
+                            try {
+                                result = tmp.apply(proxy, args);
+
+                                tran.commit();
+                            } finally {
+                                tran.rollbackIfNotCommitted();
+                            }
+
+                            return result;
+                        };
+                    }
+                } else if (transactionalAnno.propagation() == Propagation.REQUIRES_NEW) {
+                    call = (proxy, args) -> {
+                        final javax.sql.DataSource dataSource = proxy.dataSource();
+
+                        return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
+                            if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
+                                    || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
+                                final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
+                                final boolean prevSqlLogEnabled = hasSqlLogAnno ? sqlLogConfig.isEnabled : false;
+                                final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
+                                final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
+                                final long prevMinExecutionTimeForSqlPerfLog = hasPerfLogAnno ? SqlPerfLogConfig.minExecutionTimeForSqlPerfLog : -1;
+                                final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
+
+                                if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                    JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
+                                }
+
+                                if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
+                                }
+
+                                final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
+
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                Object result = null;
+
+                                try {
+                                    result = tmp.apply(proxy, args);
+
+                                    tran.commit();
+                                } finally {
+                                    if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
+                                            || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
+                                        try {
+                                            tran.rollbackIfNotCommitted();
+                                        } finally {
+                                            if (hasPerfLogAnno && JdbcUtil.isDaoMethodPerfLogAllowed) {
+                                                logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
+                                            }
+
+                                            if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                                JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                            }
+
+                                            if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                                JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
+                                            }
+                                        }
+                                    } else {
+                                        tran.rollbackIfNotCommitted();
+                                    }
+                                }
+
+                                return result;
+                            } else {
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                Object result = null;
+
+                                try {
+                                    result = tmp.apply(proxy, args);
+
+                                    tran.commit();
+                                } finally {
+                                    tran.rollbackIfNotCommitted();
+                                }
+
+                                return result;
+                            }
                         });
                     };
                 } else if (transactionalAnno.propagation() == Propagation.NOT_SUPPORTED) {
