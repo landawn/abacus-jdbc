@@ -80,6 +80,7 @@ import com.landawn.abacus.util.JdbcUtil.Dao.SqlField;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
+import com.landawn.abacus.util.JdbcUtil.SqlLogConfig;
 import com.landawn.abacus.util.SQLBuilder.NAC;
 import com.landawn.abacus.util.SQLBuilder.NLC;
 import com.landawn.abacus.util.SQLBuilder.NSC;
@@ -1580,6 +1581,16 @@ final class DaoImpl {
         return keyExtractor;
     }
 
+    private static void logDaoMethodPerf(final Logger daoLogger, final String simpleClassMethodName, final Dao.PerfLog perfLogAnno, final long startTime) {
+        if (JdbcUtil.isDaoMethodPerfLogAllowed && perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
+            final long elapsedTime = System.currentTimeMillis() - startTime;
+
+            if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
+                daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
+            }
+        }
+    }
+
     @SuppressWarnings({ "rawtypes" })
     static <T, SB extends SQLBuilder, TD extends JdbcUtil.Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
             final SQLMapper sqlMapper, final Cache<String, Object> daoCache, final Executor executor) {
@@ -1684,8 +1695,8 @@ final class DaoImpl {
                     throw new IllegalArgumentException("To support CRUD operations by extending CrudDao interface, the entity class: " + typeArguments[0]
                             + " must have at least one field annotated with @Id");
                 } else if (idFieldNames.size() == 1 && !SQLBuilder.class.isAssignableFrom((Class) typeArguments[1])) {
-                    if (!(Primitives.wrap((Class) typeArguments[1]))
-                            .isAssignableFrom(Primitives.wrap(ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType()))) {
+                    if (!(N.wrap((Class) typeArguments[1]))
+                            .isAssignableFrom(N.wrap(ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType()))) {
                         throw new IllegalArgumentException("The 'ID' type declared in Dao type parameters: " + typeArguments[1]
                                 + " is not assignable from the id property type in the entity class: "
                                 + ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType());
@@ -1852,14 +1863,6 @@ final class DaoImpl {
                 ? (pq, entity) -> pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity), idPropInfo.dbType)
                 : (pq, entity) -> pq.setParameters(entity);
 
-        final Dao.SqlLogEnabled daoClassSqlLogAnno = StreamEx.of(allInterfaces)
-                .flatMapp(cls -> cls.getAnnotations())
-                .select(Dao.SqlLogEnabled.class)
-                .first()
-                .orNull();
-
-        final Dao.PerfLog daoClassPerfLogAnno = StreamEx.of(allInterfaces).flatMapp(cls -> cls.getAnnotations()).select(Dao.PerfLog.class).first().orNull();
-
         final Dao.CacheResult daoClassCacheResultAnno = StreamEx.of(allInterfaces)
                 .flatMapp(cls -> cls.getAnnotations())
                 .select(Dao.CacheResult.class)
@@ -1898,6 +1901,9 @@ final class DaoImpl {
             if (!Modifier.isPublic(m.getModifiers())) {
                 continue;
             }
+
+            final Predicate<String> filterByMethodName = it -> N.notNullOrEmpty(it)
+                    && (StringUtil.containsIgnoreCase(m.getName(), it) || Pattern.matches(it, m.getName()));
 
             final Class<?> declaringClass = m.getDeclaringClass();
             final String methodName = m.getName();
@@ -3844,7 +3850,7 @@ final class DaoImpl {
 
                         if (isBatch == false) {
                             if (!(returnType.isAssignableFrom(void.class) || idClass == null
-                                    || Primitives.wrap(idClass).isAssignableFrom(Primitives.wrap(returnType)) || returnType.isAssignableFrom(Optional.class))) {
+                                    || N.wrap(idClass).isAssignableFrom(N.wrap(returnType)) || returnType.isAssignableFrom(Optional.class))) {
                                 throw new UnsupportedOperationException("The return type of insert operations(" + fullClassMethodName
                                         + ") only can be: void or 'ID' type. It can't be: " + returnType);
                             }
@@ -3983,8 +3989,8 @@ final class DaoImpl {
                         }
 
                         final LongFunction<?> updateResultConvertor = void.class.equals(returnType) ? updatedRecordCount -> null
-                                : (Boolean.class.equals(Primitives.wrap(returnType)) ? updatedRecordCount -> updatedRecordCount > 0
-                                        : (Integer.class.equals(Primitives.wrap(returnType)) ? updatedRecordCount -> N.toIntExact(updatedRecordCount)
+                                : (Boolean.class.equals(N.wrap(returnType)) ? updatedRecordCount -> updatedRecordCount > 0
+                                        : (Integer.class.equals(N.wrap(returnType)) ? updatedRecordCount -> N.toIntExact(updatedRecordCount)
                                                 : LongFunction.identity()));
 
                         final boolean isLargeUpdate = op == OP.largeUpdate
@@ -4153,6 +4159,20 @@ final class DaoImpl {
                 //                       + fullClassMethodName);
                 //    }
 
+                final Dao.SqlLogEnabled daoClassSqlLogAnno = StreamEx.of(allInterfaces)
+                        .flatMapp(cls -> cls.getAnnotations())
+                        .select(Dao.SqlLogEnabled.class)
+                        .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
+                        .first()
+                        .orNull();
+
+                final Dao.PerfLog daoClassPerfLogAnno = StreamEx.of(allInterfaces)
+                        .flatMapp(cls -> cls.getAnnotations())
+                        .select(Dao.PerfLog.class)
+                        .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
+                        .first()
+                        .orNull();
+
                 final Dao.SqlLogEnabled sqlLogAnno = StreamEx.of(m.getAnnotations()).select(Dao.SqlLogEnabled.class).last().orElse(daoClassSqlLogAnno);
                 final Dao.PerfLog perfLogAnno = StreamEx.of(m.getAnnotations()).select(Dao.PerfLog.class).last().orElse(daoClassPerfLogAnno);
                 final boolean hasSqlLogAnno = sqlLogAnno != null;
@@ -4161,17 +4181,22 @@ final class DaoImpl {
                 final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> tmp = call;
 
                 if (transactionalAnno == null || transactionalAnno.propagation() == Propagation.SUPPORTS) {
-                    if (hasSqlLogAnno || hasPerfLogAnno) {
+                    if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
+                            || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
                         call = (proxy, args) -> {
-                            final boolean prevSqlLogEnabled = hasSqlLogAnno ? JdbcUtil.isSQLLogEnabled() : false;
-                            final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
+                            final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
+                            final boolean prevSqlLogEnabled = hasSqlLogAnno ? sqlLogConfig.isEnabled : false;
+                            final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
+                            final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
+                            final long prevMinExecutionTimeForSqlPerfLog = hasPerfLogAnno ? SqlPerfLogConfig.minExecutionTimeForSqlPerfLog : -1;
+                            final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
 
-                            if (hasSqlLogAnno) {
-                                JdbcUtil.enableSQLLog(sqlLogAnno.value());
+                            if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                             }
 
-                            if (hasPerfLogAnno) {
-                                JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
+                            if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                             }
 
                             final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
@@ -4179,91 +4204,39 @@ final class DaoImpl {
                             try {
                                 return tmp.apply(proxy, args);
                             } finally {
-                                if (hasPerfLogAnno) {
-                                    if (perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
-                                        final long elapsedTime = System.currentTimeMillis() - startTime;
-
-                                        if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                            daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
-                                        }
-                                    }
-
-                                    JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+                                if (hasPerfLogAnno && JdbcUtil.isDaoMethodPerfLogAllowed) {
+                                    logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
                                 }
 
-                                if (hasSqlLogAnno) {
-                                    JdbcUtil.enableSQLLog(prevSqlLogEnabled);
+                                if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                }
+
+                                if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                    JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
                                 }
                             }
                         };
-
                     } else {
                         // Do not need to do anything.
                     }
                 } else if (transactionalAnno.propagation() == Propagation.REQUIRED) {
-                    call = (proxy, args) -> {
-                        final boolean prevSqlLogEnabled = hasSqlLogAnno ? JdbcUtil.isSQLLogEnabled() : false;
-                        final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
+                    if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
+                            || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
+                        call = (proxy, args) -> {
+                            final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
+                            final boolean prevSqlLogEnabled = hasSqlLogAnno ? sqlLogConfig.isEnabled : false;
+                            final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
+                            final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
+                            final long prevMinExecutionTimeForSqlPerfLog = hasPerfLogAnno ? SqlPerfLogConfig.minExecutionTimeForSqlPerfLog : -1;
+                            final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
 
-                        if (hasSqlLogAnno) {
-                            JdbcUtil.enableSQLLog(sqlLogAnno.value());
-                        }
-
-                        if (hasPerfLogAnno) {
-                            JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
-                        }
-
-                        final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
-
-                        final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
-                        Object result = null;
-
-                        try {
-                            result = tmp.apply(proxy, args);
-
-                            tran.commit();
-                        } finally {
-                            if (hasSqlLogAnno || hasPerfLogAnno) {
-                                try {
-                                    tran.rollbackIfNotCommitted();
-                                } finally {
-                                    if (hasPerfLogAnno) {
-                                        if (perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
-                                            final long elapsedTime = System.currentTimeMillis() - startTime;
-
-                                            if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                                daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
-                                            }
-                                        }
-
-                                        JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
-                                    }
-
-                                    if (hasSqlLogAnno) {
-                                        JdbcUtil.enableSQLLog(prevSqlLogEnabled);
-                                    }
-                                }
-                            } else {
-                                tran.rollbackIfNotCommitted();
-                            }
-                        }
-
-                        return result;
-                    };
-                } else if (transactionalAnno.propagation() == Propagation.REQUIRES_NEW) {
-                    call = (proxy, args) -> {
-                        final javax.sql.DataSource dataSource = proxy.dataSource();
-
-                        return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
-                            final boolean prevSqlLogEnabled = hasSqlLogAnno ? JdbcUtil.isSQLLogEnabled() : false;
-                            final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
-
-                            if (hasSqlLogAnno) {
-                                JdbcUtil.enableSQLLog(sqlLogAnno.value());
+                            if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                             }
 
-                            if (hasPerfLogAnno) {
-                                JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
+                            if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                             }
 
                             final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
@@ -4276,24 +4249,21 @@ final class DaoImpl {
 
                                 tran.commit();
                             } finally {
-                                if (hasSqlLogAnno || hasPerfLogAnno) {
+                                if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
+                                        || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
                                     try {
                                         tran.rollbackIfNotCommitted();
                                     } finally {
-                                        if (hasPerfLogAnno) {
-                                            if (perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
-                                                final long elapsedTime = System.currentTimeMillis() - startTime;
-
-                                                if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                                    daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
-                                                }
-                                            }
-
-                                            JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+                                        if (hasPerfLogAnno && JdbcUtil.isDaoMethodPerfLogAllowed) {
+                                            logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
                                         }
 
-                                        if (hasSqlLogAnno) {
-                                            JdbcUtil.enableSQLLog(prevSqlLogEnabled);
+                                        if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                            JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                        }
+
+                                        if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                            JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
                                         }
                                     }
                                 } else {
@@ -4302,23 +4272,114 @@ final class DaoImpl {
                             }
 
                             return result;
+                        };
+                    } else {
+                        call = (proxy, args) -> {
+                            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                            Object result = null;
+
+                            try {
+                                result = tmp.apply(proxy, args);
+
+                                tran.commit();
+                            } finally {
+                                tran.rollbackIfNotCommitted();
+                            }
+
+                            return result;
+                        };
+                    }
+                } else if (transactionalAnno.propagation() == Propagation.REQUIRES_NEW) {
+                    call = (proxy, args) -> {
+                        final javax.sql.DataSource dataSource = proxy.dataSource();
+
+                        return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
+                            if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
+                                    || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
+                                final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
+                                final boolean prevSqlLogEnabled = hasSqlLogAnno ? sqlLogConfig.isEnabled : false;
+                                final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
+                                final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
+                                final long prevMinExecutionTimeForSqlPerfLog = hasPerfLogAnno ? SqlPerfLogConfig.minExecutionTimeForSqlPerfLog : -1;
+                                final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
+
+                                if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                    JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
+                                }
+
+                                if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
+                                }
+
+                                final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
+
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                Object result = null;
+
+                                try {
+                                    result = tmp.apply(proxy, args);
+
+                                    tran.commit();
+                                } finally {
+                                    if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
+                                            || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
+                                        try {
+                                            tran.rollbackIfNotCommitted();
+                                        } finally {
+                                            if (hasPerfLogAnno && JdbcUtil.isDaoMethodPerfLogAllowed) {
+                                                logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
+                                            }
+
+                                            if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                                JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                            }
+
+                                            if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                                JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
+                                            }
+                                        }
+                                    } else {
+                                        tran.rollbackIfNotCommitted();
+                                    }
+                                }
+
+                                return result;
+                            } else {
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                Object result = null;
+
+                                try {
+                                    result = tmp.apply(proxy, args);
+
+                                    tran.commit();
+                                } finally {
+                                    tran.rollbackIfNotCommitted();
+                                }
+
+                                return result;
+                            }
                         });
                     };
                 } else if (transactionalAnno.propagation() == Propagation.NOT_SUPPORTED) {
                     call = (proxy, args) -> {
                         final javax.sql.DataSource dataSource = proxy.dataSource();
 
-                        if (hasSqlLogAnno || hasPerfLogAnno) {
+                        if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
+                                || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
                             return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
-                                final boolean prevSqlLogEnabled = hasSqlLogAnno ? JdbcUtil.isSQLLogEnabled() : false;
-                                final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
+                                final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
+                                final boolean prevSqlLogEnabled = hasSqlLogAnno ? sqlLogConfig.isEnabled : false;
+                                final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
+                                final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
+                                final long prevMinExecutionTimeForSqlPerfLog = hasPerfLogAnno ? SqlPerfLogConfig.minExecutionTimeForSqlPerfLog : -1;
+                                final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
 
-                                if (hasSqlLogAnno) {
-                                    JdbcUtil.enableSQLLog(sqlLogAnno.value());
+                                if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                    JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                                 }
 
-                                if (hasPerfLogAnno) {
-                                    JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
+                                if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                                 }
 
                                 final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
@@ -4326,20 +4387,16 @@ final class DaoImpl {
                                 try {
                                     return tmp.apply(proxy, args);
                                 } finally {
-                                    if (hasPerfLogAnno) {
-                                        if (perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
-                                            final long elapsedTime = System.currentTimeMillis() - startTime;
-
-                                            if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                                daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
-                                            }
-                                        }
-
-                                        JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+                                    if (hasPerfLogAnno && JdbcUtil.isDaoMethodPerfLogAllowed) {
+                                        logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
                                     }
 
-                                    if (hasSqlLogAnno) {
-                                        JdbcUtil.enableSQLLog(prevSqlLogEnabled);
+                                    if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                        JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                    }
+
+                                    if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                        JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
                                     }
                                 }
                             });
@@ -4348,9 +4405,6 @@ final class DaoImpl {
                         }
                     };
                 }
-
-                final Predicate<String> filterByMethodName = it -> N.notNullOrEmpty(it)
-                        && (StringUtil.containsIgnoreCase(m.getName(), it) || Pattern.matches(it, m.getName()));
 
                 final Dao.CacheResult cacheResultAnno = StreamEx.of(m.getAnnotations())
                         .select(Dao.CacheResult.class)

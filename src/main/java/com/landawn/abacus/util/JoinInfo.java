@@ -784,8 +784,8 @@ final class JoinInfo {
         Map<String, JoinInfo> joinInfoMap = entityJoinInfoMap.get(entityClass);
 
         if (joinInfoMap == null) {
-            final Dao.AllowJoiningByNullOrDefaultValue anno = daoClass.getAnnotation(Dao.AllowJoiningByNullOrDefaultValue.class);
-            final boolean allowJoiningByNullOrDefaultValue = anno == null || anno.value() == false ? false : true;
+            final Dao.Config anno = daoClass.getAnnotation(Dao.Config.class);
+            final boolean allowJoiningByNullOrDefaultValue = anno == null || anno.allowJoiningByNullOrDefaultValue() == false ? false : true;
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
 
             joinInfoMap = new LinkedHashMap<>();
@@ -849,7 +849,7 @@ final class JoinInfo {
     private Object checkPropValue(PropInfo propInfo, Object entity) {
         final Object value = propInfo.getPropValue(entity);
 
-        if (allowJoiningByNullOrDefaultValue == false && Primitives.isNullOrDefault(value)) {
+        if (allowJoiningByNullOrDefaultValue == false && N.isNullOrDefault(value)) {
             throw new IllegalArgumentException("The join property value can't be null or default for property: " + propInfo.name
                     + ". Annotated the Dao class of " + entityClass + " with @AllowJoiningByNullOrDefaultValue to avoid this exception");
         }
