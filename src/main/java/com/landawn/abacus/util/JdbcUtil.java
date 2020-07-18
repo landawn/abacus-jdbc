@@ -4648,7 +4648,10 @@ public final class JdbcUtil {
         }
     }
 
+    static final long DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG = 3000L;
+
     static final long DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG = 1000L;
+
     static final ThreadLocal<SqlLogConfig> minExecutionTimeForSqlPerfLog_TL = ThreadLocal
             .withInitial(() -> new SqlLogConfig(DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG, DEFAULT_MAX_SQL_LOG_LENGTH));
 
@@ -7287,6 +7290,12 @@ public final class JdbcUtil {
              * @return
              */
             boolean callGenerateIdForInsertWithSqlIfIdNotSet() default false;
+
+            /**
+             * 
+             * @return
+             */
+            boolean allowJoiningByNullOrDefaultValue() default false;
         }
 
         @Retention(RetentionPolicy.RUNTIME)
@@ -7888,6 +7897,14 @@ public final class JdbcUtil {
             boolean value() default true;
 
             int maxSqlLogLength() default JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH; // 1024
+
+            /**
+             * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
+             * It's only applied if target of annotation {@code SqlLogEnabled} is {@code Type}, and will be ignored if target is method.
+             * 
+             * @return
+             */
+            String[] filter() default { ".*" };
         }
 
         /**
@@ -7901,7 +7918,7 @@ public final class JdbcUtil {
              *
              * @return
              */
-            long minExecutionTimeForSql() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG;
+            long minExecutionTimeForSql() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG; // 1000
 
             int maxSqlLogLength() default JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH; // 1024
 
@@ -7909,7 +7926,15 @@ public final class JdbcUtil {
              * start to log performance for Dao operation/method if the execution time >= the specified(or default) execution time in milliseconds.
              * @return
              */
-            long minExecutionTimeForOperation() default 3000;
+            long minExecutionTimeForOperation() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG; // 3000
+
+            /**
+             * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
+             * It's only applied if target of annotation {@code PerfLog} is {@code Type}, and will be ignored if target is method.
+             * 
+             * @return
+             */
+            String[] filter() default { ".*" };
         }
 
         @Retention(RetentionPolicy.RUNTIME)
@@ -8035,14 +8060,6 @@ public final class JdbcUtil {
              * @return
              */
             String[] filter() default { "save", "insert", "update", "delete", "upsert", "execute" };
-        }
-
-        /** 
-         */
-        @Retention(RetentionPolicy.RUNTIME)
-        @Target(value = { ElementType.TYPE })
-        static @interface AllowJoiningByNullOrDefaultValue {
-            boolean value() default false;
         }
 
         @Retention(RetentionPolicy.RUNTIME)

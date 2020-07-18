@@ -1863,14 +1863,6 @@ final class DaoImpl {
                 ? (pq, entity) -> pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity), idPropInfo.dbType)
                 : (pq, entity) -> pq.setParameters(entity);
 
-        final Dao.SqlLogEnabled daoClassSqlLogAnno = StreamEx.of(allInterfaces)
-                .flatMapp(cls -> cls.getAnnotations())
-                .select(Dao.SqlLogEnabled.class)
-                .first()
-                .orNull();
-
-        final Dao.PerfLog daoClassPerfLogAnno = StreamEx.of(allInterfaces).flatMapp(cls -> cls.getAnnotations()).select(Dao.PerfLog.class).first().orNull();
-
         final Dao.CacheResult daoClassCacheResultAnno = StreamEx.of(allInterfaces)
                 .flatMapp(cls -> cls.getAnnotations())
                 .select(Dao.CacheResult.class)
@@ -1909,6 +1901,9 @@ final class DaoImpl {
             if (!Modifier.isPublic(m.getModifiers())) {
                 continue;
             }
+
+            final Predicate<String> filterByMethodName = it -> N.notNullOrEmpty(it)
+                    && (StringUtil.containsIgnoreCase(m.getName(), it) || Pattern.matches(it, m.getName()));
 
             final Class<?> declaringClass = m.getDeclaringClass();
             final String methodName = m.getName();
@@ -4164,6 +4159,20 @@ final class DaoImpl {
                 //                       + fullClassMethodName);
                 //    }
 
+                final Dao.SqlLogEnabled daoClassSqlLogAnno = StreamEx.of(allInterfaces)
+                        .flatMapp(cls -> cls.getAnnotations())
+                        .select(Dao.SqlLogEnabled.class)
+                        .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
+                        .first()
+                        .orNull();
+
+                final Dao.PerfLog daoClassPerfLogAnno = StreamEx.of(allInterfaces)
+                        .flatMapp(cls -> cls.getAnnotations())
+                        .select(Dao.PerfLog.class)
+                        .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
+                        .first()
+                        .orNull();
+
                 final Dao.SqlLogEnabled sqlLogAnno = StreamEx.of(m.getAnnotations()).select(Dao.SqlLogEnabled.class).last().orElse(daoClassSqlLogAnno);
                 final Dao.PerfLog perfLogAnno = StreamEx.of(m.getAnnotations()).select(Dao.PerfLog.class).last().orElse(daoClassPerfLogAnno);
                 final boolean hasSqlLogAnno = sqlLogAnno != null;
@@ -4363,9 +4372,6 @@ final class DaoImpl {
                         }
                     };
                 }
-
-                final Predicate<String> filterByMethodName = it -> N.notNullOrEmpty(it)
-                        && (StringUtil.containsIgnoreCase(m.getName(), it) || Pattern.matches(it, m.getName()));
 
                 final Dao.CacheResult cacheResultAnno = StreamEx.of(m.getAnnotations())
                         .select(Dao.CacheResult.class)

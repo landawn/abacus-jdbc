@@ -784,8 +784,8 @@ final class JoinInfo {
         Map<String, JoinInfo> joinInfoMap = entityJoinInfoMap.get(entityClass);
 
         if (joinInfoMap == null) {
-            final Dao.AllowJoiningByNullOrDefaultValue anno = daoClass.getAnnotation(Dao.AllowJoiningByNullOrDefaultValue.class);
-            final boolean allowJoiningByNullOrDefaultValue = anno == null || anno.value() == false ? false : true;
+            final Dao.Config anno = daoClass.getAnnotation(Dao.Config.class);
+            final boolean allowJoiningByNullOrDefaultValue = anno == null || anno.allowJoiningByNullOrDefaultValue() == false ? false : true;
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
 
             joinInfoMap = new LinkedHashMap<>();
