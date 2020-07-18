@@ -3661,7 +3661,7 @@ public final class JdbcUtil {
 
     static <R> R extractAndCloseResultSet(ResultSet rs, final ResultExtractor<R> resultExtrator) throws SQLException {
         try {
-            return resultExtrator.apply(rs);
+            return checkNotResultSet(resultExtrator.apply(rs));
         } finally {
             closeQuietly(rs);
         }
@@ -3669,7 +3669,7 @@ public final class JdbcUtil {
 
     static <R> R extractAndCloseResultSet(ResultSet rs, final BiResultExtractor<R> resultExtrator) throws SQLException {
         try {
-            return resultExtrator.apply(rs, getColumnLabelList(rs));
+            return checkNotResultSet(resultExtrator.apply(rs, getColumnLabelList(rs)));
         } finally {
             closeQuietly(rs);
         }
@@ -3683,6 +3683,14 @@ public final class JdbcUtil {
      */
     public static ExceptionalStream<Object[], SQLException> stream(final ResultSet resultSet) {
         return stream(Object[].class, resultSet);
+    }
+
+    static <R> R checkNotResultSet(R result) {
+        if (result instanceof ResultSet) {
+            throw new UnsupportedOperationException("The result value of ResultExtractor/BiResultExtractor.apply can't be ResultSet");
+        }
+
+        return result;
     }
 
     /**

@@ -2414,7 +2414,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return checkNotResultSet(resultExtrator.apply(rs));
+            return JdbcUtil.checkNotResultSet(resultExtrator.apply(rs));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -2432,7 +2432,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return checkNotResultSet(resultExtrator.apply(rs, JdbcUtil.getColumnLabelList(rs)));
+            return JdbcUtil.checkNotResultSet(resultExtrator.apply(rs, JdbcUtil.getColumnLabelList(rs)));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -3888,14 +3888,6 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
 
             throw new IllegalArgumentException(errorMsg);
         }
-    }
-
-    protected <R> R checkNotResultSet(R result) {
-        if (result instanceof ResultSet) {
-            throw new UnsupportedOperationException("The result value of ResultExtractor/BiResultExtractor.apply can't be ResultSet");
-        }
-
-        return result;
     }
 
     /**
