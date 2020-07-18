@@ -1580,6 +1580,19 @@ final class DaoImpl {
         return keyExtractor;
     }
 
+    private static void logMethodPerfAndReset(final Logger daoLogger, final String simpleClassMethodName, final Dao.PerfLog perfLogAnno,
+            final long prevMinExecutionTimeForSQLPerfLog, final long startTime) {
+        if (perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
+            final long elapsedTime = System.currentTimeMillis() - startTime;
+
+            if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
+                daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
+            }
+        }
+
+        JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+    }
+
     @SuppressWarnings({ "rawtypes" })
     static <T, SB extends SQLBuilder, TD extends JdbcUtil.Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
             final SQLMapper sqlMapper, final Cache<String, Object> daoCache, final Executor executor) {
@@ -4167,11 +4180,11 @@ final class DaoImpl {
                             final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
 
                             if (hasSqlLogAnno) {
-                                JdbcUtil.enableSQLLog(sqlLogAnno.value());
+                                JdbcUtil.enableSQLLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                             }
 
                             if (hasPerfLogAnno) {
-                                JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
+                                JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                             }
 
                             final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
@@ -4180,15 +4193,7 @@ final class DaoImpl {
                                 return tmp.apply(proxy, args);
                             } finally {
                                 if (hasPerfLogAnno) {
-                                    if (perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
-                                        final long elapsedTime = System.currentTimeMillis() - startTime;
-
-                                        if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                            daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
-                                        }
-                                    }
-
-                                    JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+                                    logMethodPerfAndReset(daoLogger, simpleClassMethodName, perfLogAnno, prevMinExecutionTimeForSQLPerfLog, startTime);
                                 }
 
                                 if (hasSqlLogAnno) {
@@ -4206,11 +4211,11 @@ final class DaoImpl {
                         final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
 
                         if (hasSqlLogAnno) {
-                            JdbcUtil.enableSQLLog(sqlLogAnno.value());
+                            JdbcUtil.enableSQLLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                         }
 
                         if (hasPerfLogAnno) {
-                            JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
+                            JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                         }
 
                         final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
@@ -4228,15 +4233,7 @@ final class DaoImpl {
                                     tran.rollbackIfNotCommitted();
                                 } finally {
                                     if (hasPerfLogAnno) {
-                                        if (perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
-                                            final long elapsedTime = System.currentTimeMillis() - startTime;
-
-                                            if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                                daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
-                                            }
-                                        }
-
-                                        JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+                                        logMethodPerfAndReset(daoLogger, simpleClassMethodName, perfLogAnno, prevMinExecutionTimeForSQLPerfLog, startTime);
                                     }
 
                                     if (hasSqlLogAnno) {
@@ -4259,11 +4256,11 @@ final class DaoImpl {
                             final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
 
                             if (hasSqlLogAnno) {
-                                JdbcUtil.enableSQLLog(sqlLogAnno.value());
+                                JdbcUtil.enableSQLLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                             }
 
                             if (hasPerfLogAnno) {
-                                JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
+                                JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                             }
 
                             final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
@@ -4281,15 +4278,7 @@ final class DaoImpl {
                                         tran.rollbackIfNotCommitted();
                                     } finally {
                                         if (hasPerfLogAnno) {
-                                            if (perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
-                                                final long elapsedTime = System.currentTimeMillis() - startTime;
-
-                                                if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                                    daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
-                                                }
-                                            }
-
-                                            JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+                                            logMethodPerfAndReset(daoLogger, simpleClassMethodName, perfLogAnno, prevMinExecutionTimeForSQLPerfLog, startTime);
                                         }
 
                                         if (hasSqlLogAnno) {
@@ -4314,11 +4303,11 @@ final class DaoImpl {
                                 final long prevMinExecutionTimeForSQLPerfLog = hasPerfLogAnno ? JdbcUtil.getMinExecutionTimeForSQLPerfLog() : -1;
 
                                 if (hasSqlLogAnno) {
-                                    JdbcUtil.enableSQLLog(sqlLogAnno.value());
+                                    JdbcUtil.enableSQLLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                                 }
 
                                 if (hasPerfLogAnno) {
-                                    JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql());
+                                    JdbcUtil.setMinExecutionTimeForSQLPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                                 }
 
                                 final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
@@ -4327,15 +4316,7 @@ final class DaoImpl {
                                     return tmp.apply(proxy, args);
                                 } finally {
                                     if (hasPerfLogAnno) {
-                                        if (perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
-                                            final long elapsedTime = System.currentTimeMillis() - startTime;
-
-                                            if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                                                daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
-                                            }
-                                        }
-
-                                        JdbcUtil.setMinExecutionTimeForSQLPerfLog(prevMinExecutionTimeForSQLPerfLog);
+                                        logMethodPerfAndReset(daoLogger, simpleClassMethodName, perfLogAnno, prevMinExecutionTimeForSQLPerfLog, startTime);
                                     }
 
                                     if (hasSqlLogAnno) {
