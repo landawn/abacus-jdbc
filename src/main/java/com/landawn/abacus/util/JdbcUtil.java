@@ -4549,6 +4549,18 @@ public final class JdbcUtil {
         return false;
     }
 
+    static boolean turnOffSqlLogGlobally = false;
+
+    public static void turnOffSqlLogGlobally() {
+        turnOffSqlLogGlobally = true;
+    }
+
+    static boolean turnOffSqlPerfLogGlobally = false;
+
+    public static void turnOffSqlPerfLogGlobally() {
+        turnOffSqlPerfLogGlobally = true;
+    }
+
     static final class SqlLogConfig {
         boolean isEnabled;
         int maxSqlLogLength;
@@ -4585,16 +4597,17 @@ public final class JdbcUtil {
      *
      * @param b {@code true} to enable, {@code false} to disable.
      */
-    public static void enableSQLLog(final boolean b) {
-        enableSQLLog(b, DEFAULT_MAX_SQL_LOG_LENGTH);
+    public static void enableSqlLog(final boolean b) {
+        enableSqlLog(b, DEFAULT_MAX_SQL_LOG_LENGTH);
     }
 
     /**
+     * Enable/Disable sql log in current thread.
      * 
      * @param b {@code true} to enable, {@code false} to disable.
      * @param maxSqlLogLength default value is 1024
      */
-    public static void enableSQLLog(final boolean b, final int maxSqlLogLength) {
+    public static void enableSqlLog(final boolean b, final int maxSqlLogLength) {
         // synchronized (isSQLLogEnabled_TL) {
         if (logger.isDebugEnabled() && isSQLLogEnabled_TL.get().isEnabled != b) {
             if (b) {
@@ -4613,7 +4626,7 @@ public final class JdbcUtil {
      *
      * @return {@code true} if it's enabled, otherwise {@code false} is returned.
      */
-    public static boolean isSQLLogEnabled() {
+    public static boolean isSqlLogEnabled() {
         return isSQLLogEnabled_TL.get().isEnabled;
     }
 
@@ -4633,8 +4646,13 @@ public final class JdbcUtil {
     static final ThreadLocal<SqlLogConfig> minExecutionTimeForSQLPerfLog_TL = ThreadLocal
             .withInitial(() -> new SqlLogConfig(DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG, DEFAULT_MAX_SQL_LOG_LENGTH));
 
-    public static void setMinExecutionTimeForSQLPerfLog(final long minExecutionTimeForSQLPerfLog) {
-        setMinExecutionTimeForSQLPerfLog(minExecutionTimeForSQLPerfLog, DEFAULT_MAX_SQL_LOG_LENGTH);
+    /**
+     * Set minimum execution time to log sql performance in current thread.
+     * 
+     * @param minExecutionTimeForSQLPerfLog
+     */
+    public static void setMinExecutionTimeForSqlPerfLog(final long minExecutionTimeForSQLPerfLog) {
+        setMinExecutionTimeForSqlPerfLog(minExecutionTimeForSQLPerfLog, DEFAULT_MAX_SQL_LOG_LENGTH);
     }
 
     /**
@@ -4643,7 +4661,7 @@ public final class JdbcUtil {
      * @param minExecutionTimeForSQLPerfLog Default value is 1000 (milliseconds).
      * @param maxSqlLogLength default value is 1024
      */
-    public static void setMinExecutionTimeForSQLPerfLog(final long minExecutionTimeForSQLPerfLog, final int maxSqlLogLength) {
+    public static void setMinExecutionTimeForSqlPerfLog(final long minExecutionTimeForSQLPerfLog, final int maxSqlLogLength) {
         // synchronized (minExecutionTimeForSQLPerfLog_TL) {
         if (logger.isDebugEnabled() && minExecutionTimeForSQLPerfLog_TL.get().minExecutionTimeForSQLPerfLog != minExecutionTimeForSQLPerfLog) {
             if (minExecutionTimeForSQLPerfLog >= 0) {
@@ -4658,11 +4676,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * Return the minimum execution time in milliseconds to log SQL performance. Default value is 1000 (milliseconds).
+     * Return the minimum execution time in milliseconds to log SQL performance in current thread. Default value is 1000 (milliseconds).
      *
      * @return
      */
-    public static long getMinExecutionTimeForSQLPerfLog() {
+    public static long getMinExecutionTimeForSqlPerfLog() {
         return minExecutionTimeForSQLPerfLog_TL.get().minExecutionTimeForSQLPerfLog;
     }
 
