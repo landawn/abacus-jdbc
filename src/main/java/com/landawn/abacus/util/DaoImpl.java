@@ -730,6 +730,11 @@ final class DaoImpl {
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         }
 
+        if (op == OP.executeAndGetOutParameters && !returnType.isAssignableFrom(OutParamResult.class)) {
+            throw new UnsupportedOperationException(
+                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+        }
+
         //    if ((op == OP.queryForSingle || op == OP.queryForUnique)
         //            && !(Optional.class.isAssignableFrom(returnType) || Nullable.class.isAssignableFrom(returnType))) {
         //        throw new UnsupportedOperationException(
@@ -759,11 +764,6 @@ final class DaoImpl {
 
         if (isCall) {
             if (op == OP.executeAndGetOutParameters) {
-                if (!returnType.isAssignableFrom(OutParamResult.class)) {
-                    throw new UnsupportedOperationException(
-                            "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
-                }
-
                 return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).executeAndGetOutParameters();
             } else if (op == OP.listAll) {
                 if (Tuple2.class.isAssignableFrom(returnType)) {
