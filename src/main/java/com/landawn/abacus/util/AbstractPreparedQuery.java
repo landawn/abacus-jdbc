@@ -74,14 +74,14 @@ import com.landawn.abacus.util.u.OptionalShort;
  * Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.
  *
  * @author haiyangl
- * @param <S>
- * @param <Q>
+ * @param <Stmt>
+ * @param <This>
  */
-abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends AbstractPreparedQuery<S, Q>> implements Closeable {
+abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extends AbstractPreparedQuery<Stmt, This>> implements Closeable {
 
     static final Logger logger = LoggerFactory.getLogger(AbstractPreparedQuery.class);
 
-    final S stmt;
+    final Stmt stmt;
 
     boolean isFetchDirectionSet = false;
 
@@ -93,7 +93,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
 
     Runnable closeHandler;
 
-    AbstractPreparedQuery(S stmt) {
+    AbstractPreparedQuery(Stmt stmt) {
         this.stmt = stmt;
     }
 
@@ -114,12 +114,12 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @param closeAfterExecution default is {@code true}.
      * @return
      */
-    public Q closeAfterExecution(boolean closeAfterExecution) {
+    public This closeAfterExecution(boolean closeAfterExecution) {
         assertNotClosed();
 
         this.isCloseAfterExecution = closeAfterExecution;
 
-        return (Q) this;
+        return (This) this;
     }
 
     boolean isCloseAfterExecution() {
@@ -131,7 +131,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @param closeHandler A task to execute after this {@code Query} is closed
      * @return
      */
-    public Q onClose(final Runnable closeHandler) {
+    public This onClose(final Runnable closeHandler) {
         checkArgNotNull(closeHandler, "closeHandler");
         assertNotClosed();
 
@@ -149,7 +149,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             };
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -160,10 +160,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setNull(int parameterIndex, int sqlType) throws SQLException {
+    public This setNull(int parameterIndex, int sqlType) throws SQLException {
         stmt.setNull(parameterIndex, sqlType);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -175,10 +175,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setNull(int parameterIndex, int sqlType, String typeName) throws SQLException {
+    public This setNull(int parameterIndex, int sqlType, String typeName) throws SQLException {
         stmt.setNull(parameterIndex, sqlType, typeName);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -189,10 +189,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setBoolean(int parameterIndex, boolean x) throws SQLException {
+    public This setBoolean(int parameterIndex, boolean x) throws SQLException {
         stmt.setBoolean(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -203,10 +203,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setBoolean(int parameterIndex, Boolean x) throws SQLException {
+    public This setBoolean(int parameterIndex, Boolean x) throws SQLException {
         stmt.setBoolean(parameterIndex, N.defaultIfNull(x));
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -217,10 +217,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setByte(int parameterIndex, byte x) throws SQLException {
+    public This setByte(int parameterIndex, byte x) throws SQLException {
         stmt.setByte(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -231,10 +231,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setByte(int parameterIndex, Byte x) throws SQLException {
+    public This setByte(int parameterIndex, Byte x) throws SQLException {
         stmt.setByte(parameterIndex, N.defaultIfNull(x));
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -245,10 +245,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setShort(int parameterIndex, short x) throws SQLException {
+    public This setShort(int parameterIndex, short x) throws SQLException {
         stmt.setShort(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -259,10 +259,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setShort(int parameterIndex, Short x) throws SQLException {
+    public This setShort(int parameterIndex, Short x) throws SQLException {
         stmt.setShort(parameterIndex, N.defaultIfNull(x));
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -273,10 +273,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setInt(int parameterIndex, int x) throws SQLException {
+    public This setInt(int parameterIndex, int x) throws SQLException {
         stmt.setInt(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -287,10 +287,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setInt(int parameterIndex, Integer x) throws SQLException {
+    public This setInt(int parameterIndex, Integer x) throws SQLException {
         stmt.setInt(parameterIndex, N.defaultIfNull(x));
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -301,10 +301,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setInt(int parameterIndex, char x) throws SQLException {
+    public This setInt(int parameterIndex, char x) throws SQLException {
         stmt.setInt(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -315,10 +315,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setInt(int parameterIndex, Character x) throws SQLException {
+    public This setInt(int parameterIndex, Character x) throws SQLException {
         stmt.setInt(parameterIndex, N.defaultIfNull(x));
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -329,10 +329,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setLong(int parameterIndex, long x) throws SQLException {
+    public This setLong(int parameterIndex, long x) throws SQLException {
         stmt.setLong(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -343,10 +343,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setLong(int parameterIndex, Long x) throws SQLException {
+    public This setLong(int parameterIndex, Long x) throws SQLException {
         stmt.setLong(parameterIndex, N.defaultIfNull(x));
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -357,10 +357,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setFloat(int parameterIndex, float x) throws SQLException {
+    public This setFloat(int parameterIndex, float x) throws SQLException {
         stmt.setFloat(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -371,10 +371,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setFloat(int parameterIndex, Float x) throws SQLException {
+    public This setFloat(int parameterIndex, Float x) throws SQLException {
         stmt.setFloat(parameterIndex, N.defaultIfNull(x));
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -385,10 +385,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setDouble(int parameterIndex, double x) throws SQLException {
+    public This setDouble(int parameterIndex, double x) throws SQLException {
         stmt.setDouble(parameterIndex, N.defaultIfNull(x));
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -399,10 +399,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setDouble(int parameterIndex, Double x) throws SQLException {
+    public This setDouble(int parameterIndex, Double x) throws SQLException {
         stmt.setDouble(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -413,10 +413,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setBigDecimal(int parameterIndex, BigDecimal x) throws SQLException {
+    public This setBigDecimal(int parameterIndex, BigDecimal x) throws SQLException {
         stmt.setBigDecimal(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -427,10 +427,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setString(int parameterIndex, String x) throws SQLException {
+    public This setString(int parameterIndex, String x) throws SQLException {
         stmt.setString(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -441,16 +441,16 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setString(int parameterIndex, CharSequence x) throws SQLException {
+    public This setString(int parameterIndex, CharSequence x) throws SQLException {
         stmt.setString(parameterIndex, x == null ? null : x.toString());
 
-        return (Q) this;
+        return (This) this;
     }
 
-    public Q setString(int parameterIndex, char x) throws SQLException {
+    public This setString(int parameterIndex, char x) throws SQLException {
         stmt.setString(parameterIndex, String.valueOf(x));
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -461,10 +461,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setString(int parameterIndex, Character x) throws SQLException {
+    public This setString(int parameterIndex, Character x) throws SQLException {
         stmt.setString(parameterIndex, x == null ? null : String.valueOf(x));
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -475,10 +475,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setDate(int parameterIndex, java.sql.Date x) throws SQLException {
+    public This setDate(int parameterIndex, java.sql.Date x) throws SQLException {
         stmt.setDate(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -489,10 +489,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setDate(int parameterIndex, java.util.Date x) throws SQLException {
+    public This setDate(int parameterIndex, java.util.Date x) throws SQLException {
         stmt.setDate(parameterIndex, x == null ? null : x instanceof java.sql.Date ? (java.sql.Date) x : new java.sql.Date(x.getTime()));
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -503,10 +503,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setTime(int parameterIndex, java.sql.Time x) throws SQLException {
+    public This setTime(int parameterIndex, java.sql.Time x) throws SQLException {
         stmt.setTime(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -517,10 +517,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setTime(int parameterIndex, java.util.Date x) throws SQLException {
+    public This setTime(int parameterIndex, java.util.Date x) throws SQLException {
         stmt.setTime(parameterIndex, x == null ? null : x instanceof java.sql.Time ? (java.sql.Time) x : new java.sql.Time(x.getTime()));
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -531,10 +531,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setTimestamp(int parameterIndex, java.sql.Timestamp x) throws SQLException {
+    public This setTimestamp(int parameterIndex, java.sql.Timestamp x) throws SQLException {
         stmt.setTimestamp(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -545,10 +545,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setTimestamp(int parameterIndex, java.util.Date x) throws SQLException {
+    public This setTimestamp(int parameterIndex, java.util.Date x) throws SQLException {
         stmt.setTimestamp(parameterIndex, x == null ? null : x instanceof java.sql.Timestamp ? (java.sql.Timestamp) x : new java.sql.Timestamp(x.getTime()));
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -559,10 +559,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setBytes(int parameterIndex, byte[] x) throws SQLException {
+    public This setBytes(int parameterIndex, byte[] x) throws SQLException {
         stmt.setBytes(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -573,10 +573,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setAsciiStream(int parameterIndex, InputStream inputStream) throws SQLException {
+    public This setAsciiStream(int parameterIndex, InputStream inputStream) throws SQLException {
         stmt.setAsciiStream(parameterIndex, inputStream);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -588,10 +588,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setAsciiStream(int parameterIndex, InputStream inputStream, long length) throws SQLException {
+    public This setAsciiStream(int parameterIndex, InputStream inputStream, long length) throws SQLException {
         stmt.setAsciiStream(parameterIndex, inputStream, length);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -602,10 +602,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setBinaryStream(int parameterIndex, InputStream inputStream) throws SQLException {
+    public This setBinaryStream(int parameterIndex, InputStream inputStream) throws SQLException {
         stmt.setBinaryStream(parameterIndex, inputStream);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -617,10 +617,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setBinaryStream(int parameterIndex, InputStream inputStream, long length) throws SQLException {
+    public This setBinaryStream(int parameterIndex, InputStream inputStream, long length) throws SQLException {
         stmt.setBinaryStream(parameterIndex, inputStream, length);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -631,10 +631,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setCharacterStream(int parameterIndex, Reader reader) throws SQLException {
+    public This setCharacterStream(int parameterIndex, Reader reader) throws SQLException {
         stmt.setCharacterStream(parameterIndex, reader);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -646,10 +646,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setCharacterStream(int parameterIndex, Reader reader, long length) throws SQLException {
+    public This setCharacterStream(int parameterIndex, Reader reader, long length) throws SQLException {
         stmt.setCharacterStream(parameterIndex, reader, length);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -660,10 +660,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setNCharacterStream(int parameterIndex, Reader reader) throws SQLException {
+    public This setNCharacterStream(int parameterIndex, Reader reader) throws SQLException {
         stmt.setNCharacterStream(parameterIndex, reader);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -675,10 +675,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setNCharacterStream(int parameterIndex, Reader reader, long length) throws SQLException {
+    public This setNCharacterStream(int parameterIndex, Reader reader, long length) throws SQLException {
         stmt.setNCharacterStream(parameterIndex, reader, length);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -689,10 +689,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setBlob(int parameterIndex, java.sql.Blob x) throws SQLException {
+    public This setBlob(int parameterIndex, java.sql.Blob x) throws SQLException {
         stmt.setBlob(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -703,10 +703,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setBlob(int parameterIndex, InputStream inputStream) throws SQLException {
+    public This setBlob(int parameterIndex, InputStream inputStream) throws SQLException {
         stmt.setBlob(parameterIndex, inputStream);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -718,10 +718,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setBlob(int parameterIndex, InputStream inputStream, long length) throws SQLException {
+    public This setBlob(int parameterIndex, InputStream inputStream, long length) throws SQLException {
         stmt.setBlob(parameterIndex, inputStream, length);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -732,10 +732,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setClob(int parameterIndex, java.sql.Clob x) throws SQLException {
+    public This setClob(int parameterIndex, java.sql.Clob x) throws SQLException {
         stmt.setClob(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -746,10 +746,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setClob(int parameterIndex, Reader reader) throws SQLException {
+    public This setClob(int parameterIndex, Reader reader) throws SQLException {
         stmt.setClob(parameterIndex, reader);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -761,10 +761,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setClob(int parameterIndex, Reader reader, long length) throws SQLException {
+    public This setClob(int parameterIndex, Reader reader, long length) throws SQLException {
         stmt.setClob(parameterIndex, reader, length);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -775,10 +775,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setNClob(int parameterIndex, java.sql.NClob x) throws SQLException {
+    public This setNClob(int parameterIndex, java.sql.NClob x) throws SQLException {
         stmt.setNClob(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -789,10 +789,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setNClob(int parameterIndex, Reader reader) throws SQLException {
+    public This setNClob(int parameterIndex, Reader reader) throws SQLException {
         stmt.setNClob(parameterIndex, reader);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -804,10 +804,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setNClob(int parameterIndex, Reader reader, long length) throws SQLException {
+    public This setNClob(int parameterIndex, Reader reader, long length) throws SQLException {
         stmt.setNClob(parameterIndex, reader, length);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -818,10 +818,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setURL(int parameterIndex, URL x) throws SQLException {
+    public This setURL(int parameterIndex, URL x) throws SQLException {
         stmt.setURL(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -832,10 +832,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setArray(int parameterIndex, java.sql.Array x) throws SQLException {
+    public This setArray(int parameterIndex, java.sql.Array x) throws SQLException {
         stmt.setArray(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -846,10 +846,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setSQLXML(int parameterIndex, java.sql.SQLXML x) throws SQLException {
+    public This setSQLXML(int parameterIndex, java.sql.SQLXML x) throws SQLException {
         stmt.setSQLXML(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -860,10 +860,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setRef(int parameterIndex, java.sql.Ref x) throws SQLException {
+    public This setRef(int parameterIndex, java.sql.Ref x) throws SQLException {
         stmt.setRef(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -874,10 +874,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setRowId(int parameterIndex, java.sql.RowId x) throws SQLException {
+    public This setRowId(int parameterIndex, java.sql.RowId x) throws SQLException {
         stmt.setRowId(parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -888,14 +888,14 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setObject(int parameterIndex, Object x) throws SQLException {
+    public This setObject(int parameterIndex, Object x) throws SQLException {
         if (x == null) {
             stmt.setObject(parameterIndex, x);
         } else {
             N.typeOf(x.getClass()).set(stmt, parameterIndex, x);
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -907,10 +907,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setObject(int parameterIndex, Object x, int sqlType) throws SQLException {
+    public This setObject(int parameterIndex, Object x, int sqlType) throws SQLException {
         stmt.setObject(parameterIndex, x, sqlType);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -923,10 +923,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setObject(int parameterIndex, Object x, int sqlType, int scaleOrLength) throws SQLException {
+    public This setObject(int parameterIndex, Object x, int sqlType, int scaleOrLength) throws SQLException {
         stmt.setObject(parameterIndex, x, sqlType, scaleOrLength);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -938,10 +938,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setObject(int parameterIndex, Object x, SQLType sqlType) throws SQLException {
+    public This setObject(int parameterIndex, Object x, SQLType sqlType) throws SQLException {
         stmt.setObject(parameterIndex, x, sqlType);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -954,16 +954,16 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setObject(int parameterIndex, Object x, SQLType sqlType, int scaleOrLength) throws SQLException {
+    public This setObject(int parameterIndex, Object x, SQLType sqlType, int scaleOrLength) throws SQLException {
         stmt.setObject(parameterIndex, x, sqlType, scaleOrLength);
 
-        return (Q) this;
+        return (This) this;
     }
 
-    public Q setObject(int parameterIndex, Object x, Type<Object> type) throws SQLException {
+    public This setObject(int parameterIndex, Object x, Type<Object> type) throws SQLException {
         type.set(stmt, parameterIndex, x);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -974,11 +974,11 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final String param1, final String param2) throws SQLException {
+    public This setParameters(final String param1, final String param2) throws SQLException {
         stmt.setString(1, param1);
         stmt.setString(2, param2);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -990,12 +990,12 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final String param1, final String param2, final String param3) throws SQLException {
+    public This setParameters(final String param1, final String param2, final String param3) throws SQLException {
         stmt.setString(1, param1);
         stmt.setString(2, param2);
         stmt.setString(3, param3);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1008,13 +1008,13 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final String param1, final String param2, final String param3, final String param4) throws SQLException {
+    public This setParameters(final String param1, final String param2, final String param3, final String param4) throws SQLException {
         stmt.setString(1, param1);
         stmt.setString(2, param2);
         stmt.setString(3, param3);
         stmt.setString(4, param4);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1028,14 +1028,14 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final String param1, final String param2, final String param3, final String param4, final String param5) throws SQLException {
+    public This setParameters(final String param1, final String param2, final String param3, final String param4, final String param5) throws SQLException {
         stmt.setString(1, param1);
         stmt.setString(2, param2);
         stmt.setString(3, param3);
         stmt.setString(4, param4);
         stmt.setString(5, param5);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1050,7 +1050,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final String param1, final String param2, final String param3, final String param4, final String param5, final String param6)
+    public This setParameters(final String param1, final String param2, final String param3, final String param4, final String param5, final String param6)
             throws SQLException {
         stmt.setString(1, param1);
         stmt.setString(2, param2);
@@ -1059,7 +1059,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         stmt.setString(5, param5);
         stmt.setString(6, param6);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1075,7 +1075,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final String param1, final String param2, final String param3, final String param4, final String param5, final String param6,
+    public This setParameters(final String param1, final String param2, final String param3, final String param4, final String param5, final String param6,
             final String param7) throws SQLException {
         stmt.setString(1, param1);
         stmt.setString(2, param2);
@@ -1085,7 +1085,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         stmt.setString(6, param6);
         stmt.setString(7, param7);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1096,11 +1096,11 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final Object param1, final Object param2) throws SQLException {
+    public This setParameters(final Object param1, final Object param2) throws SQLException {
         setObject(1, param1);
         setObject(2, param2);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1112,12 +1112,12 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final Object param1, final Object param2, final Object param3) throws SQLException {
+    public This setParameters(final Object param1, final Object param2, final Object param3) throws SQLException {
         setObject(1, param1);
         setObject(2, param2);
         setObject(3, param3);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1130,13 +1130,13 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final Object param1, final Object param2, final Object param3, final Object param4) throws SQLException {
+    public This setParameters(final Object param1, final Object param2, final Object param3, final Object param4) throws SQLException {
         setObject(1, param1);
         setObject(2, param2);
         setObject(3, param3);
         setObject(4, param4);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1150,14 +1150,14 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5) throws SQLException {
+    public This setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5) throws SQLException {
         setObject(1, param1);
         setObject(2, param2);
         setObject(3, param3);
         setObject(4, param4);
         setObject(5, param5);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1172,7 +1172,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6)
+    public This setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6)
             throws SQLException {
         setObject(1, param1);
         setObject(2, param2);
@@ -1181,7 +1181,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         setObject(5, param5);
         setObject(6, param6);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1197,7 +1197,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6,
+    public This setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6,
             final Object param7) throws SQLException {
         setObject(1, param1);
         setObject(2, param2);
@@ -1207,7 +1207,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         setObject(6, param6);
         setObject(7, param7);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1224,7 +1224,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6,
+    public This setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6,
             final Object param7, final Object param8) throws SQLException {
         setObject(1, param1);
         setObject(2, param2);
@@ -1235,7 +1235,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         setObject(7, param7);
         setObject(8, param8);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1253,7 +1253,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6,
+    public This setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6,
             final Object param7, final Object param8, final Object param9) throws SQLException {
         setObject(1, param1);
         setObject(2, param2);
@@ -1265,7 +1265,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
         setObject(8, param8);
         setObject(9, param9);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1276,7 +1276,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final Object[] parameters) throws IllegalArgumentException, SQLException {
+    public This setParameters(final Object[] parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
 
         int idx = 1;
@@ -1285,7 +1285,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             setObject(idx++, param);
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1297,7 +1297,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final Collection<?> parameters) throws IllegalArgumentException, SQLException {
+    public This setParameters(final Collection<?> parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
 
         int idx = 1;
@@ -1306,7 +1306,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             setObject(idx++, param);
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1316,7 +1316,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setParameters(final ParametersSetter<? super S> paramSetter) throws SQLException {
+    public This setParameters(final ParametersSetter<? super Stmt> paramSetter) throws SQLException {
         checkArgNotNull(paramSetter, "paramSetter");
 
         boolean noException = false;
@@ -1331,7 +1331,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             }
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1343,7 +1343,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public <T> Q setParameters(final T parameters, final BiParametersSetter<? super S, ? super T> paramSetter) throws SQLException {
+    public <T> This setParameters(final T parameters, final BiParametersSetter<? super Stmt, ? super T> paramSetter) throws SQLException {
         checkArgNotNull(paramSetter, "paramSetter");
 
         boolean noException = false;
@@ -1358,7 +1358,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             }
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1369,7 +1369,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException the SQL exception
      */
-    public Q settParameters(final int[] parameters) throws IllegalArgumentException, SQLException {
+    public This settParameters(final int[] parameters) throws IllegalArgumentException, SQLException {
         return settParameters(1, parameters);
     }
 
@@ -1382,14 +1382,14 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException the SQL exception
      */
-    public Q settParameters(int startParameterIndex, final int[] parameters) throws IllegalArgumentException, SQLException {
+    public This settParameters(int startParameterIndex, final int[] parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
 
         for (int param : parameters) {
             stmt.setInt(startParameterIndex++, param);
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1400,7 +1400,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException the SQL exception
      */
-    public Q settParameters(final long[] parameters) throws IllegalArgumentException, SQLException {
+    public This settParameters(final long[] parameters) throws IllegalArgumentException, SQLException {
         return settParameters(1, parameters);
     }
 
@@ -1413,14 +1413,14 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException the SQL exception
      */
-    public Q settParameters(int startParameterIndex, final long[] parameters) throws IllegalArgumentException, SQLException {
+    public This settParameters(int startParameterIndex, final long[] parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
 
         for (long param : parameters) {
             stmt.setLong(startParameterIndex++, param);
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1431,7 +1431,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException the SQL exception
      */
-    public Q settParameters(final String[] parameters) throws IllegalArgumentException, SQLException {
+    public This settParameters(final String[] parameters) throws IllegalArgumentException, SQLException {
         return settParameters(1, parameters);
     }
 
@@ -1444,14 +1444,14 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException the SQL exception
      */
-    public Q settParameters(int startParameterIndex, final String[] parameters) throws IllegalArgumentException, SQLException {
+    public This settParameters(int startParameterIndex, final String[] parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
 
         for (String param : parameters) {
             stmt.setString(startParameterIndex++, param);
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1464,7 +1464,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException the SQL exception
      */
-    public <T> Q settParameters(final T[] parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
+    public <T> This settParameters(final T[] parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
         return settParameters(1, parameters, type);
     }
 
@@ -1479,7 +1479,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException the SQL exception
      */
-    public <T> Q settParameters(int startParameterIndex, final T[] parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
+    public <T> This settParameters(int startParameterIndex, final T[] parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
         checkArgNotNull(type, "type");
 
@@ -1489,7 +1489,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             setter.set(stmt, startParameterIndex++, param);
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1503,7 +1503,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException the SQL exception
      */
-    public <T> Q settParameters(final Collection<? extends T> parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
+    public <T> This settParameters(final Collection<? extends T> parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
         return settParameters(1, parameters, type);
     }
 
@@ -1518,7 +1518,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException the SQL exception
      */
-    public <T> Q settParameters(int startParameterIndex, final Collection<? extends T> parameters, final Class<T> type)
+    public <T> This settParameters(int startParameterIndex, final Collection<? extends T> parameters, final Class<T> type)
             throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
         checkArgNotNull(type, "type");
@@ -1529,7 +1529,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             setter.set(stmt, startParameterIndex++, param);
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1538,13 +1538,13 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q settParameters(ParametersSetter<? super Q> paramSetter) throws SQLException {
+    public This settParameters(ParametersSetter<? super This> paramSetter) throws SQLException {
         checkArgNotNull(paramSetter, "paramSetter");
 
         boolean noException = false;
 
         try {
-            paramSetter.accept((Q) this);
+            paramSetter.accept((This) this);
 
             noException = true;
         } finally {
@@ -1553,7 +1553,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             }
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1564,13 +1564,13 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public <T> Q settParameters(final T parameter, BiParametersSetter<? super Q, ? super T> paramSetter) throws SQLException {
+    public <T> This settParameters(final T parameter, BiParametersSetter<? super This, ? super T> paramSetter) throws SQLException {
         checkArgNotNull(paramSetter, "paramSetter");
 
         boolean noException = false;
 
         try {
-            paramSetter.accept((Q) this, parameter);
+            paramSetter.accept((This) this, parameter);
 
             noException = true;
         } finally {
@@ -1579,7 +1579,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             }
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     //    /**
@@ -1639,11 +1639,11 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      */
     @SuppressWarnings("rawtypes")
     @Beta
-    public <T> Q addBatchParameters(final Collection<T> batchParameters) throws SQLException {
+    public <T> This addBatchParameters(final Collection<T> batchParameters) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
 
         if (N.isNullOrEmpty(batchParameters)) {
-            return (Q) this;
+            return (This) this;
         }
 
         boolean noException = false;
@@ -1688,7 +1688,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             }
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1699,7 +1699,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException
      */
     @Beta
-    public <T> Q addBatchParameters(final Iterator<T> batchParameters) throws SQLException {
+    public <T> This addBatchParameters(final Iterator<T> batchParameters) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
 
         return addBatchParameters(Iterators.toList(batchParameters));
@@ -1714,7 +1714,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException
      */
     @Beta
-    public <T> Q addBatchParameters(final Collection<? extends T> batchParameters, final Class<T> type) throws SQLException {
+    public <T> This addBatchParameters(final Collection<? extends T> batchParameters, final Class<T> type) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
         checkArgNotNull(type, "type");
 
@@ -1736,7 +1736,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             }
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     //    /**
@@ -1793,7 +1793,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     @Beta
-    public <T> Q addBatchParameters(final Collection<T> batchParameters, BiParametersSetter<? super Q, ? super T> parametersSetter) throws SQLException {
+    public <T> This addBatchParameters(final Collection<T> batchParameters, BiParametersSetter<? super This, ? super T> parametersSetter) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
         checkArgNotNull(parametersSetter, "parametersSetter");
 
@@ -1809,7 +1809,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     @Beta
-    public <T> Q addBatchParameters(final Iterator<T> batchParameters, BiParametersSetter<? super Q, ? super T> parametersSetter) throws SQLException {
+    public <T> This addBatchParameters(final Iterator<T> batchParameters, BiParametersSetter<? super This, ? super T> parametersSetter) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
         checkArgNotNull(parametersSetter, "parametersSetter");
 
@@ -1819,7 +1819,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             final Iterator<T> iter = batchParameters;
 
             while (iter.hasNext()) {
-                parametersSetter.accept((Q) this, iter.next());
+                parametersSetter.accept((This) this, iter.next());
                 stmt.addBatch();
                 isBatch = true;
             }
@@ -1831,7 +1831,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             }
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1842,8 +1842,8 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     @Beta
-    public <T> Q addBatchParameters(final Collection<T> batchParameters,
-            Throwables.TriConsumer<? super Q, ? super S, ? super T, ? extends SQLException> parametersSetter) throws SQLException {
+    public <T> This addBatchParameters(final Collection<T> batchParameters,
+            Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException> parametersSetter) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
         checkArgNotNull(parametersSetter, "parametersSetter");
 
@@ -1859,8 +1859,8 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     @Beta
-    public <T> Q addBatchParameters(final Iterator<T> batchParameters,
-            Throwables.TriConsumer<? super Q, ? super S, ? super T, ? extends SQLException> parametersSetter) throws SQLException {
+    public <T> This addBatchParameters(final Iterator<T> batchParameters,
+            Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException> parametersSetter) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
         checkArgNotNull(parametersSetter, "parametersSetter");
 
@@ -1870,7 +1870,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             final Iterator<T> iter = batchParameters;
 
             while (iter.hasNext()) {
-                parametersSetter.accept((Q) this, stmt, iter.next());
+                parametersSetter.accept((This) this, stmt, iter.next());
                 stmt.addBatch();
                 isBatch = true;
             }
@@ -1882,7 +1882,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             }
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -1893,7 +1893,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     @Beta
-    public <T> Q addBatchParametters(final Collection<T> batchParameters, BiParametersSetter<? super S, ? super T> parametersSetter) throws SQLException {
+    public <T> This addBatchParametters(final Collection<T> batchParameters, BiParametersSetter<? super Stmt, ? super T> parametersSetter) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
         checkArgNotNull(parametersSetter, "parametersSetter");
 
@@ -1909,7 +1909,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      */
     @Beta
-    public <T> Q addBatchParametters(final Iterator<T> batchParameters, BiParametersSetter<? super S, ? super T> parametersSetter) throws SQLException {
+    public <T> This addBatchParametters(final Iterator<T> batchParameters, BiParametersSetter<? super Stmt, ? super T> parametersSetter) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
         checkArgNotNull(parametersSetter, "parametersSetter");
 
@@ -1931,7 +1931,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
             }
         }
 
-        return (Q) this;
+        return (This) this;
     }
 
     //    /**
@@ -1969,11 +1969,11 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q addBatch() throws SQLException {
+    public This addBatch() throws SQLException {
         stmt.addBatch();
         isBatch = true;
 
-        return (Q) this;
+        return (This) this;
     }
 
     int defaultFetchDirection = -1;
@@ -1990,14 +1990,14 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @throws SQLException the SQL exception
      * @see {@link java.sql.Statement#setFetchDirection(int)}
      */
-    public Q setFetchDirection(FetchDirection direction) throws SQLException {
+    public This setFetchDirection(FetchDirection direction) throws SQLException {
         defaultFetchDirection = stmt.getFetchDirection();
 
         stmt.setFetchDirection(direction.intValue);
 
         isFetchDirectionSet = true;
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -2007,12 +2007,12 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setFetchSize(int rows) throws SQLException {
+    public This setFetchSize(int rows) throws SQLException {
         defaultFetchSize = stmt.getFetchSize();
 
         stmt.setFetchSize(rows);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -2022,12 +2022,12 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setMaxFieldSize(int max) throws SQLException {
+    public This setMaxFieldSize(int max) throws SQLException {
         defaultMaxFieldSize = stmt.getMaxFieldSize();
 
         stmt.setMaxFieldSize(max);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -2037,10 +2037,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setMaxRows(int max) throws SQLException {
+    public This setMaxRows(int max) throws SQLException {
         stmt.setMaxRows(max);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -2050,10 +2050,10 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setLargeMaxRows(long max) throws SQLException {
+    public This setLargeMaxRows(long max) throws SQLException {
         stmt.setLargeMaxRows(max);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -2063,12 +2063,12 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public Q setQueryTimeout(int seconds) throws SQLException {
+    public This setQueryTimeout(int seconds) throws SQLException {
         defaultQueryTimeout = stmt.getQueryTimeout();
 
         stmt.setQueryTimeout(seconds);
 
-        return (Q) this;
+        return (This) this;
     }
 
     /**
@@ -3713,7 +3713,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public <R> R executeThenApply(final Throwables.Function<? super S, ? extends R, SQLException> getter) throws SQLException {
+    public <R> R executeThenApply(final Throwables.Function<? super Stmt, ? extends R, SQLException> getter) throws SQLException {
         checkArgNotNull(getter, "getter");
         assertNotClosed();
 
@@ -3734,7 +3734,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      * @throws SQLException the SQL exception
      */
-    public <R> R executeThenApply(final Throwables.BiFunction<Boolean, ? super S, ? extends R, SQLException> getter) throws SQLException {
+    public <R> R executeThenApply(final Throwables.BiFunction<Boolean, ? super Stmt, ? extends R, SQLException> getter) throws SQLException {
         checkArgNotNull(getter, "getter");
         assertNotClosed();
 
@@ -3753,7 +3753,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @param consumer
      * @throws SQLException the SQL exception
      */
-    public void executeThenAccept(final Throwables.Consumer<? super S, SQLException> consumer) throws SQLException {
+    public void executeThenAccept(final Throwables.Consumer<? super Stmt, SQLException> consumer) throws SQLException {
         checkArgNotNull(consumer, "consumer");
         assertNotClosed();
 
@@ -3772,7 +3772,7 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @param consumer
      * @throws SQLException the SQL exception
      */
-    public void executeThenAccept(final Throwables.BiConsumer<Boolean, ? super S, SQLException> consumer) throws SQLException {
+    public void executeThenAccept(final Throwables.BiConsumer<Boolean, ? super Stmt, SQLException> consumer) throws SQLException {
         checkArgNotNull(consumer, "consumer");
         assertNotClosed();
 
@@ -3793,11 +3793,11 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      */
     @Beta
-    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<Q, R, SQLException> sqlAction) {
+    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<This, R, SQLException> sqlAction) {
         checkArgNotNull(sqlAction, "func");
         assertNotClosed();
 
-        final Q q = (Q) this;
+        final This q = (This) this;
 
         return JdbcUtil.asyncExecutor.execute(() -> sqlAction.apply(q));
     }
@@ -3811,12 +3811,12 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      */
     @Beta
-    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<Q, R, SQLException> sqlAction, final Executor executor) {
+    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<This, R, SQLException> sqlAction, final Executor executor) {
         checkArgNotNull(sqlAction, "func");
         checkArgNotNull(executor, "executor");
         assertNotClosed();
 
-        final Q q = (Q) this;
+        final This q = (This) this;
 
         return ContinuableFuture.call(() -> sqlAction.apply(q), executor);
     }
@@ -3828,11 +3828,11 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      */
     @Beta
-    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<Q, SQLException> sqlAction) {
+    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<This, SQLException> sqlAction) {
         checkArgNotNull(sqlAction, "action");
         assertNotClosed();
 
-        final Q q = (Q) this;
+        final This q = (This) this;
 
         return JdbcUtil.asyncExecutor.execute(() -> sqlAction.accept(q));
     }
@@ -3845,12 +3845,12 @@ abstract class AbstractPreparedQuery<S extends PreparedStatement, Q extends Abst
      * @return
      */
     @Beta
-    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<Q, SQLException> sqlAction, final Executor executor) {
+    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<This, SQLException> sqlAction, final Executor executor) {
         checkArgNotNull(sqlAction, "action");
         checkArgNotNull(executor, "executor");
         assertNotClosed();
 
-        final Q q = (Q) this;
+        final This q = (This) this;
 
         return ContinuableFuture.run(() -> sqlAction.accept(q), executor);
     }
