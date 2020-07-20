@@ -1,3 +1,8 @@
+### 2.6.1
+
+* Improvements and bug fix.
+
+
 ### 2.6.0
 
 * Improvements and bug fix.
