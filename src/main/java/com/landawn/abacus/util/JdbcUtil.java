@@ -5791,6 +5791,21 @@ public final class JdbcUtil {
             return rs -> after.apply(apply(rs));
         }
 
+        static <T, U> RowMapper<Tuple2<T, U>> combine(final RowMapper<T> rowMapper1, final RowMapper<U> rowMapper2) {
+            N.checkArgNotNull(rowMapper1, "rowMapper1");
+            N.checkArgNotNull(rowMapper2, "rowMapper2");
+
+            return rs -> Tuple.of(rowMapper1.apply(rs), rowMapper2.apply(rs));
+        }
+
+        static <A, B, C> RowMapper<Tuple3<A, B, C>> combine(final RowMapper<A> rowMapper1, final RowMapper<B> rowMapper2, final RowMapper<C> rowMapper3) {
+            N.checkArgNotNull(rowMapper1, "rowMapper1");
+            N.checkArgNotNull(rowMapper2, "rowMapper2");
+            N.checkArgNotNull(rowMapper3, "rowMapper3");
+
+            return rs -> Tuple.of(rowMapper1.apply(rs), rowMapper2.apply(rs), rowMapper3.apply(rs));
+        }
+
         default BiRowMapper<T> toBiRowMapper() {
             return BiRowMapper.from(this);
         }
@@ -6290,6 +6305,22 @@ public final class JdbcUtil {
             N.checkArgNotNull(after);
 
             return (rs, columnLabels) -> after.apply(apply(rs, columnLabels));
+        }
+
+        static <T, U> BiRowMapper<Tuple2<T, U>> combine(final BiRowMapper<T> rowMapper1, final BiRowMapper<U> rowMapper2) {
+            N.checkArgNotNull(rowMapper1, "rowMapper1");
+            N.checkArgNotNull(rowMapper2, "rowMapper2");
+
+            return (rs, cls) -> Tuple.of(rowMapper1.apply(rs, cls), rowMapper2.apply(rs, cls));
+        }
+
+        static <A, B, C> BiRowMapper<Tuple3<A, B, C>> combine(final BiRowMapper<A> rowMapper1, final BiRowMapper<B> rowMapper2,
+                final BiRowMapper<C> rowMapper3) {
+            N.checkArgNotNull(rowMapper1, "rowMapper1");
+            N.checkArgNotNull(rowMapper2, "rowMapper2");
+            N.checkArgNotNull(rowMapper3, "rowMapper3");
+
+            return (rs, cls) -> Tuple.of(rowMapper1.apply(rs, cls), rowMapper2.apply(rs, cls), rowMapper3.apply(rs, cls));
         }
 
         static <T> BiRowMapper<T> from(final RowMapper<T> rowMapper) {
