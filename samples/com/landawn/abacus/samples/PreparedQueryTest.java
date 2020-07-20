@@ -23,6 +23,34 @@ import com.landawn.abacus.util.stream.IntStream;
 public class PreparedQueryTest {
 
     @Test
+    public void test_alias() throws SQLException {
+
+        List<User> users = IntStream.range(1, 9)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump").email("123@email.com" + i).build())
+                .toList();
+
+        List<Long> ids = userDao.batchInsertWithId(users);
+        assertEquals(users.size(), ids.size());
+
+        long minId = N.min(ids);
+
+        String sql = "SELECT acc.id AS \"acc.id\", acc.FIRST_NAME AS \"acc.firstName\", acc.last_name AS \"lastName\", acc.prop1 AS \"nickName\", acc.email AS \"email\", acc.create_time AS \"createTime\" FROM user acc";
+
+        JdbcUtil.prepareQuery(dataSource, sql) // 
+                .query()
+                .println();
+
+        JdbcUtil.prepareQuery(dataSource, sql) // 
+                .list(BiRowMapper.to(User.class, null, it -> it.replaceFirst("acc.", "")))
+                .forEach(Fn.println());
+
+        sql = PSC.deleteFrom(User.class).where("id >= ?").sql();
+        JdbcUtil.prepareQuery(dataSource, sql) //
+                .setLong(1, minId)
+                .update();
+    }
+
+    @Test
     public void test_listToMap() throws SQLException {
 
         List<User> users = IntStream.range(1, 9)
