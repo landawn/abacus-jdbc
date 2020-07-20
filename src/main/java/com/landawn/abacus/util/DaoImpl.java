@@ -77,6 +77,7 @@ import com.landawn.abacus.util.JdbcUtil.Dao.NonDBOperation;
 import com.landawn.abacus.util.JdbcUtil.Dao.OP;
 import com.landawn.abacus.util.JdbcUtil.Dao.OutParameter;
 import com.landawn.abacus.util.JdbcUtil.Dao.SqlField;
+import com.landawn.abacus.util.JdbcUtil.OutParamResult;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
@@ -729,6 +730,11 @@ final class DaoImpl {
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         }
 
+        if (op == OP.executeAndGetOutParameters && !returnType.isAssignableFrom(OutParamResult.class)) {
+            throw new UnsupportedOperationException(
+                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+        }
+
         //    if ((op == OP.queryForSingle || op == OP.queryForUnique)
         //            && !(Optional.class.isAssignableFrom(returnType) || Nullable.class.isAssignableFrom(returnType))) {
         //        throw new UnsupportedOperationException(
@@ -758,11 +764,6 @@ final class DaoImpl {
 
         if (isCall) {
             if (op == OP.executeAndGetOutParameters) {
-                if (!List.class.isAssignableFrom(returnType)) {
-                    throw new UnsupportedOperationException(
-                            "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
-                }
-
                 return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).executeAndGetOutParameters();
             } else if (op == OP.listAll) {
                 if (Tuple2.class.isAssignableFrom(returnType)) {
@@ -952,10 +953,10 @@ final class DaoImpl {
 
             if (Tuple2.class.isAssignableFrom(returnType)) {
                 if (op == OP.list || op == OP.query || op == OP.DEFAULT) {
-                    if (firstReturnEleType == null || !List.class.isAssignableFrom(firstReturnEleType)) {
-                        throw new UnsupportedOperationException(
-                                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
-                    }
+                    //    if (firstReturnEleType == null || !List.class.isAssignableFrom(firstReturnEleType)) {
+                    //        throw new UnsupportedOperationException(
+                    //                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+                    //    }
 
                     if (hasRowMapperOrExtractor) {
                         if (RowMapper.class.isAssignableFrom(lastParamType)) {
@@ -985,16 +986,21 @@ final class DaoImpl {
                                     + " is not supported the specified op: " + op);
                         }
                     } else {
+                        if (firstReturnEleType == null) {
+                            throw new UnsupportedOperationException(
+                                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+                        }
+
+                        if (DataSet.class.isAssignableFrom(firstReturnEleType)) {
+                            return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).queryAndGetOutParameters();
+                        }
+
                         if (firstReturnEleEleType == null) {
                             throw new UnsupportedOperationException(
                                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
                         }
 
-                        if (DataSet.class.isAssignableFrom(firstReturnEleEleType)) {
-                            return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).queryAndGetOutParameters();
-                        } else {
-                            return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).listAndGetOutParameters(firstReturnEleEleType);
-                        }
+                        return (preparedQuery, args) -> (R) ((PreparedCallableQuery) preparedQuery).listAndGetOutParameters(firstReturnEleEleType);
                     }
                 }
             }
@@ -3663,6 +3669,20 @@ final class DaoImpl {
                                         + fullClassMethodName);
                     }
 
+                    if (hasRowMapperOrResultExtractor && (RowMapper.class.isAssignableFrom(lastParamType) || BiRowMapper.class.isAssignableFrom(lastParamType))
+                            && !(op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.listAll || op == OP.stream || op == OP.streamAll
+                                    || op == OP.DEFAULT)) {
+                        throw new UnsupportedOperationException(
+                                "Parameter 'RowMapper/BiRowMapper' is not supported by OP = " + op + " in method: " + fullClassMethodName);
+                    }
+
+                    if (hasRowMapperOrResultExtractor
+                            && (ResultExtractor.class.isAssignableFrom(lastParamType) || BiResultExtractor.class.isAssignableFrom(lastParamType))
+                            && !(op == OP.query || op == OP.queryAll || op == OP.DEFAULT)) {
+                        throw new UnsupportedOperationException(
+                                "Parameter 'ResultExtractor/BiResultExtractor' is not supported by OP = " + op + " in method: " + fullClassMethodName);
+                    }
+
                     // TODO may enable it later.
                     if (hasRowMapperOrResultExtractor) {
                         throw new UnsupportedOperationException(
@@ -3849,8 +3869,8 @@ final class DaoImpl {
                                         : (ret, entity, isEntity) -> ret.orElse(isEntity ? idGetter.apply(entity) : N.defaultValueOf(returnType)));
 
                         if (isBatch == false) {
-                            if (!(returnType.isAssignableFrom(void.class) || idClass == null
-                                    || N.wrap(idClass).isAssignableFrom(N.wrap(returnType)) || returnType.isAssignableFrom(Optional.class))) {
+                            if (!(returnType.isAssignableFrom(void.class) || idClass == null || N.wrap(idClass).isAssignableFrom(N.wrap(returnType))
+                                    || returnType.isAssignableFrom(Optional.class))) {
                                 throw new UnsupportedOperationException("The return type of insert operations(" + fullClassMethodName
                                         + ") only can be: void or 'ID' type. It can't be: " + returnType);
                             }

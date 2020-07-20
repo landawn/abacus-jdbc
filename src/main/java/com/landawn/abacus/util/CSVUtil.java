@@ -63,6 +63,9 @@ public final class CSVUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(CSVUtil.class);
 
+    private static final int DEFAULT_BATCH_SIZE = JdbcUtil.DEFAULT_BATCH_SIZE;
+    private static final int DEFAULT_FETCH_SIZE = JdbcUtil.DEFAULT_BATCH_SIZE;
+
     private static final JSONParser jsonParser = ParserFactory.createJSONParser();
 
     private static final JSONDeserializationConfig jdc = JDC.create().setElementType(String.class);
@@ -1017,7 +1020,7 @@ public final class CSVUtil {
         try {
             stmt = conn.prepareStatement(sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
             stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
-            stmt.setFetchSize(200);
+            stmt.setFetchSize(DEFAULT_FETCH_SIZE);
 
             return exportCSV(out, stmt, selectColumnNames, offset, count, writeTitle, quoted);
         } catch (SQLException e) {
@@ -1079,7 +1082,7 @@ public final class CSVUtil {
 
         try {
             rs = stmt.executeQuery();
-            // rs.setFetchSize(200);
+            // rs.setFetchSize(DEFAULT_FETCH_SIZE);
 
             return exportCSV(out, rs, selectColumnNames, offset, count, writeTitle, quoted);
         } catch (SQLException e) {
@@ -1392,7 +1395,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final File file, final Connection conn, final String insertSQL, final List<? extends Type> columnTypeList)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, 0, Long.MAX_VALUE, true, conn, insertSQL, 200, 0, columnTypeList);
+        return importCSV(file, 0, Long.MAX_VALUE, true, conn, insertSQL, DEFAULT_BATCH_SIZE, 0, columnTypeList);
     }
 
     /**
@@ -1464,7 +1467,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final File file, final PreparedStatement stmt, final List<? extends Type> columnTypeList)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, 0, Long.MAX_VALUE, true, stmt, 200, 0, columnTypeList);
+        return importCSV(file, 0, Long.MAX_VALUE, true, stmt, DEFAULT_BATCH_SIZE, 0, columnTypeList);
     }
 
     /**
@@ -1534,7 +1537,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final InputStream is, final PreparedStatement stmt, final List<? extends Type> columnTypeList)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(is, 0, Long.MAX_VALUE, true, stmt, 200, 0, columnTypeList);
+        return importCSV(is, 0, Long.MAX_VALUE, true, stmt, DEFAULT_BATCH_SIZE, 0, columnTypeList);
     }
 
     /**
@@ -1596,7 +1599,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final Reader reader, final PreparedStatement stmt, final List<? extends Type> columnTypeList)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(reader, 0, Long.MAX_VALUE, true, stmt, 200, 0, columnTypeList);
+        return importCSV(reader, 0, Long.MAX_VALUE, true, stmt, DEFAULT_BATCH_SIZE, 0, columnTypeList);
     }
 
     /**
@@ -1733,7 +1736,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final File file, final Connection conn, final String insertSQL, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, 0, Long.MAX_VALUE, conn, insertSQL, 200, 0, columnTypeMap);
+        return importCSV(file, 0, Long.MAX_VALUE, conn, insertSQL, DEFAULT_BATCH_SIZE, 0, columnTypeMap);
     }
 
     /**
@@ -1802,7 +1805,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final File file, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, 0, Long.MAX_VALUE, stmt, 200, 0, columnTypeMap);
+        return importCSV(file, 0, Long.MAX_VALUE, stmt, DEFAULT_BATCH_SIZE, 0, columnTypeMap);
     }
 
     /**
@@ -1870,7 +1873,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final InputStream is, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(is, 0, Long.MAX_VALUE, stmt, 200, 0, columnTypeMap);
+        return importCSV(is, 0, Long.MAX_VALUE, stmt, DEFAULT_BATCH_SIZE, 0, columnTypeMap);
     }
 
     /**
@@ -1929,7 +1932,7 @@ public final class CSVUtil {
     @SuppressWarnings("rawtypes")
     public static long importCSV(final Reader reader, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(reader, 0, Long.MAX_VALUE, stmt, 200, 0, columnTypeMap);
+        return importCSV(reader, 0, Long.MAX_VALUE, stmt, DEFAULT_BATCH_SIZE, 0, columnTypeMap);
     }
 
     /**
@@ -2074,7 +2077,7 @@ public final class CSVUtil {
     public static long importCSV(final File file, final Connection conn, final String insertSQL,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, 0, Long.MAX_VALUE, conn, insertSQL, 200, 0, stmtSetter);
+        return importCSV(file, 0, Long.MAX_VALUE, conn, insertSQL, DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
@@ -2143,7 +2146,7 @@ public final class CSVUtil {
     public static long importCSV(final File file, final PreparedStatement stmt,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, 0, Long.MAX_VALUE, stmt, 200, 0, stmtSetter);
+        return importCSV(file, 0, Long.MAX_VALUE, stmt, DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
@@ -2211,7 +2214,7 @@ public final class CSVUtil {
     public static long importCSV(final InputStream is, final PreparedStatement stmt,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(is, 0, Long.MAX_VALUE, stmt, 200, 0, stmtSetter);
+        return importCSV(is, 0, Long.MAX_VALUE, stmt, DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
@@ -2270,7 +2273,7 @@ public final class CSVUtil {
     public static long importCSV(final Reader reader, final PreparedStatement stmt,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(reader, 0, Long.MAX_VALUE, stmt, 200, 0, stmtSetter);
+        return importCSV(reader, 0, Long.MAX_VALUE, stmt, DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
