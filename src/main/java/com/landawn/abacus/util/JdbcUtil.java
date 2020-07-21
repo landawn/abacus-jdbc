@@ -4712,13 +4712,26 @@ public final class JdbcUtil {
     static final ThreadLocal<Boolean> isSpringTransactionalDisabled_TL = ThreadLocal.withInitial(() -> false);
 
     /**
-     * Disable/enable {@code Spring Transactional} in current thread.
+     * Don't share or share {@code Spring Transactional} in current thread.
      *
      * {@code Spring Transactional} won't be used in fetching Connection if it's disabled.
      *
-     * @param b {@code true} to disable, {@code false} to enable it again.
+     * @param b {@code true} to not share, {@code false} to share it again.
+     * @deprecated replaced by {@link #doNotUseSpringTransactional(boolean)}
      */
+    @Deprecated
     public static void disableSpringTransactional(boolean b) {
+        doNotUseSpringTransactional(b);
+    }
+
+    /**
+     * Don't share or share {@code Spring Transactional} in current thread.
+     *
+     * {@code Spring Transactional} won't be used in fetching Connection if it's disabled.
+     *
+     * @param b {@code true} to not share, {@code false} to share it again.
+     */
+    public static void doNotUseSpringTransactional(boolean b) {
         // synchronized (isSpringTransactionalDisabled_TL) {
         if (isInSpring) {
             if (logger.isWarnEnabled() && isSpringTransactionalDisabled_TL.get() != b) {
@@ -4733,15 +4746,26 @@ public final class JdbcUtil {
         } else {
             logger.warn("Not in Spring or not able to retrieve Spring Transactional");
         }
-        // }
+        // }        
     }
 
     /**
-     * Check if {@code Spring Transactional} is disabled or not in current thread.
+     * Check if {@code Spring Transactional} is shared or not in current thread.
      *
-     * @return {@code true} if it's disabled, otherwise {@code false} is returned.
+     * @return {@code true} if it's not share, otherwise {@code false} is returned.
+     * @deprecated replaced by {@link #isSpringTransactionalNotUsed()}
      */
+    @Deprecated
     public static boolean isSpringTransactionalDisabled() {
+        return isSpringTransactionalDisabled_TL.get();
+    }
+
+    /**
+     * Check if {@code Spring Transactional} is shared or not in current thread.
+     *
+     * @return {@code true} if it's not share, otherwise {@code false} is returned.
+     */
+    public static boolean isSpringTransactionalNotUsed() {
         return isSpringTransactionalDisabled_TL.get();
     }
 
