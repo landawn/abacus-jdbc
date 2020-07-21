@@ -15,5 +15,4 @@ public class City {
     @Id
     private int id;
     private String name;
-
 }
