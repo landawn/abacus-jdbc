@@ -1903,6 +1903,9 @@ final class DaoImpl {
         final Map<String, String> sqlCache = new ConcurrentHashMap<>(0);
         final Map<String, ImmutableList<String>> sqlsCache = new ConcurrentHashMap<>(0);
 
+        final Map<String, JoinInfo> joinEntityInfo = (JdbcUtil.JoinEntityHelper.class.isAssignableFrom(daoInterface)
+                || JdbcUtil.UncheckedJoinEntityHelper.class.isAssignableFrom(daoInterface)) ? JdbcUtil.getEntityJoinInfo(daoInterface, entityClass) : null;
+
         for (Method m : sqlMethods) {
             if (!Modifier.isPublic(m.getModifiers())) {
                 continue;
@@ -3434,13 +3437,14 @@ final class DaoImpl {
                         };
                     }
                 } else if (declaringClass.equals(JdbcUtil.JoinEntityHelper.class) || declaringClass.equals(JdbcUtil.UncheckedJoinEntityHelper.class)) {
+
                     if (methodName.equals("loadJoinEntities") && paramLen == 3 && !Collection.class.isAssignableFrom(paramTypes[0])
                             && String.class.isAssignableFrom(paramTypes[1]) && Collection.class.isAssignableFrom(paramTypes[2])) {
                         call = (proxy, args) -> {
                             final Object entity = args[0];
                             final String joinEntityPropName = (String) args[1];
                             final Collection<String> selectPropNames = (Collection<String>) args[2];
-                            final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
+                            final JoinInfo propJoinInfo = joinEntityInfo.get(joinEntityPropName);
                             final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getSelectSQLBuilderAndParamSetter(sbc);
 

@@ -16939,7 +16939,7 @@ public final class JdbcUtil {
         return JoinInfo.getJoinEntityPropNamesByType(targetDaoInterface, targetEntityClass, joinEntityClass);
     }
 
-    private static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass) {
+     static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass) {
         return JoinInfo.getEntityJoinInfo(targetDaoInterface, targetEntityClass);
     }
 
