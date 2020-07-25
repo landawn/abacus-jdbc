@@ -39,6 +39,7 @@ import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
+import com.landawn.abacus.util.JdbcUtil.RowConsumer;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Pair;
 import com.landawn.abacus.util.Profiler;
@@ -564,6 +565,8 @@ public class DaoTest {
         userDao.listToCollection(0).forEach(Fn.println());
 
         assertEquals(1, userDao.listToCollection(0).size());
+
+        userDao.forEach(CF.eq("firstName", "Forrest"), RowConsumer.from(it -> N.println(it.join(", "))));
 
         //    userDao.list(0, RowFilter.ALWAYS_TRUE, RowMapper.builder().toList()).forEach(Fn.println());
         //
