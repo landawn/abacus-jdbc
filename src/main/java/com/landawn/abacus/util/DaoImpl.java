@@ -69,6 +69,7 @@ import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Columns.ColumnOne;
 import com.landawn.abacus.util.Fn.IntFunctions;
 import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
+import com.landawn.abacus.util.JdbcUtil.BiRowConsumer;
 import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.CrudDao;
@@ -79,6 +80,7 @@ import com.landawn.abacus.util.JdbcUtil.Dao.OutParameter;
 import com.landawn.abacus.util.JdbcUtil.Dao.SqlField;
 import com.landawn.abacus.util.JdbcUtil.OutParamResult;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
+import com.landawn.abacus.util.JdbcUtil.RowConsumer;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.JdbcUtil.SqlLogConfig;
@@ -2705,6 +2707,90 @@ final class DaoImpl {
                                     .stream((BiRowFilter) args[2], (BiRowMapper) args[3]);
 
                             return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                        };
+                    } else if (methodName.equals("forEach") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                            && paramTypes[1].equals(RowConsumer.class)) {
+                        call = (proxy, args) -> {
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).forEach((RowConsumer) args[1]);
+                            return null;
+                        };
+                    } else if (methodName.equals("forEach") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                            && paramTypes[1].equals(BiRowConsumer.class)) {
+                        call = (proxy, args) -> {
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).forEach((BiRowConsumer) args[1]);
+                            return null;
+                        };
+                    } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(RowFilter.class)
+                            && paramTypes[2].equals(RowConsumer.class)) {
+                        call = (proxy, args) -> {
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .forEach((RowFilter) args[1], (RowConsumer) args[2]);
+                            return null;
+                        };
+                    } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(BiRowFilter.class)
+                            && paramTypes[2].equals(BiRowConsumer.class)) {
+                        call = (proxy, args) -> {
+                            final Condition condArg = (Condition) args[0];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .forEach((BiRowFilter) args[1], (BiRowConsumer) args[2]);
+                            return null;
+                        };
+                    } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                            && paramTypes[2].equals(RowConsumer.class)) {
+                        call = (proxy, args) -> {
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).forEach((RowConsumer) args[2]);
+                            return null;
+                        };
+                    } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                            && paramTypes[2].equals(BiRowConsumer.class)) {
+                        call = (proxy, args) -> {
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).forEach((BiRowConsumer) args[2]);
+                            return null;
+                        };
+                    } else if (methodName.equals("forEach") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                            && paramTypes[2].equals(RowFilter.class) && paramTypes[3].equals(RowConsumer.class)) {
+                        call = (proxy, args) -> {
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .forEach((RowFilter) args[2], (RowConsumer) args[3]);
+                            return null;
+                        };
+                    } else if (methodName.equals("forEach") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                            && paramTypes[2].equals(BiRowFilter.class) && paramTypes[3].equals(BiRowConsumer.class)) {
+                        call = (proxy, args) -> {
+                            final Condition condArg = (Condition) args[1];
+                            final Condition cond = handleLimit(condArg, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .setParameters(sp.parameters)
+                                    .forEach((BiRowFilter) args[2], (BiRowConsumer) args[3]);
+                            return null;
                         };
                     } else if (methodName.equals("update") && paramLen == 2 && Map.class.equals(paramTypes[0])
                             && Condition.class.isAssignableFrom(paramTypes[1])) {

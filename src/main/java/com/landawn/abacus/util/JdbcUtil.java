@@ -9469,6 +9469,88 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Condition cond, final RowConsumer rowConsumer) throws SQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Condition cond, final BiRowConsumer rowConsumer) throws SQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Condition cond, final RowFilter rowFilter, final RowConsumer rowConsumer) throws SQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Condition cond, final BiRowFilter rowFilter, final BiRowConsumer rowConsumer) throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final RowConsumer rowConsumer) throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final BiRowConsumer rowConsumer) throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final RowFilter rowFilter, final RowConsumer rowConsumer)
+                throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter, final BiRowConsumer rowConsumer)
+                throws SQLException;
+
+        /**
+         *
          * @param propName
          * @param propValue
          * @param cond
@@ -13373,6 +13455,96 @@ public final class JdbcUtil {
         default <R> List<R> list(final String singleSelectPropName, final Condition cond, final RowMapper<R> rowMapper) throws UncheckedSQLException {
             return list(N.asList(singleSelectPropName), cond, rowMapper);
         }
+
+        /**
+         *
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Condition cond, final RowConsumer rowConsumer) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Condition cond, final BiRowConsumer rowConsumer) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Condition cond, final RowFilter rowFilter, final RowConsumer rowConsumer) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Condition cond, final BiRowFilter rowFilter, final BiRowConsumer rowConsumer) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final RowConsumer rowConsumer) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final BiRowConsumer rowConsumer) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final RowFilter rowFilter, final RowConsumer rowConsumer)
+                throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter, final BiRowConsumer rowConsumer)
+                throws UncheckedSQLException;
 
         /**
          *
