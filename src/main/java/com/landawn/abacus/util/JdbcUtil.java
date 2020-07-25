@@ -98,6 +98,7 @@ import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.BiConsumer;
 import com.landawn.abacus.util.function.BinaryOperator;
+import com.landawn.abacus.util.function.Consumer;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.function.Predicate;
 import com.landawn.abacus.util.function.Supplier;
@@ -7050,6 +7051,31 @@ public final class JdbcUtil {
                 after.accept(rs);
             };
         }
+
+        static RowConsumer from(final Consumer<DisposableObjArray> consumer) {
+            N.checkArgNotNull(consumer, "consumer");
+
+            return new RowConsumer() {
+                private DisposableObjArray disposable = null;
+                private int columnCount = 0;
+                private Object[] output = null;
+
+                @Override
+                public void accept(final ResultSet rs) throws SQLException {
+                    if (disposable == null) {
+                        columnCount = JdbcUtil.getColumnCount(rs);
+                        output = new Object[columnCount];
+                        disposable = DisposableObjArray.wrap(output);
+                    }
+
+                    for (int i = 0; i < columnCount; i++) {
+                        output[i] = rs.getObject(i + 1);
+                    }
+
+                    consumer.accept(disposable);
+                }
+            };
+        }
     }
 
     /**
@@ -7070,6 +7096,31 @@ public final class JdbcUtil {
             return (rs, cls) -> {
                 accept(rs, cls);
                 after.accept(rs, cls);
+            };
+        }
+
+        static BiRowConsumer from(final BiConsumer<List<String>, DisposableObjArray> consumer) {
+            N.checkArgNotNull(consumer, "consumer");
+
+            return new BiRowConsumer() {
+                private DisposableObjArray disposable = null;
+                private int columnCount = 0;
+                private Object[] output = null;
+
+                @Override
+                public void accept(final ResultSet rs, final List<String> cls) throws SQLException {
+                    if (disposable == null) {
+                        columnCount = cls.size();
+                        output = new Object[columnCount];
+                        disposable = DisposableObjArray.wrap(output);
+                    }
+
+                    for (int i = 0; i < columnCount; i++) {
+                        output[i] = rs.getObject(i + 1);
+                    }
+
+                    consumer.accept(cls, disposable);
+                }
             };
         }
     }
@@ -16939,7 +16990,7 @@ public final class JdbcUtil {
         return JoinInfo.getJoinEntityPropNamesByType(targetDaoInterface, targetEntityClass, joinEntityClass);
     }
 
-     static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass) {
+    static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass) {
         return JoinInfo.getEntityJoinInfo(targetDaoInterface, targetEntityClass);
     }
 
