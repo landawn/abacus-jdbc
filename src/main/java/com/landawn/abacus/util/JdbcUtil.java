@@ -122,6 +122,7 @@ import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.BiConsumer;
 import com.landawn.abacus.util.function.BinaryOperator;
+import com.landawn.abacus.util.function.Consumer;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.function.Predicate;
 import com.landawn.abacus.util.function.Supplier;
@@ -552,6 +553,7 @@ public final class JdbcUtil {
     //    public static DataSource wrap(final javax.sql.DataSource sqlDataSource) {
     //        return sqlDataSource instanceof DataSource ? ((DataSource) sqlDataSource) : new SimpleDataSource(sqlDataSource);
     //    }
+
 
     /**
      * Creates the connection.
@@ -4984,13 +4986,26 @@ public final class JdbcUtil {
     static final ThreadLocal<Boolean> isSpringTransactionalDisabled_TL = ThreadLocal.withInitial(() -> false);
 
     /**
-     * Disable/enable {@code Spring Transactional} in current thread.
+     * Don't share or share {@code Spring Transactional} in current thread.
      *
      * {@code Spring Transactional} won't be used in fetching Connection if it's disabled.
      *
-     * @param b {@code true} to disable, {@code false} to enable it again.
+     * @param b {@code true} to not share, {@code false} to share it again.
+     * @deprecated replaced by {@link #doNotUseSpringTransactional(boolean)}
      */
+    @Deprecated
     public static void disableSpringTransactional(boolean b) {
+        doNotUseSpringTransactional(b);
+    }
+
+    /**
+     * Don't share or share {@code Spring Transactional} in current thread.
+     *
+     * {@code Spring Transactional} won't be used in fetching Connection if it's disabled.
+     *
+     * @param b {@code true} to not share, {@code false} to share it again.
+     */
+    public static void doNotUseSpringTransactional(boolean b) {
         // synchronized (isSpringTransactionalDisabled_TL) {
         if (isInSpring) {
             if (logger.isWarnEnabled() && isSpringTransactionalDisabled_TL.get() != b) {
@@ -5005,15 +5020,26 @@ public final class JdbcUtil {
         } else {
             logger.warn("Not in Spring or not able to retrieve Spring Transactional");
         }
-        // }
+        // }        
     }
 
     /**
-     * Check if {@code Spring Transactional} is disabled or not in current thread.
+     * Check if {@code Spring Transactional} is shared or not in current thread.
      *
-     * @return {@code true} if it's disabled, otherwise {@code false} is returned.
+     * @return {@code true} if it's not share, otherwise {@code false} is returned.
+     * @deprecated replaced by {@link #isSpringTransactionalNotUsed()}
      */
+    @Deprecated
     public static boolean isSpringTransactionalDisabled() {
+        return isSpringTransactionalDisabled_TL.get();
+    }
+
+    /**
+     * Check if {@code Spring Transactional} is shared or not in current thread.
+     *
+     * @return {@code true} if it's not share, otherwise {@code false} is returned.
+     */
+    public static boolean isSpringTransactionalNotUsed() {
         return isSpringTransactionalDisabled_TL.get();
     }
 
@@ -6063,6 +6089,21 @@ public final class JdbcUtil {
             return rs -> after.apply(apply(rs));
         }
 
+        static <T, U> RowMapper<Tuple2<T, U>> combine(final RowMapper<T> rowMapper1, final RowMapper<U> rowMapper2) {
+            N.checkArgNotNull(rowMapper1, "rowMapper1");
+            N.checkArgNotNull(rowMapper2, "rowMapper2");
+
+            return rs -> Tuple.of(rowMapper1.apply(rs), rowMapper2.apply(rs));
+        }
+
+        static <A, B, C> RowMapper<Tuple3<A, B, C>> combine(final RowMapper<A> rowMapper1, final RowMapper<B> rowMapper2, final RowMapper<C> rowMapper3) {
+            N.checkArgNotNull(rowMapper1, "rowMapper1");
+            N.checkArgNotNull(rowMapper2, "rowMapper2");
+            N.checkArgNotNull(rowMapper3, "rowMapper3");
+
+            return rs -> Tuple.of(rowMapper1.apply(rs), rowMapper2.apply(rs), rowMapper3.apply(rs));
+        }
+
         default BiRowMapper<T> toBiRowMapper() {
             return BiRowMapper.from(this);
         }
@@ -6562,6 +6603,22 @@ public final class JdbcUtil {
             N.checkArgNotNull(after);
 
             return (rs, columnLabels) -> after.apply(apply(rs, columnLabels));
+        }
+
+        static <T, U> BiRowMapper<Tuple2<T, U>> combine(final BiRowMapper<T> rowMapper1, final BiRowMapper<U> rowMapper2) {
+            N.checkArgNotNull(rowMapper1, "rowMapper1");
+            N.checkArgNotNull(rowMapper2, "rowMapper2");
+
+            return (rs, cls) -> Tuple.of(rowMapper1.apply(rs, cls), rowMapper2.apply(rs, cls));
+        }
+
+        static <A, B, C> BiRowMapper<Tuple3<A, B, C>> combine(final BiRowMapper<A> rowMapper1, final BiRowMapper<B> rowMapper2,
+                final BiRowMapper<C> rowMapper3) {
+            N.checkArgNotNull(rowMapper1, "rowMapper1");
+            N.checkArgNotNull(rowMapper2, "rowMapper2");
+            N.checkArgNotNull(rowMapper3, "rowMapper3");
+
+            return (rs, cls) -> Tuple.of(rowMapper1.apply(rs, cls), rowMapper2.apply(rs, cls), rowMapper3.apply(rs, cls));
         }
 
         static <T> BiRowMapper<T> from(final RowMapper<T> rowMapper) {
@@ -7267,6 +7324,31 @@ public final class JdbcUtil {
                 after.accept(rs);
             };
         }
+
+        static RowConsumer from(final Consumer<DisposableObjArray> consumer) {
+            N.checkArgNotNull(consumer, "consumer");
+
+            return new RowConsumer() {
+                private DisposableObjArray disposable = null;
+                private int columnCount = 0;
+                private Object[] output = null;
+
+                @Override
+                public void accept(final ResultSet rs) throws SQLException {
+                    if (disposable == null) {
+                        columnCount = JdbcUtil.getColumnCount(rs);
+                        output = new Object[columnCount];
+                        disposable = DisposableObjArray.wrap(output);
+                    }
+
+                    for (int i = 0; i < columnCount; i++) {
+                        output[i] = rs.getObject(i + 1);
+                    }
+
+                    consumer.accept(disposable);
+                }
+            };
+        }
     }
 
     /**
@@ -7287,6 +7369,31 @@ public final class JdbcUtil {
             return (rs, cls) -> {
                 accept(rs, cls);
                 after.accept(rs, cls);
+            };
+        }
+
+        static BiRowConsumer from(final BiConsumer<List<String>, DisposableObjArray> consumer) {
+            N.checkArgNotNull(consumer, "consumer");
+
+            return new BiRowConsumer() {
+                private DisposableObjArray disposable = null;
+                private int columnCount = 0;
+                private Object[] output = null;
+
+                @Override
+                public void accept(final ResultSet rs, final List<String> cls) throws SQLException {
+                    if (disposable == null) {
+                        columnCount = cls.size();
+                        output = new Object[columnCount];
+                        disposable = DisposableObjArray.wrap(output);
+                    }
+
+                    for (int i = 0; i < columnCount; i++) {
+                        output[i] = rs.getObject(i + 1);
+                    }
+
+                    consumer.accept(cls, disposable);
+                }
             };
         }
     }
@@ -9632,6 +9739,88 @@ public final class JdbcUtil {
                 final RowMapper<R> rowMapper) {
             return stream(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
         }
+
+        /**
+         *
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Condition cond, final RowConsumer rowConsumer) throws SQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Condition cond, final BiRowConsumer rowConsumer) throws SQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Condition cond, final RowFilter rowFilter, final RowConsumer rowConsumer) throws SQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Condition cond, final BiRowFilter rowFilter, final BiRowConsumer rowConsumer) throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final RowConsumer rowConsumer) throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final BiRowConsumer rowConsumer) throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final RowFilter rowFilter, final RowConsumer rowConsumer)
+                throws SQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter, final BiRowConsumer rowConsumer)
+                throws SQLException;
 
         /**
          *
@@ -13542,6 +13731,96 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Condition cond, final RowConsumer rowConsumer) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Condition cond, final BiRowConsumer rowConsumer) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Condition cond, final RowFilter rowFilter, final RowConsumer rowConsumer) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Condition cond, final BiRowFilter rowFilter, final BiRowConsumer rowConsumer) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final RowConsumer rowConsumer) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final BiRowConsumer rowConsumer) throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final RowFilter rowFilter, final RowConsumer rowConsumer)
+                throws UncheckedSQLException;
+
+        /**
+         *
+         * @param selectPropNames
+         * @param cond
+         * @param rowFilter
+         * @param rowConsumer
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        void forEach(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter, final BiRowConsumer rowConsumer)
+                throws UncheckedSQLException;
+
+        /**
+         *
          * @param propName
          * @param propValue
          * @param cond
@@ -17156,7 +17435,7 @@ public final class JdbcUtil {
         return JoinInfo.getJoinEntityPropNamesByType(targetDaoInterface, targetEntityClass, joinEntityClass);
     }
 
-    private static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass) {
+    static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass) {
         return JoinInfo.getEntityJoinInfo(targetDaoInterface, targetEntityClass);
     }
 
