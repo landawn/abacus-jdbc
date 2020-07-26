@@ -6416,7 +6416,7 @@ public final class JdbcUtil {
 
             if (Object[].class.isAssignableFrom(targetClass)) {
                 if ((columnNameFilter == null || Objects.equals(columnNameFilter, Fn.alwaysTrue()))
-                        && (columnNameConverter == null && Objects.equals(columnNameConverter, Fn.identity()))) {
+                        && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()))) {
                     return new BiRowMapper<T>() {
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
@@ -6469,7 +6469,7 @@ public final class JdbcUtil {
                 }
             } else if (List.class.isAssignableFrom(targetClass)) {
                 if ((columnNameFilter == null || Objects.equals(columnNameFilter, Fn.alwaysTrue()))
-                        && (columnNameConverter == null && Objects.equals(columnNameConverter, Fn.identity()))) {
+                        && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()))) {
                     return new BiRowMapper<T>() {
                         private final boolean isListOrArrayList = targetClass.equals(List.class) || targetClass.equals(ArrayList.class);
 
@@ -6525,7 +6525,7 @@ public final class JdbcUtil {
                 }
             } else if (Map.class.isAssignableFrom(targetClass)) {
                 if ((columnNameFilter == null || Objects.equals(columnNameFilter, Fn.alwaysTrue()))
-                        && (columnNameConverter == null && Objects.equals(columnNameConverter, Fn.identity()))) {
+                        && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()))) {
                     return new BiRowMapper<T>() {
                         private final boolean isMapOrHashMap = targetClass.equals(Map.class) || targetClass.equals(HashMap.class);
                         private final boolean isLinkedHashMap = targetClass.equals(LinkedHashMap.class);
@@ -6673,7 +6673,7 @@ public final class JdbcUtil {
                 };
             } else {
                 if ((columnNameFilter == null || Objects.equals(columnNameFilter, Fn.alwaysTrue()))
-                        && (columnNameConverter == null && Objects.equals(columnNameConverter, Fn.identity()))) {
+                        && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()))) {
                     return new BiRowMapper<T>() {
                         private final Type<? extends T> targetType = N.typeOf(targetClass);
                         private int columnCount = 0;

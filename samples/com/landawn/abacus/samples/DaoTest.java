@@ -620,6 +620,10 @@ public class DaoTest {
 
         userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.to(User.class)).forEach(Fn.println());
 
+        userDao.streamOne(0).forEach(Fn.println());
+
+        userDao.streamOne_2(0).forEach(Fn.println());
+
         userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
         userDao.allUsers().map(e -> e.getFirstName() + " " + e.getLastName()).forEach(Fn.println());

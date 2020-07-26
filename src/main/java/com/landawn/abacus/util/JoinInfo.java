@@ -28,6 +28,7 @@ import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.stream.Stream;
+import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 final class JoinInfo {
     final Class<?> entityClass;
@@ -66,13 +67,15 @@ final class JoinInfo {
             throw new IllegalArgumentException("Property '" + joinPropInfo.name + "' in class: " + entityClass + " is annotated by @Column");
         }
 
-        referencedEntityType = joinPropInfo.type.isCollection() ? joinPropInfo.type.getElementType() : joinPropInfo.type;
+        referencedEntityType = joinPropInfo.type.isMap() ? joinPropInfo.type.getParameterTypes()[1]
+                : (joinPropInfo.type.isCollection() ? joinPropInfo.type.getElementType() : joinPropInfo.type);
 
         if (!referencedEntityType.isEntity()) {
             throw new IllegalArgumentException("Property '" + joinPropInfo.name + "' in class: " + entityClass + " is not an entity type");
         }
 
         referencedEntityClass = referencedEntityType.clazz();
+        referencedEntityInfo = ParserUtil.getEntityInfo(referencedEntityClass);
 
         final String joinByVal = StringUtil.join(joinPropInfo.getAnnotation(JoinedBy.class).value(), ", ");
 
@@ -81,13 +84,17 @@ final class JoinInfo {
                     "Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: " + entityClass);
         }
 
-        referencedEntityInfo = ParserUtil.getEntityInfo(referencedEntityClass);
         final String[] joinColumnPairs = StringUtil.split(joinByVal, ',', true);
 
-        // Many to many joined by third table
-        if (joinByVal.indexOf('.') > 0) {
-            isManyToManyJoin = true;
+        this.isManyToManyJoin = StreamEx.of(joinColumnPairs)
+                .flatMapp(it -> StringUtil.split(joinColumnPairs[0], '=', true))
+                .filter(it -> it.indexOf('.') > 0)
+                .map(it -> it.substring(0, it.indexOf('.')).trim())
+                .anyMatch(it -> !(it.equalsIgnoreCase(entityInfo.tableName.orElse(entityInfo.simpleClassName))
+                        || it.equalsIgnoreCase(referencedEntityInfo.tableName.orElse(referencedEntityInfo.simpleClassName))));
 
+        // Many to many joined by third table
+        if (isManyToManyJoin) {
             if (joinColumnPairs.length != 2) {
                 throw new IllegalArgumentException(
                         "Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: " + entityClass
@@ -416,7 +423,6 @@ final class JoinInfo {
             referencedEntityKeyExtractor = entity -> referencedPropInfos[0].getPropValue(entity);
             // ===============================================================================================================================
         } else {
-            isManyToManyJoin = false;
             srcPropInfos = new PropInfo[joinColumnPairs.length];
             referencedPropInfos = new PropInfo[joinColumnPairs.length];
 
@@ -774,7 +780,7 @@ final class JoinInfo {
     private final static Map<Class<?>, Map<Class<?>, Map<String, JoinInfo>>> daoEntityJoinInfoPool = new ConcurrentHashMap<>();
 
     public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass) {
-        Map<Class<?>, Map<String, JoinInfo>> entityJoinInfoMap = daoEntityJoinInfoPool.get(entityClass);
+        Map<Class<?>, Map<String, JoinInfo>> entityJoinInfoMap = daoEntityJoinInfoPool.get(daoClass);
 
         if (entityJoinInfoMap == null) {
             entityJoinInfoMap = new ConcurrentHashMap<>();

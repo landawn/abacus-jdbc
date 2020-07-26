@@ -9,6 +9,7 @@ import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.samples.dao.handler.UserDaoHandlerA;
 import com.landawn.abacus.samples.entity.User;
+import com.landawn.abacus.util.ExceptionalStream;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.JdbcUtil.Dao;
 import com.landawn.abacus.util.JdbcUtil.Dao.Cache;
@@ -147,6 +148,12 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 
     @Select("select * from user where id > ?")
     Queue<User> listToCollection(int id) throws SQLException;
+
+    @Select(value = "select first_name from user where id >= ?", fetchSize = 100)
+    public ExceptionalStream<String, SQLException> streamOne(long id);
+
+    @Select(value = "select first_name from user where id >= ?", fetchSize = 100)
+    public Stream<String> streamOne_2(long id);
 
     //    @Select("select * from user where id > ?")
     //    Queue<List<Object>> list(int id, RowFilter rowFilter, RowMapper<List<Object>> rowMapper) throws SQLException;
