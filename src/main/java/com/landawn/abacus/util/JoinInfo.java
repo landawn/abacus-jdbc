@@ -246,7 +246,7 @@ final class JoinInfo {
 
                 final BiFunction<Collection<String>, Integer, String> batchSQLBuilder = (selectPropNames, size) -> {
                     if (N.isNullOrEmpty(selectPropNames)) {
-                        return batchSelectAllLeftSql + StringUtil.repeat("?", size, ", ", "", ")");
+                        return StringUtil.repeat("?", size, ", ", batchSelectAllLeftSql, ")");
                     } else {
                         Collection<String> newSelectPropNames = selectPropNames;
 
@@ -264,13 +264,11 @@ final class JoinInfo {
 
                         sb.append(tmpSql, 0, tmpSql.length() - fromLength).append(", ").append(middleCondPropName).append(batchSelectFromToJoinOn);
 
-                        sb.append(StringUtil.repeat("?", size, ", ", "", ")"));
-
                         final String sql = sb.toString();
 
                         Objectory.recycle(sb);
 
-                        return sql;
+                        return StringUtil.repeat("?", size, ", ", sql, ")");
                     }
                 };
 
@@ -288,41 +286,23 @@ final class JoinInfo {
                         .where(cond)
                         .sql()
                         .replace(inCondToReplace, middleSelectSql)
-                        .replace(" = ?)", " IN ");
+                        .replace(" = ?)", " IN (");
 
                 final IntFunction<String> batchDeleteSQLBuilder = size -> {
                     if (size == 1) {
                         return deleteSql;
                     } else {
-                        final StringBuilder sb = Objectory.createStringBuilder();
-
-                        sb.append(batchDeleteSqlHeader);
-                        sb.append(StringUtil.repeat("?", size, ", ", "(", ")")).append(")");
-
-                        final String sql = sb.toString();
-
-                        Objectory.recycle(sb);
-
-                        return sql;
+                        return StringUtil.repeat("?", size, ", ", batchDeleteSqlHeader, "))");
                     }
                 };
 
-                final String batchMiddleDeleteSql = entry.getValue()._4.apply(middleEntityClass).where(middleEntityCond).sql().replace(" = ?", " IN ");
+                final String batchMiddleDeleteSql = entry.getValue()._4.apply(middleEntityClass).where(middleEntityCond).sql().replace(" = ?", " IN (");
 
                 final IntFunction<String> batchMiddleDeleteSQLBuilder = size -> {
                     if (size == 1) {
                         return middleDeleteSql;
                     } else {
-                        final StringBuilder sb = Objectory.createStringBuilder();
-
-                        sb.append(batchMiddleDeleteSql);
-                        sb.append(StringUtil.repeat("?", size, ", ", "(", ")"));
-
-                        final String sql = sb.toString();
-
-                        Objectory.recycle(sb);
-
-                        return sql;
+                        return StringUtil.repeat("?", size, ", ", batchMiddleDeleteSql, ")");
                     }
                 };
 
@@ -430,9 +410,8 @@ final class JoinInfo {
                 selectSQLBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(sqlBuilder, paramSetter));
 
                 final BiFunction<SQLBuilder, Integer, SQLBuilder> appendWhereFunc = referencedPropInfos.length == 1
-                        ? (sb, batchSize) -> sb.append(CF.expr(referencedPropInfos[0].name))
-                                .append(" IN ") //
-                                .append(StringUtil.repeat("?", batchSize, ", ", "(", ")")) //
+                        ? (sb, batchSize) -> sb.append(CF.expr(referencedPropInfos[0].name)) //
+                                .append(StringUtil.repeat("?", batchSize, ", ", " IN (", ")")) //
                         : (sb, batchSize) -> sb.where(CF.or(N.repeat(cond, batchSize)));
 
                 final BiFunction<Collection<String>, Integer, String> batchSelectSQLBuilder = (selectPropNames, size) -> {

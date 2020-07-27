@@ -823,6 +823,10 @@ public class DaoTest {
 
         projectDao.deleteAllJoinEntities(projects);
 
+        employeeDao.deleteAllJoinEntities(employees.get(0));
+
+        projectDao.deleteAllJoinEntities(projects.get(0));
+
         employeeDao.delete(CF.alwaysTrue());
         projectDao.delete(CF.alwaysTrue());
         employeeProjectDao.deleteById(entityId);
