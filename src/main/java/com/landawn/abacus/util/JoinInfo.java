@@ -18,19 +18,38 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
-import com.landawn.abacus.util.Fn.BiConsumers;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.Dao;
 import com.landawn.abacus.util.SQLBuilder.PAC;
 import com.landawn.abacus.util.SQLBuilder.PLC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.Tuple.Tuple2;
+import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.Tuple.Tuple4;
 import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Function;
+import com.landawn.abacus.util.function.IntFunction;
 import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 final class JoinInfo {
+
+    static final Map<Class<? extends SQLBuilder>, Tuple4<Function<Collection<String>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>>> sqlBuilderFuncMap = new HashMap<>();
+
+    static {
+        sqlBuilderFuncMap.put(PSC.class,
+                Tuple.of((Collection<String> selectPropNames) -> PSC.select(selectPropNames), (Class<?> targetClass) -> PSC.selectFrom(targetClass),
+                        (Class<?> targetClass) -> PSC.update(targetClass), (Class<?> targetClass) -> PSC.deleteFrom(targetClass)));
+
+        sqlBuilderFuncMap.put(PAC.class,
+                Tuple.of((Collection<String> selectPropNames) -> PAC.select(selectPropNames), (Class<?> targetClass) -> PAC.selectFrom(targetClass),
+                        (Class<?> targetClass) -> PAC.update(targetClass), (Class<?> targetClass) -> PAC.deleteFrom(targetClass)));
+
+        sqlBuilderFuncMap.put(PLC.class,
+                Tuple.of((Collection<String> selectPropNames) -> PLC.select(selectPropNames), (Class<?> targetClass) -> PLC.selectFrom(targetClass),
+                        (Class<?> targetClass) -> PLC.update(targetClass), (Class<?> targetClass) -> PLC.deleteFrom(targetClass)));
+    }
+
     final Class<?> entityClass;
     final EntityInfo entityInfo;
     final PropInfo joinPropInfo;
@@ -46,11 +65,13 @@ final class JoinInfo {
 
     private final Map<Class<? extends SQLBuilder>, Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>> selectSQLBuilderAndParamSetterPool = new HashMap<>();
 
-    private final Map<Class<? extends SQLBuilder>, Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>>> selectSQLBuilderAndParamSetterForBatchPool = new HashMap<>();
+    private final Map<Class<? extends SQLBuilder>, Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>>> batchSelectSQLBuilderAndParamSetterPool = new HashMap<>();
 
     private final Map<Class<? extends SQLBuilder>, Tuple2<String, BiParametersSetter<PreparedStatement, Object>>> setNullSqlAndParamSetterPool = new HashMap<>();
 
-    private final Map<Class<? extends SQLBuilder>, Tuple2<String, BiParametersSetter<PreparedStatement, Object>>> deleteSqlAndParamSetterPool = new HashMap<>();
+    private final Map<Class<? extends SQLBuilder>, Tuple3<String, String, BiParametersSetter<PreparedStatement, Object>>> deleteSqlAndParamSetterPool = new HashMap<>();
+
+    private final Map<Class<? extends SQLBuilder>, Tuple3<IntFunction<String>, IntFunction<String>, BiParametersSetter<PreparedStatement, Collection<?>>>> batchDeleteSQLBuilderAndParamSetterForPool = new HashMap<>();
 
     JoinInfo(final Class<?> entityClass, final String joinEntityPropName, final boolean allowJoiningByNullOrDefaultValue) {
         this.allowJoiningByNullOrDefaultValue = allowJoiningByNullOrDefaultValue;
@@ -161,12 +182,19 @@ final class JoinInfo {
                 }
             };
 
-            {
-                final String middleSelectSql = PSC.select(middleSelectPropNames).from(middleEntityClass).where(middleEntityCond).sql();
-                final String leftSelectSql = PSC.selectFrom(referencedEntityClass).where(cond).sql();
+            final BiParametersSetter<PreparedStatement, Object> setNullParamSetterForUpdate = (stmt, entity) -> {
+                referencedPropInfos[0].dbType.set(stmt, 1, referencedPropInfos[0].dbType.defaultValue());
+                srcPropInfos[0].dbType.set(stmt, 2, checkPropValue(srcPropInfos[0], entity));
+            };
+
+            for (Map.Entry<Class<? extends SQLBuilder>, Tuple4<Function<Collection<String>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>>> entry : sqlBuilderFuncMap
+                    .entrySet()) {
+
+                final String middleSelectSql = entry.getValue()._1.apply(middleSelectPropNames).from(middleEntityClass).where(middleEntityCond).sql();
+                final String leftSelectSql = entry.getValue()._2.apply(referencedEntityClass).where(cond).sql();
 
                 final String middleSelectSqlWhereIn = leftSelectSql.substring(leftSelectSql.lastIndexOf(" WHERE ")).replace(inCondToReplace, middleSelectSql);
-                final String selectSql = PSC.selectFrom(referencedEntityClass).sql() + middleSelectSqlWhereIn;
+                final String selectSql = entry.getValue()._2.apply(referencedEntityClass).sql() + middleSelectSqlWhereIn;
 
                 final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
                     if (N.isNullOrEmpty(selectPropNames)) {
@@ -177,14 +205,14 @@ final class JoinInfo {
                             newSelectPropNames.add(referencedPropInfos[0].name);
                             newSelectPropNames.addAll(selectPropNames);
 
-                            return PSC.select(newSelectPropNames).from(referencedEntityClass).sql() + middleSelectSqlWhereIn;
+                            return entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass).append(middleSelectSqlWhereIn).sql();
                         } else {
-                            return PSC.select(selectPropNames).from(referencedEntityClass).sql() + middleSelectSqlWhereIn;
+                            return entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass).append(middleSelectSqlWhereIn).sql();
                         }
                     }
                 };
 
-                selectSQLBuilderAndParamSetterPool.put(PSC.class, Tuple.of(sqlBuilder, paramSetter));
+                selectSQLBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(sqlBuilder, paramSetter));
 
                 final List<String> middleSelectWords = SQLParser.parse(middleSelectSql);
                 final String middleTableName = middleSelectWords.get(10);
@@ -196,23 +224,29 @@ final class JoinInfo {
                 final String leftTableName = leftSelectLastWords.get(0);
                 final String leftCondPropName = leftTableName + "." + leftSelectLastWords.get(4);
 
-                final Map<String, String> selectPropNameMap = Stream.of(SQLParser.parse(leftSelectSql.substring(0, fromIndex)))
+                final String batchSelectFromToJoinOn = " FROM " + leftTableName + " INNER JOIN " + middleTableName + " ON " + leftCondPropName + " = "
+                        + middleSelectPropName + " WHERE " + middleCondPropName + " IN (";
+
+                final Collection<String> defaultSelectPropNames = SQLBuilder.getSelectPropNames(referencedEntityClass, false, null);
+
+                // same column name in reference entity and middle entity
+                final boolean hasSameColumnName = Stream.of(SQLParser.parse(leftSelectSql.substring(0, fromIndex)))
                         .skip(2)
                         .splitToList(7)
-                        .map(it -> it.get(0))
-                        .toMap(Fn.identity(), it -> leftTableName + "." + it);
+                        .anyMatch(it -> middleSelectWords.get(2).equalsIgnoreCase(it.get(0)));
 
-                final String middleEntityCondStr = middleCondPropName + " = ?";
-                final String batchSelectHeader = "SELECT " + middleCondPropName + ", ";
-                final String batchSelectFromToJoinOn = " FROM " + leftTableName + " JOIN " + middleTableName + " ON " + leftCondPropName + " = "
-                        + middleSelectPropName + " WHERE ";
-                final String batchSelectAllLeftSql = batchSelectHeader
-                        + Stream.of(SQLParser.parse(leftSelectSql.substring(0, fromIndex))).skip(2).map(it -> selectPropNameMap.getOrDefault(it, it)).join("")
+                final String leftSelectSqlForBatch = hasSameColumnName //
+                        ? entry.getValue()._1.apply(defaultSelectPropNames).from(referencedEntityClass, leftTableName).sql()
+                        : entry.getValue()._1.apply(defaultSelectPropNames).from(referencedEntityClass).sql();
+
+                final int fromLength = leftSelectSqlForBatch.length() - leftSelectSqlForBatch.lastIndexOf(" FROM ");
+
+                final String batchSelectAllLeftSql = leftSelectSqlForBatch.substring(0, leftSelectSqlForBatch.length() - fromLength) + ", " + middleCondPropName
                         + batchSelectFromToJoinOn;
 
                 final BiFunction<Collection<String>, Integer, String> batchSQLBuilder = (selectPropNames, size) -> {
                     if (N.isNullOrEmpty(selectPropNames)) {
-                        return batchSelectAllLeftSql + StringUtil.repeat(middleEntityCondStr, size, " OR ");
+                        return batchSelectAllLeftSql + StringUtil.repeat("?", size, ", ", "", ")");
                     } else {
                         Collection<String> newSelectPropNames = selectPropNames;
 
@@ -224,17 +258,13 @@ final class JoinInfo {
 
                         final StringBuilder sb = Objectory.createStringBuilder();
 
-                        sb.append(batchSelectHeader);
+                        String tmpSql = hasSameColumnName //
+                                ? entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass, leftTableName).sql()
+                                : entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass).sql();
 
-                        Stream.of(SQLParser.parse(PSC.select(newSelectPropNames).from(referencedEntityClass).sql()))
-                                .skip(2)
-                                .skipLast(4)
-                                .map(it -> selectPropNameMap.getOrDefault(it, it))
-                                .collect(() -> sb, BiConsumers.ofAppend());
+                        sb.append(tmpSql, 0, tmpSql.length() - fromLength).append(", ").append(middleCondPropName).append(batchSelectFromToJoinOn);
 
-                        sb.append(batchSelectFromToJoinOn);
-
-                        sb.append(StringUtil.repeat(middleEntityCondStr, size, " OR "));
+                        sb.append(StringUtil.repeat("?", size, ", ", "", ")"));
 
                         final String sql = sb.toString();
 
@@ -244,83 +274,30 @@ final class JoinInfo {
                     }
                 };
 
-                selectSQLBuilderAndParamSetterForBatchPool.put(PSC.class, Tuple.of(batchSQLBuilder, batchParaSetter));
-            }
+                batchSelectSQLBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(batchSQLBuilder, batchParaSetter));
 
-            {
-                final String middleSelectSql = PAC.select(middleSelectPropNames).from(middleEntityClass).where(middleEntityCond).sql();
-                final String leftSelectSql = PAC.selectFrom(referencedEntityClass).where(cond).sql();
+                final List<String> referencedPropNames = Stream.of(referencedPropInfos).map(p -> p.name).toList();
+                final String setNullSql = entry.getValue()._3.apply(referencedEntityClass).set(referencedPropNames).sql() + middleSelectSqlWhereIn;
+                final String deleteSql = entry.getValue()._4.apply(referencedEntityClass).sql() + middleSelectSqlWhereIn;
+                final String middleDeleteSql = entry.getValue()._4.apply(middleEntityClass).where(middleEntityCond).sql();
 
-                final String middleSelectSqlWhereIn = leftSelectSql.substring(leftSelectSql.lastIndexOf(" WHERE ")).replace(inCondToReplace, middleSelectSql);
-                final String selectSql = PAC.selectFrom(referencedEntityClass).sql() + middleSelectSqlWhereIn;
+                setNullSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(setNullSql, setNullParamSetterForUpdate));
+                deleteSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(deleteSql, middleDeleteSql, paramSetter));
 
-                final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
-                    if (N.isNullOrEmpty(selectPropNames)) {
-                        return selectSql;
+                final String batchDeleteSqlHeader = entry.getValue()._4.apply(referencedEntityClass)
+                        .where(cond)
+                        .sql()
+                        .replace(inCondToReplace, middleSelectSql)
+                        .replace(" = ?)", " IN ");
+
+                final IntFunction<String> batchDeleteSQLBuilder = size -> {
+                    if (size == 1) {
+                        return deleteSql;
                     } else {
-                        if (!selectPropNames.contains(referencedPropInfos[0].name)) {
-                            final List<String> newSelectPropNames = new ArrayList<>(selectPropNames.size() + 1);
-                            newSelectPropNames.add(referencedPropInfos[0].name);
-                            newSelectPropNames.addAll(selectPropNames);
-
-                            return PAC.select(newSelectPropNames).from(referencedEntityClass).sql() + middleSelectSqlWhereIn;
-                        } else {
-                            return PAC.select(selectPropNames).from(referencedEntityClass).sql() + middleSelectSqlWhereIn;
-                        }
-                    }
-                };
-
-                selectSQLBuilderAndParamSetterPool.put(PAC.class, Tuple.of(sqlBuilder, paramSetter));
-
-                final List<String> middleSelectWords = SQLParser.parse(middleSelectSql);
-                final String middleTableName = middleSelectWords.get(10);
-                final String middleSelectPropName = middleTableName + "." + middleSelectWords.get(2);
-                final String middleCondPropName = middleTableName + "." + middleSelectWords.get(14);
-
-                final int fromIndex = leftSelectSql.lastIndexOf(" FROM ");
-                final List<String> leftSelectLastWords = SQLParser.parse(leftSelectSql.substring(fromIndex + 6));
-                final String leftTableName = leftSelectLastWords.get(0);
-                final String leftCondPropName = leftTableName + "." + leftSelectLastWords.get(4);
-
-                final Map<String, String> selectPropNameMap = Stream.of(SQLParser.parse(leftSelectSql.substring(0, fromIndex)))
-                        .skip(2)
-                        .splitToList(7)
-                        .map(it -> it.get(0))
-                        .toMap(Fn.identity(), it -> leftTableName + "." + it);
-
-                final String middleEntityCondStr = middleCondPropName + " = ?";
-                final String batchSelectHeader = "SELECT " + middleCondPropName + ", ";
-                final String batchSelectFromToJoinOn = " FROM " + leftTableName + " JOIN " + middleTableName + " ON " + leftCondPropName + " = "
-                        + middleSelectPropName + " WHERE ";
-                final String batchSelectAllLeftSql = batchSelectHeader
-                        + Stream.of(SQLParser.parse(leftSelectSql.substring(0, fromIndex))).skip(2).map(it -> selectPropNameMap.getOrDefault(it, it)).join("")
-                        + batchSelectFromToJoinOn;
-
-                final BiFunction<Collection<String>, Integer, String> batchSQLBuilder = (selectPropNames, size) -> {
-                    if (N.isNullOrEmpty(selectPropNames)) {
-                        return batchSelectAllLeftSql + StringUtil.repeat(middleEntityCondStr, size, " OR ");
-                    } else {
-                        Collection<String> newSelectPropNames = selectPropNames;
-
-                        if (!selectPropNames.contains(referencedPropInfos[0].name)) {
-                            newSelectPropNames = new ArrayList<>(selectPropNames.size() + 1);
-                            newSelectPropNames.add(referencedPropInfos[0].name);
-                            newSelectPropNames.addAll(selectPropNames);
-                        }
-
                         final StringBuilder sb = Objectory.createStringBuilder();
 
-                        sb.append(batchSelectHeader);
-
-                        Stream.of(SQLParser.parse(PAC.select(newSelectPropNames).from(referencedEntityClass).sql()))
-                                .skip(2)
-                                .skipLast(4)
-                                .map(it -> selectPropNameMap.getOrDefault(it, it))
-                                .collect(() -> sb, BiConsumers.ofAppend());
-
-                        sb.append(batchSelectFromToJoinOn);
-
-                        sb.append(StringUtil.repeat(middleEntityCondStr, size, " OR "));
+                        sb.append(batchDeleteSqlHeader);
+                        sb.append(StringUtil.repeat("?", size, ", ", "(", ")")).append(")");
 
                         final String sql = sb.toString();
 
@@ -330,83 +307,16 @@ final class JoinInfo {
                     }
                 };
 
-                selectSQLBuilderAndParamSetterForBatchPool.put(PAC.class, Tuple.of(batchSQLBuilder, batchParaSetter));
-            }
+                final String batchMiddleDeleteSql = entry.getValue()._4.apply(middleEntityClass).where(middleEntityCond).sql().replace(" = ?", " IN ");
 
-            {
-                final String middleSelectSql = PLC.select(middleSelectPropNames).from(middleEntityClass).where(middleEntityCond).sql();
-                final String leftSelectSql = PLC.selectFrom(referencedEntityClass).where(cond).sql();
-
-                final String middleSelectSqlWhereIn = leftSelectSql.substring(leftSelectSql.lastIndexOf(" WHERE ")).replace(inCondToReplace, middleSelectSql);
-                final String selectSql = PLC.selectFrom(referencedEntityClass).sql() + middleSelectSqlWhereIn;
-
-                final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
-                    if (N.isNullOrEmpty(selectPropNames)) {
-                        return selectSql;
+                final IntFunction<String> batchMiddleDeleteSQLBuilder = size -> {
+                    if (size == 1) {
+                        return middleDeleteSql;
                     } else {
-                        if (!selectPropNames.contains(referencedPropInfos[0].name)) {
-                            final List<String> newSelectPropNames = new ArrayList<>(selectPropNames.size() + 1);
-                            newSelectPropNames.add(referencedPropInfos[0].name);
-                            newSelectPropNames.addAll(selectPropNames);
-
-                            return PLC.select(newSelectPropNames).from(referencedEntityClass).sql() + middleSelectSqlWhereIn;
-                        } else {
-                            return PLC.select(selectPropNames).from(referencedEntityClass).sql() + middleSelectSqlWhereIn;
-                        }
-                    }
-                };
-
-                selectSQLBuilderAndParamSetterPool.put(PLC.class, Tuple.of(sqlBuilder, paramSetter));
-
-                final List<String> middleSelectWords = SQLParser.parse(middleSelectSql);
-                final String middleTableName = middleSelectWords.get(10);
-                final String middleSelectPropName = middleTableName + "." + middleSelectWords.get(2);
-                final String middleCondPropName = middleTableName + "." + middleSelectWords.get(14);
-
-                final int fromIndex = leftSelectSql.lastIndexOf(" FROM ");
-                final List<String> leftSelectLastWords = SQLParser.parse(leftSelectSql.substring(fromIndex + 6));
-                final String leftTableName = leftSelectLastWords.get(0);
-                final String leftCondPropName = leftTableName + "." + leftSelectLastWords.get(4);
-
-                final Map<String, String> selectPropNameMap = Stream.of(SQLParser.parse(leftSelectSql.substring(0, fromIndex)))
-                        .skip(2)
-                        .splitToList(7)
-                        .map(it -> it.get(0))
-                        .toMap(Fn.identity(), it -> leftTableName + "." + it);
-
-                final String middleEntityCondStr = middleCondPropName + " = ?";
-                final String batchSelectHeader = "SELECT " + middleCondPropName + ", ";
-                final String batchSelectFromToJoinOn = " FROM " + leftTableName + " JOIN " + middleTableName + " ON " + leftCondPropName + " = "
-                        + middleSelectPropName + " WHERE ";
-                final String batchSelectAllLeftSql = batchSelectHeader
-                        + Stream.of(SQLParser.parse(leftSelectSql.substring(0, fromIndex))).skip(2).map(it -> selectPropNameMap.getOrDefault(it, it)).join("")
-                        + batchSelectFromToJoinOn;
-
-                final BiFunction<Collection<String>, Integer, String> batchSQLBuilder = (selectPropNames, size) -> {
-                    if (N.isNullOrEmpty(selectPropNames)) {
-                        return batchSelectAllLeftSql + StringUtil.repeat(middleEntityCondStr, size, " OR ");
-                    } else {
-                        Collection<String> newSelectPropNames = selectPropNames;
-
-                        if (!selectPropNames.contains(referencedPropInfos[0].name)) {
-                            newSelectPropNames = new ArrayList<>(selectPropNames.size() + 1);
-                            newSelectPropNames.add(referencedPropInfos[0].name);
-                            newSelectPropNames.addAll(selectPropNames);
-                        }
-
                         final StringBuilder sb = Objectory.createStringBuilder();
 
-                        sb.append(batchSelectHeader);
-
-                        Stream.of(SQLParser.parse(PLC.select(newSelectPropNames).from(referencedEntityClass).sql()))
-                                .skip(2)
-                                .skipLast(4)
-                                .map(it -> selectPropNameMap.getOrDefault(it, it))
-                                .collect(() -> sb, BiConsumers.ofAppend());
-
-                        sb.append(batchSelectFromToJoinOn);
-
-                        sb.append(StringUtil.repeat(middleEntityCondStr, size, " OR "));
+                        sb.append(batchMiddleDeleteSql);
+                        sb.append(StringUtil.repeat("?", size, ", ", "(", ")"));
 
                         final String sql = sb.toString();
 
@@ -416,7 +326,7 @@ final class JoinInfo {
                     }
                 };
 
-                selectSQLBuilderAndParamSetterForBatchPool.put(PLC.class, Tuple.of(batchSQLBuilder, batchParaSetter));
+                batchDeleteSQLBuilderAndParamSetterForPool.put(entry.getKey(), Tuple.of(batchDeleteSQLBuilder, batchMiddleDeleteSQLBuilder, batchParaSetter));
             }
 
             srcEntityKeyExtractor = entity -> checkPropValue(srcPropInfos[0], entity);
@@ -451,7 +361,6 @@ final class JoinInfo {
             }
 
             final Condition cond = joinColumnPairs.length == 1 ? conds.get(0) : CF.and(conds);
-            final List<String> referencedPropNames = Stream.of(referencedPropInfos).map(p -> p.name).toList();
 
             final BiParametersSetter<PreparedStatement, Object> paramSetter = srcPropInfos.length == 1
                     ? (stmt, entity) -> srcPropInfos[0].dbType.set(stmt, 1, checkPropValue(srcPropInfos[0], entity))
@@ -464,7 +373,30 @@ final class JoinInfo {
                         }
                     });
 
-            final BiParametersSetter<PreparedStatement, Object> setNullParamSetter = srcPropInfos.length == 1 ? (stmt, entity) -> {
+            final BiParametersSetter<PreparedStatement, Collection<?>> batchParaSetter = srcPropInfos.length == 1 ? (stmt, entities) -> {
+                int index = 1;
+
+                for (Object entity : entities) {
+                    srcPropInfos[0].dbType.set(stmt, index++, checkPropValue(srcPropInfos[0], entity));
+                }
+            } : (srcPropInfos.length == 2 ? (stmt, entities) -> {
+                int index = 1;
+
+                for (Object entity : entities) {
+                    srcPropInfos[0].dbType.set(stmt, index++, checkPropValue(srcPropInfos[0], entity));
+                    srcPropInfos[1].dbType.set(stmt, index++, checkPropValue(srcPropInfos[1], entity));
+                }
+            } : (stmt, entities) -> {
+                int index = 1;
+
+                for (Object entity : entities) {
+                    for (int i = 0, len = srcPropInfos.length; i < len; i++) {
+                        srcPropInfos[i].dbType.set(stmt, index++, checkPropValue(srcPropInfos[i], entity));
+                    }
+                }
+            });
+
+            final BiParametersSetter<PreparedStatement, Object> setNullParamSetterForUpdate = srcPropInfos.length == 1 ? (stmt, entity) -> {
                 srcPropInfos[0].dbType.set(stmt, 1, srcPropInfos[0].dbType.defaultValue());
                 srcPropInfos[0].dbType.set(stmt, 2, checkPropValue(srcPropInfos[0], entity));
             } : (srcPropInfos.length == 2 ? (stmt, entity) -> {
@@ -482,44 +414,36 @@ final class JoinInfo {
                 }
             });
 
-            final BiParametersSetter<PreparedStatement, Collection<?>> batchParaSetter = srcPropInfos.length == 1 ? (stmt, entities) -> {
-                int index = 1;
+            for (Map.Entry<Class<? extends SQLBuilder>, Tuple4<Function<Collection<String>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>>> entry : sqlBuilderFuncMap
+                    .entrySet()) {
 
-                for (Object entity : entities) {
-                    srcPropInfos[0].dbType.set(stmt, index++, checkPropValue(srcPropInfos[0], entity));
-                }
-            } : (stmt, entities) -> {
-                int index = 1;
-
-                for (Object entity : entities) {
-                    for (int i = 0, len = srcPropInfos.length; i < len; i++) {
-                        srcPropInfos[i].dbType.set(stmt, index++, checkPropValue(srcPropInfos[i], entity));
-                    }
-                }
-            };
-
-            {
-                final String selectSql = PSC.selectFrom(referencedEntityClass).where(cond).sql();
+                final String selectSql = entry.getValue()._2.apply(referencedEntityClass).where(cond).sql();
 
                 final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
                     if (N.isNullOrEmpty(selectPropNames)) {
                         return selectSql;
                     } else {
-                        return PSC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
+                        return entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass).where(cond).sql();
                     }
                 };
 
-                selectSQLBuilderAndParamSetterPool.put(PSC.class, Tuple.of(sqlBuilder, paramSetter));
+                selectSQLBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(sqlBuilder, paramSetter));
 
-                final BiFunction<Collection<String>, Integer, String> batchSQLBuilder = (selectPropNames, size) -> {
+                final BiFunction<SQLBuilder, Integer, SQLBuilder> appendWhereFunc = referencedPropInfos.length == 1
+                        ? (sb, batchSize) -> sb.append(CF.expr(referencedPropInfos[0].name))
+                                .append(" IN ") //
+                                .append(StringUtil.repeat("?", batchSize, ", ", "(", ")")) //
+                        : (sb, batchSize) -> sb.where(CF.or(N.repeat(cond, batchSize)));
+
+                final BiFunction<Collection<String>, Integer, String> batchSelectSQLBuilder = (selectPropNames, size) -> {
                     if (size == 1) {
                         return sqlBuilder.apply(selectPropNames);
                     } else {
                         if (N.isNullOrEmpty(selectPropNames)) {
-                            return PSC.selectFrom(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
+                            return entry.getValue()._2.apply(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
                         } else {
                             if (N.allMatch(referencedPropInfos, it -> selectPropNames.contains(it.name))) {
-                                return PSC.select(selectPropNames).from(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
+                                return appendWhereFunc.apply(entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass), size).sql();
                             } else {
                                 final Collection<String> newSelectPropNames = N.newLinkedHashSet(referencedPropInfos.length + selectPropNames.size());
 
@@ -529,111 +453,30 @@ final class JoinInfo {
 
                                 newSelectPropNames.addAll(selectPropNames);
 
-                                return PSC.select(newSelectPropNames).from(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
+                                return appendWhereFunc.apply(entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass), size).sql();
                             }
                         }
                     }
                 };
 
-                selectSQLBuilderAndParamSetterForBatchPool.put(PSC.class, Tuple.of(batchSQLBuilder, batchParaSetter));
+                batchSelectSQLBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(batchSelectSQLBuilder, batchParaSetter));
 
-                final String setNullSql = PSC.update(referencedEntityClass).set(referencedPropNames).where(cond).sql();
-                final String deleteSql = PSC.deleteFrom(referencedEntityClass).where(cond).sql();
+                final List<String> referencedPropNames = Stream.of(referencedPropInfos).map(p -> p.name).toList();
+                final String setNullSql = entry.getValue()._3.apply(referencedEntityClass).set(referencedPropNames).where(cond).sql();
+                final String deleteSql = entry.getValue()._4.apply(referencedEntityClass).where(cond).sql();
 
-                setNullSqlAndParamSetterPool.put(PSC.class, Tuple.of(setNullSql, setNullParamSetter));
-                deleteSqlAndParamSetterPool.put(PSC.class, Tuple.of(deleteSql, paramSetter));
-            }
+                setNullSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(setNullSql, setNullParamSetterForUpdate));
+                deleteSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(deleteSql, null, paramSetter));
 
-            {
-                final String selectSql = PAC.selectFrom(referencedEntityClass).where(cond).sql();
-
-                final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
-                    if (N.isNullOrEmpty(selectPropNames)) {
-                        return selectSql;
-                    } else {
-                        return PAC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
-                    }
-                };
-
-                selectSQLBuilderAndParamSetterPool.put(PAC.class, Tuple.of(sqlBuilder, paramSetter));
-
-                final BiFunction<Collection<String>, Integer, String> batchSQLBuilder = (selectPropNames, size) -> {
+                final IntFunction<String> batchDeleteSQLBuilder = size -> {
                     if (size == 1) {
-                        return sqlBuilder.apply(selectPropNames);
+                        return deleteSql;
                     } else {
-                        if (N.isNullOrEmpty(selectPropNames)) {
-                            return PAC.selectFrom(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
-                        } else {
-                            if (N.allMatch(referencedPropInfos, it -> selectPropNames.contains(it.name))) {
-                                return PAC.select(selectPropNames).from(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
-                            } else {
-                                final Collection<String> newSelectPropNames = N.newLinkedHashSet(referencedPropInfos.length + selectPropNames.size());
-
-                                for (PropInfo propInfo : referencedPropInfos) {
-                                    newSelectPropNames.add(propInfo.name);
-                                }
-
-                                newSelectPropNames.addAll(selectPropNames);
-
-                                return PAC.select(newSelectPropNames).from(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
-                            }
-                        }
+                        return appendWhereFunc.apply(entry.getValue()._4.apply(referencedEntityClass), size).sql();
                     }
                 };
 
-                selectSQLBuilderAndParamSetterForBatchPool.put(PAC.class, Tuple.of(batchSQLBuilder, batchParaSetter));
-
-                final String setNullSql = PAC.update(referencedEntityClass).set(referencedPropNames).where(cond).sql();
-                final String deleteSql = PAC.deleteFrom(referencedEntityClass).where(cond).sql();
-
-                setNullSqlAndParamSetterPool.put(PAC.class, Tuple.of(setNullSql, setNullParamSetter));
-                deleteSqlAndParamSetterPool.put(PAC.class, Tuple.of(deleteSql, paramSetter));
-            }
-
-            {
-                final String selectSql = PLC.selectFrom(referencedEntityClass).where(cond).sql();
-
-                final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
-                    if (N.isNullOrEmpty(selectPropNames)) {
-                        return selectSql;
-                    } else {
-                        return PLC.select(selectPropNames).from(referencedEntityClass).where(cond).sql();
-                    }
-                };
-
-                selectSQLBuilderAndParamSetterPool.put(PLC.class, Tuple.of(sqlBuilder, paramSetter));
-
-                final BiFunction<Collection<String>, Integer, String> batchSQLBuilder = (selectPropNames, size) -> {
-                    if (size == 1) {
-                        return sqlBuilder.apply(selectPropNames);
-                    } else {
-                        if (N.isNullOrEmpty(selectPropNames)) {
-                            return PLC.selectFrom(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
-                        } else {
-                            if (N.allMatch(referencedPropInfos, it -> selectPropNames.contains(it.name))) {
-                                return PLC.select(selectPropNames).from(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
-                            } else {
-                                final Collection<String> newSelectPropNames = N.newLinkedHashSet(referencedPropInfos.length + selectPropNames.size());
-
-                                for (PropInfo propInfo : referencedPropInfos) {
-                                    newSelectPropNames.add(propInfo.name);
-                                }
-
-                                newSelectPropNames.addAll(selectPropNames);
-
-                                return PLC.select(newSelectPropNames).from(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
-                            }
-                        }
-                    }
-                };
-
-                selectSQLBuilderAndParamSetterForBatchPool.put(PLC.class, Tuple.of(batchSQLBuilder, batchParaSetter));
-
-                final String setNullSql = PLC.update(referencedEntityClass).set(referencedPropNames).where(cond).sql();
-                final String deleteSql = PLC.deleteFrom(referencedEntityClass).where(cond).sql();
-
-                setNullSqlAndParamSetterPool.put(PLC.class, Tuple.of(setNullSql, setNullParamSetter));
-                deleteSqlAndParamSetterPool.put(PLC.class, Tuple.of(deleteSql, paramSetter));
+                batchDeleteSQLBuilderAndParamSetterForPool.put(entry.getKey(), Tuple.of(batchDeleteSQLBuilder, null, batchParaSetter));
             }
 
             Function<Object, Object> srcEntityKeyExtractorTmp = null;
@@ -704,9 +547,9 @@ final class JoinInfo {
         return tp;
     }
 
-    public Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> getSelectSQLBuilderAndParamSetterForBatch(
+    public Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSQLBuilderAndParamSetter(
             final Class<? extends SQLBuilder> sbc) {
-        final Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = selectSQLBuilderAndParamSetterForBatchPool
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchSelectSQLBuilderAndParamSetterPool
                 .get(sbc);
 
         if (tp == null) {
@@ -726,8 +569,20 @@ final class JoinInfo {
     //        return tp;
     //    }
 
-    public Tuple2<String, BiParametersSetter<PreparedStatement, Object>> getDeleteSqlAndParamSetter(final Class<? extends SQLBuilder> sbc) {
-        final Tuple2<String, BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(sbc);
+    public Tuple3<String, String, BiParametersSetter<PreparedStatement, Object>> getDeleteSqlAndParamSetter(final Class<? extends SQLBuilder> sbc) {
+        final Tuple3<String, String, BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(sbc);
+
+        if (tp == null) {
+            throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
+        }
+
+        return tp;
+    }
+
+    public Tuple3<IntFunction<String>, IntFunction<String>, BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSQLBuilderAndParamSetter(
+            final Class<? extends SQLBuilder> sbc) {
+        final Tuple3<IntFunction<String>, IntFunction<String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchDeleteSQLBuilderAndParamSetterForPool
+                .get(sbc);
 
         if (tp == null) {
             throw new IllegalArgumentException("Not supported SQLBuilder class: " + ClassUtil.getCanonicalClassName(sbc));

@@ -767,8 +767,17 @@ public class DaoTest {
         employeeDao.loadAllJoinEntities(employeeFromDB);
         System.out.println(employeeFromDB);
 
+        List<Employee> employeesFromDB = N.asList(employeeDao.gett(employee.getEmployeeId()), employeeDao.gett(employee.getEmployeeId()));
+        employeeDao.loadAllJoinEntities(employeesFromDB);
+        System.out.println(employeesFromDB);
+
+        employeeFromDB = employeeDao.gett(employee.getEmployeeId());
         employeeDao.loadJoinEntities(employeeFromDB, Project.class, N.asList("title"));
         System.out.println(employeeFromDB);
+
+        employeesFromDB = N.asList(employeeDao.gett(employee.getEmployeeId()), employeeDao.gett(employee.getEmployeeId()));
+        employeeDao.loadJoinEntities(employeesFromDB, Project.class, N.asList("title"));
+        System.out.println(employeesFromDB);
 
         projectDao.loadAllJoinEntities(projectFromDB);
         System.out.println(projectFromDB);
@@ -809,6 +818,10 @@ public class DaoTest {
 
         assertTrue(employeeProjectDao2.exists(entityId2));
         assertNotNull(employeeProjectDao2.gett(entityId2));
+
+        employeeDao.deleteAllJoinEntities(employees);
+
+        projectDao.deleteAllJoinEntities(projects);
 
         employeeDao.delete(CF.alwaysTrue());
         projectDao.delete(CF.alwaysTrue());
