@@ -31,7 +31,7 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLExecutor;
-import com.landawn.abacus.util.SQLExecutor.MapperLEx;
+import com.landawn.abacus.util.SQLExecutor.MapperL;
 import com.landawn.abacus.util.SQLTransaction;
 
 /**
@@ -46,9 +46,9 @@ public class Jdbc {
 
     static final DataSource dataSource = JdbcUtil.createDataSource("jdbc:h2:~/test", "sa", "");
     static final SQLExecutor sqlExecutor = new SQLExecutor(dataSource);
-    static final MapperLEx<User> userMapper = sqlExecutor.mapperEx(User.class);
-    static final MapperLEx<Device> deviceMapper = sqlExecutor.mapperEx(Device.class);
-    static final MapperLEx<Address> addressMapper = sqlExecutor.mapperEx(Address.class);
+    static final MapperL<User> userMapper = sqlExecutor.mapper(User.class);
+    static final MapperL<Device> deviceMapper = sqlExecutor.mapper(Device.class);
+    static final MapperL<Address> addressMapper = sqlExecutor.mapper(Address.class);
 
     static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
     static final UserDaoL userDao2 = JdbcUtil.createDao(UserDaoL.class, dataSource);
@@ -222,7 +222,7 @@ public class Jdbc {
         sql = PSC.selectFrom(User.class).where("id = ?").sql();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .get(User.class) // or findFirst/list/stream/... a lot more we can do.
+                .findOnlyOne(User.class) // or findFirst/list/stream/... a lot more we can do.
                 .ifPresent(System.out::println);
 
         sql = PSC.update(User.class).set("firstName", "lastName").where("id = ?").sql();
@@ -352,49 +352,4 @@ public class Jdbc {
         // then don't need to call beginTransaction because Spring transaction is integrated and supported.
     }
 
-    @Test
-    public void crud_joinedBy() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-        userDao.insertWithId(user);
-
-        User userFromDB = userDao.gett(100L);
-        System.out.println(userFromDB);
-
-        Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
-        deviceMapper.insert(device);
-
-        Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
-        addressMapper.insert(address);
-
-        User userFromDB2 = N.copy(userFromDB);
-        userDao.loadAllJoinEntities(userFromDB);
-        System.out.println(userFromDB);
-
-        userMapper.loadAllJoinEntities(userFromDB2);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
-        userFromDB = userDao.gett(100L);
-        userFromDB2 = N.copy(userFromDB);
-        userDao.loadJoinEntitiesIfNull(userFromDB);
-        System.out.println(userFromDB);
-
-        userMapper.loadJoinEntitiesIfNull(userFromDB2);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
-        userFromDB = userDao.gett(100L);
-        userFromDB2 = N.copy(userFromDB);
-        userDao.loadAllJoinEntities(userFromDB, true);
-        System.out.println(userFromDB);
-
-        userMapper.loadJoinEntitiesIfNull(userFromDB2, true);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
-        userDao.deleteById(100L);
-    }
 }

@@ -30,6 +30,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -68,6 +69,7 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Columns.ColumnOne;
 import com.landawn.abacus.util.Fn.IntFunctions;
+import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
 import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowConsumer;
 import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
@@ -104,6 +106,7 @@ import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.BiConsumer;
 import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Function;
+import com.landawn.abacus.util.function.IntFunction;
 import com.landawn.abacus.util.function.LongFunction;
 import com.landawn.abacus.util.function.Predicate;
 import com.landawn.abacus.util.function.Supplier;
@@ -3523,7 +3526,6 @@ final class DaoImpl {
                         };
                     }
                 } else if (declaringClass.equals(JdbcUtil.JoinEntityHelper.class) || declaringClass.equals(JdbcUtil.UncheckedJoinEntityHelper.class)) {
-
                     if (methodName.equals("loadJoinEntities") && paramLen == 3 && !Collection.class.isAssignableFrom(paramTypes[0])
                             && String.class.isAssignableFrom(paramTypes[1]) && Collection.class.isAssignableFrom(paramTypes[2])) {
                         call = (proxy, args) -> {
@@ -3593,13 +3595,26 @@ final class DaoImpl {
                                 }
                             } else {
                                 final Tuple2<BiFunction<Collection<String>, Integer, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
-                                        .getSelectSQLBuilderAndParamSetterForBatch(sbc);
+                                        .getBatchSelectSQLBuilderAndParamSetter(sbc);
 
                                 ExceptionalStream.of(entities).splitToList(JdbcUtil.MAX_BATCH_SIZE).forEach(bp -> {
                                     if (propJoinInfo.isManyToManyJoin()) {
-                                        final BiRowMapper<Object> biRowMapper = BiRowMapper.to(propJoinInfo.referencedEntityClass, true);
-                                        final BiRowMapper<Pair<Object, Object>> pairBiRowMapper = (rs, cls) -> Pair.of(rs.getObject(1),
-                                                biRowMapper.apply(rs, cls));
+                                        final BiRowMapper<Pair<Object, Object>> pairBiRowMapper = new BiRowMapper<Pair<Object, Object>>() {
+                                            private BiRowMapper<Object> biRowMapper = null;
+                                            private int columnCount = 0;
+                                            private List<String> selectCls = null;
+
+                                            @Override
+                                            public Pair<Object, Object> apply(final ResultSet rs, final List<String> cls) throws SQLException {
+                                                if (columnCount == 0) {
+                                                    columnCount = cls.size();
+                                                    selectCls = cls.subList(0, cls.size() - 1);
+                                                    biRowMapper = BiRowMapper.to(propJoinInfo.referencedEntityClass);
+                                                }
+
+                                                return Pair.of(rs.getObject(columnCount), biRowMapper.apply(rs, selectCls));
+                                            }
+                                        };
 
                                         final List<Pair<Object, Object>> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, bp.size()))
                                                 .setParameters(bp, tp._2)
@@ -3624,9 +3639,26 @@ final class DaoImpl {
                             final Object entity = args[0];
                             final String joinEntityPropName = (String) args[1];
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
-                            final Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+                            final Tuple3<String, String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
+                                    .getDeleteSqlAndParamSetter(sbc);
 
-                            return proxy.prepareQuery(tp._1).setParameters(entity, tp._2).update();
+                            if (N.isNullOrEmpty(tp._2)) {
+                                return proxy.prepareQuery(tp._1).setParameters(entity, tp._3).update();
+                            } else {
+                                long result = 0;
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+
+                                try {
+                                    result = proxy.prepareQuery(tp._1).setParameters(entity, tp._3).update();
+                                    result += proxy.prepareQuery(tp._2).setParameters(entity, tp._3).update();
+
+                                    tran.commit();
+                                } finally {
+                                    tran.rollbackIfNotCommitted();
+                                }
+
+                                return N.toIntExact(result);
+                            }
                         };
                     } else if (methodName.equals("deleteJoinEntities") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
                             && String.class.isAssignableFrom(paramTypes[1])) {
@@ -3634,17 +3666,53 @@ final class DaoImpl {
                             final Collection<Object> entities = (Collection) args[0];
                             final String joinEntityPropName = (String) args[1];
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
-                            final Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.getDeleteSqlAndParamSetter(sbc);
 
                             if (N.isNullOrEmpty(entities)) {
                                 return 0;
                             } else if (entities.size() == 1) {
-                                return proxy.prepareQuery(tp._1).setParameters(N.firstOrNullIfEmpty(entities), tp._2).update();
+                                final Object entity = N.firstOrNullIfEmpty(entities);
+
+                                final Tuple3<String, String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
+                                        .getDeleteSqlAndParamSetter(sbc);
+
+                                if (N.isNullOrEmpty(tp._2)) {
+                                    return proxy.prepareQuery(tp._1).setParameters(entity, tp._3).update();
+                                } else {
+                                    int result = 0;
+                                    final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+
+                                    try {
+                                        result = proxy.prepareQuery(tp._1).setParameters(entity, tp._3).update();
+                                        result += proxy.prepareQuery(tp._2).setParameters(entity, tp._3).update();
+
+                                        tran.commit();
+                                    } finally {
+                                        tran.rollbackIfNotCommitted();
+                                    }
+
+                                    return result;
+                                }
                             } else {
-                                final long result = ExceptionalStream.of(entities)
-                                        .splitToList(JdbcUtil.MAX_BATCH_SIZE)
-                                        .sumInt(bp -> proxy.prepareQuery(tp._1).addBatchParametters(bp, tp._2).update())
-                                        .orZero();
+                                long result = 0;
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+
+                                try {
+                                    final Tuple3<IntFunction<String>, IntFunction<String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
+                                            .getBatchDeleteSQLBuilderAndParamSetter(sbc);
+
+                                    result = ExceptionalStream.of(entities).splitToList(JdbcUtil.MAX_BATCH_SIZE).sumInt(bp -> {
+                                        if (tp._2 == null) {
+                                            return proxy.prepareQuery(tp._1.apply(bp.size())).setParameters(bp, tp._3).update();
+                                        } else {
+                                            return proxy.prepareQuery(tp._1.apply(bp.size())).setParameters(bp, tp._3).update()
+                                                    + proxy.prepareQuery(tp._2.apply(bp.size())).setParameters(bp, tp._3).update();
+                                        }
+                                    }).orZero();
+
+                                    tran.commit();
+                                } finally {
+                                    tran.rollbackIfNotCommitted();
+                                }
 
                                 return N.toIntExact(result);
                             }

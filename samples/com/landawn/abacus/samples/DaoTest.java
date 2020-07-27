@@ -555,60 +555,13 @@ public class DaoTest {
         Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
         addressMapper.insert(address);
 
-        User userFromDB2 = N.copy(userFromDB);
         userDao.loadAllJoinEntities(userFromDB);
         System.out.println(userFromDB);
 
-        userMapper.loadAllJoinEntities(userFromDB2);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
         userFromDB = userDao.gett(100L);
-        userFromDB2 = N.copy(userFromDB);
+
         userDao.loadJoinEntitiesIfNull(userFromDB);
         System.out.println(userFromDB);
-
-        userMapper.loadJoinEntitiesIfNull(userFromDB2);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
-        userFromDB = userDao.gett(100L);
-        userFromDB2 = N.copy(userFromDB);
-        userDao.loadJoinEntities(userFromDB, Device.class);
-        System.out.println(userFromDB);
-
-        userMapper.loadJoinEntities(userFromDB2, Device.class);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
-        userFromDB = userDao.gett(100L);
-        userFromDB2 = N.copy(userFromDB);
-        userDao.loadJoinEntitiesIfNull(userFromDB, Address.class);
-        System.out.println(userFromDB);
-
-        userMapper.loadJoinEntitiesIfNull(userFromDB2, Address.class);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
-        userFromDB = userDao.gett(100L);
-        userFromDB2 = N.copy(userFromDB);
-        userDao.loadAllJoinEntities(userFromDB, true);
-        System.out.println(userFromDB);
-
-        userMapper.loadJoinEntitiesIfNull(userFromDB2, true);
-        System.out.println(userFromDB2);
-
-        assertEquals(userFromDB, userFromDB2);
-
-        userDao.deleteJoinEntities(userFromDB, Address.class);
-        userDao.deleteJoinEntities(N.asList(userFromDB, userFromDB, userFromDB), Device.class);
-
-        userMapper.deleteJoinEntities(userFromDB, Address.class);
-        userMapper.deleteJoinEntities(N.asList(userFromDB, userFromDB, userFromDB), Device.class);
 
         userDao.deleteById(100L);
     }
@@ -633,65 +586,14 @@ public class DaoTest {
         }
 
         List<User> users2 = Stream.of(users).map(N::copy).toList();
-        List<User> users3 = Stream.of(users).map(N::copy).toList();
 
         userDao.loadAllJoinEntities(users2);
         System.out.println(users2);
 
-        userMapper.loadAllJoinEntities(users3);
-        System.out.println(users3);
-
-        assertEquals(users2, users3);
-
         users2 = Stream.of(users).map(N::copy).toList();
-        users3 = Stream.of(users).map(N::copy).toList();
 
         userDao.loadJoinEntitiesIfNull(users2);
         System.out.println(users2);
-
-        userMapper.loadJoinEntitiesIfNull(users3);
-        System.out.println(users3);
-
-        assertEquals(users2, users3);
-
-        users2 = Stream.of(users).map(N::copy).toList();
-        users3 = Stream.of(users).map(N::copy).toList();
-
-        userDao.loadJoinEntities(users2, Device.class);
-        System.out.println(users2);
-
-        userMapper.loadJoinEntities(users3, Device.class);
-        System.out.println(users3);
-
-        assertEquals(users2, users3);
-
-        users2 = Stream.of(users).map(N::copy).toList();
-        users3 = Stream.of(users).map(N::copy).toList();
-
-        userDao.loadJoinEntitiesIfNull(users2, Address.class);
-        System.out.println(users2);
-
-        userMapper.loadJoinEntitiesIfNull(users3, Address.class);
-        System.out.println(users3);
-
-        assertEquals(users2, users3);
-
-        users2 = Stream.of(users).map(N::copy).toList();
-        users3 = Stream.of(users).map(N::copy).toList();
-
-        userDao.loadAllJoinEntities(users2, true);
-        System.out.println(users2);
-
-        userMapper.loadAllJoinEntities(users3, true);
-        System.out.println(users3);
-
-        assertEquals(users2, users3);
-
-        userDao.deleteJoinEntities(users3, Address.class);
-        userDao.deleteJoinEntities(users, Device.class);
-
-        userMapper.deleteJoinEntities(users2, Address.class);
-        userMapper.deleteJoinEntities(users, Device.class);
 
         userDao.batchDelete(users);
     }
