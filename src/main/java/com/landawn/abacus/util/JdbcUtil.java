@@ -11953,7 +11953,8 @@ public final class JdbcUtil {
 
             loadJoinEntitiesIfNull(entities, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
         }
-
+        
+        // TODO may or may not, should or should not? undecided.
         //    int saveWithJoinEntities(final T entity) throws SQLException;
         //
         //    default int batchSaveWithJoinEntities(final Collection<? extends T> entities) throws SQLException {

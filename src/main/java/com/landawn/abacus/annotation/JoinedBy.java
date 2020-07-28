@@ -79,6 +79,9 @@ public @interface JoinedBy {
     String[] value() default {};
 
     // OnDeleteAction onDelete() default OnDeleteAction.NO_ACTION; // TODO it's very complicated to support it.
-    
+
     boolean cascadeDeleteDefinedInDB() default true;
+
+    // TODO may or may not, should or should not? undecided.
+    // boolean callInsertForSave() default true;
 }
