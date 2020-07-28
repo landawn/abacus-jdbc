@@ -51,6 +51,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
+import javax.sql.DataSource;
+
 import com.landawn.abacus.DataSet;
 import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.EntityId;
@@ -8305,7 +8307,7 @@ public final class JdbcUtil {
              * 
              * @return
              */
-            String[] filter() default { "query", "queryFor", "list", "get", "find", "findFirst", "exist", "count" };
+            String[] filter() default { "query", "queryFor", "list", "get", "find", "findFirst", "findOnlyOne", "exist", "count" };
 
             // TODO: second, what will key be like?: {methodName=[args]} -> JSON or kryo? 
             // KeyGenerator keyGenerator() default KeyGenerator.JSON; KeyGenerator.JSON/KRYO;
@@ -11964,13 +11966,24 @@ public final class JdbcUtil {
             final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
 
-            int result = 0;
+            if (joinEntityPropNames.size() == 1) {
+                return deleteJoinEntities(entity, joinEntityPropNames.get(0));
+            } else {
+                int result = 0;
+                final DataSource dataSource = getDao(this).dataSource();
+                final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
-            for (String joinEntityPropName : joinEntityPropNames) {
-                result += deleteJoinEntities(entity, joinEntityPropName);
+                try {
+                    for (String joinEntityPropName : joinEntityPropNames) {
+                        result += deleteJoinEntities(entity, joinEntityPropName);
+                    }
+                    tran.commit();
+                } finally {
+                    tran.rollbackIfNotCommitted();
+                }
+
+                return result;
             }
-
-            return result;
         }
 
         /**
@@ -11981,21 +11994,32 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
-            if (N.isNullOrEmpty(entities)) {
-                return 0;
-            }
-
             final Class<?> targetEntityClass = targetEntityClass();
             final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
 
-            int result = 0;
-
-            for (String joinEntityPropName : joinEntityPropNames) {
-                result += deleteJoinEntities(entities, joinEntityPropName);
+            if (N.isNullOrEmpty(entities)) {
+                return 0;
             }
 
-            return result;
+            if (joinEntityPropNames.size() == 1) {
+                return deleteJoinEntities(entities, joinEntityPropNames.get(0));
+            } else {
+                int result = 0;
+                final DataSource dataSource = getDao(this).dataSource();
+                final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+                try {
+                    for (String joinEntityPropName : joinEntityPropNames) {
+                        result += deleteJoinEntities(entities, joinEntityPropName);
+                    }
+                    tran.commit();
+                } finally {
+                    tran.rollbackIfNotCommitted();
+                }
+
+                return result;
+            }
         }
 
         /**
@@ -12030,13 +12054,24 @@ public final class JdbcUtil {
                 return 0;
             }
 
-            int result = 0;
+            if (joinEntityPropNames.size() == 1) {
+                return deleteJoinEntities(entity, N.firstOrNullIfEmpty(joinEntityPropNames));
+            } else {
+                int result = 0;
+                final DataSource dataSource = getDao(this).dataSource();
+                final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
-            for (String joinEntityPropName : joinEntityPropNames) {
-                result += deleteJoinEntities(entity, joinEntityPropName);
+                try {
+                    for (String joinEntityPropName : joinEntityPropNames) {
+                        result += deleteJoinEntities(entity, joinEntityPropName);
+                    }
+                    tran.commit();
+                } finally {
+                    tran.rollbackIfNotCommitted();
+                }
+
+                return result;
             }
-
-            return result;
         }
 
         /**
@@ -12046,7 +12081,9 @@ public final class JdbcUtil {
          * @param inParallel
          * @return the total count of updated/deleted records.
          * @throws SQLException the SQL exception
+         * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
+        @Deprecated
         default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
             if (inParallel) {
                 return deleteJoinEntities(entity, joinEntityPropNames, executor());
@@ -12062,7 +12099,9 @@ public final class JdbcUtil {
          * @param executor
          * @return the total count of updated/deleted records.
          * @throws SQLException the SQL exception
+         * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
+        @Deprecated
         default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
             if (N.isNullOrEmpty(joinEntityPropNames)) {
                 return 0;
@@ -12087,13 +12126,24 @@ public final class JdbcUtil {
                 return 0;
             }
 
-            int result = 0;
+            if (joinEntityPropNames.size() == 1) {
+                return deleteJoinEntities(entities, N.firstOrNullIfEmpty(joinEntityPropNames));
+            } else {
+                int result = 0;
+                final DataSource dataSource = getDao(this).dataSource();
+                final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
-            for (String joinEntityPropName : joinEntityPropNames) {
-                result += deleteJoinEntities(entities, joinEntityPropName);
+                try {
+                    for (String joinEntityPropName : joinEntityPropNames) {
+                        result += deleteJoinEntities(entities, joinEntityPropName);
+                    }
+                    tran.commit();
+                } finally {
+                    tran.rollbackIfNotCommitted();
+                }
+
+                return result;
             }
-
-            return result;
         }
 
         /**
@@ -12103,7 +12153,9 @@ public final class JdbcUtil {
          * @param inParallel
          * @return the total count of updated/deleted records.
          * @throws SQLException the SQL exception
+         * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
+        @Deprecated
         default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
                 throws SQLException {
             if (inParallel) {
@@ -12120,7 +12172,9 @@ public final class JdbcUtil {
          * @param executor
          * @return the total count of updated/deleted records.
          * @throws SQLException the SQL exception
+         * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
+        @Deprecated
         default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
                 throws SQLException {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
@@ -12150,7 +12204,9 @@ public final class JdbcUtil {
          * @param inParallel
          * @return the total count of updated/deleted records.
          * @throws SQLException the SQL exception
+         * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
+        @Deprecated
         default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws SQLException {
             if (inParallel) {
                 return deleteAllJoinEntities(entity, executor());
@@ -12165,7 +12221,9 @@ public final class JdbcUtil {
          * @param executor
          * @return the total count of updated/deleted records.
          * @throws SQLException the SQL exception
+         * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
+        @Deprecated
         default int deleteAllJoinEntities(final T entity, final Executor executor) throws SQLException {
             return deleteJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
         }
@@ -12190,7 +12248,9 @@ public final class JdbcUtil {
          * @param inParallel
          * @return the total count of updated/deleted records.
          * @throws SQLException the SQL exception
+         * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
+        @Deprecated
         default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws SQLException {
             if (inParallel) {
                 return deleteAllJoinEntities(entities, executor());
@@ -12205,7 +12265,9 @@ public final class JdbcUtil {
          * @param executor
          * @return the total count of updated/deleted records.
          * @throws SQLException the SQL exception
+         * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
+        @Deprecated
         default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws SQLException {
             if (N.isNullOrEmpty(entities)) {
                 return 0;
@@ -15982,13 +16044,24 @@ public final class JdbcUtil {
             final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
 
-            int result = 0;
+            if (joinEntityPropNames.size() == 1) {
+                return deleteJoinEntities(entity, joinEntityPropNames.get(0));
+            } else {
+                int result = 0;
+                final DataSource dataSource = getDao(this).dataSource();
+                final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
-            for (String joinEntityPropName : joinEntityPropNames) {
-                result += deleteJoinEntities(entity, joinEntityPropName);
+                try {
+                    for (String joinEntityPropName : joinEntityPropNames) {
+                        result += deleteJoinEntities(entity, joinEntityPropName);
+                    }
+                    tran.commit();
+                } finally {
+                    tran.rollbackIfNotCommitted();
+                }
+
+                return result;
             }
-
-            return result;
         }
 
         /**
@@ -16000,21 +16073,32 @@ public final class JdbcUtil {
          */
         @Override
         default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
-            if (N.isNullOrEmpty(entities)) {
-                return 0;
-            }
-
             final Class<?> targetEntityClass = targetEntityClass();
             final List<String> joinEntityPropNames = getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, joinEntityClass);
             N.checkArgument(N.notNullOrEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
 
-            int result = 0;
-
-            for (String joinEntityPropName : joinEntityPropNames) {
-                result += deleteJoinEntities(entities, joinEntityPropName);
+            if (N.isNullOrEmpty(entities)) {
+                return 0;
             }
 
-            return result;
+            if (joinEntityPropNames.size() == 1) {
+                return deleteJoinEntities(entities, joinEntityPropNames.get(0));
+            } else {
+                int result = 0;
+                final DataSource dataSource = getDao(this).dataSource();
+                final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+                try {
+                    for (String joinEntityPropName : joinEntityPropNames) {
+                        result += deleteJoinEntities(entities, joinEntityPropName);
+                    }
+                    tran.commit();
+                } finally {
+                    tran.rollbackIfNotCommitted();
+                }
+
+                return result;
+            }
         }
 
         /**
@@ -16052,13 +16136,24 @@ public final class JdbcUtil {
                 return 0;
             }
 
-            int result = 0;
+            if (joinEntityPropNames.size() == 1) {
+                return deleteJoinEntities(entity, N.firstOrNullIfEmpty(joinEntityPropNames));
+            } else {
+                int result = 0;
+                final DataSource dataSource = getDao(this).dataSource();
+                final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
-            for (String joinEntityPropName : joinEntityPropNames) {
-                result += deleteJoinEntities(entity, joinEntityPropName);
+                try {
+                    for (String joinEntityPropName : joinEntityPropNames) {
+                        result += deleteJoinEntities(entity, joinEntityPropName);
+                    }
+                    tran.commit();
+                } finally {
+                    tran.rollbackIfNotCommitted();
+                }
+
+                return result;
             }
-
-            return result;
         }
 
         /**
@@ -16068,8 +16163,10 @@ public final class JdbcUtil {
          * @param inParallel
          * @return the total count of updated/deleted records.
          * @throws UncheckedSQLException the unchecked SQL exception
+         * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
         @Override
+        @Deprecated
         default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 return deleteJoinEntities(entity, joinEntityPropNames, executor());
@@ -16085,8 +16182,10 @@ public final class JdbcUtil {
          * @param executor
          * @return the total count of updated/deleted records.
          * @throws UncheckedSQLException the unchecked SQL exception
+         * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
         @Override
+        @Deprecated
         default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
             if (N.isNullOrEmpty(joinEntityPropNames)) {
                 return 0;
@@ -16112,13 +16211,24 @@ public final class JdbcUtil {
                 return 0;
             }
 
-            int result = 0;
+            if (joinEntityPropNames.size() == 1) {
+                return deleteJoinEntities(entities, N.firstOrNullIfEmpty(joinEntityPropNames));
+            } else {
+                int result = 0;
+                final DataSource dataSource = getDao(this).dataSource();
+                final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
-            for (String joinEntityPropName : joinEntityPropNames) {
-                result += deleteJoinEntities(entities, joinEntityPropName);
+                try {
+                    for (String joinEntityPropName : joinEntityPropNames) {
+                        result += deleteJoinEntities(entities, joinEntityPropName);
+                    }
+                    tran.commit();
+                } finally {
+                    tran.rollbackIfNotCommitted();
+                }
+
+                return result;
             }
-
-            return result;
         }
 
         /**
@@ -16128,8 +16238,10 @@ public final class JdbcUtil {
          * @param inParallel
          * @return the total count of updated/deleted records.
          * @throws UncheckedSQLException the unchecked SQL exception
+         * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
         @Override
+        @Deprecated
         default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
                 throws UncheckedSQLException {
             if (inParallel) {
@@ -16146,8 +16258,10 @@ public final class JdbcUtil {
          * @param executor
          * @return the total count of updated/deleted records.
          * @throws UncheckedSQLException the unchecked SQL exception
+         * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
         @Override
+        @Deprecated
         default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
                 throws UncheckedSQLException {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
@@ -16178,8 +16292,10 @@ public final class JdbcUtil {
          * @param inParallel
          * @return the total count of updated/deleted records.
          * @throws UncheckedSQLException the unchecked SQL exception
+         * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
         @Override
+        @Deprecated
         default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 return deleteAllJoinEntities(entity, executor());
@@ -16194,8 +16310,10 @@ public final class JdbcUtil {
          * @param executor
          * @return the total count of updated/deleted records.
          * @throws UncheckedSQLException the unchecked SQL exception
+         * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
         @Override
+        @Deprecated
         default int deleteAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException {
             return deleteJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
         }
@@ -16221,8 +16339,10 @@ public final class JdbcUtil {
          * @param inParallel
          * @return the total count of updated/deleted records.
          * @throws UncheckedSQLException the unchecked SQL exception
+         * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
         @Override
+        @Deprecated
         default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 return deleteAllJoinEntities(entities, executor());
@@ -16237,8 +16357,10 @@ public final class JdbcUtil {
          * @param executor
          * @return the total count of updated/deleted records.
          * @throws UncheckedSQLException the unchecked SQL exception
+         * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
         @Override
+        @Deprecated
         default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
             if (N.isNullOrEmpty(entities)) {
                 return 0;

@@ -3670,20 +3670,20 @@ final class DaoImpl {
                             if (N.isNullOrEmpty(entities)) {
                                 return 0;
                             } else if (entities.size() == 1) {
-                                final Object entity = N.firstOrNullIfEmpty(entities);
+                                final Object first = N.firstOrNullIfEmpty(entities);
 
                                 final Tuple3<String, String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                         .getDeleteSqlAndParamSetter(sbc);
 
                                 if (N.isNullOrEmpty(tp._2)) {
-                                    return proxy.prepareQuery(tp._1).setParameters(entity, tp._3).update();
+                                    return proxy.prepareQuery(tp._1).setParameters(first, tp._3).update();
                                 } else {
                                     int result = 0;
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
-                                        result = proxy.prepareQuery(tp._1).setParameters(entity, tp._3).update();
-                                        result += proxy.prepareQuery(tp._2).setParameters(entity, tp._3).update();
+                                        result = proxy.prepareQuery(tp._1).setParameters(first, tp._3).update();
+                                        result += proxy.prepareQuery(tp._2).setParameters(first, tp._3).update();
 
                                         tran.commit();
                                     } finally {

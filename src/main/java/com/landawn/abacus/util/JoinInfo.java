@@ -98,7 +98,9 @@ final class JoinInfo {
         referencedEntityClass = referencedEntityType.clazz();
         referencedEntityInfo = ParserUtil.getEntityInfo(referencedEntityClass);
 
-        final String joinByVal = StringUtil.join(joinPropInfo.getAnnotation(JoinedBy.class).value(), ", ");
+        final JoinedBy joinedByAnno = joinPropInfo.getAnnotation(JoinedBy.class);
+        final boolean cascadeDeleteDefinedInDB = joinedByAnno.cascadeDeleteDefinedInDB();
+        final String joinByVal = StringUtil.join(joinedByAnno.value(), ", ");
 
         if (N.isNullOrEmpty(joinByVal)) {
             throw new IllegalArgumentException(
@@ -280,7 +282,7 @@ final class JoinInfo {
                 final String middleDeleteSql = entry.getValue()._4.apply(middleEntityClass).where(middleEntityCond).sql();
 
                 setNullSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(setNullSql, setNullParamSetterForUpdate));
-                deleteSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(deleteSql, middleDeleteSql, paramSetter));
+                deleteSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(deleteSql, cascadeDeleteDefinedInDB ? null : middleDeleteSql, paramSetter));
 
                 final String batchDeleteSqlHeader = entry.getValue()._4.apply(referencedEntityClass)
                         .where(cond)
@@ -306,7 +308,8 @@ final class JoinInfo {
                     }
                 };
 
-                batchDeleteSQLBuilderAndParamSetterForPool.put(entry.getKey(), Tuple.of(batchDeleteSQLBuilder, batchMiddleDeleteSQLBuilder, batchParaSetter));
+                batchDeleteSQLBuilderAndParamSetterForPool.put(entry.getKey(),
+                        Tuple.of(batchDeleteSQLBuilder, cascadeDeleteDefinedInDB ? null : batchMiddleDeleteSQLBuilder, batchParaSetter));
             }
 
             srcEntityKeyExtractor = entity -> checkPropValue(srcPropInfos[0], entity);
