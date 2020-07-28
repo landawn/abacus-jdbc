@@ -11954,6 +11954,14 @@ public final class JdbcUtil {
             loadJoinEntitiesIfNull(entities, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
         }
 
+        //    int saveWithJoinEntities(final T entity) throws SQLException;
+        //
+        //    default int batchSaveWithJoinEntities(final Collection<? extends T> entities) throws SQLException {
+        //        return batchSaveWithJoinEntities(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+        //    }
+        //
+        //    int batchSaveWithJoinEntities(final Collection<? extends T> entity, int batchSize) throws SQLException;
+
         /**
          *
          * @param entity
