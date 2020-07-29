@@ -99,7 +99,7 @@ final class JoinInfo {
         referencedEntityInfo = ParserUtil.getEntityInfo(referencedEntityClass);
 
         final JoinedBy joinedByAnno = joinPropInfo.getAnnotation(JoinedBy.class);
-        final boolean cascadeDeleteDefinedInDB = joinedByAnno.cascadeDeleteDefinedInDB();
+        final boolean cascadeDeleteDefinedInDB = true; // joinedByAnno.cascadeDeleteDefinedInDB(); // TODO should be defined/implemented on DB server side.
         final String joinByVal = StringUtil.join(joinedByAnno.value(), ", ");
 
         if (N.isNullOrEmpty(joinByVal)) {
