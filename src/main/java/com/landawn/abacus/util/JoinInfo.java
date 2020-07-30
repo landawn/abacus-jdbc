@@ -422,7 +422,7 @@ final class JoinInfo {
                         return sqlBuilder.apply(selectPropNames);
                     } else {
                         if (N.isNullOrEmpty(selectPropNames)) {
-                            return entry.getValue()._2.apply(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
+                            return appendWhereFunc.apply(entry.getValue()._2.apply(referencedEntityClass), size).sql();
                         } else {
                             if (N.allMatch(referencedPropInfos, it -> selectPropNames.contains(it.name))) {
                                 return appendWhereFunc.apply(entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass), size).sql();
