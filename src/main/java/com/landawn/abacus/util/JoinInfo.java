@@ -98,7 +98,9 @@ final class JoinInfo {
         referencedEntityClass = referencedEntityType.clazz();
         referencedEntityInfo = ParserUtil.getEntityInfo(referencedEntityClass);
 
-        final String joinByVal = StringUtil.join(joinPropInfo.getAnnotation(JoinedBy.class).value(), ", ");
+        final JoinedBy joinedByAnno = joinPropInfo.getAnnotation(JoinedBy.class);
+        final boolean cascadeDeleteDefinedInDB = true; // joinedByAnno.cascadeDeleteDefinedInDB(); // TODO should be defined/implemented on DB server side.
+        final String joinByVal = StringUtil.join(joinedByAnno.value(), ", ");
 
         if (N.isNullOrEmpty(joinByVal)) {
             throw new IllegalArgumentException(
@@ -280,7 +282,7 @@ final class JoinInfo {
                 final String middleDeleteSql = entry.getValue()._4.apply(middleEntityClass).where(middleEntityCond).sql();
 
                 setNullSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(setNullSql, setNullParamSetterForUpdate));
-                deleteSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(deleteSql, middleDeleteSql, paramSetter));
+                deleteSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(deleteSql, cascadeDeleteDefinedInDB ? null : middleDeleteSql, paramSetter));
 
                 final String batchDeleteSqlHeader = entry.getValue()._4.apply(referencedEntityClass)
                         .where(cond)
@@ -306,7 +308,8 @@ final class JoinInfo {
                     }
                 };
 
-                batchDeleteSQLBuilderAndParamSetterForPool.put(entry.getKey(), Tuple.of(batchDeleteSQLBuilder, batchMiddleDeleteSQLBuilder, batchParaSetter));
+                batchDeleteSQLBuilderAndParamSetterForPool.put(entry.getKey(),
+                        Tuple.of(batchDeleteSQLBuilder, cascadeDeleteDefinedInDB ? null : batchMiddleDeleteSQLBuilder, batchParaSetter));
             }
 
             srcEntityKeyExtractor = entity -> checkPropValue(srcPropInfos[0], entity);
@@ -419,7 +422,7 @@ final class JoinInfo {
                         return sqlBuilder.apply(selectPropNames);
                     } else {
                         if (N.isNullOrEmpty(selectPropNames)) {
-                            return entry.getValue()._2.apply(referencedEntityClass).where(CF.or(N.repeat(cond, size))).sql();
+                            return appendWhereFunc.apply(entry.getValue()._2.apply(referencedEntityClass), size).sql();
                         } else {
                             if (N.allMatch(referencedPropInfos, it -> selectPropNames.contains(it.name))) {
                                 return appendWhereFunc.apply(entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass), size).sql();
