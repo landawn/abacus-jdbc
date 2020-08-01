@@ -197,18 +197,18 @@ public class DaoTest {
         userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
         long id = user.getId();
-        User userFromDB = userDao.gett(id);
+        User userFromDB = noUpdateUserDao.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        Profiler.run(1, 10000, 1, () -> userDao.gett(id)).printResult();
+        Profiler.run(1, 10000, 1, () -> noUpdateUserDao.gett(id)).printResult();
 
         userDao.delete(userFromDB);
 
-        Profiler.run(1, 10000, 1, () -> userDao.gett(id)).printResult();
+        Profiler.run(1, 10000, 1, () -> noUpdateUserDao.gett(id)).printResult();
 
         userDao.delete(userFromDB);
     }
@@ -882,5 +882,15 @@ public class DaoTest {
         employeeDao.delete(CF.alwaysTrue());
         projectDao.delete(CF.alwaysTrue());
         employeeProjectDao.delete(CF.alwaysTrue());
+    }
+
+    @Test
+    public void test_innerHandler() throws SQLException {
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.insertWithId(user);
+
+        userDao.testInnerHandler(100).forEach(Fn.println());
+
+        userDao.deleteById(100L);
     }
 }

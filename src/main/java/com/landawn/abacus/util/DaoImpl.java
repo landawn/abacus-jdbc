@@ -80,12 +80,14 @@ import com.landawn.abacus.util.JdbcUtil.Dao.NonDBOperation;
 import com.landawn.abacus.util.JdbcUtil.Dao.OP;
 import com.landawn.abacus.util.JdbcUtil.Dao.OutParameter;
 import com.landawn.abacus.util.JdbcUtil.Dao.SqlField;
+import com.landawn.abacus.util.JdbcUtil.NoUpdateDao;
 import com.landawn.abacus.util.JdbcUtil.OutParamResult;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowConsumer;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.JdbcUtil.SqlLogConfig;
+import com.landawn.abacus.util.JdbcUtil.UncheckedNoUpdateDao;
 import com.landawn.abacus.util.SQLBuilder.NAC;
 import com.landawn.abacus.util.SQLBuilder.NLC;
 import com.landawn.abacus.util.SQLBuilder.NSC;
@@ -1658,12 +1660,13 @@ final class DaoImpl {
                 .append(StreamEx.of(allInterfaces).flatMapp(it -> it.getDeclaredClasses()).flatMapp(it -> it.getDeclaredFields()))
                 .filter(it -> it.isAnnotationPresent(SqlField.class))
                 .onEach(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()) && String.class.equals(it.getType()),
-                        "Field annotated with @SqlField must be static&final String. but {} is not.", it))
+                        "Field annotated with @SqlField must be static&final String. but {} is not in Dao class {}.", it, daoInterface))
                 .onEach(it -> it.setAccessible(true))
                 .map(it -> Tuple.of(it.getAnnotation(SqlField.class), it))
                 .map(it -> Tuple.of(N.isNullOrEmpty(it._1.id()) ? it._2.getName() : it._1.id(), it._2))
                 .distinctBy(it -> it._1, (a, b) -> {
-                    throw new IllegalArgumentException("Two fields annotated with @SqlField have the same id (or name): " + a + "," + b);
+                    throw new IllegalArgumentException(
+                            "Two fields annotated with @SqlField have the same id (or name): " + a + "," + b + " in Dao class: " + daoInterface);
                 })
                 .toMap(it -> it._1, Fn.ff(it -> (String) (it._2.get(null))));
 
@@ -1886,6 +1889,16 @@ final class DaoImpl {
                 .first()
                 .orNull();
 
+        if (NoUpdateDao.class.isAssignableFrom(daoInterface) || UncheckedNoUpdateDao.class.isAssignableFrom(daoInterface)) {
+            // OK
+        } else {
+            // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
+            if (daoClassCacheResultAnno != null || daoClassRefreshCacheAnno != null) {
+                throw new UnsupportedOperationException(
+                        "Cache is only supported for NoUpdateDao/UncheckedNoUpdateDao interface right now, not supported for Dao interface: " + daoInterface);
+            }
+        }
+
         final MutableBoolean hasCacheResult = MutableBoolean.of(false);
         final MutableBoolean hasRefreshCache = MutableBoolean.of(false);
 
@@ -1897,10 +1910,33 @@ final class DaoImpl {
                         anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno) : N.asList(((DaoImpl.HandlerList) anno).value()))
                 .toList();
 
+        final Map<String, JdbcUtil.Handler<?>> daoClassHandlerMap = StreamEx.of(allInterfaces)
+                .flatMapp(it -> it.getDeclaredFields())
+                .append(StreamEx.of(allInterfaces).flatMapp(it -> it.getDeclaredClasses()).flatMapp(it -> it.getDeclaredFields()))
+                .filter(it -> JdbcUtil.Handler.class.isAssignableFrom(it.getType()))
+                .onEach(it -> N.checkArgument(
+                        Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()) && JdbcUtil.Handler.class.equals(it.getType()),
+                        "Handler Fields defined in Dao declared classes must be static&final Handler. but {} is not in Dao class {}.", it, daoInterface))
+                .onEach(it -> it.setAccessible(true))
+                .distinctBy(it -> it.getName(), (a, b) -> {
+                    throw new IllegalArgumentException("Two Handler fields have the same id (or name): " + a + "," + b + " in Dao class: " + daoInterface);
+                })
+                .toMap(it -> it.getName(), Fn.ff(it -> (JdbcUtil.Handler) it.get(null)));
+
         final Dao.Cache daoClassCacheAnno = StreamEx.of(allInterfaces).flatMapp(cls -> cls.getAnnotations()).select(Dao.Cache.class).first().orNull();
 
         final int capacity = daoClassCacheAnno == null ? 1000 : daoClassCacheAnno.capacity();
         final long evictDelay = daoClassCacheAnno == null ? 3000 : daoClassCacheAnno.evictDelay();
+
+        if (NoUpdateDao.class.isAssignableFrom(daoInterface) || UncheckedNoUpdateDao.class.isAssignableFrom(daoInterface)) {
+            // OK
+        } else {
+            // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
+            if (daoCache != null || daoClassCacheAnno != null) {
+                throw new UnsupportedOperationException(
+                        "Cache is only supported for NoUpdateDao/UncheckedNoUpdateDao interface right now, not supported for Dao interface: " + daoInterface);
+            }
+        }
 
         final Cache<String, Object> cache = daoCache == null ? CacheFactory.createLocalCache(capacity, evictDelay) : daoCache;
         final Set<Method> nonDBOperationSet = new HashSet<>();
@@ -4682,7 +4718,8 @@ final class DaoImpl {
                         .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
                                 : N.asList(((DaoImpl.HandlerList) anno).value()))
                         .prepend(StreamEx.of(daoClassHandlerList).filter(h -> StreamEx.of(h.filter()).anyMatch(filterByMethodName)))
-                        .map(handlerAnno -> N.notNullOrEmpty(handlerAnno.qualifier()) ? HandlerFactory.get(handlerAnno.qualifier())
+                        .map(handlerAnno -> N.notNullOrEmpty(handlerAnno.qualifier())
+                                ? daoClassHandlerMap.getOrDefault(handlerAnno.qualifier(), HandlerFactory.get(handlerAnno.qualifier()))
                                 : HandlerFactory.getOrCreate(handlerAnno.type()))
                         .onEach(handler -> N.checkArgNotNull(handler,
                                 "No handler found/registered with qualifier or type in class/method: " + fullClassMethodName))

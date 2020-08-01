@@ -1,5 +1,6 @@
 package com.landawn.abacus.samples.dao;
 
+import java.lang.reflect.Method;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Queue;
@@ -10,25 +11,22 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.samples.dao.handler.UserDaoHandlerA;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.ExceptionalStream;
+import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.JdbcUtil.Dao;
-import com.landawn.abacus.util.JdbcUtil.Dao.Cache;
-import com.landawn.abacus.util.JdbcUtil.Dao.CacheResult;
 import com.landawn.abacus.util.JdbcUtil.Dao.Handler;
 import com.landawn.abacus.util.JdbcUtil.Dao.PerfLog;
-import com.landawn.abacus.util.JdbcUtil.Dao.RefreshCache;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Propagation;
+import com.landawn.abacus.util.Result;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.SQLBuilder.PSC;
+import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.stream.Stream;
 
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
 @Handler(type = UserDaoHandlerA.class)
 @Handler(qualifier = "handler1", filter = ".*")
-@CacheResult(transfer = "none")
-@Cache(capacity = 1000, evictDelay = 6000)
-@RefreshCache
 @Dao.Config(addLimitForSingleQuery = true, callGenerateIdForInsertIfIdNotSet = false)
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
 
@@ -155,6 +153,10 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     @Select(value = "select first_name from user where id >= ?", fetchSize = 100)
     public Stream<String> streamOne_2(long id);
 
+    @Select("select * from user where id > ?")
+    @Handler(qualifier = "innerHandler_1")
+    Queue<User> testInnerHandler(int id) throws SQLException;
+
     //    @Select("select * from user where id > ?")
     //    Queue<List<Object>> list(int id, RowFilter rowFilter, RowMapper<List<Object>> rowMapper) throws SQLException;
 
@@ -162,5 +164,20 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 
         @SqlField
         static final String sql_listToSet = PSC.selectFrom(User.class).where(CF.gt("id")).sql();
+    }
+
+    static final class Handlers {
+        static final JdbcUtil.Handler<UserDao> innerHandler_1 = new JdbcUtil.Handler<UserDao>() {
+            @Override
+            public void beforeInvoke(final UserDao targetDao, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                N.println("innerHandler_1.beforeInvoke: method: " + methodSignature);
+            }
+
+            @Override
+            public void afterInvoke(final Result<?, Exception> result, final UserDao targetDao, final Object[] args,
+                    Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                N.println("innerHandler_1.afterInvoke: method: result" + result);
+            }
+        };
     }
 }
