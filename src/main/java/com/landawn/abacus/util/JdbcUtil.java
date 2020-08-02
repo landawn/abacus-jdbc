@@ -9320,6 +9320,20 @@ public final class JdbcUtil {
             return list(N.asList(singleSelectPropName), cond, rowMapper);
         }
 
+        /**
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @param rowFilter
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default <R> List<R> list(final String singleSelectPropName, final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper)
+                throws SQLException {
+            return list(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
+        }
+
         // Will it cause confusion if it's called in transaction?
         /**
          * lazy-execution, lazy-fetch.
@@ -13528,6 +13542,21 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param singleSelectPropName
+         * @param cond
+         * @param rowFilter
+         * @param rowMapper
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        default <R> List<R> list(final String singleSelectPropName, final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper)
+                throws UncheckedSQLException {
+            return list(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
+        }
+
+        /**
+         *
          * @param cond
          * @param rowConsumer
          * @return
@@ -17351,7 +17380,7 @@ public final class JdbcUtil {
      * @param daoInterface
      * @param ds
      * @param sqlMapper
-     * @param cache Don't share cache between Dao.
+     * @param cache don't share cache between Dao instances.
      * @return
      * @deprecated
      */
@@ -17400,7 +17429,7 @@ public final class JdbcUtil {
      * @param daoInterface
      * @param ds
      * @param sqlMapper
-     * @param cache Don't share cache between Dao.
+     * @param cache don't share cache between Dao instances.
      * @param executor
      * @return
      * @deprecated
