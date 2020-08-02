@@ -10121,7 +10121,7 @@ public final class JdbcUtil {
         default boolean refresh(final T entity) throws SQLException {
             final Class<?> cls = entity.getClass();
             final Collection<String> propNamesToRefresh = DirtyMarkerUtil.isDirtyMarker(cls) ? DirtyMarkerUtil.signedPropNames((DirtyMarker) entity)
-                    : SQLBuilder.getSelectPropNames(cls, false, null);
+                    : JdbcUtil.getSelectPropNames(cls);
 
             return refresh(entity, propNamesToRefresh);
         }
@@ -10184,7 +10184,7 @@ public final class JdbcUtil {
             final T first = N.firstOrNullIfEmpty(entities);
             final Class<?> cls = first.getClass();
             final Collection<String> propNamesToRefresh = DirtyMarkerUtil.isDirtyMarker(cls) ? DirtyMarkerUtil.signedPropNames((DirtyMarker) first)
-                    : SQLBuilder.getSelectPropNames(cls, false, null);
+                    : JdbcUtil.getSelectPropNames(cls);
 
             return batchRefresh(entities, propNamesToRefresh, batchSize);
         }
@@ -14155,7 +14155,7 @@ public final class JdbcUtil {
         default boolean refresh(final T entity) throws UncheckedSQLException {
             final Class<?> cls = entity.getClass();
             final Collection<String> propNamesToRefresh = DirtyMarkerUtil.isDirtyMarker(cls) ? DirtyMarkerUtil.signedPropNames((DirtyMarker) entity)
-                    : SQLBuilder.getSelectPropNames(cls, false, null);
+                    : JdbcUtil.getSelectPropNames(cls);
 
             return refresh(entity, propNamesToRefresh);
         }
@@ -14221,7 +14221,7 @@ public final class JdbcUtil {
             final T first = N.firstOrNullIfEmpty(entities);
             final Class<?> cls = first.getClass();
             final Collection<String> propNamesToRefresh = DirtyMarkerUtil.isDirtyMarker(cls) ? DirtyMarkerUtil.signedPropNames((DirtyMarker) first)
-                    : SQLBuilder.getSelectPropNames(cls, false, null);
+                    : JdbcUtil.getSelectPropNames(cls);
 
             return batchRefresh(entities, propNamesToRefresh, batchSize);
         }
