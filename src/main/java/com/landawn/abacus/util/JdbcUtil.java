@@ -7358,14 +7358,14 @@ public final class JdbcUtil {
         }
     }
 
-    public static interface Handler<T> {
+    public static interface Handler<P> {
         /**
          *
-         * @param targetDao
+         * @param proxy
          * @param args
          * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
          */
-        default void beforeInvoke(final T targetDao, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+        default void beforeInvoke(final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             // empty action.
         }
 
@@ -7373,11 +7373,11 @@ public final class JdbcUtil {
          *
          * @param <R>
          * @param result
-         * @param targetDao
+         * @param proxy
          * @param args
          * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
          */
-        default void afterInvoke(final Result<?, Exception> result, final T targetDao, final Object[] args,
+        default void afterInvoke(final Result<?, Exception> result, final P proxy, final Object[] args,
                 Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             // empty action.
         }
