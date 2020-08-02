@@ -1694,7 +1694,8 @@ final class DaoImpl {
             if (typeArguments.length >= 1 && typeArguments[0] instanceof Class) {
                 if (!ClassUtil.isEntity((Class) typeArguments[0])) {
                     throw new IllegalArgumentException(
-                            "Entity Type parameter must be: Object.class or entity class with getter/setter methods. Can't be: " + typeArguments[0]);
+                            "Entity Type parameter of Dao interface must be: Object.class or entity class with getter/setter methods. Can't be: "
+                                    + typeArguments[0]);
                 }
             }
 
