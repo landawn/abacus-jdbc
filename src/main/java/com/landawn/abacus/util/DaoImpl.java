@@ -1921,7 +1921,7 @@ final class DaoImpl {
                 .distinctBy(it -> it.getName(), (a, b) -> {
                     throw new IllegalArgumentException("Two Handler fields have the same id (or name): " + a + "," + b + " in Dao class: " + daoInterface);
                 })
-                .toMap(it -> it.getName(), Fn.ff(it -> (JdbcUtil.Handler) it.get(null)));
+                .toMap(it -> it.getName(), Fn.ff(it -> (JdbcUtil.Handler<?>) it.get(null)));
 
         final Dao.Cache daoClassCacheAnno = StreamEx.of(allInterfaces).flatMapp(cls -> cls.getAnnotations()).select(Dao.Cache.class).first().orNull();
 
