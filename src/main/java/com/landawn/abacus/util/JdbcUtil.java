@@ -7377,8 +7377,7 @@ public final class JdbcUtil {
          * @param args
          * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
          */
-        default void afterInvoke(final Result<?, Exception> result, final P proxy, final Object[] args,
-                Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+        default void afterInvoke(final Object result, final P proxy, final Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             // empty action.
         }
     }

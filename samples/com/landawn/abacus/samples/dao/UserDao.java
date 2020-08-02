@@ -18,7 +18,6 @@ import com.landawn.abacus.util.JdbcUtil.Dao.Handler;
 import com.landawn.abacus.util.JdbcUtil.Dao.PerfLog;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Propagation;
-import com.landawn.abacus.util.Result;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.Tuple.Tuple3;
@@ -174,7 +173,7 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
             }
 
             @Override
-            public void afterInvoke(final Result<?, Exception> result, final UserDao targetDao, final Object[] args,
+            public void afterInvoke(final Object result, final UserDao targetDao, final Object[] args,
                     Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
                 N.println("innerHandler_1.afterInvoke: method: result" + result);
             }

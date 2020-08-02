@@ -134,12 +134,12 @@ public class HandlerFactory {
     }
 
     public static <T, E extends RuntimeException> Handler<T> create(
-            final Throwables.QuadConsumer<Result<?, Exception>, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) {
+            final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) {
         N.checkArgNotNull(afterInvokeAction, "afterInvokeAction");
 
         return new Handler<T>() {
             @Override
-            public void afterInvoke(final Result<?, Exception> result, final T targetObject, final Object[] args,
+            public void afterInvoke(final Object result, final T targetObject, final Object[] args,
                     final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
 
                 afterInvokeAction.accept(result, targetObject, args, methodSignature);
@@ -149,7 +149,7 @@ public class HandlerFactory {
 
     public static <T, E extends RuntimeException> Handler<T> create(
             final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction,
-            final Throwables.QuadConsumer<Result<?, Exception>, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) {
+            final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) {
         N.checkArgNotNull(beforeInvokeAction, "beforeInvokeAction");
         N.checkArgNotNull(afterInvokeAction, "afterInvokeAction");
 
@@ -160,7 +160,7 @@ public class HandlerFactory {
             }
 
             @Override
-            public void afterInvoke(final Result<?, Exception> result, final T targetObject, final Object[] args,
+            public void afterInvoke(final Object result, final T targetObject, final Object[] args,
                     final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
 
                 afterInvokeAction.accept(result, targetObject, args, methodSignature);
