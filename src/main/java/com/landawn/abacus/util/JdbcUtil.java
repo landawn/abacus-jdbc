@@ -9591,6 +9591,20 @@ public final class JdbcUtil {
             return list(N.asList(singleSelectPropName), cond, rowMapper);
         }
 
+        /**
+         *
+         * @param singleSelectPropName
+         * @param cond
+         * @param rowFilter
+         * @param rowMapper
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        default <R> List<R> list(final String singleSelectPropName, final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper)
+                throws SQLException {
+            return list(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
+        }
+
         // Will it cause confusion if it's called in transaction?
         /**
          * lazy-execution, lazy-fetch.
@@ -10392,7 +10406,7 @@ public final class JdbcUtil {
         default boolean refresh(final T entity) throws SQLException {
             final Class<?> cls = entity.getClass();
             final Collection<String> propNamesToRefresh = DirtyMarkerUtil.isDirtyMarker(cls) ? DirtyMarkerUtil.signedPropNames((DirtyMarker) entity)
-                    : SQLBuilder.getSelectPropNames(cls, false, null);
+                    : JdbcUtil.getSelectPropNames(cls);
 
             return refresh(entity, propNamesToRefresh);
         }
@@ -10455,7 +10469,7 @@ public final class JdbcUtil {
             final T first = N.firstOrNullIfEmpty(entities);
             final Class<?> cls = first.getClass();
             final Collection<String> propNamesToRefresh = DirtyMarkerUtil.isDirtyMarker(cls) ? DirtyMarkerUtil.signedPropNames((DirtyMarker) first)
-                    : SQLBuilder.getSelectPropNames(cls, false, null);
+                    : JdbcUtil.getSelectPropNames(cls);
 
             return batchRefresh(entities, propNamesToRefresh, batchSize);
         }
@@ -13799,6 +13813,21 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param singleSelectPropName
+         * @param cond
+         * @param rowFilter
+         * @param rowMapper
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        default <R> List<R> list(final String singleSelectPropName, final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper)
+                throws UncheckedSQLException {
+            return list(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
+        }
+
+        /**
+         *
          * @param cond
          * @param rowConsumer
          * @return
@@ -14426,7 +14455,7 @@ public final class JdbcUtil {
         default boolean refresh(final T entity) throws UncheckedSQLException {
             final Class<?> cls = entity.getClass();
             final Collection<String> propNamesToRefresh = DirtyMarkerUtil.isDirtyMarker(cls) ? DirtyMarkerUtil.signedPropNames((DirtyMarker) entity)
-                    : SQLBuilder.getSelectPropNames(cls, false, null);
+                    : JdbcUtil.getSelectPropNames(cls);
 
             return refresh(entity, propNamesToRefresh);
         }
@@ -14492,7 +14521,7 @@ public final class JdbcUtil {
             final T first = N.firstOrNullIfEmpty(entities);
             final Class<?> cls = first.getClass();
             final Collection<String> propNamesToRefresh = DirtyMarkerUtil.isDirtyMarker(cls) ? DirtyMarkerUtil.signedPropNames((DirtyMarker) first)
-                    : SQLBuilder.getSelectPropNames(cls, false, null);
+                    : JdbcUtil.getSelectPropNames(cls);
 
             return batchRefresh(entities, propNamesToRefresh, batchSize);
         }
@@ -17586,6 +17615,29 @@ public final class JdbcUtil {
         idExtractorPool.put(daoInterface, idExtractor);
     }
 
+    //    @SuppressWarnings("rawtypes")
+    //    static Class<?> getTargetEntityClass(final Class<? extends Dao> daoInterface) {
+    //        if (N.notNullOrEmpty(daoInterface.getGenericInterfaces()) && daoInterface.getGenericInterfaces()[0] instanceof ParameterizedType) {
+    //            final ParameterizedType parameterizedType = (ParameterizedType) daoInterface.getGenericInterfaces()[0];
+    //            java.lang.reflect.Type[] typeArguments = parameterizedType.getActualTypeArguments();
+    //
+    //            if (typeArguments.length >= 1 && typeArguments[0] instanceof Class) {
+    //                if (!ClassUtil.isEntity((Class) typeArguments[0])) {
+    //                    throw new IllegalArgumentException(
+    //                            "Entity Type parameter of Dao interface must be: Object.class or entity class with getter/setter methods. Can't be: "
+    //                                    + typeArguments[0]);
+    //                }
+    //
+    //                return (Class) typeArguments[0];
+    //            }
+    //        }
+    //
+    //        throw new IllegalArgumentException("Invalid Dao interface: " + daoInterface + ". No entity class found by type parameter");
+    //    }
+    //
+    //    @SuppressWarnings("rawtypes")
+    //    static final Map<javax.sql.DataSource, Map<Class<?>, Dao>> dsEntityDaoPool = new IdentityHashMap<>();
+
     /**
      *
      * @param <T>
@@ -17622,7 +17674,7 @@ public final class JdbcUtil {
      * @param daoInterface
      * @param ds
      * @param sqlMapper
-     * @param cache Don't share cache between Dao.
+     * @param cache don't share cache between Dao instances.
      * @return
      * @deprecated
      */
@@ -17671,7 +17723,7 @@ public final class JdbcUtil {
      * @param daoInterface
      * @param ds
      * @param sqlMapper
-     * @param cache Don't share cache between Dao.
+     * @param cache don't share cache between Dao instances.
      * @param executor
      * @return
      * @deprecated
@@ -17679,6 +17731,48 @@ public final class JdbcUtil {
     @Deprecated
     public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
             final SQLMapper sqlMapper, final Cache<String, Object> cache, final Executor executor) {
-        return DaoImpl.createDao(daoInterface, ds, sqlMapper, cache, executor);
+        final TD dao = DaoImpl.createDao(daoInterface, ds, sqlMapper, cache, executor);
+
+        //    synchronized (dsEntityDaoPool) {
+        //        @SuppressWarnings("rawtypes")
+        //        Map<Class<?>, Dao> entityDaoPool = dsEntityDaoPool.get(ds);
+        //
+        //        if (entityDaoPool == null) {
+        //            entityDaoPool = new HashMap<>();
+        //            dsEntityDaoPool.put(ds, entityDaoPool);
+        //        }
+        //
+        //        entityDaoPool.put(getTargetEntityClass(daoInterface), dao);
+        //    }
+
+        return dao;
     }
+
+    //    /**
+    //     * 
+    //     * @param ds
+    //     * @param targetEntityOrDaoClass
+    //     */
+    //    public static void removeCachedDao(final javax.sql.DataSource ds, final Class<?> targetEntityOrDaoClass) {
+    //        N.checkArgNotNull(ds, "dataSource");
+    //        N.checkArgNotNull(targetEntityOrDaoClass, "targetEntityOrDaoClass");
+    //
+    //        @SuppressWarnings("rawtypes")
+    //        final Class<?> targetEntityClass = Dao.class.isAssignableFrom(targetEntityOrDaoClass)
+    //                ? getTargetEntityClass((Class<? extends Dao>) targetEntityOrDaoClass)
+    //                : targetEntityOrDaoClass;
+    //
+    //        synchronized (dsEntityDaoPool) {
+    //            @SuppressWarnings("rawtypes")
+    //            Map<Class<?>, Dao> entityDaoPool = dsEntityDaoPool.get(ds);
+    //
+    //            if (entityDaoPool != null) {
+    //                entityDaoPool.remove(targetEntityClass);
+    //
+    //                if (N.isNullOrEmpty(entityDaoPool)) {
+    //                    dsEntityDaoPool.remove(ds);
+    //                }
+    //            }
+    //        }
+    //    }
 }

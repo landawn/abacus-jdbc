@@ -229,7 +229,7 @@ final class JoinInfo {
                 final String batchSelectFromToJoinOn = " FROM " + leftTableName + " INNER JOIN " + middleTableName + " ON " + leftCondPropName + " = "
                         + middleSelectPropName + " WHERE " + middleCondPropName + " IN (";
 
-                final Collection<String> defaultSelectPropNames = SQLBuilder.getSelectPropNames(referencedEntityClass, false, null);
+                final Collection<String> defaultSelectPropNames = JdbcUtil.getSelectPropNames(referencedEntityClass);
 
                 // same column name in reference entity and middle entity
                 final boolean hasSameColumnName = Stream.of(SQLParser.parse(leftSelectSql.substring(0, fromIndex)))
