@@ -1691,7 +1691,7 @@ public final class JdbcUtils {
             }
         };
 
-        Iterables.parse(iter, offset, count, processThreadNum, queueSize, rowParser, onComplete);
+        Iterables.forEach(iter, offset, count, processThreadNum, queueSize, rowParser, onComplete);
     }
 
     /**
