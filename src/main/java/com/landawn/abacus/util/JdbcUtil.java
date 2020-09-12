@@ -1365,10 +1365,10 @@ public final class JdbcUtil {
      */
     @Beta
     public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd) throws E {
-        final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
             JdbcUtil.disableSpringTransactional(true);
+
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             try {
                 if (tran == null) {
@@ -1380,6 +1380,8 @@ public final class JdbcUtil {
                 JdbcUtil.disableSpringTransactional(false);
             }
         } else {
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
             if (tran == null) {
                 return cmd.call();
             } else {
@@ -1400,10 +1402,10 @@ public final class JdbcUtil {
     @Beta
     public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds,
             final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws E {
-        final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
             JdbcUtil.disableSpringTransactional(true);
+
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             try {
                 if (tran == null) {
@@ -1415,6 +1417,8 @@ public final class JdbcUtil {
                 JdbcUtil.disableSpringTransactional(false);
             }
         } else {
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
             if (tran == null) {
                 return cmd.apply(ds);
             } else {
@@ -1433,10 +1437,10 @@ public final class JdbcUtil {
      */
     @Beta
     public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws E {
-        final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
             JdbcUtil.disableSpringTransactional(true);
+
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             try {
                 if (tran == null) {
@@ -1448,6 +1452,8 @@ public final class JdbcUtil {
                 JdbcUtil.disableSpringTransactional(false);
             }
         } else {
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
             if (tran == null) {
                 cmd.run();
             } else {
@@ -1467,10 +1473,10 @@ public final class JdbcUtil {
     @Beta
     public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd)
             throws E {
-        final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
             JdbcUtil.disableSpringTransactional(true);
+
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             try {
                 if (tran == null) {
@@ -1482,6 +1488,8 @@ public final class JdbcUtil {
                 JdbcUtil.disableSpringTransactional(false);
             }
         } else {
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
             if (tran == null) {
                 cmd.accept(ds);
             } else {
