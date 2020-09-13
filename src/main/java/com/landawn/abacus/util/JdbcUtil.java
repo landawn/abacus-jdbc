@@ -7366,6 +7366,7 @@ public final class JdbcUtil {
         }
     }
 
+    @Beta
     public static interface Handler<P> {
         /**
          *
@@ -7391,7 +7392,7 @@ public final class JdbcUtil {
     }
 
     @SuppressWarnings("rawtypes")
-    static final class DaoHandler implements JdbcUtil.Handler<Dao> {
+    static final class EmptyHandler implements JdbcUtil.Handler<Dao> {
 
     };
 
@@ -8071,7 +8072,7 @@ public final class JdbcUtil {
 
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
-        @Repeatable(DaoImpl.OutParameterList.class)
+        @Repeatable(JdbcUtil.OutParameterList.class)
         public @interface OutParameter {
             /**
              *
@@ -8222,14 +8223,15 @@ public final class JdbcUtil {
             String[] filter() default { ".*" };
         }
 
+        @Beta
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.METHOD, ElementType.TYPE })
-        @Repeatable(DaoImpl.HandlerList.class)
+        @Repeatable(JdbcUtil.HandlerList.class)
         public static @interface Handler {
             String qualifier() default "";
 
             @SuppressWarnings("rawtypes")
-            Class<? extends JdbcUtil.Handler<? extends Dao>> type() default DaoHandler.class;
+            Class<? extends JdbcUtil.Handler<? extends Dao>> type() default EmptyHandler.class;
 
             /**
              * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
@@ -17031,6 +17033,18 @@ public final class JdbcUtil {
 
     public static interface UnckeckedReadOnlyCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
             extends UncheckedReadOnlyJoinEntityHelper<T, SB, TD>, UncheckedCrudJoinEntityHelper<T, ID, SB, TD> {
+    }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    static @interface OutParameterList {
+        Dao.OutParameter[] value();
+    }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(value = { ElementType.METHOD, ElementType.TYPE })
+    static @interface HandlerList {
+        Dao.Handler[] value();
     }
 
     static Object[] getParameterArray(final SP sp) {
