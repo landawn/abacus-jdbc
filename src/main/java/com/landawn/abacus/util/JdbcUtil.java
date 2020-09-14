@@ -8193,9 +8193,6 @@ public final class JdbcUtil {
             String[] filter() default { ".*" };
         }
 
-        /**
-         *
-         */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.METHOD, ElementType.TYPE })
         public static @interface PerfLog {
@@ -8246,6 +8243,7 @@ public final class JdbcUtil {
         /** 
          * Mostly, it's used for static tables.
          */
+        @Beta
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.TYPE })
         static @interface Cache {
@@ -8254,9 +8252,7 @@ public final class JdbcUtil {
             long evictDelay() default 3000; // unit milliseconds.
         }
 
-        /** 
-         * 
-         */
+        @Beta
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.METHOD, ElementType.TYPE })
         static @interface CacheResult {
@@ -8322,8 +8318,7 @@ public final class JdbcUtil {
             // KeyGenerator keyGenerator() default KeyGenerator.JSON; KeyGenerator.JSON/KRYO;
         }
 
-        /** 
-         */
+        @Beta
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.METHOD, ElementType.TYPE })
         static @interface RefreshCache {

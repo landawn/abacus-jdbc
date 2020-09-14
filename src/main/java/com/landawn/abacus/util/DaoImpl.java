@@ -1911,8 +1911,8 @@ final class DaoImpl {
                 .reversed()
                 .flatMapp(cls -> cls.getAnnotations())
                 .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(JdbcUtil.HandlerList.class))
-                .flattMap(
-                        anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno) : N.asList(((JdbcUtil.HandlerList) anno).value()))
+                .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
+                        : N.asList(((JdbcUtil.HandlerList) anno).value()))
                 .toList();
 
         final Map<String, JdbcUtil.Handler<?>> daoClassHandlerMap = StreamEx.of(allInterfaces)
@@ -4728,7 +4728,6 @@ final class DaoImpl {
                                 : HandlerFactory.getOrCreate(handlerAnno.type()))
                         .onEach(handler -> N.checkArgNotNull(handler,
                                 "No handler found/registered with qualifier or type in class/method: " + fullClassMethodName))
-                        .reversed()
                         .toList();
 
                 if (N.notNullOrEmpty(handlerList)) {
@@ -4743,8 +4742,8 @@ final class DaoImpl {
 
                         final Object result = temp.apply(proxy, args);
 
-                        for (JdbcUtil.Handler handler : handlerList) {
-                            handler.afterInvoke(result, proxy, args, methodSignature);
+                        for (int i = N.size(handlerList) - 1; i >= 0; i--) {
+                            ((JdbcUtil.Handler) handlerList.get(i)).afterInvoke(result, proxy, args, methodSignature);
                         }
 
                         return result;
