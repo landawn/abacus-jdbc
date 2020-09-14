@@ -61,6 +61,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
+import javax.sql.DataSource;
 import javax.xml.parsers.DocumentBuilder;
 
 import org.w3c.dom.Document;
@@ -68,7 +69,6 @@ import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
 import com.landawn.abacus.DataSet;
-import com.landawn.abacus.DataSource;
 import com.landawn.abacus.DataSourceManager;
 import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.EntityId;
@@ -553,7 +553,6 @@ public final class JdbcUtil {
     //    public static DataSource wrap(final javax.sql.DataSource sqlDataSource) {
     //        return sqlDataSource instanceof DataSource ? ((DataSource) sqlDataSource) : new SimpleDataSource(sqlDataSource);
     //    }
-
 
     /**
      * Creates the connection.
@@ -1636,10 +1635,10 @@ public final class JdbcUtil {
      */
     @Beta
     public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd) throws E {
-        final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
             JdbcUtil.disableSpringTransactional(true);
+
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             try {
                 if (tran == null) {
@@ -1651,6 +1650,8 @@ public final class JdbcUtil {
                 JdbcUtil.disableSpringTransactional(false);
             }
         } else {
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
             if (tran == null) {
                 return cmd.call();
             } else {
@@ -1671,10 +1672,10 @@ public final class JdbcUtil {
     @Beta
     public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds,
             final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws E {
-        final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
             JdbcUtil.disableSpringTransactional(true);
+
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             try {
                 if (tran == null) {
@@ -1686,6 +1687,8 @@ public final class JdbcUtil {
                 JdbcUtil.disableSpringTransactional(false);
             }
         } else {
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
             if (tran == null) {
                 return cmd.apply(ds);
             } else {
@@ -1704,10 +1707,10 @@ public final class JdbcUtil {
      */
     @Beta
     public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws E {
-        final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
             JdbcUtil.disableSpringTransactional(true);
+
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             try {
                 if (tran == null) {
@@ -1719,6 +1722,8 @@ public final class JdbcUtil {
                 JdbcUtil.disableSpringTransactional(false);
             }
         } else {
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
             if (tran == null) {
                 cmd.run();
             } else {
@@ -1738,10 +1743,10 @@ public final class JdbcUtil {
     @Beta
     public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd)
             throws E {
-        final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
             JdbcUtil.disableSpringTransactional(true);
+
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             try {
                 if (tran == null) {
@@ -1753,6 +1758,8 @@ public final class JdbcUtil {
                 JdbcUtil.disableSpringTransactional(false);
             }
         } else {
+            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
             if (tran == null) {
                 cmd.accept(ds);
             } else {
@@ -7629,6 +7636,7 @@ public final class JdbcUtil {
         }
     }
 
+    @Beta
     public static interface Handler<P> {
         /**
          *
@@ -7654,7 +7662,7 @@ public final class JdbcUtil {
     }
 
     @SuppressWarnings("rawtypes")
-    static final class DaoHandler implements JdbcUtil.Handler<Dao> {
+    static final class EmptyHandler implements JdbcUtil.Handler<Dao> {
 
     };
 
@@ -8334,7 +8342,7 @@ public final class JdbcUtil {
 
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
-        @Repeatable(DaoImpl.OutParameterList.class)
+        @Repeatable(JdbcUtil.OutParameterList.class)
         public @interface OutParameter {
             /**
              *
@@ -8455,9 +8463,6 @@ public final class JdbcUtil {
             String[] filter() default { ".*" };
         }
 
-        /**
-         *
-         */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.METHOD, ElementType.TYPE })
         public static @interface PerfLog {
@@ -8485,14 +8490,15 @@ public final class JdbcUtil {
             String[] filter() default { ".*" };
         }
 
+        @Beta
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.METHOD, ElementType.TYPE })
-        @Repeatable(DaoImpl.HandlerList.class)
+        @Repeatable(JdbcUtil.HandlerList.class)
         public static @interface Handler {
             String qualifier() default "";
 
             @SuppressWarnings("rawtypes")
-            Class<? extends JdbcUtil.Handler<? extends Dao>> type() default DaoHandler.class;
+            Class<? extends JdbcUtil.Handler<? extends Dao>> type() default EmptyHandler.class;
 
             /**
              * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
@@ -8507,6 +8513,7 @@ public final class JdbcUtil {
         /** 
          * Mostly, it's used for static tables.
          */
+        @Beta
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.TYPE })
         static @interface Cache {
@@ -8515,9 +8522,7 @@ public final class JdbcUtil {
             long evictDelay() default 3000; // unit milliseconds.
         }
 
-        /** 
-         * 
-         */
+        @Beta
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.METHOD, ElementType.TYPE })
         static @interface CacheResult {
@@ -8583,8 +8588,7 @@ public final class JdbcUtil {
             // KeyGenerator keyGenerator() default KeyGenerator.JSON; KeyGenerator.JSON/KRYO;
         }
 
-        /** 
-         */
+        @Beta
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.METHOD, ElementType.TYPE })
         static @interface RefreshCache {
@@ -12263,7 +12267,7 @@ public final class JdbcUtil {
                 return deleteJoinEntities(entity, joinEntityPropNames.get(0));
             } else {
                 int result = 0;
-                final javax.sql.DataSource dataSource = getDao(this).dataSource();
+                final DataSource dataSource = getDao(this).dataSource();
                 final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
                 try {
@@ -12299,7 +12303,7 @@ public final class JdbcUtil {
                 return deleteJoinEntities(entities, joinEntityPropNames.get(0));
             } else {
                 int result = 0;
-                final javax.sql.DataSource dataSource = getDao(this).dataSource();
+                final DataSource dataSource = getDao(this).dataSource();
                 final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
                 try {
@@ -12351,7 +12355,7 @@ public final class JdbcUtil {
                 return deleteJoinEntities(entity, N.firstOrNullIfEmpty(joinEntityPropNames));
             } else {
                 int result = 0;
-                final javax.sql.DataSource dataSource = getDao(this).dataSource();
+                final DataSource dataSource = getDao(this).dataSource();
                 final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
                 try {
@@ -12423,7 +12427,7 @@ public final class JdbcUtil {
                 return deleteJoinEntities(entities, N.firstOrNullIfEmpty(joinEntityPropNames));
             } else {
                 int result = 0;
-                final javax.sql.DataSource dataSource = getDao(this).dataSource();
+                final DataSource dataSource = getDao(this).dataSource();
                 final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
                 try {
@@ -16356,7 +16360,7 @@ public final class JdbcUtil {
                 return deleteJoinEntities(entity, joinEntityPropNames.get(0));
             } else {
                 int result = 0;
-                final javax.sql.DataSource dataSource = getDao(this).dataSource();
+                final DataSource dataSource = getDao(this).dataSource();
                 final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
                 try {
@@ -16393,7 +16397,7 @@ public final class JdbcUtil {
                 return deleteJoinEntities(entities, joinEntityPropNames.get(0));
             } else {
                 int result = 0;
-                final javax.sql.DataSource dataSource = getDao(this).dataSource();
+                final DataSource dataSource = getDao(this).dataSource();
                 final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
                 try {
@@ -16448,7 +16452,7 @@ public final class JdbcUtil {
                 return deleteJoinEntities(entity, N.firstOrNullIfEmpty(joinEntityPropNames));
             } else {
                 int result = 0;
-                final javax.sql.DataSource dataSource = getDao(this).dataSource();
+                final DataSource dataSource = getDao(this).dataSource();
                 final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
                 try {
@@ -16523,7 +16527,7 @@ public final class JdbcUtil {
                 return deleteJoinEntities(entities, N.firstOrNullIfEmpty(joinEntityPropNames));
             } else {
                 int result = 0;
-                final javax.sql.DataSource dataSource = getDao(this).dataSource();
+                final DataSource dataSource = getDao(this).dataSource();
                 final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
                 try {
@@ -17294,6 +17298,18 @@ public final class JdbcUtil {
 
     public static interface UnckeckedReadOnlyCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
             extends UncheckedReadOnlyJoinEntityHelper<T, SB, TD>, UncheckedCrudJoinEntityHelper<T, ID, SB, TD> {
+    }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    static @interface OutParameterList {
+        Dao.OutParameter[] value();
+    }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(value = { ElementType.METHOD, ElementType.TYPE })
+    static @interface HandlerList {
+        Dao.Handler[] value();
     }
 
     static Object[] getParameterArray(final SP sp) {
