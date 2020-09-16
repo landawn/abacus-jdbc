@@ -1702,7 +1702,7 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
     public <T> This addBatchParameters(final Iterator<T> batchParameters) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
 
-        return addBatchParameters(Iterators.toList(batchParameters));
+        return addBatchParameters(N.toList(batchParameters));
     }
 
     /**
