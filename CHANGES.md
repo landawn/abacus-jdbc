@@ -1,3 +1,8 @@
+### 2.6.9
+
+* A new release.
+
+
 ### 2.6.8
 
 * Improvements and bug fix.
