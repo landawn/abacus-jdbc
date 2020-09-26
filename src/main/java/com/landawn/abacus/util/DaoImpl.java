@@ -2115,7 +2115,7 @@ final class DaoImpl {
                                 return 0;
                             }
 
-                            final ParsedSql namedInsertSQL = isNoId || isDefaultIdTester.test(idGetter.apply(N.firstOrNullIfEmpty(entities)))
+                            final ParsedSql namedInsertSQL = isNoId || N.allMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)))
                                     ? namedInsertWithoutIdSQL
                                     : namedInsertWithIdSQL;
 
