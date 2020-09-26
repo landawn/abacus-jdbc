@@ -174,19 +174,19 @@ final class JoinInfo {
             final Condition middleEntityCond = CF.eq(left[1].substring(left[1].indexOf('.') + 1));
 
             final BiParametersSetter<PreparedStatement, Object> paramSetter = (stmt, entity) -> srcPropInfos[0].dbType.set(stmt, 1,
-                    checkPropValue(srcPropInfos[0], entity));
+                    getJoinPropValue(srcPropInfos[0], entity));
 
             final BiParametersSetter<PreparedStatement, Collection<?>> batchParaSetter = (stmt, entities) -> {
                 int index = 1;
 
                 for (Object entity : entities) {
-                    srcPropInfos[0].dbType.set(stmt, index++, checkPropValue(srcPropInfos[0], entity));
+                    srcPropInfos[0].dbType.set(stmt, index++, getJoinPropValue(srcPropInfos[0], entity));
                 }
             };
 
             final BiParametersSetter<PreparedStatement, Object> setNullParamSetterForUpdate = (stmt, entity) -> {
                 referencedPropInfos[0].dbType.set(stmt, 1, referencedPropInfos[0].dbType.defaultValue());
-                srcPropInfos[0].dbType.set(stmt, 2, checkPropValue(srcPropInfos[0], entity));
+                srcPropInfos[0].dbType.set(stmt, 2, getJoinPropValue(srcPropInfos[0], entity));
             };
 
             for (Map.Entry<Class<? extends SQLBuilder>, Tuple4<Function<Collection<String>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>>> entry : sqlBuilderFuncMap
@@ -312,7 +312,7 @@ final class JoinInfo {
                         Tuple.of(batchDeleteSQLBuilder, cascadeDeleteDefinedInDB ? null : batchMiddleDeleteSQLBuilder, batchParaSetter));
             }
 
-            srcEntityKeyExtractor = entity -> checkPropValue(srcPropInfos[0], entity);
+            srcEntityKeyExtractor = entity -> getJoinPropValue(srcPropInfos[0], entity);
             referencedEntityKeyExtractor = entity -> referencedPropInfos[0].getPropValue(entity);
             // ===============================================================================================================================
         } else {
@@ -346,13 +346,13 @@ final class JoinInfo {
             final Condition cond = joinColumnPairs.length == 1 ? conds.get(0) : CF.and(conds);
 
             final BiParametersSetter<PreparedStatement, Object> paramSetter = srcPropInfos.length == 1
-                    ? (stmt, entity) -> srcPropInfos[0].dbType.set(stmt, 1, checkPropValue(srcPropInfos[0], entity))
+                    ? (stmt, entity) -> srcPropInfos[0].dbType.set(stmt, 1, getJoinPropValue(srcPropInfos[0], entity))
                     : (srcPropInfos.length == 2 ? (stmt, entity) -> {
-                        srcPropInfos[0].dbType.set(stmt, 1, checkPropValue(srcPropInfos[0], entity));
-                        srcPropInfos[1].dbType.set(stmt, 2, checkPropValue(srcPropInfos[1], entity));
+                        srcPropInfos[0].dbType.set(stmt, 1, getJoinPropValue(srcPropInfos[0], entity));
+                        srcPropInfos[1].dbType.set(stmt, 2, getJoinPropValue(srcPropInfos[1], entity));
                     } : (stmt, entity) -> {
                         for (int i = 0, len = srcPropInfos.length; i < len; i++) {
-                            srcPropInfos[i].dbType.set(stmt, i + 1, checkPropValue(srcPropInfos[i], entity));
+                            srcPropInfos[i].dbType.set(stmt, i + 1, getJoinPropValue(srcPropInfos[i], entity));
                         }
                     });
 
@@ -360,40 +360,40 @@ final class JoinInfo {
                 int index = 1;
 
                 for (Object entity : entities) {
-                    srcPropInfos[0].dbType.set(stmt, index++, checkPropValue(srcPropInfos[0], entity));
+                    srcPropInfos[0].dbType.set(stmt, index++, getJoinPropValue(srcPropInfos[0], entity));
                 }
             } : (srcPropInfos.length == 2 ? (stmt, entities) -> {
                 int index = 1;
 
                 for (Object entity : entities) {
-                    srcPropInfos[0].dbType.set(stmt, index++, checkPropValue(srcPropInfos[0], entity));
-                    srcPropInfos[1].dbType.set(stmt, index++, checkPropValue(srcPropInfos[1], entity));
+                    srcPropInfos[0].dbType.set(stmt, index++, getJoinPropValue(srcPropInfos[0], entity));
+                    srcPropInfos[1].dbType.set(stmt, index++, getJoinPropValue(srcPropInfos[1], entity));
                 }
             } : (stmt, entities) -> {
                 int index = 1;
 
                 for (Object entity : entities) {
                     for (int i = 0, len = srcPropInfos.length; i < len; i++) {
-                        srcPropInfos[i].dbType.set(stmt, index++, checkPropValue(srcPropInfos[i], entity));
+                        srcPropInfos[i].dbType.set(stmt, index++, getJoinPropValue(srcPropInfos[i], entity));
                     }
                 }
             });
 
             final BiParametersSetter<PreparedStatement, Object> setNullParamSetterForUpdate = srcPropInfos.length == 1 ? (stmt, entity) -> {
                 srcPropInfos[0].dbType.set(stmt, 1, srcPropInfos[0].dbType.defaultValue());
-                srcPropInfos[0].dbType.set(stmt, 2, checkPropValue(srcPropInfos[0], entity));
+                srcPropInfos[0].dbType.set(stmt, 2, getJoinPropValue(srcPropInfos[0], entity));
             } : (srcPropInfos.length == 2 ? (stmt, entity) -> {
                 srcPropInfos[0].dbType.set(stmt, 1, srcPropInfos[0].dbType.defaultValue());
                 srcPropInfos[1].dbType.set(stmt, 2, srcPropInfos[1].dbType.defaultValue());
-                srcPropInfos[0].dbType.set(stmt, 3, checkPropValue(srcPropInfos[0], entity));
-                srcPropInfos[1].dbType.set(stmt, 4, checkPropValue(srcPropInfos[1], entity));
+                srcPropInfos[0].dbType.set(stmt, 3, getJoinPropValue(srcPropInfos[0], entity));
+                srcPropInfos[1].dbType.set(stmt, 4, getJoinPropValue(srcPropInfos[1], entity));
             } : (stmt, entity) -> {
                 for (int i = 0, len = srcPropInfos.length; i < len; i++) {
                     srcPropInfos[i].dbType.set(stmt, i + 1, srcPropInfos[i].dbType.defaultValue());
                 }
 
                 for (int i = 0, len = srcPropInfos.length; i < len; i++) {
-                    srcPropInfos[i].dbType.set(stmt, len + i + 1, checkPropValue(srcPropInfos[i], entity));
+                    srcPropInfos[i].dbType.set(stmt, len + i + 1, getJoinPropValue(srcPropInfos[i], entity));
                 }
             });
 
@@ -468,7 +468,7 @@ final class JoinInfo {
                 final PropInfo srcPropInfo = srcPropInfos[0];
                 final PropInfo referencedPropInfo = referencedPropInfos[0];
 
-                srcEntityKeyExtractorTmp = entity -> checkPropValue(srcPropInfo, entity);
+                srcEntityKeyExtractorTmp = entity -> getJoinPropValue(srcPropInfo, entity);
                 referencedEntityKeyExtractorTmp = entity -> referencedPropInfo.getPropValue(entity);
             } else if (srcPropInfos.length == 2) {
                 final PropInfo srcPropInfo_1 = srcPropInfos[0];
@@ -476,7 +476,7 @@ final class JoinInfo {
                 final PropInfo referencedPropInfo_1 = referencedPropInfos[0];
                 final PropInfo referencedPropInfo_2 = referencedPropInfos[1];
 
-                srcEntityKeyExtractorTmp = entity -> Tuple.of(checkPropValue(srcPropInfo_1, entity), checkPropValue(srcPropInfo_2, entity));
+                srcEntityKeyExtractorTmp = entity -> Tuple.of(getJoinPropValue(srcPropInfo_1, entity), getJoinPropValue(srcPropInfo_2, entity));
                 referencedEntityKeyExtractorTmp = entity -> Tuple.of(referencedPropInfo_1.getPropValue(entity), referencedPropInfo_2.getPropValue(entity));
             } else if (srcPropInfos.length == 3) {
                 final PropInfo srcPropInfo_1 = srcPropInfos[0];
@@ -486,8 +486,8 @@ final class JoinInfo {
                 final PropInfo referencedPropInfo_2 = referencedPropInfos[1];
                 final PropInfo referencedPropInfo_3 = referencedPropInfos[2];
 
-                srcEntityKeyExtractorTmp = entity -> Tuple.of(checkPropValue(srcPropInfo_1, entity), checkPropValue(srcPropInfo_2, entity),
-                        checkPropValue(srcPropInfo_3, entity));
+                srcEntityKeyExtractorTmp = entity -> Tuple.of(getJoinPropValue(srcPropInfo_1, entity), getJoinPropValue(srcPropInfo_2, entity),
+                        getJoinPropValue(srcPropInfo_3, entity));
 
                 referencedEntityKeyExtractorTmp = entity -> Tuple.of(referencedPropInfo_1.getPropValue(entity), referencedPropInfo_2.getPropValue(entity),
                         referencedPropInfo_3.getPropValue(entity));
@@ -496,7 +496,7 @@ final class JoinInfo {
                     final List<Object> keys = new ArrayList<>(srcPropInfos.length);
 
                     for (PropInfo srcPropInfo : srcPropInfos) {
-                        keys.add(checkPropValue(srcPropInfo, entity));
+                        keys.add(getJoinPropValue(srcPropInfo, entity));
                     }
 
                     return keys;
@@ -689,12 +689,12 @@ final class JoinInfo {
         return isManyToManyJoin;
     }
 
-    private Object checkPropValue(PropInfo propInfo, Object entity) {
+    private Object getJoinPropValue(PropInfo propInfo, Object entity) {
         final Object value = propInfo.getPropValue(entity);
 
         if (allowJoiningByNullOrDefaultValue == false && N.isNullOrDefault(value)) {
             throw new IllegalArgumentException("The join property value can't be null or default for property: " + propInfo.name
-                    + ". Annotated the Dao class of " + entityClass + " with @AllowJoiningByNullOrDefaultValue to avoid this exception");
+                    + ". Annotated the Dao class of " + entityClass + " with @Config{allowJoiningByNullOrDefaultValue = true} to avoid this exception");
         }
 
         return value;
