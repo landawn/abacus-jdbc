@@ -2115,7 +2115,7 @@ final class DaoImpl {
                                 return 0;
                             }
 
-                            final ParsedSql namedInsertSQL = isNoId || isDefaultIdTester.test(idGetter.apply(N.firstOrNullIfEmpty(entities)))
+                            final ParsedSql namedInsertSQL = isNoId || N.allMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)))
                                     ? namedInsertWithoutIdSQL
                                     : namedInsertWithIdSQL;
 
@@ -2864,24 +2864,28 @@ final class DaoImpl {
 
                             ParsedSql namedInsertSQL = null;
 
-                            if (callGenerateIdForInsert && isDefaultIdTester.test(idGetter.apply(entity))) {
-                                idSetter.accept(((JdbcUtil.CrudDao) proxy).generateId(), entity);
-                            }
-
                             if (isDirtyMarker) {
                                 final Collection<String> propNamesToInsert = SQLBuilder.getInsertPropNames(entity, null);
-                                N.checkArgNotNullOrEmpty(propNamesToInsert, "propNamesToInsert");
+                                N.checkArgNotNullOrEmpty(propNamesToInsert, "No property is assigned to entity to insert");
+
+                                if (!N.disjoint(propNamesToInsert, idPropNameSet)) {
+                                    if (isDefaultIdTester.test(idGetter.apply(entity))) {
+                                        idSetter.accept(((JdbcUtil.CrudDao) proxy).generateId(), entity);
+                                    }
+                                }
 
                                 namedInsertSQL = ParsedSql.parse(namedInsertSQLBuilderFunc.apply(propNamesToInsert).sql());
                             } else {
-                                if (callGenerateIdForInsert == false && isDefaultIdTester.test(idGetter.apply(entity))) {
-                                    namedInsertSQL = namedInsertWithoutIdSQL;
-                                } else {
+                                if (callGenerateIdForInsert && isDefaultIdTester.test(idGetter.apply(entity))) {
+                                    idSetter.accept(((JdbcUtil.CrudDao) proxy).generateId(), entity);
+
                                     namedInsertSQL = namedInsertWithIdSQL;
+                                } else {
+                                    namedInsertSQL = namedInsertWithoutIdSQL;
                                 }
                             }
 
-                            Object newId = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
+                            final Object id = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
                                     .setParameters(entity)
                                     .insert(keyExtractor)
                                     .ifPresent(ret -> idSetter.accept(ret, entity))
@@ -2891,7 +2895,7 @@ final class DaoImpl {
                                 DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
                             }
 
-                            return newId;
+                            return id;
                         };
                     } else if (methodName.equals("insert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[1])) {
                         call = (proxy, args) -> {
@@ -2900,11 +2904,9 @@ final class DaoImpl {
                             final Collection<String> propNamesToInsert = (Collection<String>) args[1];
                             N.checkArgNotNullOrEmpty(propNamesToInsert, "propNamesToInsert");
 
-                            if (callGenerateIdForInsert) {
-                                if (!N.disjoint(propNamesToInsert, idPropNameSet)) {
-                                    if (isDefaultIdTester.test(idGetter.apply(entity))) {
-                                        idSetter.accept(((JdbcUtil.CrudDao) proxy).generateId(), entity);
-                                    }
+                            if (callGenerateIdForInsert && !N.disjoint(propNamesToInsert, idPropNameSet)) {
+                                if (isDefaultIdTester.test(idGetter.apply(entity))) {
+                                    idSetter.accept(((JdbcUtil.CrudDao) proxy).generateId(), entity);
                                 }
                             }
 
@@ -2958,19 +2960,19 @@ final class DaoImpl {
                                 return 0;
                             }
 
-                            final Object first = N.firstOrNullIfEmpty(entities);
-                            final boolean isDefaultIdPropValue = isDefaultIdTester.test(idGetter.apply(first));
+                            final boolean allDefaultIdValue = N.allMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)));
 
-                            if (isDefaultIdPropValue && callGenerateIdForInsert) {
+                            if (allDefaultIdValue == false && callGenerateIdForInsert) {
                                 final CrudDao crudDao = (JdbcUtil.CrudDao) proxy;
 
                                 for (Object entity : entities) {
-                                    idSetter.accept(crudDao.generateId(), entity);
+                                    if (isDefaultIdTester.test(idGetter.apply(entity))) {
+                                        idSetter.accept(crudDao.generateId(), entity);
+                                    }
                                 }
                             }
 
-                            final ParsedSql namedInsertSQL = isDefaultIdPropValue && callGenerateIdForInsert == false ? namedInsertWithoutIdSQL
-                                    : namedInsertWithIdSQL;
+                            final ParsedSql namedInsertSQL = allDefaultIdValue ? namedInsertWithoutIdSQL : namedInsertWithIdSQL;
                             List<Object> ids = null;
 
                             if (entities.size() <= batchSize) {
@@ -2996,6 +2998,13 @@ final class DaoImpl {
                                 ids = new ArrayList<>();
                             }
 
+                            if (N.notNullOrEmpty(ids) && N.size(ids) != N.size(entities)) {
+                                if (daoLogger.isWarnEnabled()) {
+                                    daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
+                                            entities.size());
+                                }
+                            }
+
                             if (N.notNullOrEmpty(ids) && N.notNullOrEmpty(entities) && ids.size() == N.size(entities)) {
                                 int idx = 0;
 
@@ -3007,13 +3016,6 @@ final class DaoImpl {
                             if (isDirtyMarker) {
                                 for (Object e : entities) {
                                     DirtyMarkerUtil.markDirty((DirtyMarker) e, false);
-                                }
-                            }
-
-                            if (N.notNullOrEmpty(ids) && ids.size() != entities.size()) {
-                                if (daoLogger.isWarnEnabled()) {
-                                    daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
-                                            entities.size());
                                 }
                             }
 
@@ -3039,16 +3041,12 @@ final class DaoImpl {
                                 return 0;
                             }
 
-                            final Object first = N.firstOrNullIfEmpty(entities);
+                            if (callGenerateIdForInsert && !N.disjoint(propNamesToInsert, idPropNameSet)) {
+                                final CrudDao crudDao = (JdbcUtil.CrudDao) proxy;
 
-                            if (callGenerateIdForInsert) {
-                                if (!N.disjoint(propNamesToInsert, idPropNameSet)) {
-                                    if (isDefaultIdTester.test(idGetter.apply(first))) {
-                                        final CrudDao crudDao = (JdbcUtil.CrudDao) proxy;
-
-                                        for (Object entity : entities) {
-                                            idSetter.accept(crudDao.generateId(), entity);
-                                        }
+                                for (Object entity : entities) {
+                                    if (isDefaultIdTester.test(idGetter.apply(entity))) {
+                                        idSetter.accept(crudDao.generateId(), entity);
                                     }
                                 }
                             }
@@ -3119,13 +3117,11 @@ final class DaoImpl {
                                 return 0;
                             }
 
-                            final Object first = N.firstOrNullIfEmpty(entities);
-
                             if (callGenerateIdForInsertWithSql) {
-                                if (isDefaultIdTester.test(idGetter.apply(first))) {
-                                    final CrudDao crudDao = (JdbcUtil.CrudDao) proxy;
+                                final CrudDao crudDao = (JdbcUtil.CrudDao) proxy;
 
-                                    for (Object entity : entities) {
+                                for (Object entity : entities) {
+                                    if (isDefaultIdTester.test(idGetter.apply(entity))) {
                                         idSetter.accept(crudDao.generateId(), entity);
                                     }
                                 }
@@ -3156,6 +3152,13 @@ final class DaoImpl {
                                 ids = new ArrayList<>();
                             }
 
+                            if (N.notNullOrEmpty(ids) && N.size(ids) != N.size(entities)) {
+                                if (daoLogger.isWarnEnabled()) {
+                                    daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
+                                            entities.size());
+                                }
+                            }
+
                             if (N.notNullOrEmpty(ids) && N.notNullOrEmpty(entities) && ids.size() == N.size(entities)) {
                                 int idx = 0;
 
@@ -3167,13 +3170,6 @@ final class DaoImpl {
                             if (isDirtyMarker) {
                                 for (Object e : entities) {
                                     DirtyMarkerUtil.markDirty((DirtyMarker) e, false);
-                                }
-                            }
-
-                            if (N.notNullOrEmpty(ids) && ids.size() != entities.size()) {
-                                if (daoLogger.isWarnEnabled()) {
-                                    daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
-                                            entities.size());
                                 }
                             }
 
