@@ -1,3 +1,8 @@
+### 2.6.10
+
+* Improvements and bug fix.
+
+
 ### 2.6.9
 
 * A new release.
