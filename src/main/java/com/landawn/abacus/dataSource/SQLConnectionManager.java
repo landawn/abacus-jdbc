@@ -68,7 +68,7 @@ public final class SQLConnectionManager extends AbstractConnectionManager {
 
     private final DataSource ds;
 
-    private final Map<Connection, Connection> xpool = new IdentityHashMap<Connection, Connection>();
+    private final Map<Connection, Connection> xpool = new IdentityHashMap<>();
 
     private final ObjectPool<PoolableConnection> pool;
 
@@ -362,7 +362,7 @@ public final class SQLConnectionManager extends AbstractConnectionManager {
             }
 
             synchronized (xpool) {
-                List<Connection> list = new ArrayList<Connection>(xpool.keySet());
+                List<Connection> list = new ArrayList<>(xpool.keySet());
 
                 for (Connection conn : list) {
                     if (conn != null) {
