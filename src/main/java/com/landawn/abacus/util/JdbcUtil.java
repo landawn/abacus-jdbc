@@ -11524,6 +11524,7 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
             if (inParallel) {
                 loadJoinEntities(entity, joinEntityPropNames, executor());
@@ -11539,6 +11540,7 @@ public final class JdbcUtil {
          * @param executor
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
             if (N.isNullOrEmpty(joinEntityPropNames)) {
                 return;
@@ -11574,6 +11576,7 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
                 throws SQLException {
             if (inParallel) {
@@ -11590,6 +11593,7 @@ public final class JdbcUtil {
          * @param executor
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
                 return;
@@ -11617,6 +11621,7 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadAllJoinEntities(final T entity, final boolean inParallel) throws SQLException {
             if (inParallel) {
                 loadAllJoinEntities(entity, executor());
@@ -11631,6 +11636,7 @@ public final class JdbcUtil {
          * @param executor
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadAllJoinEntities(final T entity, final Executor executor) throws SQLException {
             loadJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
         }
@@ -11654,6 +11660,7 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws SQLException {
             if (inParallel) {
                 loadAllJoinEntities(entities, executor());
@@ -11668,6 +11675,7 @@ public final class JdbcUtil {
          * @param executor
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadAllJoinEntities(final Collection<T> entities, final Executor executor) throws SQLException {
             if (N.isNullOrEmpty(entities)) {
                 return;
@@ -11819,6 +11827,7 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
             if (inParallel) {
                 loadJoinEntitiesIfNull(entity, joinEntityPropNames, executor());
@@ -11834,6 +11843,7 @@ public final class JdbcUtil {
          * @param executor
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
             if (N.isNullOrEmpty(joinEntityPropNames)) {
                 return;
@@ -11869,6 +11879,7 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
                 throws SQLException {
             if (inParallel) {
@@ -11885,6 +11896,7 @@ public final class JdbcUtil {
          * @param executor
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
                 throws SQLException {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
@@ -11913,6 +11925,7 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) throws SQLException {
             if (inParallel) {
                 loadJoinEntitiesIfNull(entity, executor());
@@ -11927,6 +11940,7 @@ public final class JdbcUtil {
          * @param executor
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws SQLException {
             loadJoinEntitiesIfNull(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
         }
@@ -11950,6 +11964,7 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) throws SQLException {
             if (inParallel) {
                 loadJoinEntitiesIfNull(entities, executor());
@@ -11964,6 +11979,7 @@ public final class JdbcUtil {
          * @param executor
          * @throws SQLException the SQL exception
          */
+        @Beta
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) throws SQLException {
             if (N.isNullOrEmpty(entities)) {
                 return;
@@ -12111,6 +12127,7 @@ public final class JdbcUtil {
          * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
         @Deprecated
+        @Beta
         default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
             if (inParallel) {
                 return deleteJoinEntities(entity, joinEntityPropNames, executor());
@@ -12129,6 +12146,7 @@ public final class JdbcUtil {
          * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
         @Deprecated
+        @Beta
         default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
             if (N.isNullOrEmpty(joinEntityPropNames)) {
                 return 0;
@@ -12183,6 +12201,7 @@ public final class JdbcUtil {
          * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
         @Deprecated
+        @Beta
         default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
                 throws SQLException {
             if (inParallel) {
@@ -12202,6 +12221,7 @@ public final class JdbcUtil {
          * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
         @Deprecated
+        @Beta
         default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
                 throws SQLException {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
@@ -12234,6 +12254,7 @@ public final class JdbcUtil {
          * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
         @Deprecated
+        @Beta
         default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws SQLException {
             if (inParallel) {
                 return deleteAllJoinEntities(entity, executor());
@@ -12251,6 +12272,7 @@ public final class JdbcUtil {
          * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
         @Deprecated
+        @Beta
         default int deleteAllJoinEntities(final T entity, final Executor executor) throws SQLException {
             return deleteJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
         }
@@ -12278,6 +12300,7 @@ public final class JdbcUtil {
          * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
         @Deprecated
+        @Beta
         default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws SQLException {
             if (inParallel) {
                 return deleteAllJoinEntities(entities, executor());
@@ -12295,6 +12318,7 @@ public final class JdbcUtil {
          * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
         @Deprecated
+        @Beta
         default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws SQLException {
             if (N.isNullOrEmpty(entities)) {
                 return 0;
@@ -15590,6 +15614,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 loadJoinEntities(entity, joinEntityPropNames, executor());
@@ -15606,6 +15631,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
             if (N.isNullOrEmpty(joinEntityPropNames)) {
                 return;
@@ -15643,6 +15669,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
                 throws UncheckedSQLException {
             if (inParallel) {
@@ -15660,6 +15687,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
                 throws UncheckedSQLException {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
@@ -15690,6 +15718,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadAllJoinEntities(final T entity, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 loadAllJoinEntities(entity, executor());
@@ -15705,6 +15734,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException {
             loadJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
         }
@@ -15730,6 +15760,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 loadAllJoinEntities(entities, executor());
@@ -15745,6 +15776,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
             if (N.isNullOrEmpty(entities)) {
                 return;
@@ -15908,6 +15940,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel)
                 throws UncheckedSQLException {
             if (inParallel) {
@@ -15925,6 +15958,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final Executor executor)
                 throws UncheckedSQLException {
             if (N.isNullOrEmpty(joinEntityPropNames)) {
@@ -15963,6 +15997,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
                 throws UncheckedSQLException {
             if (inParallel) {
@@ -15980,6 +16015,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
                 throws UncheckedSQLException {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
@@ -16010,6 +16046,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 loadJoinEntitiesIfNull(entity, executor());
@@ -16025,6 +16062,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws UncheckedSQLException {
             loadJoinEntitiesIfNull(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
         }
@@ -16050,6 +16088,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 loadJoinEntitiesIfNull(entities, executor());
@@ -16065,6 +16104,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          */
         @Override
+        @Beta
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
             if (N.isNullOrEmpty(entities)) {
                 return;
@@ -16209,6 +16249,7 @@ public final class JdbcUtil {
          */
         @Override
         @Deprecated
+        @Beta
         default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 return deleteJoinEntities(entity, joinEntityPropNames, executor());
@@ -16228,6 +16269,7 @@ public final class JdbcUtil {
          */
         @Override
         @Deprecated
+        @Beta
         default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
             if (N.isNullOrEmpty(joinEntityPropNames)) {
                 return 0;
@@ -16284,6 +16326,7 @@ public final class JdbcUtil {
          */
         @Override
         @Deprecated
+        @Beta
         default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
                 throws UncheckedSQLException {
             if (inParallel) {
@@ -16304,6 +16347,7 @@ public final class JdbcUtil {
          */
         @Override
         @Deprecated
+        @Beta
         default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
                 throws UncheckedSQLException {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
@@ -16338,6 +16382,7 @@ public final class JdbcUtil {
          */
         @Override
         @Deprecated
+        @Beta
         default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 return deleteAllJoinEntities(entity, executor());
@@ -16356,6 +16401,7 @@ public final class JdbcUtil {
          */
         @Override
         @Deprecated
+        @Beta
         default int deleteAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException {
             return deleteJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
         }
@@ -16385,6 +16431,7 @@ public final class JdbcUtil {
          */
         @Override
         @Deprecated
+        @Beta
         default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 return deleteAllJoinEntities(entities, executor());
@@ -16403,6 +16450,7 @@ public final class JdbcUtil {
          */
         @Override
         @Deprecated
+        @Beta
         default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
             if (N.isNullOrEmpty(entities)) {
                 return 0;
