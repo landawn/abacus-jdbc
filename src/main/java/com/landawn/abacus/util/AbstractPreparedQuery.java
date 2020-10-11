@@ -159,6 +159,7 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
      * @param sqlType
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public This setNull(int parameterIndex, int sqlType) throws SQLException {
         stmt.setNull(parameterIndex, sqlType);
@@ -174,6 +175,7 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
      * @param typeName
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public This setNull(int parameterIndex, int sqlType, String typeName) throws SQLException {
         stmt.setNull(parameterIndex, sqlType, typeName);
@@ -906,6 +908,7 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
      * @param sqlType
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public This setObject(int parameterIndex, Object x, int sqlType) throws SQLException {
         stmt.setObject(parameterIndex, x, sqlType);
@@ -922,6 +925,7 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
      * @param scaleOrLength
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public This setObject(int parameterIndex, Object x, int sqlType, int scaleOrLength) throws SQLException {
         stmt.setObject(parameterIndex, x, sqlType, scaleOrLength);
