@@ -99,9 +99,11 @@ import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.BiConsumer;
+import com.landawn.abacus.util.function.BiPredicate;
 import com.landawn.abacus.util.function.BinaryOperator;
 import com.landawn.abacus.util.function.Consumer;
 import com.landawn.abacus.util.function.Function;
+import com.landawn.abacus.util.function.IntFunction;
 import com.landawn.abacus.util.function.Predicate;
 import com.landawn.abacus.util.function.Supplier;
 import com.landawn.abacus.util.stream.Collector;
@@ -6314,7 +6316,7 @@ public final class JdbcUtil {
             @Override
             public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 final int columnCount = columnLabels.size();
-                final Map<String, Object> result = new HashMap<>(columnCount);
+                final Map<String, Object> result = new HashMap<>();
 
                 for (int i = 1; i <= columnCount; i++) {
                     result.put(columnLabels.get(i - 1), JdbcUtil.getColumnValue(rs, i));
@@ -6724,6 +6726,52 @@ public final class JdbcUtil {
                             "'columnNameFilter' and 'columnNameConverter' are not supported to convert single column to target type: " + targetClass);
                 }
             }
+        }
+
+        static BiRowMapper<Map<String, Object>> toMap(final Predicate<Object> valueFilter) {
+            return new BiRowMapper<Map<String, Object>>() {
+                @Override
+                public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                    final int columnCount = columnLabels.size();
+                    final Map<String, Object> result = new HashMap<>(columnCount);
+
+                    Object value = null;
+
+                    for (int i = 1; i <= columnCount; i++) {
+                        value = JdbcUtil.getColumnValue(rs, i);
+
+                        if (valueFilter.test(value)) {
+                            result.put(columnLabels.get(i - 1), valueFilter);
+                        }
+                    }
+
+                    return result;
+                }
+            };
+        }
+
+        static BiRowMapper<Map<String, Object>> toMap(final BiPredicate<String, Object> valueFilter, final IntFunction<Map<String, Object>> mapSupplier) {
+            return new BiRowMapper<Map<String, Object>>() {
+                @Override
+                public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                    final int columnCount = columnLabels.size();
+                    final Map<String, Object> result = mapSupplier.apply(columnCount);
+
+                    String columnName = null;
+                    Object value = null;
+
+                    for (int i = 1; i <= columnCount; i++) {
+                        columnName = columnLabels.get(i - 1);
+                        value = JdbcUtil.getColumnValue(rs, i);
+
+                        if (valueFilter.test(columnName, value)) {
+                            result.put(columnName, valueFilter);
+                        }
+                    }
+
+                    return result;
+                }
+            };
         }
 
         static BiRowMapperBuilder builder() {
