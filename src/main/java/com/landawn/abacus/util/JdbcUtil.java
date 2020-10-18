@@ -5050,11 +5050,11 @@ public final class JdbcUtil {
     }
 
     static Map<String, Object> newRowHashMap(int columnCount) {
-        return new HashMap<>(columnCount + 1);
+        return new HashMap<>(N.initHashCapacity(columnCount));
     }
 
     static LinkedHashMap<String, Object> newRowLinkedHashMap(int columnCount) {
-        return new LinkedHashMap<>(columnCount + 1);
+        return new LinkedHashMap<>(N.initHashCapacity(columnCount));
     }
 
     @EqualsAndHashCode
