@@ -6365,7 +6365,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * Don't cache or reuse the returned {@code BiRowMapper} instance. It's stateful.
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param <T>
          * @param targetClass
@@ -6392,7 +6392,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * Don't cache or reuse the returned {@code BiRowMapper} instance. It's stateful.
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param <T>
          * @param targetClass 
@@ -6408,7 +6408,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * Don't cache or reuse the returned {@code BiRowMapper} instance. It's stateful.
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param <T>
          * @param targetClass 
@@ -17171,7 +17171,7 @@ public final class JdbcUtil {
                 throwSQLExceptionAction.accept(ret.getExceptionIfPresent());
             }
 
-            result += ret.orElse(0);
+            result += ret.orElseIfFailure(0);
         }
 
         return result;
@@ -17204,7 +17204,7 @@ public final class JdbcUtil {
                 throwUncheckedSQLException.accept(ret.getExceptionIfPresent());
             }
 
-            result += ret.orElse(0);
+            result += ret.orElseIfFailure(0);
         }
 
         return result;
