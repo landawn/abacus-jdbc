@@ -94,6 +94,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param sqlType
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public PreparedCallableQuery setNull(String parameterName, int sqlType) throws SQLException {
         stmt.setNull(parameterName, sqlType);
@@ -109,6 +110,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param typeName
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public PreparedCallableQuery setNull(String parameterName, int sqlType, String typeName) throws SQLException {
         stmt.setNull(parameterName, sqlType, typeName);
@@ -751,6 +753,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param sqlType
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public PreparedCallableQuery setObject(String parameterName, Object x, int sqlType) throws SQLException {
         stmt.setObject(parameterName, x, sqlType);
@@ -767,6 +770,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param scaleOrLength
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public PreparedCallableQuery setObject(String parameterName, Object x, int sqlType, int scaleOrLength) throws SQLException {
         stmt.setObject(parameterName, x, sqlType, scaleOrLength);
@@ -826,6 +830,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param sqlType
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public PreparedCallableQuery registerOutParameter(int parameterIndex, int sqlType) throws SQLException {
         stmt.registerOutParameter(parameterIndex, sqlType);
@@ -851,6 +856,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param scale
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public PreparedCallableQuery registerOutParameter(int parameterIndex, int sqlType, int scale) throws SQLException {
         stmt.registerOutParameter(parameterIndex, sqlType, scale);
@@ -868,6 +874,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param typeName
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public PreparedCallableQuery registerOutParameter(int parameterIndex, int sqlType, String typeName) throws SQLException {
         stmt.registerOutParameter(parameterIndex, sqlType, typeName);
@@ -884,6 +891,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param sqlType
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public PreparedCallableQuery registerOutParameter(String parameterName, int sqlType) throws SQLException {
         stmt.registerOutParameter(parameterName, sqlType);
@@ -901,6 +909,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param scale
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public PreparedCallableQuery registerOutParameter(String parameterName, int sqlType, int scale) throws SQLException {
         stmt.registerOutParameter(parameterName, sqlType, scale);
@@ -918,6 +927,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param typeName
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public PreparedCallableQuery registerOutParameter(String parameterName, int sqlType, String typeName) throws SQLException {
         stmt.registerOutParameter(parameterName, sqlType, typeName);

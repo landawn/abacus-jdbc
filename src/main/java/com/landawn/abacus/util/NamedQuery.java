@@ -66,6 +66,8 @@ import com.landawn.abacus.util.JdbcUtil.TriParametersSetter;
  */
 public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQuery> {
 
+    static final int MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP = 5;
+
     private final ParsedSql namedSql;
 
     private final List<String> parameterNames;
@@ -111,9 +113,10 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @param sqlType
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public NamedQuery setNull(String parameterName, int sqlType) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -166,9 +169,10 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @param typeName
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public NamedQuery setNull(String parameterName, int sqlType, String typeName) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -222,7 +226,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setBoolean(String parameterName, boolean x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -290,7 +294,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setByte(String parameterName, byte x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -358,7 +362,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setShort(String parameterName, short x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -426,7 +430,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setInt(String parameterName, int x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -502,7 +506,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setLong(String parameterName, long x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -570,7 +574,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setFloat(String parameterName, float x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -638,7 +642,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setDouble(String parameterName, double x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -706,7 +710,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setBigDecimal(String parameterName, BigDecimal x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -760,7 +764,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setString(String parameterName, String x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -826,7 +830,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setDate(String parameterName, java.sql.Date x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -894,7 +898,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setTime(String parameterName, java.sql.Time x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -962,7 +966,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setTimestamp(String parameterName, java.sql.Timestamp x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1030,7 +1034,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setBytes(String parameterName, byte[] x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1084,7 +1088,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setAsciiStream(String parameterName, InputStream x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1139,7 +1143,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setAsciiStream(String parameterName, InputStream x, long length) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1193,7 +1197,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setBinaryStream(String parameterName, InputStream x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1248,7 +1252,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setBinaryStream(String parameterName, InputStream x, long length) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1302,7 +1306,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setCharacterStream(String parameterName, Reader x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1357,7 +1361,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setCharacterStream(String parameterName, Reader x, long length) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1411,7 +1415,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setNCharacterStream(String parameterName, Reader x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1466,7 +1470,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setNCharacterStream(String parameterName, Reader x, long length) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1520,7 +1524,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setBlob(String parameterName, java.sql.Blob x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1574,7 +1578,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setBlob(String parameterName, InputStream x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1629,7 +1633,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setBlob(String parameterName, InputStream x, long length) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1683,7 +1687,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setClob(String parameterName, java.sql.Clob x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1737,7 +1741,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setClob(String parameterName, Reader x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1792,7 +1796,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setClob(String parameterName, Reader x, long length) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1846,7 +1850,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setNClob(String parameterName, java.sql.NClob x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1900,7 +1904,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setNClob(String parameterName, Reader x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -1955,7 +1959,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setNClob(String parameterName, Reader x, long length) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -2009,7 +2013,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setURL(String parameterName, URL x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -2063,7 +2067,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setSQLXML(String parameterName, java.sql.SQLXML x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -2117,7 +2121,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setRowId(String parameterName, java.sql.RowId x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -2171,7 +2175,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setRef(String parameterName, java.sql.Ref x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -2225,7 +2229,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setArray(String parameterName, java.sql.Array x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -2279,7 +2283,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setObject(String parameterName, Object x) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -2332,9 +2336,10 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @param sqlType
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public NamedQuery setObject(String parameterName, Object x, int sqlType) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -2388,9 +2393,10 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @param scaleOrLength
      * @return
      * @throws SQLException the SQL exception
+     * @see java.sql.Types
      */
     public NamedQuery setObject(String parameterName, Object x, int sqlType, int scaleOrLength) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -2445,7 +2451,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setObject(String parameterName, Object x, SQLType sqlType) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -2501,7 +2507,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setObject(String parameterName, Object x, SQLType sqlType, int scaleOrLength) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -2556,7 +2562,7 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      * @throws SQLException the SQL exception
      */
     public NamedQuery setObject(final String parameterName, final Object x, final Type<Object> type) throws SQLException {
-        if (parameterCount < 5) {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
