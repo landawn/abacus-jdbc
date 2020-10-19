@@ -5319,6 +5319,14 @@ public final class JdbcUtil {
         return asyncExecutor.execute(() -> sqlAction.apply(a, b, c));
     }
 
+    static Map<String, Object> newRowHashMap(int columnCount) {
+        return N.newHashMap(columnCount);
+    }
+
+    static Map<String, Object> newRowLinkedHashMap(int columnCount) {
+        return N.newLinkedHashMap(columnCount);
+    }
+
     @EqualsAndHashCode
     @ToString
     public static class OutParamResult {
@@ -6586,7 +6594,7 @@ public final class JdbcUtil {
             @Override
             public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 final int columnCount = columnLabels.size();
-                final Map<String, Object> result = new HashMap<>();
+                final Map<String, Object> result = JdbcUtil.newRowHashMap(columnCount);
 
                 for (int i = 1; i <= columnCount; i++) {
                     result.put(columnLabels.get(i - 1), JdbcUtil.getColumnValue(rs, i));
@@ -6601,7 +6609,7 @@ public final class JdbcUtil {
             @Override
             public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 final int columnCount = columnLabels.size();
-                final Map<String, Object> result = new LinkedHashMap<>(columnCount);
+                final Map<String, Object> result = JdbcUtil.newRowLinkedHashMap(columnCount);
 
                 for (int i = 1; i <= columnCount; i++) {
                     result.put(columnLabels.get(i - 1), JdbcUtil.getColumnValue(rs, i));
@@ -6844,8 +6852,8 @@ public final class JdbcUtil {
                                 this.columnLabels = columnLabels;
                             }
 
-                            final Map<String, Object> m = isMapOrHashMap ? new HashMap<>(columnCount)
-                                    : (isLinkedHashMap ? new LinkedHashMap<>(columnCount) : (Map<String, Object>) N.newInstance(targetClass));
+                            final Map<String, Object> m = isMapOrHashMap ? JdbcUtil.newRowHashMap(columnCount)
+                                    : (isLinkedHashMap ? JdbcUtil.newRowLinkedHashMap(columnCount) : (Map<String, Object>) N.newInstance(targetClass));
 
                             for (int i = 0; i < columnCount; i++) {
                                 m.put(columnLabels[i], getColumnValue(rs, i + 1));
@@ -6879,8 +6887,8 @@ public final class JdbcUtil {
                                 this.columnLabels = columnLabels;
                             }
 
-                            final Map<String, Object> m = isMapOrHashMap ? new HashMap<>(columnCount)
-                                    : (isLinkedHashMap ? new LinkedHashMap<>(columnCount) : (Map<String, Object>) N.newInstance(targetClass));
+                            final Map<String, Object> m = isMapOrHashMap ? JdbcUtil.newRowHashMap(columnCount)
+                                    : (isLinkedHashMap ? JdbcUtil.newRowLinkedHashMap(columnCount) : (Map<String, Object>) N.newInstance(targetClass));
 
                             for (int i = 0; i < columnCount; i++) {
                                 if (columnLabels[i] == null) {
@@ -7003,7 +7011,7 @@ public final class JdbcUtil {
                 @Override
                 public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                     final int columnCount = columnLabels.size();
-                    final Map<String, Object> result = new HashMap<>(columnCount);
+                    final Map<String, Object> result = JdbcUtil.newRowHashMap(columnCount);
 
                     Object value = null;
 
@@ -7262,8 +7270,8 @@ public final class JdbcUtil {
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
                             }
 
-                            final Map<String, Object> m = isMapOrHashMap ? new HashMap<>(rsColumnCount)
-                                    : (isLinkedHashMap ? new LinkedHashMap<>(rsColumnCount) : (Map<String, Object>) N.newInstance(targetClass));
+                            final Map<String, Object> m = isMapOrHashMap ? JdbcUtil.newRowHashMap(rsColumnCount)
+                                    : (isLinkedHashMap ? JdbcUtil.newRowLinkedHashMap(rsColumnCount) : (Map<String, Object>) N.newInstance(targetClass));
 
                             for (int i = 0; i < rsColumnCount;) {
                                 m.put(columnLabels[i], rsColumnGetters[++i].apply(i, rs));
