@@ -4652,7 +4652,7 @@ public final class JdbcUtil {
     }
 
     static void logSql(final String sql) {
-        if (logger.isInfoEnabled() == false) {
+        if (logger.isDebugEnabled() == false) {
             return;
         }
 
@@ -4660,9 +4660,9 @@ public final class JdbcUtil {
 
         if (isSqlLogAllowed && sqlLogConfig.isEnabled) {
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
-                logger.info("[SQL]: " + sql);
+                logger.debug("[SQL]: " + sql);
             } else {
-                logger.info("[SQL]: " + sql.substring(0, sqlLogConfig.maxSqlLogLength));
+                logger.debug("[SQL]: " + sql.substring(0, sqlLogConfig.maxSqlLogLength));
             }
         }
     }
