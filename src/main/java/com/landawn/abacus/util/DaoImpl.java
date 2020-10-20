@@ -1595,7 +1595,7 @@ final class DaoImpl {
             final long elapsedTime = System.currentTimeMillis() - startTime;
 
             if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
+                daoLogger.info(StringUtil.concat("[DAO-OP-PERF]-[", simpleClassMethodName, "]: ", String.valueOf(elapsedTime)));
             }
         }
     }

@@ -4652,6 +4652,10 @@ public final class JdbcUtil {
     }
 
     static void logSql(final String sql) {
+        if (logger.isInfoEnabled() == false) {
+            return;
+        }
+
         final SqlLogConfig sqlLogConfig = isSQLLogEnabled_TL.get();
 
         if (isSqlLogAllowed && sqlLogConfig.isEnabled) {
@@ -4709,15 +4713,19 @@ public final class JdbcUtil {
     }
 
     static void logSqlPerf(final Statement stmt, final SqlLogConfig sqlLogConfig, final long startTime) {
+        if (logger.isInfoEnabled() == false) {
+            return;
+        }
+
         final long elapsedTime = System.currentTimeMillis() - startTime;
 
         if (isSqlPerfLogAllowed && elapsedTime >= sqlLogConfig.minExecutionTimeForSqlPerfLog) {
             final String sql = stmt.toString();
 
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
-                logger.info("[SQL-PERF]: " + elapsedTime + ", " + sql);
+                logger.info(StringUtil.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", sql));
             } else {
-                logger.info("[SQL-PERF]: " + elapsedTime + ", " + sql.substring(0, sqlLogConfig.maxSqlLogLength));
+                logger.info(StringUtil.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", sql.substring(0, sqlLogConfig.maxSqlLogLength)));
             }
         }
     }
