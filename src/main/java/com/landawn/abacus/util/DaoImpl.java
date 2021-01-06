@@ -1595,7 +1595,7 @@ final class DaoImpl {
             final long elapsedTime = System.currentTimeMillis() - startTime;
 
             if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                daoLogger.info("[DAO-OP-PERF]: " + elapsedTime + ", " + simpleClassMethodName);
+                daoLogger.info(StringUtil.concat("[DAO-OP-PERF]-[", simpleClassMethodName, "]: ", String.valueOf(elapsedTime)));
             }
         }
     }
@@ -2005,7 +2005,7 @@ final class DaoImpl {
                     if (sqlsAnno != null) {
                         if (N.notNullOrEmpty((String[]) args[paramLen - 1])) {
                             throw new IllegalArgumentException(
-                                    "The last parameter(String[]) of method annotated by @Sqls must be null, don't specify it. It will auto-filled by sqls from annotation @Sqls on the method: "
+                                    "The last parameter(String[]) of method annotated by @Sqls must be empty, don't specify it. It will auto-filled by sqls from annotation @Sqls on the method: "
                                             + fullClassMethodName);
                         }
 
@@ -3573,7 +3573,10 @@ final class DaoImpl {
                             final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getSelectSQLBuilderAndParamSetter(sbc);
 
-                            final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
+                            final JdbcUtil.Dao<?, SQLBuilder, ?> joinEntityDao = getAppliableDaoForJoinEntity(propJoinInfo.referencedEntityClass,
+                                    primaryDataSource, proxy);
+
+                            final PreparedQuery preparedQuery = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
 
                             if (propJoinInfo.joinPropInfo.type.isCollection()) {
                                 final List<?> propEntities = preparedQuery.list(propJoinInfo.referencedEntityClass);
@@ -3603,6 +3606,9 @@ final class DaoImpl {
                             final Collection<String> selectPropNames = (Collection<String>) args[2];
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
 
+                            final JdbcUtil.Dao<?, SQLBuilder, ?> joinEntityDao = getAppliableDaoForJoinEntity(propJoinInfo.referencedEntityClass,
+                                    primaryDataSource, proxy);
+
                             if (N.isNullOrEmpty(entities)) {
                                 // Do nothing.
                             } else if (entities.size() == 1) {
@@ -3611,7 +3617,7 @@ final class DaoImpl {
                                 final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                         .getSelectSQLBuilderAndParamSetter(sbc);
 
-                                final PreparedQuery preparedQuery = proxy.prepareQuery(tp._1.apply(selectPropNames)).setParameters(first, tp._2);
+                                final PreparedQuery preparedQuery = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames)).setParameters(first, tp._2);
 
                                 if (propJoinInfo.joinPropInfo.type.isCollection()) {
                                     final List<?> propEntities = preparedQuery.list(propJoinInfo.referencedEntityClass);
@@ -3653,13 +3659,13 @@ final class DaoImpl {
                                             }
                                         };
 
-                                        final List<Pair<Object, Object>> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, bp.size()))
+                                        final List<Pair<Object, Object>> joinPropEntities = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames, bp.size()))
                                                 .setParameters(bp, tp._2)
                                                 .list(pairBiRowMapper);
 
                                         propJoinInfo.setJoinPropEntities(bp, Stream.of(joinPropEntities).groupTo(it -> it.left, it -> it.right));
                                     } else {
-                                        final List<?> joinPropEntities = proxy.prepareQuery(tp._1.apply(selectPropNames, bp.size()))
+                                        final List<?> joinPropEntities = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames, bp.size()))
                                                 .setParameters(bp, tp._2)
                                                 .list(propJoinInfo.referencedEntityClass);
 
@@ -3679,15 +3685,18 @@ final class DaoImpl {
                             final Tuple3<String, String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getDeleteSqlAndParamSetter(sbc);
 
+                            final JdbcUtil.Dao<?, SQLBuilder, ?> joinEntityDao = getAppliableDaoForJoinEntity(propJoinInfo.referencedEntityClass,
+                                    primaryDataSource, proxy);
+
                             if (N.isNullOrEmpty(tp._2)) {
-                                return proxy.prepareQuery(tp._1).setParameters(entity, tp._3).update();
+                                return joinEntityDao.prepareQuery(tp._1).setParameters(entity, tp._3).update();
                             } else {
                                 long result = 0;
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
 
                                 try {
-                                    result = proxy.prepareQuery(tp._1).setParameters(entity, tp._3).update();
-                                    result += proxy.prepareQuery(tp._2).setParameters(entity, tp._3).update();
+                                    result = joinEntityDao.prepareQuery(tp._1).setParameters(entity, tp._3).update();
+                                    result += joinEntityDao.prepareQuery(tp._2).setParameters(entity, tp._3).update();
 
                                     tran.commit();
                                 } finally {
@@ -3704,6 +3713,9 @@ final class DaoImpl {
                             final String joinEntityPropName = (String) args[1];
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
 
+                            final JdbcUtil.Dao<?, SQLBuilder, ?> joinEntityDao = getAppliableDaoForJoinEntity(propJoinInfo.referencedEntityClass,
+                                    primaryDataSource, proxy);
+
                             if (N.isNullOrEmpty(entities)) {
                                 return 0;
                             } else if (entities.size() == 1) {
@@ -3713,14 +3725,14 @@ final class DaoImpl {
                                         .getDeleteSqlAndParamSetter(sbc);
 
                                 if (N.isNullOrEmpty(tp._2)) {
-                                    return proxy.prepareQuery(tp._1).setParameters(first, tp._3).update();
+                                    return joinEntityDao.prepareQuery(tp._1).setParameters(first, tp._3).update();
                                 } else {
                                     int result = 0;
-                                    final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                    final SQLTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
 
                                     try {
-                                        result = proxy.prepareQuery(tp._1).setParameters(first, tp._3).update();
-                                        result += proxy.prepareQuery(tp._2).setParameters(first, tp._3).update();
+                                        result = joinEntityDao.prepareQuery(tp._1).setParameters(first, tp._3).update();
+                                        result += joinEntityDao.prepareQuery(tp._2).setParameters(first, tp._3).update();
 
                                         tran.commit();
                                     } finally {
@@ -3731,7 +3743,7 @@ final class DaoImpl {
                                 }
                             } else {
                                 long result = 0;
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
 
                                 try {
                                     final Tuple3<IntFunction<String>, IntFunction<String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
@@ -3739,10 +3751,10 @@ final class DaoImpl {
 
                                     result = ExceptionalStream.of(entities).splitToList(JdbcUtil.MAX_BATCH_SIZE).sumInt(bp -> {
                                         if (tp._2 == null) {
-                                            return proxy.prepareQuery(tp._1.apply(bp.size())).setParameters(bp, tp._3).update();
+                                            return joinEntityDao.prepareQuery(tp._1.apply(bp.size())).setParameters(bp, tp._3).update();
                                         } else {
-                                            return proxy.prepareQuery(tp._1.apply(bp.size())).setParameters(bp, tp._3).update()
-                                                    + proxy.prepareQuery(tp._2.apply(bp.size())).setParameters(bp, tp._3).update();
+                                            return joinEntityDao.prepareQuery(tp._1.apply(bp.size())).setParameters(bp, tp._3).update()
+                                                    + joinEntityDao.prepareQuery(tp._2.apply(bp.size())).setParameters(bp, tp._3).update();
                                         }
                                     }).orZero();
 
@@ -4773,6 +4785,33 @@ final class DaoImpl {
         daoPool.put(key, daoInstance);
 
         return daoInstance;
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static final Map<String, JdbcUtil.Dao> joinEntityDaoPool = new ConcurrentHashMap<>();
+
+    @SuppressWarnings("rawtypes")
+    static JdbcUtil.Dao getAppliableDaoForJoinEntity(final Class<?> referencedEntityClass, final javax.sql.DataSource ds, final JdbcUtil.Dao defaultDao) {
+        final String key = ClassUtil.getCanonicalClassName(referencedEntityClass) + "_" + System.identityHashCode(ds);
+        final JdbcUtil.Dao joinEntityDao = joinEntityDaoPool.get(key);
+
+        if (joinEntityDao != null) {
+            return joinEntityDao;
+        } else {
+            for (JdbcUtil.Dao dao : daoPool.values()) {
+                if (dao.targetEntityClass().equals(referencedEntityClass) && dao.dataSource().equals(ds)) {
+                    joinEntityDaoPool.put(key, dao);
+                    return dao;
+                }
+            }
+        }
+
+        JdbcUtil.logger.warn("No Dao interface/instance found for entity class: " + referencedEntityClass + " with data source: " + ds
+                + " for join operations in Dao: " + defaultDao.getClass());
+
+        joinEntityDaoPool.put(key, defaultDao);
+
+        return defaultDao;
     }
 
     static final class QueryInfo {
