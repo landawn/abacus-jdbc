@@ -1,7 +1,7 @@
 # abacus-jdbc
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc.svg)](https://maven-badges.herokuapp.com/maven-central/com.landawn/abacus-jdbc/)
-[![Javadocs](https://img.shields.io/badge/javadoc-2.7.0-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/2.7.0/index.html)
+[![Javadocs](https://img.shields.io/badge/javadoc-2.7.1-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/2.7.1/index.html)
 
 Hope it will bring you the programming experiences: coding with SQL/DB is just like coding with Collections.
 
@@ -13,8 +13,7 @@ Hope it will bring you the programming experiences: coding with SQL/DB is just l
 [NamedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/NamedQuery_view.html), 
 [PreparedCallableQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedCallableQuery_view.html), 
 [Dao/CrudDao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dao_view.html), 
-[JdbcUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtil_view.html)/[JdbcUtils](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtils_view.html),
-[CSVUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/CSVUtil_view.html), 
+[JdbcUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtil_view.html)/[JdbcUtils](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtils_view.html), 
 [DataSet](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DataSet_view.html), 
 [ConditionFactory(CF)](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/ConditionFactory_view.html), 
 [SQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/SQLBuilder_view.html), 
@@ -71,7 +70,7 @@ userDao.deleteById(100L);
 * Gradle:
 ```gradle
 // JDK 1.8 or above:
-compile 'com.landawn:abacus-jdbc:2.7.0'
+compile 'com.landawn:abacus-jdbc:2.7.1'
 ```
 
 ## User Guide:

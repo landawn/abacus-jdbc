@@ -1,3 +1,9 @@
+### 2.7.1
+
+* Refactoring `JdbcUtils` and move `CSVUtil` to project abacus-util.
+* Improvements and bug fix.
+
+
 ### 2.7.0
 
 * Improvements and bug fix.
