@@ -39,7 +39,6 @@ import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Profiler;
-import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLParser;
 import com.landawn.abacus.util.SQLTransaction;
 import com.landawn.abacus.util.stream.IntStream;
@@ -78,16 +77,16 @@ public class UncheckedDaoTest {
         assertFalse(JdbcUtil.call(() -> uncheckedUserDao.isThere("user", "last_name", ids.get(0))));
     }
 
-    @Test
-    public void test_cacheSql() {
-        String sql = NSC.selectFrom(User.class).where(CF.eq("id")).sql();
-        uncheckedUserDao.cacheSql("selectById", sql);
-
-        assertEquals(sql, uncheckedUserDao.getCachedSql("selectById"));
-
-        uncheckedUserDao.cacheSqls("selectById", N.asList(sql));
-        assertEquals(N.asList(sql), uncheckedUserDao.getCachedSqls("selectById"));
-    }
+    //    @Test
+    //    public void test_cacheSql() {
+    //        String sql = NSC.selectFrom(User.class).where(CF.eq("id")).sql();
+    //        uncheckedUserDao.cacheSql("selectById", sql);
+    //
+    //        assertEquals(sql, uncheckedUserDao.getCachedSql("selectById"));
+    //
+    //        uncheckedUserDao.cacheSqls("selectById", N.asList(sql));
+    //        assertEquals(N.asList(sql), uncheckedUserDao.getCachedSqls("selectById"));
+    //    }
 
     @Test
     public void test_orderBy() {

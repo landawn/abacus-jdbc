@@ -8530,17 +8530,21 @@ public final class JdbcUtil {
         @NonDBOperation
         AsyncExecutor asyncExecutor();
 
-        @NonDBOperation
-        void cacheSql(String key, String sql);
-
-        @NonDBOperation
-        void cacheSqls(String key, Collection<String> sqls);
-
-        @NonDBOperation
-        String getCachedSql(String key);
-
-        @NonDBOperation
-        ImmutableList<String> getCachedSqls(String key);
+        //    @NonDBOperation
+        //    @Beta
+        //    void cacheSql(String key, String sql);
+        //
+        //    @NonDBOperation
+        //    @Beta
+        //    void cacheSqls(String key, Collection<String> sqls);
+        //
+        //    @NonDBOperation
+        //    @Beta
+        //    String getCachedSql(String key);
+        //
+        //    @NonDBOperation
+        //    @Beta
+        //    ImmutableList<String> getCachedSqls(String key);
 
         //    /**
         //     *
@@ -10584,6 +10588,283 @@ public final class JdbcUtil {
      */
     @Beta
     public static interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T, SB, TD>> extends NoUpdateDao<T, SB, TD> {
+        /**
+         *
+         * @param query
+         * @return
+         * @throws SQLException
+         */
+        @Override
+        @NonDBOperation
+        default PreparedQuery prepareQuery(final String query) throws SQLException {
+            if (!JdbcUtil.isSelectQuery(query)) {
+                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
+            }
+
+            return JdbcUtil.prepareQuery(dataSource(), query);
+        }
+
+        /**
+         *
+         * @param query
+         * @param generateKeys
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param query
+         * @param returnColumnIndexes
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param query
+         * @param returnColumnIndexes
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param sql
+         * @param stmtCreator
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default PreparedQuery prepareQuery(final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
+                throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param namedQuery
+         * @return
+         * @throws SQLException
+         */
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final String namedQuery) throws SQLException {
+            if (!JdbcUtil.isSelectQuery(namedQuery)) {
+                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
+            }
+
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery);
+        }
+
+        /**
+         *
+         * @param namedQuery
+         * @param generateKeys
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param namedQuery
+         * @param returnColumnIndexes
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param namedQuery
+         * @param returnColumnNames
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param namedQuery
+         * @param stmtCreator
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final String namedQuery,
+                final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
+                throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param namedSql the named query
+         * @return
+         * @throws SQLException
+         */
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final ParsedSql namedSql) throws SQLException {
+            if (!JdbcUtil.isSelectQuery(namedSql.sql())) {
+                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
+            }
+
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedSql);
+        }
+
+        /**
+         *
+         * @param namedSql the named query
+         * @param generateKeys
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param namedQuery
+         * @param returnColumnIndexes
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param namedQuery
+         * @param returnColumnNames
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param namedSql the named query
+         * @param stmtCreator
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final ParsedSql namedSql,
+                final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
+                throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param query
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default PreparedCallableQuery prepareCallableQuery(final String query) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         *
+         * @param sql
+         * @param stmtCreator
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default PreparedCallableQuery prepareCallableQuery(final String sql,
+                final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
+                throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
 
         /**
          *
@@ -10595,7 +10876,7 @@ public final class JdbcUtil {
          */
         @Deprecated
         @Override
-        default void save(final T entityToSave) throws UnsupportedOperationException, SQLException {
+        default void save(final T entityToSave) throws UnsupportedOperationException, UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -17227,6 +17508,10 @@ public final class JdbcUtil {
 
     static <R> BiRowMapper<R> toBiRowMapper(final RowMapper<R> rowMapper) {
         return (rs, columnLabels) -> rowMapper.apply(rs);
+    }
+
+    static boolean isSelectQuery(String sql) throws UnsupportedOperationException {
+        return sql.startsWith("select ") || sql.startsWith("SELECT ") || StringUtil.startsWithIgnoreCase(StringUtil.trim(sql), "select ");
     }
 
     static final Throwables.Consumer<? super Exception, SQLException> throwSQLExceptionAction = e -> {

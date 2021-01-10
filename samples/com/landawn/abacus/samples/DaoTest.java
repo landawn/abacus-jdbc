@@ -43,7 +43,6 @@ import com.landawn.abacus.util.JdbcUtil.RowConsumer;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Pair;
 import com.landawn.abacus.util.Profiler;
-import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLParser;
 import com.landawn.abacus.util.SQLTransaction;
@@ -157,16 +156,16 @@ public class DaoTest {
         assertFalse(userDao.isThere("user", "last_name", ids.get(0)));
     }
 
-    @Test
-    public void test_cacheSql() throws SQLException {
-        String sql = NSC.selectFrom(User.class).where(CF.eq("id")).sql();
-        userDao.cacheSql("selectById", sql);
-
-        assertEquals(sql, userDao.getCachedSql("selectById"));
-
-        userDao.cacheSqls("selectById", N.asList(sql));
-        assertEquals(N.asList(sql), userDao.getCachedSqls("selectById"));
-    }
+    //    @Test
+    //    public void test_cacheSql() throws SQLException {
+    //        String sql = NSC.selectFrom(User.class).where(CF.eq("id")).sql();
+    //        userDao.cacheSql("selectById", sql);
+    //
+    //        assertEquals(sql, userDao.getCachedSql("selectById"));
+    //
+    //        userDao.cacheSqls("selectById", N.asList(sql));
+    //        assertEquals(N.asList(sql), userDao.getCachedSqls("selectById"));
+    //    }
 
     @Test
     public void test_orderBy() throws SQLException {
