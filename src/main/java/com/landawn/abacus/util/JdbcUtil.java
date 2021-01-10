@@ -10621,11 +10621,12 @@ public final class JdbcUtil {
          *
          * @param query
          * @return
+         * @throws UnsupportedOperationException if the specified {@code query} is not a select sql statement.
          * @throws SQLException
          */
         @Override
         @NonDBOperation
-        default PreparedQuery prepareQuery(final String query) throws SQLException {
+        default PreparedQuery prepareQuery(final String query) throws UnsupportedOperationException, SQLException {
             if (!JdbcUtil.isSelectQuery(query)) {
                 throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
             }
@@ -10702,11 +10703,12 @@ public final class JdbcUtil {
          *
          * @param namedQuery
          * @return
+         * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a select sql statement.
          * @throws SQLException
          */
         @Override
         @NonDBOperation
-        default NamedQuery prepareNamedQuery(final String namedQuery) throws SQLException {
+        default NamedQuery prepareNamedQuery(final String namedQuery) throws UnsupportedOperationException, SQLException {
             if (!JdbcUtil.isSelectQuery(namedQuery)) {
                 throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
             }
@@ -10784,11 +10786,12 @@ public final class JdbcUtil {
          *
          * @param namedSql the named query
          * @return
+         * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a select sql statement.
          * @throws SQLException
          */
         @Override
         @NonDBOperation
-        default NamedQuery prepareNamedQuery(final ParsedSql namedSql) throws SQLException {
+        default NamedQuery prepareNamedQuery(final ParsedSql namedSql) throws UnsupportedOperationException, SQLException {
             if (!JdbcUtil.isSelectQuery(namedSql.sql())) {
                 throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
             }

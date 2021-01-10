@@ -429,6 +429,15 @@ public class DaoTest {
             //
         }
 
+        readOnlyUserDao.prepareQuery("select * from user").stream(List.class).forEach(Fn.println());
+
+        try {
+            readOnlyUserDao.prepareQuery("delete from user").execute();
+            fail("Should throw UnsupportedOperationException");
+        } catch (UnsupportedOperationException e) {
+            //
+        }
+
         userDao.delete(user);
     }
 
