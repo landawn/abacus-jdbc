@@ -90,7 +90,7 @@ public class UncheckedDaoTest {
 
     @Test
     public void test_orderBy() {
-        JdbcUtil.enableSqlLog(true);
+        JdbcUtil.enableSqlLog();
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.save(user, N.asList("id", "firstName", "lastName", "email"));
 
@@ -161,7 +161,7 @@ public class UncheckedDaoTest {
             synchronized (JdbcUtil.class) {
                 if (idx % 2 == 0) {
                     System.out.println("###: enable log for Thread: " + Thread.currentThread());
-                    JdbcUtil.enableSqlLog(true);
+                    JdbcUtil.enableSqlLog();
                     JdbcUtil.setMinExecutionTimeForSqlPerfLog(0);
                 } else {
                     System.out.println("+++: Not enable log for Thread: " + Thread.currentThread());
@@ -176,7 +176,7 @@ public class UncheckedDaoTest {
 
                 if (idx % 2 == 0) {
                     System.out.println("###: disable log for Thread: " + Thread.currentThread());
-                    JdbcUtil.enableSqlLog(false);
+                    JdbcUtil.disableSqlLog();
                     JdbcUtil.setMinExecutionTimeForSqlPerfLog(-1);
                 }
             }

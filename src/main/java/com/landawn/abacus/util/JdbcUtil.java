@@ -4617,7 +4617,9 @@ public final class JdbcUtil {
      * Enable/Disable sql log in current thread.
      *
      * @param b {@code true} to enable, {@code false} to disable.
+     * @deprecated replaced by {@code enableSqlLog/disableSqlLog}.
      */
+    @Deprecated
     public static void enableSqlLog(final boolean b) {
         enableSqlLog(b, DEFAULT_MAX_SQL_LOG_LENGTH);
     }
@@ -4627,7 +4629,9 @@ public final class JdbcUtil {
      * 
      * @param b {@code true} to enable, {@code false} to disable.
      * @param maxSqlLogLength default value is 1024
+     * @deprecated replaced by {@code enableSqlLog/disableSqlLog}.
      */
+    @Deprecated
     public static void enableSqlLog(final boolean b, final int maxSqlLogLength) {
         // synchronized (isSQLLogEnabled_TL) {
         if (logger.isDebugEnabled() && isSQLLogEnabled_TL.get().isEnabled != b) {
@@ -4640,6 +4644,31 @@ public final class JdbcUtil {
 
         isSQLLogEnabled_TL.get().set(b, maxSqlLogLength);
         // }
+    }
+
+    /**
+     * Enable sql log in current thread.
+     * 
+     */
+    public static void enableSqlLog() {
+        enableSqlLog(DEFAULT_MAX_SQL_LOG_LENGTH);
+    }
+
+    /**
+     * Enable sql log in current thread.
+     *  
+     * @param maxSqlLogLength default value is 1024
+     */
+    public static void enableSqlLog(final int maxSqlLogLength) {
+        enableSqlLog(true, maxSqlLogLength);
+    }
+
+    /**
+     * Disable sql log in current thread.
+     * 
+     */
+    public static void disableSqlLog() {
+        enableSqlLog(false, isSQLLogEnabled_TL.get().maxSqlLogLength);
     }
 
     /**
