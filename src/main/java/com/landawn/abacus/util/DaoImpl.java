@@ -1946,8 +1946,8 @@ final class DaoImpl {
         final Cache<String, Object> cache = daoCache == null ? CacheFactory.createLocalCache(capacity, evictDelay) : daoCache;
         final Set<Method> nonDBOperationSet = new HashSet<>();
 
-        final Map<String, String> sqlCache = new ConcurrentHashMap<>(0);
-        final Map<String, ImmutableList<String>> sqlsCache = new ConcurrentHashMap<>(0);
+        //    final Map<String, String> sqlCache = new ConcurrentHashMap<>(0);
+        //    final Map<String, ImmutableList<String>> sqlsCache = new ConcurrentHashMap<>(0);
 
         final Map<String, JoinInfo> joinEntityInfo = (JdbcUtil.JoinEntityHelper.class.isAssignableFrom(daoInterface)
                 || JdbcUtil.UncheckedJoinEntityHelper.class.isAssignableFrom(daoInterface)) ? JdbcUtil.getEntityJoinInfo(daoInterface, entityClass) : null;
@@ -2027,24 +2027,24 @@ final class DaoImpl {
                 call = (proxy, args) -> primaryDataSource;
             } else if (methodName.equals("sqlMapper") && SQLMapper.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> newSQLMapper;
-            } else if (methodName.equals("cacheSql") && void.class.isAssignableFrom(returnType) && paramLen == 2 && paramTypes[0].equals(String.class)
-                    && paramTypes[1].equals(String.class)) {
-                call = (proxy, args) -> {
-                    sqlCache.put(N.checkArgNotNullOrEmpty((String) args[0], "key"), N.checkArgNotNullOrEmpty((String) args[1], "sql"));
-                    return null;
-                };
-            } else if (methodName.equals("cacheSqls") && void.class.isAssignableFrom(returnType) && paramLen == 2 && paramTypes[0].equals(String.class)
-                    && paramTypes[1].equals(Collection.class)) {
-                call = (proxy, args) -> {
-                    sqlsCache.put(N.checkArgNotNullOrEmpty((String) args[0], "key"),
-                            ImmutableList.copyOf(N.checkArgNotNullOrEmpty((Collection<String>) args[1], "sqls")));
-                    return null;
-                };
-            } else if (methodName.equals("getCachedSql") && String.class.isAssignableFrom(returnType) && paramLen == 1 && paramTypes[0].equals(String.class)) {
-                call = (proxy, args) -> sqlCache.get(args[0]);
-            } else if (methodName.equals("getCachedSqls") && ImmutableList.class.isAssignableFrom(returnType) && paramLen == 1
-                    && paramTypes[0].equals(String.class)) {
-                call = (proxy, args) -> sqlsCache.get(args[0]);
+                //    } else if (methodName.equals("cacheSql") && void.class.isAssignableFrom(returnType) && paramLen == 2 && paramTypes[0].equals(String.class)
+                //            && paramTypes[1].equals(String.class)) {
+                //        call = (proxy, args) -> {
+                //            sqlCache.put(N.checkArgNotNullOrEmpty((String) args[0], "key"), N.checkArgNotNullOrEmpty((String) args[1], "sql"));
+                //            return null;
+                //        };
+                //    } else if (methodName.equals("cacheSqls") && void.class.isAssignableFrom(returnType) && paramLen == 2 && paramTypes[0].equals(String.class)
+                //            && paramTypes[1].equals(Collection.class)) {
+                //        call = (proxy, args) -> {
+                //            sqlsCache.put(N.checkArgNotNullOrEmpty((String) args[0], "key"),
+                //                    ImmutableList.copyOf(N.checkArgNotNullOrEmpty((Collection<String>) args[1], "sqls")));
+                //            return null;
+                //        };
+                //    } else if (methodName.equals("getCachedSql") && String.class.isAssignableFrom(returnType) && paramLen == 1 && paramTypes[0].equals(String.class)) {
+                //        call = (proxy, args) -> sqlCache.get(args[0]);
+                //    } else if (methodName.equals("getCachedSqls") && ImmutableList.class.isAssignableFrom(returnType) && paramLen == 1
+                //            && paramTypes[0].equals(String.class)) {
+                //        call = (proxy, args) -> sqlsCache.get(args[0]);
             } else {
                 final boolean isStreamReturn = Stream.class.isAssignableFrom(returnType) || ExceptionalStream.class.isAssignableFrom(returnType);
                 final boolean throwsSQLException = StreamEx.of(m.getExceptionTypes()).anyMatch(e -> SQLException.class.equals(e));
