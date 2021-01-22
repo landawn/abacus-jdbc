@@ -5578,12 +5578,12 @@ public class SQLExecutor {
 
             String attr = attrs.get(SQLMapper.BATCH_SIZE);
             if (attr != null) {
-                jdbcSettings.setBatchSize(N.parseInt(attr));
+                jdbcSettings.setBatchSize(Numbers.toInt(attr));
             }
 
             attr = attrs.get(SQLMapper.FETCH_SIZE);
             if (attr != null) {
-                jdbcSettings.setFetchSize(N.parseInt(attr));
+                jdbcSettings.setFetchSize(Numbers.toInt(attr));
             }
 
             attr = attrs.get(SQLMapper.RESULT_SET_TYPE);
@@ -5599,7 +5599,7 @@ public class SQLExecutor {
 
             attr = attrs.get(SQLMapper.TIMEOUT);
             if (attr != null) {
-                jdbcSettings.setQueryTimeout(N.parseInt(attr));
+                jdbcSettings.setQueryTimeout(Numbers.toInt(attr));
             }
 
             return jdbcSettings;
