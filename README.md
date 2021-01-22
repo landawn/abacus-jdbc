@@ -78,7 +78,7 @@ compile 'com.landawn:abacus-jdbc:2.7.2'
 * [Programming in JDBC/DB with JdbcUtil/PreparedQuery/SQLExecutor/Mapper/Dao](https://github.com/landawn/abacus-jdbc/wiki/Programming-in-RDBMS-with-Jdbc,-PreparedQuery,-SQLExecutor,-Mapper-and-Dao).
 * [More samples](https://github.com/landawn/abacus-jdbc/tree/master/samples/com/landawn/abacus/samples)
 
-## Also See: [abacus-util](https://github.com/landawn/abacus-util), [abacus-entity-manager](https://github.com/landawn/abacus-entity-manager), [abacus-da](https://github.com/landawn/abacus-da).
+## Also See: [abacus-common](https://github.com/landawn/abacus-common), [abacus-entity-manager](https://github.com/landawn/abacus-entity-manager), [abacus-da](https://github.com/landawn/abacus-da).
 
 ## Recommended Java programming libraries/frameworks:
 [lombok](https://github.com/rzwitserloot/lombok), [Guava](https://github.com/google/guava), [Kyro](https://github.com/EsotericSoftware/kryo), [snappy-java](https://github.com/xerial/snappy-java), [lz4-java](https://github.com/lz4/lz4-java), [Caffeine](https://github.com/ben-manes/caffeine), [Ehcache](http://www.ehcache.org/), [Chronicle-Map](https://github.com/OpenHFT/Chronicle-Map), [echarts](https://github.com/apache/incubator-echarts), 
