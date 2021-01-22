@@ -4820,6 +4820,94 @@ public final class JdbcUtil {
     }
 
     /**
+     * Since enable/disable sql log flag is attached with current thread, so don't execute the specified {@code sqlAction} in another thread.
+     * 
+     * @param <E>
+     * @param sqlAction
+     * @throws E
+     */
+    public static <E extends Exception> void runWithSqlLogDisabled(final Throwables.Runnable<E> sqlAction) throws E {
+        if (isSqlLogEnabled()) {
+            disableSqlLog();
+
+            try {
+                sqlAction.run();
+            } finally {
+                enableSqlLog();
+            }
+        } else {
+            sqlAction.run();
+        }
+    }
+
+    /**
+     * Since enable/disable sql log flag is attached with current thread, so don't execute the specified {@code sqlAction} in another thread.
+     * 
+     * @param <R>
+     * @param <E>
+     * @param sqlAction
+     * @return
+     * @throws E
+     */
+    public static <R, E extends Exception> R callWithSqlLogDisabled(final Throwables.Callable<R, E> sqlAction) throws E {
+        if (isSqlLogEnabled()) {
+            disableSqlLog();
+
+            try {
+                return sqlAction.call();
+            } finally {
+                enableSqlLog();
+            }
+        } else {
+            return sqlAction.call();
+        }
+    }
+
+    /**
+     * Since using or not using Spring transaction flag is attached with current thread, so don't execute the specified {@code sqlAction} in another thread.
+     * 
+     * @param <E>
+     * @param sqlAction
+     * @throws E
+     */
+    public static <E extends Exception> void runWithoutUsingSpringTransaction(final Throwables.Runnable<E> sqlAction) throws E {
+        if (isSpringTransactionalNotUsed()) {
+            sqlAction.run();
+        } else {
+            doNotUseSpringTransactional(true);
+
+            try {
+                sqlAction.run();
+            } finally {
+                doNotUseSpringTransactional(false);
+            }
+        }
+    }
+
+    /**
+     * Since using or not using Spring transaction flag is attached with current thread, so don't execute the specified {@code sqlAction} in another thread.
+     * 
+     * @param <R>
+     * @param <E>
+     * @param sqlAction
+     * @return
+     * @throws E
+     */
+    public static <R, E extends Exception> R callWithoutUsingSpringTransaction(final Throwables.Callable<R, E> sqlAction) throws E {
+        if (isSpringTransactionalNotUsed()) {
+            return sqlAction.call();
+        } else {
+            doNotUseSpringTransactional(true);
+
+            try {
+                return sqlAction.call();
+            } finally {
+                doNotUseSpringTransactional(false);
+            }
+        }
+    }
+
+    /**
      * Checks if is default id prop value.
      *
      * @param propValue
