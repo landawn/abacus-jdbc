@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 
@@ -2531,6 +2532,16 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
 
     /**
      *
+     * @return
+     * @throws DuplicatedResultException If More than one record found by the query
+     * @throws SQLException the SQL exception
+     */
+    public Optional<Map<String, Object>> findOnlyOne() throws DuplicatedResultException, SQLException {
+        return findOnlyOne(BiRowMapper.TO_MAP);
+    }
+
+    /**
+     *
      * @param <T>
      * @param targetClass
      * @return
@@ -2563,6 +2574,16 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
      */
     public <T> Optional<T> findOnlyOne(BiRowMapper<T> rowMapper) throws DuplicatedResultException, SQLException {
         return Optional.ofNullable(findOnlyOneOrNull(rowMapper));
+    }
+
+    /**
+     *
+     * @return
+     * @throws DuplicatedResultException If More than one record found by the query
+     * @throws SQLException the SQL exception
+     */
+    public Map<String, Object> findOnlyOneOrNull() throws DuplicatedResultException, SQLException {
+        return findOnlyOneOrNull(BiRowMapper.TO_MAP);
     }
 
     /**
@@ -2659,6 +2680,15 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
 
     /**
      *
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public Optional<Map<String, Object>> findFirst() throws SQLException {
+        return findFirst(BiRowMapper.TO_MAP);
+    }
+
+    /**
+     *
      * @param <T>
      * @param targetClass
      * @return
@@ -2716,6 +2746,15 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
     @Deprecated
     public <T> Optional<T> findFirst(final BiRowFilter rowFilter, BiRowMapper<T> rowMapper) throws SQLException {
         return Optional.ofNullable(findFirstOrNull(rowFilter, rowMapper));
+    }
+
+    /**
+     *
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public Map<String, Object> findFirstOrNull() throws SQLException {
+        return findFirstOrNull(BiRowMapper.TO_MAP);
     }
 
     /**
@@ -2840,6 +2879,15 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
         } finally {
             closeAfterExecutionIfAllowed();
         }
+    }
+
+    /**
+     *  
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public List<Map<String, Object>> list() throws SQLException {
+        return list(BiRowMapper.TO_MAP);
     }
 
     /**
@@ -3005,6 +3053,11 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
     }
 
     // Will it cause confusion if it's called in transaction?
+
+    public ExceptionalStream<Map<String, Object>, SQLException> stream() throws SQLException {
+        return stream(BiRowMapper.TO_MAP);
+    }
+
     /**
      * lazy-execution, lazy-fetch.
      *

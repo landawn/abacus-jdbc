@@ -158,13 +158,13 @@ public final class Columns {
         public static final BiParametersSetter<AbstractPreparedQuery, Timestamp> SET_TIMESTAMP = (preparedQuery, x) -> preparedQuery.setTimestamp(1, x);
 
         @SuppressWarnings("rawtypes")
-        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_DATE_2 = (preparedQuery, x) -> preparedQuery.setDate(1, x);
+        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_DATE_JU = (preparedQuery, x) -> preparedQuery.setDate(1, x);
 
         @SuppressWarnings("rawtypes")
-        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIME_2 = (preparedQuery, x) -> preparedQuery.setTime(1, x);
+        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIME_JU = (preparedQuery, x) -> preparedQuery.setTime(1, x);
 
         @SuppressWarnings("rawtypes")
-        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIMESTAMP_2 = (preparedQuery, x) -> preparedQuery.setTimestamp(1, x);
+        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIMESTAMP_JU = (preparedQuery, x) -> preparedQuery.setTimestamp(1, x);
 
         @SuppressWarnings("rawtypes")
         public static final BiParametersSetter<AbstractPreparedQuery, byte[]> SET_BYTES = (preparedQuery, x) -> preparedQuery.setBytes(1, x);
@@ -313,13 +313,13 @@ public final class Columns {
         public static final BiParametersSetter<AbstractPreparedQuery, Timestamp> SET_TIMESTAMP = (preparedQuery, x) -> preparedQuery.setTimestamp(2, x);
 
         @SuppressWarnings("rawtypes")
-        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_DATE_2 = (preparedQuery, x) -> preparedQuery.setDate(2, x);
+        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_DATE_JU = (preparedQuery, x) -> preparedQuery.setDate(2, x);
 
         @SuppressWarnings("rawtypes")
-        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIME_2 = (preparedQuery, x) -> preparedQuery.setTime(2, x);
+        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIME_JU = (preparedQuery, x) -> preparedQuery.setTime(2, x);
 
         @SuppressWarnings("rawtypes")
-        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIMESTAMP_2 = (preparedQuery, x) -> preparedQuery.setTimestamp(2, x);
+        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIMESTAMP_JU = (preparedQuery, x) -> preparedQuery.setTimestamp(2, x);
 
         @SuppressWarnings("rawtypes")
         public static final BiParametersSetter<AbstractPreparedQuery, byte[]> SET_BYTES = (preparedQuery, x) -> preparedQuery.setBytes(2, x);
@@ -467,13 +467,13 @@ public final class Columns {
         public static final BiParametersSetter<AbstractPreparedQuery, Timestamp> SET_TIMESTAMP = (preparedQuery, x) -> preparedQuery.setTimestamp(3, x);
 
         @SuppressWarnings("rawtypes")
-        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_DATE_2 = (preparedQuery, x) -> preparedQuery.setDate(3, x);
+        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_DATE_JU = (preparedQuery, x) -> preparedQuery.setDate(3, x);
 
         @SuppressWarnings("rawtypes")
-        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIME_2 = (preparedQuery, x) -> preparedQuery.setTime(3, x);
+        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIME_JU = (preparedQuery, x) -> preparedQuery.setTime(3, x);
 
         @SuppressWarnings("rawtypes")
-        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIMESTAMP_2 = (preparedQuery, x) -> preparedQuery.setTimestamp(3, x);
+        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIMESTAMP_JU = (preparedQuery, x) -> preparedQuery.setTimestamp(3, x);
 
         @SuppressWarnings("rawtypes")
         public static final BiParametersSetter<AbstractPreparedQuery, byte[]> SET_BYTES = (preparedQuery, x) -> preparedQuery.setBytes(3, x);
