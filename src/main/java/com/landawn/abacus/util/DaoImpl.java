@@ -2957,7 +2957,7 @@ final class DaoImpl {
                             N.checkArgPositive(batchSize, "batchSize");
 
                             if (N.isNullOrEmpty(entities)) {
-                                return 0;
+                                return new ArrayList<>();
                             }
 
                             final boolean allDefaultIdValue = N.allMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)));
@@ -3038,7 +3038,7 @@ final class DaoImpl {
                             N.checkArgPositive(batchSize, "batchSize");
 
                             if (N.isNullOrEmpty(entities)) {
-                                return 0;
+                                return new ArrayList<>();
                             }
 
                             if (callGenerateIdForInsert && !N.disjoint(propNamesToInsert, idPropNameSet)) {
@@ -3114,7 +3114,7 @@ final class DaoImpl {
                             N.checkArgPositive(batchSize, "batchSize");
 
                             if (N.isNullOrEmpty(entities)) {
-                                return 0;
+                                return new ArrayList<>();
                             }
 
                             if (callGenerateIdForInsertWithSql) {
