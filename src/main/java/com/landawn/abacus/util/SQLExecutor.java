@@ -7053,7 +7053,7 @@ public class SQLExecutor {
         public DataSet query(final Connection conn, final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
-            return sqlExecutor.query(conn, sp.sql, StatementSetter.DEFAULT, null, jdbcSettings, JdbcUtil.getParameterArray(sp));
+            return sqlExecutor.query(conn, sp.sql, StatementSetter.DEFAULT, ResultExtractor.TO_DATA_SET, jdbcSettings, JdbcUtil.getParameterArray(sp));
         }
 
         /**
