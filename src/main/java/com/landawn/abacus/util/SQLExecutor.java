@@ -37,6 +37,7 @@ import com.landawn.abacus.DataSet;
 import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.EntityId;
 import com.landawn.abacus.IsolationLevel;
+import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.core.DirtyMarkerUtil;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -502,6 +503,31 @@ public class SQLExecutor {
         }
 
         _defaultIsolationLevel = defaultIsolationLevel;
+    }
+
+    /**
+     *
+     * @param url
+     * @param user
+     * @param password
+     * @return
+     */
+    @Beta
+    public static SQLExecutor create(final String url, final String user, final String password) {
+        return new SQLExecutor(JdbcUtil.createHikariDataSource(url, user, password));
+    }
+
+    /**
+     *
+     * @param driverClass
+     * @param url
+     * @param user
+     * @param password
+     * @return
+     */
+    @Beta
+    public static SQLExecutor create(final DataSource dataSource) {
+        return new SQLExecutor(dataSource);
     }
 
     /**
