@@ -33,6 +33,7 @@ import com.landawn.abacus.util.HandlerFactory;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.PSC;
+import com.landawn.abacus.util.SQLExecutor;
 import com.landawn.abacus.util.SQLTransaction;
 
 /**
@@ -67,6 +68,8 @@ public class Jdbc {
 
     static final DeviceDao deviceDao = JdbcUtil.createDao(DeviceDao.class, dataSource);
     static final AddressDao addressDao = JdbcUtil.createDao(AddressDao.class, dataSource);
+
+    static final SQLExecutor sqlExecutor = new SQLExecutor(dataSource);
 
     // initialize DB schema.
     static {

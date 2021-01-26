@@ -11,8 +11,10 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.experimental.Accessors;
 
 @Data
+@Accessors(chain = true)
 public final class JdbcSettings {
 
     public static final String DEFAULT_GENERATED_ID_PROP_NAME = "id";
