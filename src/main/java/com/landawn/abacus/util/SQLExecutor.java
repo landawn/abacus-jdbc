@@ -4986,35 +4986,37 @@ public class SQLExecutor {
                 ? getDataSource(N.EMPTY_STRING, N.EMPTY_OBJECT_ARRAY, jdbcSettings)
                 : _ds;
 
-        SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+        //    SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+        //
+        //    if (tran == null) {
+        //        Connection conn = null;
+        //        boolean noException = false;
+        //
+        //        try {
+        //            conn = getConnection(ds);
+        //            tran = new SQLTransaction(ds, conn, isolationLevel == IsolationLevel.DEFAULT ? _defaultIsolationLevel : isolationLevel, CreatedBy.JDBC_UTIL,
+        //                    true);
+        //            tran.incrementAndGetRef(isolationLevel, forUpdateOnly);
+        //
+        //            noException = true;
+        //        } catch (SQLException e) {
+        //            throw new UncheckedSQLException(e);
+        //        } finally {
+        //            if (noException == false) {
+        //                close(conn, ds);
+        //            }
+        //        }
+        //
+        //        logger.info("Create a new SQLTransaction(id={})", tran.id());
+        //        SQLTransaction.putTransaction(tran);
+        //    } else {
+        //        logger.info("Reusing the existing SQLTransaction(id={})", tran.id());
+        //        tran.incrementAndGetRef(isolationLevel, forUpdateOnly);
+        //    }
+        //
+        //    return tran;
 
-        if (tran == null) {
-            Connection conn = null;
-            boolean noException = false;
-
-            try {
-                conn = getConnection(ds);
-                tran = new SQLTransaction(ds, conn, isolationLevel == IsolationLevel.DEFAULT ? _defaultIsolationLevel : isolationLevel, CreatedBy.JDBC_UTIL,
-                        true);
-                tran.incrementAndGetRef(isolationLevel, forUpdateOnly);
-
-                noException = true;
-            } catch (SQLException e) {
-                throw new UncheckedSQLException(e);
-            } finally {
-                if (noException == false) {
-                    close(conn, ds);
-                }
-            }
-
-            logger.info("Create a new SQLTransaction(id={})", tran.id());
-            SQLTransaction.putTransaction(tran);
-        } else {
-            logger.info("Reusing the existing SQLTransaction(id={})", tran.id());
-            tran.incrementAndGetRef(isolationLevel, forUpdateOnly);
-        }
-
-        return tran;
+        return JdbcUtil.beginTransaction(ds, isolationLevel, forUpdateOnly);
     }
 
     /**
