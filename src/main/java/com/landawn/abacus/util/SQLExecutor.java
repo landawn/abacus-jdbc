@@ -4299,6 +4299,133 @@ public class SQLExecutor {
     }
 
     /**
+     * Refer to {@code beginTransaction(IsolationLevel, boolean, JdbcSettings)}.
+     *
+     * @return
+     * @see #beginTransaction(IsolationLevel, boolean, JdbcSettings)
+     */
+    public SQLTransaction beginTransaction() {
+        return beginTransaction(IsolationLevel.DEFAULT);
+    }
+
+    /**
+     *
+     * Refer to {@code beginTransaction(IsolationLevel, boolean, JdbcSettings)}.
+     *
+     * @param isolationLevel
+     * @return
+     * @see #beginTransaction(IsolationLevel, boolean, JdbcSettings)
+     */
+    public SQLTransaction beginTransaction(final IsolationLevel isolationLevel) {
+        return beginTransaction(isolationLevel, false);
+    }
+
+    /**
+     *
+     * Refer to {@code beginTransaction(IsolationLevel, boolean, JdbcSettings)}.
+     *
+     * @param forUpdateOnly
+     * @return
+     * @see #beginTransaction(IsolationLevel, boolean, JdbcSettings)
+     */
+    public SQLTransaction beginTransaction(final boolean forUpdateOnly) {
+        return beginTransaction(IsolationLevel.DEFAULT, forUpdateOnly);
+    }
+
+    /**
+     *
+     * Refer to {@code beginTransaction(IsolationLevel, boolean, JdbcSettings)}.
+     *
+     * @param isolationLevel
+     * @param forUpdateOnly
+     * @return
+     * @see #beginTransaction(IsolationLevel, boolean, JdbcSettings)
+     */
+    public SQLTransaction beginTransaction(IsolationLevel isolationLevel, boolean forUpdateOnly) {
+        return beginTransaction(isolationLevel, forUpdateOnly, null);
+    }
+
+    /**
+     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction} or in {@code Spring} with the same {@code DataSource} in the same thread,
+     * the {@code Connection} started the Transaction will be used here.
+     * That's to say the transaction started by {@code JdbcUtil.beginTransaction} or in {@code Spring} will have the final control on commit/roll back over the {@code Connection}.
+     * <br />
+     * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
+     * <br />
+     * Transactions started by {@code SQLExecutor.beginTransaction} won't be shared by {@code JdbcUtil.beginTransaction} or Spring.
+     *
+     * <br />
+     * <br />
+     *
+     * The connection opened in the transaction will be automatically closed after the transaction is committed or rolled back.
+     * DON'T close it again by calling the close method.
+     *
+     * Transaction can be started:
+     *
+     * <pre>
+     * <code>
+     *   final SQLTransaction tran = sqlExecutor.beginTransaction(IsolationLevel.READ_COMMITTED);
+     *   try {
+     *       // sqlExecutor.insert(...);
+     *       // sqlExecutor.update(...);
+     *       // sqlExecutor.query(...);
+     *
+     *       tran.commit();
+     *   } finally {
+     *       // The connection will be automatically closed after the transaction is committed or rolled back.
+     *       tran.rollbackIfNotCommitted();
+     *   }
+     * </code>
+     * </pre>
+     *
+     * @param isolationLevel
+     * @param forUpdateOnly
+     * @param jdbcSettings
+     * @return
+     */
+    public SQLTransaction beginTransaction(final IsolationLevel isolationLevel, final boolean forUpdateOnly, final JdbcSettings jdbcSettings) {
+        N.checkArgNotNull(isolationLevel, "isolationLevel");
+
+        //    final DataSource ds = jdbcSettings != null && jdbcSettings.getQueryWithDataSource() != null
+        //            ? getDataSource(N.EMPTY_STRING, N.EMPTY_OBJECT_ARRAY, jdbcSettings)
+        //            : _ds;
+
+        //    final DataSource ds = _ds;
+        //
+        //    SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+        //
+        //    if (tran == null) {
+        //        Connection conn = null;
+        //        boolean noException = false;
+        //
+        //        try {
+        //            conn = getConnection(ds);
+        //            tran = new SQLTransaction(ds, conn, isolationLevel == IsolationLevel.DEFAULT ? _defaultIsolationLevel : isolationLevel, CreatedBy.JDBC_UTIL,
+        //                    true);
+        //            tran.incrementAndGetRef(isolationLevel, forUpdateOnly);
+        //
+        //            noException = true;
+        //        } catch (SQLException e) {
+        //            throw new UncheckedSQLException(e);
+        //        } finally {
+        //            if (noException == false) {
+        //                close(conn, ds);
+        //            }
+        //        }
+        //
+        //        logger.info("Create a new SQLTransaction(id={})", tran.id());
+        //        SQLTransaction.putTransaction(tran);
+        //    } else {
+        //        logger.info("Reusing the existing SQLTransaction(id={})", tran.id());
+        //        tran.incrementAndGetRef(isolationLevel, forUpdateOnly);
+        //    }
+        //
+        //    return tran;
+
+        return JdbcUtil.beginTransaction(_ds, isolationLevel, forUpdateOnly);
+    }
+
+    /**
      * Does table exist.
      *
      * @param tableName
