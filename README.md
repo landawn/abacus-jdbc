@@ -13,6 +13,7 @@ Hope it will bring you the programming experiences: coding with SQL/DB is just l
 [NamedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/NamedQuery_view.html), 
 [PreparedCallableQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedCallableQuery_view.html), 
 [Dao/CrudDao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dao_view.html), 
+[SQLExecutor](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/SQLExecutor_view.html), 
 [JdbcUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtil_view.html)/[JdbcUtils](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtils_view.html), 
 [DataSet](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DataSet_view.html), 
 [ConditionFactory(CF)](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/ConditionFactory_view.html), 
@@ -21,8 +22,7 @@ Hope it will bring you the programming experiences: coding with SQL/DB is just l
 [Columns](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Columns_view.html)...
 
 
-* Looking for: [SQLExecutor](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/SQLExecutor_view.html), 
-[Mapper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Mapper_view.html)? Please refer to branch: [sql_executor_mapper](https://github.com/landawn/abacus-jdbc/tree/sql_executor_mapper)
+* Looking for: [Mapper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Mapper_view.html)? Please refer to branch: [sql_executor_mapper](https://github.com/landawn/abacus-jdbc/tree/sql_executor_mapper)
 
 
 ## Why abacus-jdbc?
