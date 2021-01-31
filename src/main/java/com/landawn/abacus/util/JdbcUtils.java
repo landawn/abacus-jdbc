@@ -570,7 +570,7 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings({ "rawtypes", "null" })
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
             final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
             final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, E {

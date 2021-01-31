@@ -1294,16 +1294,18 @@ final class DaoImpl {
 
         JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter = null;
 
-        boolean hasParameterSetter = false;
+        boolean hasParameterSetter = true;
 
-        if (hasParameterSetter = paramLen - defineParamLen > 0 && JdbcUtil.ParametersSetter.class.isAssignableFrom(paramTypes[defineParamLen])) {
+        if (paramLen - defineParamLen > 0 && JdbcUtil.ParametersSetter.class.isAssignableFrom(paramTypes[defineParamLen])) {
             parametersSetter = (preparedQuery, args) -> preparedQuery.settParameters((JdbcUtil.ParametersSetter) args[defineParamLen]);
-        } else if (hasParameterSetter = paramLen - defineParamLen > 1 && JdbcUtil.BiParametersSetter.class.isAssignableFrom(paramTypes[defineParamLen + 1])) {
+        } else if (paramLen - defineParamLen > 1 && JdbcUtil.BiParametersSetter.class.isAssignableFrom(paramTypes[defineParamLen + 1])) {
             parametersSetter = (preparedQuery, args) -> preparedQuery.settParameters(args[defineParamLen],
                     (JdbcUtil.BiParametersSetter) args[defineParamLen + 1]);
-        } else if (hasParameterSetter = paramLen - defineParamLen > 1 && JdbcUtil.TriParametersSetter.class.isAssignableFrom(paramTypes[defineParamLen + 1])) {
+        } else if (paramLen - defineParamLen > 1 && JdbcUtil.TriParametersSetter.class.isAssignableFrom(paramTypes[defineParamLen + 1])) {
             parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[defineParamLen],
                     (JdbcUtil.TriParametersSetter) args[defineParamLen + 1]);
+        } else {
+            hasParameterSetter = false;
         }
 
         if (hasParameterSetter) {
@@ -1444,7 +1446,7 @@ final class DaoImpl {
         return parametersSetter == null ? JdbcUtil.BiParametersSetter.DO_NOTHING : parametersSetter;
     }
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings({ "rawtypes", "unused" })
     private static AbstractPreparedQuery prepareQuery(final Dao proxy, final Method method, final Object[] args, final int[] defineParamIndexes,
             final String[] defines, final boolean isNamedQuery, String query, ParsedSql namedSql, final boolean isBatch, final int batchSize,
             final int fetchSize, final FetchDirection fetchDirection, final int queryTimeout, final boolean returnGeneratedKeys,
@@ -1537,6 +1539,7 @@ final class DaoImpl {
         return result;
     }
 
+    @SuppressWarnings("unused")
     private static String createCacheKey(final Method method, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
         String cachekey = null;
 
@@ -1600,7 +1603,7 @@ final class DaoImpl {
         }
     }
 
-    @SuppressWarnings({ "rawtypes" })
+    @SuppressWarnings({ "rawtypes", "null", "resource" })
     static <T, SB extends SQLBuilder, TD extends JdbcUtil.Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
             final SQLMapper sqlMapper, final Cache<String, Object> daoCache, final Executor executor) {
         N.checkArgNotNull(daoInterface, "daoInterface");
