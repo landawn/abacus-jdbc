@@ -32,6 +32,7 @@ import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.HandlerFactory;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLExecutor;
 import com.landawn.abacus.util.SQLTransaction;
@@ -141,6 +142,11 @@ public class Jdbc {
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         }
+    }
+
+    @Test
+    public void crud_by_Jdbc_00() throws SQLException {
+        NSC.selectFrom(User.class).where(CF.gt("id", 1)).toNamedQuery(dataSource).list().forEach(Fn.println());
     }
 
     @Test

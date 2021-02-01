@@ -4076,7 +4076,7 @@ public class SQLExecutor {
                             }
 
                             @Override
-                            public void skip(long n) {
+                            public void advance(long n) {
                                 N.checkArgNotNegative(n, "n");
 
                                 if (skipped == false) {

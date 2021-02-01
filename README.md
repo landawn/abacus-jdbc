@@ -1,7 +1,7 @@
 # abacus-jdbc
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc.svg)](https://maven-badges.herokuapp.com/maven-central/com.landawn/abacus-jdbc/)
-[![Javadocs](https://img.shields.io/badge/javadoc-2.7.5-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/2.7.5/index.html)
+[![Javadocs](https://img.shields.io/badge/javadoc-2.7.6-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/2.7.6/index.html)
 
 Hope it will bring you the programming experiences: coding with SQL/DB is just like coding with Collections.
 
@@ -70,7 +70,7 @@ userDao.deleteById(100L);
 * Gradle:
 ```gradle
 // JDK 1.8 or above:
-compile 'com.landawn:abacus-jdbc:2.7.5'
+compile 'com.landawn:abacus-jdbc:2.7.6'
 ```
 
 ## User Guide:
@@ -81,8 +81,24 @@ compile 'com.landawn:abacus-jdbc:2.7.5'
 ## Also See: [abacus-common](https://github.com/landawn/abacus-common), [abacus-entity-manager](https://github.com/landawn/abacus-entity-manager), [abacus-da](https://github.com/landawn/abacus-da).
 
 ## Recommended Java programming libraries/frameworks:
-[lombok](https://github.com/rzwitserloot/lombok), [Guava](https://github.com/google/guava), [Kyro](https://github.com/EsotericSoftware/kryo), [snappy-java](https://github.com/xerial/snappy-java), [lz4-java](https://github.com/lz4/lz4-java), [Caffeine](https://github.com/ben-manes/caffeine), [Ehcache](http://www.ehcache.org/), [Chronicle-Map](https://github.com/OpenHFT/Chronicle-Map), [echarts](https://github.com/apache/incubator-echarts), 
-[Chartjs](https://github.com/chartjs/Chart.js), [Highcharts](https://www.highcharts.com/blog/products/highcharts/), [Apache POI](https://github.com/apache/poi)/[easyexcel](https://github.com/alibaba/easyexcel), [mapstruct](https://github.com/mapstruct/mapstruct), [Sharding-JDBC](https://github.com/apache/incubator-shardingsphere), [fastutil](https://github.com/vigna/fastutil), [hppc](https://github.com/carrotsearch/hppc), [re2j](https://github.com/google/re2j)...[awesome-java](https://github.com/akullpp/awesome-java)
+[lombok](https://github.com/rzwitserloot/lombok), 
+[Guava](https://github.com/google/guava), 
+[Jinq](https://github.com/landawn/Jinq), 
+[Kyro](https://github.com/EsotericSoftware/kryo), 
+[snappy-java](https://github.com/xerial/snappy-java), 
+[lz4-java](https://github.com/lz4/lz4-java), 
+[Caffeine](https://github.com/ben-manes/caffeine), 
+[Ehcache](http://www.ehcache.org/), 
+[Chronicle-Map](https://github.com/OpenHFT/Chronicle-Map), 
+[echarts](https://github.com/apache/incubator-echarts), 
+[Chartjs](https://github.com/chartjs/Chart.js), 
+[Highcharts](https://www.highcharts.com/blog/products/highcharts/), 
+[Apache POI](https://github.com/apache/poi)/[easyexcel](https://github.com/alibaba/easyexcel), 
+[mapstruct](https://github.com/mapstruct/mapstruct), 
+[Sharding-JDBC](https://github.com/apache/incubator-shardingsphere), 
+[fastutil](https://github.com/vigna/fastutil), 
+[hppc](https://github.com/carrotsearch/hppc), 
+[re2j](https://github.com/google/re2j)...[awesome-java](https://github.com/akullpp/awesome-java)
 
 ## Recommended Java programming tools:
 [Spotbugs](https://github.com/spotbugs/spotbugs), [JaCoCo](https://www.eclemma.org/jacoco/)...

@@ -3722,7 +3722,7 @@ public final class JdbcUtil {
             }
 
             @Override
-            public void skip(long n) throws SQLException {
+            public void advance(long n) throws SQLException {
                 N.checkArgNotNegative(n, "n");
 
                 final long m = hasNext ? n - 1 : n;
@@ -3846,7 +3846,7 @@ public final class JdbcUtil {
             }
 
             @Override
-            public void skip(long n) throws SQLException {
+            public void advance(long n) throws SQLException {
                 N.checkArgNotNegative(n, "n");
 
                 final long m = hasNext ? n - 1 : n;
