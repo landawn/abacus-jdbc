@@ -91,7 +91,7 @@ public class DaoTest {
 
     @Test
     public void test_orderBy() throws SQLException {
-        JdbcUtil.enableSqlLog(true);
+        JdbcUtil.enableSqlLog();
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
 
@@ -162,7 +162,7 @@ public class DaoTest {
             synchronized (JdbcUtil.class) {
                 if (idx % 2 == 0) {
                     System.out.println("###: enable log for Thread: " + Thread.currentThread());
-                    JdbcUtil.enableSqlLog(true);
+                    JdbcUtil.enableSqlLog();
                     JdbcUtil.setMinExecutionTimeForSqlPerfLog(0);
                 } else {
                     System.out.println("+++: Not enable log for Thread: " + Thread.currentThread());
@@ -177,7 +177,7 @@ public class DaoTest {
 
                 if (idx % 2 == 0) {
                     System.out.println("###: disable log for Thread: " + Thread.currentThread());
-                    JdbcUtil.enableSqlLog(false);
+                    JdbcUtil.disableSqlLog();
                     JdbcUtil.setMinExecutionTimeForSqlPerfLog(-1);
                 }
             }
@@ -598,7 +598,7 @@ public class DaoTest {
     }
 
     @Test
-    public void test_SQLParser() throws SQLException {
+    public void test_SQLParser() {
         String sql = "SELECT employee_id AS \"employeeId\", first_name AS \"firstName\", last_name AS \"lastName\" FROM employee WHERE 1 < 2";
         SQLParser.parse(sql).forEach(Fn.println());
     }

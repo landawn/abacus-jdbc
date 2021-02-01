@@ -132,6 +132,7 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
      * @param closeHandler A task to execute after this {@code Query} is closed
      * @return
      */
+    @SuppressWarnings("hiding")
     public This onClose(final Runnable closeHandler) {
         checkArgNotNull(closeHandler, "closeHandler");
         assertNotClosed();
@@ -2392,7 +2393,7 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
      * @return
      * @throws SQLException the SQL exception
      */
-    private <T> T get(Class<T> targetClass, ResultSet rs) throws SQLException {
+    private static <T> T get(Class<T> targetClass, ResultSet rs) throws SQLException {
         final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
         return BiRowMapper.to(targetClass).apply(rs, columnLabels);

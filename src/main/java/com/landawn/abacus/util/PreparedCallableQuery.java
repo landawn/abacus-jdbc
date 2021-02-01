@@ -79,12 +79,12 @@ import com.landawn.abacus.util.Tuple.Tuple4;
  */
 public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStatement, PreparedCallableQuery> {
 
-    final CallableStatement stmt;
+    final CallableStatement cstmt;
     List<OutParam> outParams;
 
     PreparedCallableQuery(CallableStatement stmt) {
         super(stmt);
-        this.stmt = stmt;
+        this.cstmt = stmt;
     }
 
     /**
@@ -97,7 +97,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @see java.sql.Types
      */
     public PreparedCallableQuery setNull(String parameterName, int sqlType) throws SQLException {
-        stmt.setNull(parameterName, sqlType);
+        cstmt.setNull(parameterName, sqlType);
 
         return this;
     }
@@ -113,7 +113,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @see java.sql.Types
      */
     public PreparedCallableQuery setNull(String parameterName, int sqlType, String typeName) throws SQLException {
-        stmt.setNull(parameterName, sqlType, typeName);
+        cstmt.setNull(parameterName, sqlType, typeName);
 
         return this;
     }
@@ -127,7 +127,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setBoolean(String parameterName, boolean x) throws SQLException {
-        stmt.setBoolean(parameterName, x);
+        cstmt.setBoolean(parameterName, x);
 
         return this;
     }
@@ -141,7 +141,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setBoolean(String parameterName, Boolean x) throws SQLException {
-        stmt.setBoolean(parameterName, N.defaultIfNull(x));
+        cstmt.setBoolean(parameterName, N.defaultIfNull(x));
 
         return this;
     }
@@ -155,7 +155,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setByte(String parameterName, byte x) throws SQLException {
-        stmt.setByte(parameterName, x);
+        cstmt.setByte(parameterName, x);
 
         return this;
     }
@@ -169,7 +169,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setByte(String parameterName, Byte x) throws SQLException {
-        stmt.setByte(parameterName, N.defaultIfNull(x));
+        cstmt.setByte(parameterName, N.defaultIfNull(x));
 
         return this;
     }
@@ -183,7 +183,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setShort(String parameterName, short x) throws SQLException {
-        stmt.setShort(parameterName, x);
+        cstmt.setShort(parameterName, x);
 
         return this;
     }
@@ -197,7 +197,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setShort(String parameterName, Short x) throws SQLException {
-        stmt.setShort(parameterName, N.defaultIfNull(x));
+        cstmt.setShort(parameterName, N.defaultIfNull(x));
 
         return this;
     }
@@ -211,7 +211,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setInt(String parameterName, int x) throws SQLException {
-        stmt.setInt(parameterName, x);
+        cstmt.setInt(parameterName, x);
 
         return this;
     }
@@ -225,7 +225,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setInt(String parameterName, Integer x) throws SQLException {
-        stmt.setInt(parameterName, N.defaultIfNull(x));
+        cstmt.setInt(parameterName, N.defaultIfNull(x));
 
         return this;
     }
@@ -239,7 +239,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setLong(String parameterName, long x) throws SQLException {
-        stmt.setLong(parameterName, x);
+        cstmt.setLong(parameterName, x);
 
         return this;
     }
@@ -253,7 +253,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setLong(String parameterName, Long x) throws SQLException {
-        stmt.setLong(parameterName, N.defaultIfNull(x));
+        cstmt.setLong(parameterName, N.defaultIfNull(x));
 
         return this;
     }
@@ -267,7 +267,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setFloat(String parameterName, float x) throws SQLException {
-        stmt.setFloat(parameterName, x);
+        cstmt.setFloat(parameterName, x);
 
         return this;
     }
@@ -281,7 +281,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setFloat(String parameterName, Float x) throws SQLException {
-        stmt.setFloat(parameterName, N.defaultIfNull(x));
+        cstmt.setFloat(parameterName, N.defaultIfNull(x));
 
         return this;
     }
@@ -295,7 +295,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setDouble(String parameterName, double x) throws SQLException {
-        stmt.setDouble(parameterName, x);
+        cstmt.setDouble(parameterName, x);
 
         return this;
     }
@@ -309,7 +309,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setDouble(String parameterName, Double x) throws SQLException {
-        stmt.setDouble(parameterName, N.defaultIfNull(x));
+        cstmt.setDouble(parameterName, N.defaultIfNull(x));
 
         return this;
     }
@@ -323,7 +323,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setBigDecimal(String parameterName, BigDecimal x) throws SQLException {
-        stmt.setBigDecimal(parameterName, x);
+        cstmt.setBigDecimal(parameterName, x);
 
         return this;
     }
@@ -337,7 +337,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setString(String parameterName, String x) throws SQLException {
-        stmt.setString(parameterName, x);
+        cstmt.setString(parameterName, x);
 
         return this;
     }
@@ -351,7 +351,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setDate(String parameterName, java.sql.Date x) throws SQLException {
-        stmt.setDate(parameterName, x);
+        cstmt.setDate(parameterName, x);
 
         return this;
     }
@@ -365,7 +365,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setDate(String parameterName, java.util.Date x) throws SQLException {
-        stmt.setDate(parameterName, x == null ? null : x instanceof java.sql.Date ? (java.sql.Date) x : new java.sql.Date(x.getTime()));
+        cstmt.setDate(parameterName, x == null ? null : x instanceof java.sql.Date ? (java.sql.Date) x : new java.sql.Date(x.getTime()));
 
         return this;
     }
@@ -379,7 +379,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setTime(String parameterName, java.sql.Time x) throws SQLException {
-        stmt.setTime(parameterName, x);
+        cstmt.setTime(parameterName, x);
 
         return this;
     }
@@ -393,7 +393,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setTime(String parameterName, java.util.Date x) throws SQLException {
-        stmt.setTime(parameterName, x == null ? null : x instanceof java.sql.Time ? (java.sql.Time) x : new java.sql.Time(x.getTime()));
+        cstmt.setTime(parameterName, x == null ? null : x instanceof java.sql.Time ? (java.sql.Time) x : new java.sql.Time(x.getTime()));
 
         return this;
     }
@@ -407,7 +407,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setTimestamp(String parameterName, java.sql.Timestamp x) throws SQLException {
-        stmt.setTimestamp(parameterName, x);
+        cstmt.setTimestamp(parameterName, x);
 
         return this;
     }
@@ -421,7 +421,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setTimestamp(String parameterName, java.util.Date x) throws SQLException {
-        stmt.setTimestamp(parameterName, x == null ? null : x instanceof java.sql.Timestamp ? (java.sql.Timestamp) x : new java.sql.Timestamp(x.getTime()));
+        cstmt.setTimestamp(parameterName, x == null ? null : x instanceof java.sql.Timestamp ? (java.sql.Timestamp) x : new java.sql.Timestamp(x.getTime()));
 
         return this;
     }
@@ -435,7 +435,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setBytes(String parameterName, byte[] x) throws SQLException {
-        stmt.setBytes(parameterName, x);
+        cstmt.setBytes(parameterName, x);
 
         return this;
     }
@@ -449,7 +449,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setAsciiStream(String parameterName, InputStream inputStream) throws SQLException {
-        stmt.setAsciiStream(parameterName, inputStream);
+        cstmt.setAsciiStream(parameterName, inputStream);
 
         return this;
     }
@@ -464,7 +464,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setAsciiStream(String parameterName, InputStream inputStream, long length) throws SQLException {
-        stmt.setAsciiStream(parameterName, inputStream, length);
+        cstmt.setAsciiStream(parameterName, inputStream, length);
 
         return this;
     }
@@ -478,7 +478,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setBinaryStream(String parameterName, InputStream inputStream) throws SQLException {
-        stmt.setBinaryStream(parameterName, inputStream);
+        cstmt.setBinaryStream(parameterName, inputStream);
 
         return this;
     }
@@ -493,7 +493,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setBinaryStream(String parameterName, InputStream inputStream, long length) throws SQLException {
-        stmt.setBinaryStream(parameterName, inputStream, length);
+        cstmt.setBinaryStream(parameterName, inputStream, length);
 
         return this;
     }
@@ -507,7 +507,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setCharacterStream(String parameterName, Reader reader) throws SQLException {
-        stmt.setCharacterStream(parameterName, reader);
+        cstmt.setCharacterStream(parameterName, reader);
 
         return this;
     }
@@ -522,7 +522,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setCharacterStream(String parameterName, Reader reader, long length) throws SQLException {
-        stmt.setCharacterStream(parameterName, reader, length);
+        cstmt.setCharacterStream(parameterName, reader, length);
 
         return this;
     }
@@ -536,7 +536,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setNCharacterStream(String parameterName, Reader reader) throws SQLException {
-        stmt.setNCharacterStream(parameterName, reader);
+        cstmt.setNCharacterStream(parameterName, reader);
 
         return this;
     }
@@ -551,7 +551,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setNCharacterStream(String parameterName, Reader reader, long length) throws SQLException {
-        stmt.setNCharacterStream(parameterName, reader, length);
+        cstmt.setNCharacterStream(parameterName, reader, length);
 
         return this;
     }
@@ -565,7 +565,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setBlob(String parameterName, java.sql.Blob x) throws SQLException {
-        stmt.setBlob(parameterName, x);
+        cstmt.setBlob(parameterName, x);
 
         return this;
     }
@@ -579,7 +579,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setBlob(String parameterName, InputStream inputStream) throws SQLException {
-        stmt.setBlob(parameterName, inputStream);
+        cstmt.setBlob(parameterName, inputStream);
 
         return this;
     }
@@ -594,7 +594,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setBlob(String parameterName, InputStream inputStream, long length) throws SQLException {
-        stmt.setBlob(parameterName, inputStream, length);
+        cstmt.setBlob(parameterName, inputStream, length);
 
         return this;
     }
@@ -608,7 +608,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setClob(String parameterName, java.sql.Clob x) throws SQLException {
-        stmt.setClob(parameterName, x);
+        cstmt.setClob(parameterName, x);
 
         return this;
     }
@@ -622,7 +622,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setClob(String parameterName, Reader reader) throws SQLException {
-        stmt.setClob(parameterName, reader);
+        cstmt.setClob(parameterName, reader);
 
         return this;
     }
@@ -637,7 +637,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setClob(String parameterName, Reader reader, long length) throws SQLException {
-        stmt.setClob(parameterName, reader, length);
+        cstmt.setClob(parameterName, reader, length);
 
         return this;
     }
@@ -651,7 +651,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setNClob(String parameterName, java.sql.NClob x) throws SQLException {
-        stmt.setNClob(parameterName, x);
+        cstmt.setNClob(parameterName, x);
 
         return this;
     }
@@ -665,7 +665,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setNClob(String parameterName, Reader reader) throws SQLException {
-        stmt.setNClob(parameterName, reader);
+        cstmt.setNClob(parameterName, reader);
 
         return this;
     }
@@ -680,7 +680,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setNClob(String parameterName, Reader reader, long length) throws SQLException {
-        stmt.setNClob(parameterName, reader, length);
+        cstmt.setNClob(parameterName, reader, length);
 
         return this;
     }
@@ -694,7 +694,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setURL(String parameterName, URL x) throws SQLException {
-        stmt.setURL(parameterName, x);
+        cstmt.setURL(parameterName, x);
 
         return this;
     }
@@ -708,7 +708,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setSQLXML(String parameterName, java.sql.SQLXML x) throws SQLException {
-        stmt.setSQLXML(parameterName, x);
+        cstmt.setSQLXML(parameterName, x);
 
         return this;
     }
@@ -722,7 +722,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setRowId(String parameterName, java.sql.RowId x) throws SQLException {
-        stmt.setRowId(parameterName, x);
+        cstmt.setRowId(parameterName, x);
 
         return this;
     }
@@ -737,9 +737,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      */
     public PreparedCallableQuery setObject(String parameterName, Object x) throws SQLException {
         if (x == null) {
-            stmt.setObject(parameterName, x);
+            cstmt.setObject(parameterName, x);
         } else {
-            N.typeOf(x.getClass()).set(stmt, parameterName, x);
+            N.typeOf(x.getClass()).set(cstmt, parameterName, x);
         }
 
         return this;
@@ -756,7 +756,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @see java.sql.Types
      */
     public PreparedCallableQuery setObject(String parameterName, Object x, int sqlType) throws SQLException {
-        stmt.setObject(parameterName, x, sqlType);
+        cstmt.setObject(parameterName, x, sqlType);
 
         return this;
     }
@@ -773,7 +773,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @see java.sql.Types
      */
     public PreparedCallableQuery setObject(String parameterName, Object x, int sqlType, int scaleOrLength) throws SQLException {
-        stmt.setObject(parameterName, x, sqlType, scaleOrLength);
+        cstmt.setObject(parameterName, x, sqlType, scaleOrLength);
 
         return this;
     }
@@ -817,7 +817,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
 
         for (String parameterName : parameterNames) {
             propInfo = entityInfo.getPropInfo(parameterName);
-            propInfo.dbType.set(stmt, parameterName, propInfo.getPropValue(entity));
+            propInfo.dbType.set(cstmt, parameterName, propInfo.getPropValue(entity));
         }
 
         return this;
@@ -833,7 +833,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @see java.sql.Types
      */
     public PreparedCallableQuery registerOutParameter(int parameterIndex, int sqlType) throws SQLException {
-        stmt.registerOutParameter(parameterIndex, sqlType);
+        cstmt.registerOutParameter(parameterIndex, sqlType);
 
         addOutParameters(new OutParam(parameterIndex, null, sqlType, null, -1));
 
@@ -859,7 +859,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @see java.sql.Types
      */
     public PreparedCallableQuery registerOutParameter(int parameterIndex, int sqlType, int scale) throws SQLException {
-        stmt.registerOutParameter(parameterIndex, sqlType, scale);
+        cstmt.registerOutParameter(parameterIndex, sqlType, scale);
 
         addOutParameters(new OutParam(parameterIndex, null, sqlType, null, scale));
 
@@ -877,7 +877,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @see java.sql.Types
      */
     public PreparedCallableQuery registerOutParameter(int parameterIndex, int sqlType, String typeName) throws SQLException {
-        stmt.registerOutParameter(parameterIndex, sqlType, typeName);
+        cstmt.registerOutParameter(parameterIndex, sqlType, typeName);
 
         addOutParameters(new OutParam(parameterIndex, null, sqlType, typeName, -1));
 
@@ -894,7 +894,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @see java.sql.Types
      */
     public PreparedCallableQuery registerOutParameter(String parameterName, int sqlType) throws SQLException {
-        stmt.registerOutParameter(parameterName, sqlType);
+        cstmt.registerOutParameter(parameterName, sqlType);
 
         addOutParameters(new OutParam(-1, parameterName, sqlType, null, -1));
 
@@ -912,7 +912,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @see java.sql.Types
      */
     public PreparedCallableQuery registerOutParameter(String parameterName, int sqlType, int scale) throws SQLException {
-        stmt.registerOutParameter(parameterName, sqlType, scale);
+        cstmt.registerOutParameter(parameterName, sqlType, scale);
 
         addOutParameters(new OutParam(-1, parameterName, sqlType, null, scale));
 
@@ -930,7 +930,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @see java.sql.Types
      */
     public PreparedCallableQuery registerOutParameter(String parameterName, int sqlType, String typeName) throws SQLException {
-        stmt.registerOutParameter(parameterName, sqlType, typeName);
+        cstmt.registerOutParameter(parameterName, sqlType, typeName);
 
         addOutParameters(new OutParam(-1, parameterName, sqlType, typeName, -1));
 
@@ -946,7 +946,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery registerOutParameter(int parameterIndex, SQLType sqlType) throws SQLException {
-        stmt.registerOutParameter(parameterIndex, sqlType);
+        cstmt.registerOutParameter(parameterIndex, sqlType);
 
         addOutParameters(new OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), null, -1));
 
@@ -963,7 +963,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery registerOutParameter(int parameterIndex, SQLType sqlType, int scale) throws SQLException {
-        stmt.registerOutParameter(parameterIndex, sqlType, scale);
+        cstmt.registerOutParameter(parameterIndex, sqlType, scale);
 
         addOutParameters(new OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), null, scale));
 
@@ -980,7 +980,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery registerOutParameter(int parameterIndex, SQLType sqlType, String typeName) throws SQLException {
-        stmt.registerOutParameter(parameterIndex, sqlType, typeName);
+        cstmt.registerOutParameter(parameterIndex, sqlType, typeName);
 
         addOutParameters(new OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), typeName, -1));
 
@@ -996,7 +996,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery registerOutParameter(String parameterName, SQLType sqlType) throws SQLException {
-        stmt.registerOutParameter(parameterName, sqlType);
+        cstmt.registerOutParameter(parameterName, sqlType);
 
         addOutParameters(new OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), null, -1));
 
@@ -1013,7 +1013,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery registerOutParameter(String parameterName, SQLType sqlType, int scale) throws SQLException {
-        stmt.registerOutParameter(parameterName, sqlType, scale);
+        cstmt.registerOutParameter(parameterName, sqlType, scale);
 
         addOutParameters(new OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), null, scale));
 
@@ -1030,7 +1030,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery registerOutParameter(String parameterName, SQLType sqlType, String typeName) throws SQLException {
-        stmt.registerOutParameter(parameterName, sqlType, typeName);
+        cstmt.registerOutParameter(parameterName, sqlType, typeName);
 
         addOutParameters(new OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), typeName, -1));
 
@@ -1093,18 +1093,18 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     @Override
     protected ResultSet executeQuery() throws SQLException {
         if (!isFetchDirectionSet) {
-            stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
+            cstmt.setFetchDirection(ResultSet.FETCH_FORWARD);
         }
 
-        boolean ret = JdbcUtil.execute(stmt);
-        int updateCount = stmt.getUpdateCount();
+        boolean ret = JdbcUtil.execute(cstmt);
+        int updateCount = cstmt.getUpdateCount();
 
         while (ret || updateCount != -1) {
             if (ret) {
-                return stmt.getResultSet();
+                return cstmt.getResultSet();
             } else {
-                ret = stmt.getMoreResults();
-                updateCount = stmt.getUpdateCount();
+                ret = cstmt.getMoreResults();
+                updateCount = cstmt.getUpdateCount();
             }
         }
 
@@ -1160,10 +1160,10 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            final boolean isFirstResultSet = JdbcUtil.execute(stmt);
+            final boolean isFirstResultSet = JdbcUtil.execute(cstmt);
             outParams = outParams == null ? N.<OutParam> emptyList() : outParams;
 
-            return getter.apply(isFirstResultSet, outParams, stmt);
+            return getter.apply(isFirstResultSet, outParams, cstmt);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1213,10 +1213,10 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            final boolean isFirstResultSet = JdbcUtil.execute(stmt);
+            final boolean isFirstResultSet = JdbcUtil.execute(cstmt);
             outParams = outParams == null ? N.<OutParam> emptyList() : outParams;
 
-            consumer.accept(isFirstResultSet, outParams, stmt);
+            consumer.accept(isFirstResultSet, outParams, cstmt);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1231,9 +1231,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            return JdbcUtil.getOutParameters(stmt, outParams);
+            return JdbcUtil.getOutParameters(cstmt, outParams);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1260,9 +1260,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            return ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(stmt)).map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator)).toList();
+            return ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(cstmt)).map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator)).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1280,9 +1280,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            return ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(stmt)).map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator)).toList();
+            return ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(cstmt)).map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator)).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1316,7 +1316,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                 result = JdbcUtil.extractAndCloseResultSet(rs, resultExtrator);
             }
 
-            return Tuple.of(result, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1345,7 +1345,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                 }
             }
 
-            return Tuple.of(result, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1372,13 +1372,13 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            final List<R> resultList = ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(stmt))
+            final List<R> resultList = ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(cstmt))
                     .map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator))
                     .toList();
 
-            return Tuple.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1396,13 +1396,13 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            final List<R> resultList = ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(stmt))
+            final List<R> resultList = ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(cstmt))
                     .map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator))
                     .toList();
 
-            return Tuple.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1423,9 +1423,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(stmt);
+            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(cstmt);
 
             R1 result1 = null;
             R2 result2 = null;
@@ -1460,9 +1460,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(stmt);
+            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(cstmt);
 
             R1 result1 = null;
             R2 result2 = null;
@@ -1475,7 +1475,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                 result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtrator2);
             }
 
-            return Tuple.of(result1, result2, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(result1, result2, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1500,9 +1500,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(stmt);
+            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(cstmt);
 
             R1 result1 = null;
             R2 result2 = null;
@@ -1545,9 +1545,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(stmt);
+            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(cstmt);
 
             R1 result1 = null;
             R2 result2 = null;
@@ -1565,7 +1565,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                 result3 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtrator3);
             }
 
-            return Tuple.of(result1, result2, result3, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(result1, result2, result3, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1605,7 +1605,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                 }
             }
 
-            return Tuple.of(result, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1636,7 +1636,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                 }
             }
 
-            return Tuple.of(result, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1665,7 +1665,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                 }
             }
 
-            return Tuple.of(result, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1698,7 +1698,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
                 }
             }
 
-            return Tuple.of(result, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1729,9 +1729,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            return JdbcUtil.streamAllResultSets(stmt, rowMapper).toList();
+            return JdbcUtil.streamAllResultSets(cstmt, rowMapper).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1751,9 +1751,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            return JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).toList();
+            return JdbcUtil.streamAllResultSets(cstmt, rowFilter, rowMapper).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1771,9 +1771,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            return JdbcUtil.streamAllResultSets(stmt, rowMapper).toList();
+            return JdbcUtil.streamAllResultSets(cstmt, rowMapper).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1793,9 +1793,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            return JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).toList();
+            return JdbcUtil.streamAllResultSets(cstmt, rowFilter, rowMapper).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1826,11 +1826,11 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            final List<T> resultList = JdbcUtil.streamAllResultSets(stmt, rowMapper).toList();
+            final List<T> resultList = JdbcUtil.streamAllResultSets(cstmt, rowMapper).toList();
 
-            return Tuple.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1850,11 +1850,11 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            final List<T> resultList = JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).toList();
+            final List<T> resultList = JdbcUtil.streamAllResultSets(cstmt, rowFilter, rowMapper).toList();
 
-            return Tuple.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1872,11 +1872,11 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            final List<T> resultList = JdbcUtil.streamAllResultSets(stmt, rowMapper).toList();
+            final List<T> resultList = JdbcUtil.streamAllResultSets(cstmt, rowMapper).toList();
 
-            return Tuple.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1896,11 +1896,11 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(stmt);
+            JdbcUtil.execute(cstmt);
 
-            final List<T> resultList = JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).toList();
+            final List<T> resultList = JdbcUtil.streamAllResultSets(cstmt, rowFilter, rowMapper).toList();
 
-            return Tuple.of(resultList, JdbcUtil.getOutParameters(stmt, outParams));
+            return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1930,10 +1930,10 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
-        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(stmt);
+        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(cstmt);
 
         return ExceptionalStream.just(supplier, SQLException.class)
-                .flatMap(it -> JdbcUtil.streamAllResultSets(stmt, rowMapper))
+                .flatMap(it -> JdbcUtil.streamAllResultSets(cstmt, rowMapper))
                 .onClose(() -> closeAfterExecutionIfAllowed());
     }
 
@@ -1950,10 +1950,10 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
-        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(stmt);
+        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(cstmt);
 
         return ExceptionalStream.just(supplier, SQLException.class)
-                .flatMap(it -> JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper))
+                .flatMap(it -> JdbcUtil.streamAllResultSets(cstmt, rowFilter, rowMapper))
                 .onClose(() -> closeAfterExecutionIfAllowed());
     }
 
@@ -1968,10 +1968,10 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
-        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(stmt);
+        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(cstmt);
 
         return ExceptionalStream.just(supplier, SQLException.class)
-                .flatMap(it -> JdbcUtil.streamAllResultSets(stmt, rowMapper))
+                .flatMap(it -> JdbcUtil.streamAllResultSets(cstmt, rowMapper))
                 .onClose(() -> closeAfterExecutionIfAllowed());
     }
 
@@ -1988,10 +1988,10 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
-        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(stmt);
+        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(cstmt);
 
         return ExceptionalStream.just(supplier, SQLException.class)
-                .flatMap(it -> JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper))
+                .flatMap(it -> JdbcUtil.streamAllResultSets(cstmt, rowFilter, rowMapper))
                 .onClose(() -> closeAfterExecutionIfAllowed());
     }
 
@@ -2004,7 +2004,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     @Override
     protected void closeStatement() {
         try {
-            stmt.clearParameters();
+            cstmt.clearParameters();
         } catch (SQLException e) {
             logger.warn("failed to reset statement", e);
         } finally {

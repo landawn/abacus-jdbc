@@ -3992,7 +3992,7 @@ public final class JdbcUtil {
             }
 
             @Override
-            public void skip(long n) throws SQLException {
+            public void advance(long n) throws SQLException {
                 N.checkArgNotNegative(n, "n");
 
                 final long m = hasNext ? n - 1 : n;
@@ -4116,7 +4116,7 @@ public final class JdbcUtil {
             }
 
             @Override
-            public void skip(long n) throws SQLException {
+            public void advance(long n) throws SQLException {
                 N.checkArgNotNegative(n, "n");
 
                 final long m = hasNext ? n - 1 : n;
@@ -4640,7 +4640,7 @@ public final class JdbcUtil {
         @Override
         public Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException {
             return stmt.getObject(outParameterName);
-        };
+        }
     };
 
     /**
@@ -6569,7 +6569,7 @@ public final class JdbcUtil {
                 return initColumnGetter(rs.getMetaData().getColumnCount());
             }
 
-            Columns.ColumnGetter<?>[] initColumnGetter(final int columnCount) throws SQLException {
+            Columns.ColumnGetter<?>[] initColumnGetter(final int columnCount) {
                 final Columns.ColumnGetter<?>[] rsColumnGetters = new Columns.ColumnGetter<?>[columnCount + 1];
                 rsColumnGetters[0] = columnGetterMap.get(0);
 
@@ -6592,6 +6592,7 @@ public final class JdbcUtil {
                     private volatile int rsColumnCount = -1;
                     private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
 
+                    @SuppressWarnings("hiding")
                     @Override
                     public Object[] apply(ResultSet rs) throws SQLException {
                         Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
@@ -6625,6 +6626,7 @@ public final class JdbcUtil {
                     private volatile int rsColumnCount = -1;
                     private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
 
+                    @SuppressWarnings("hiding")
                     @Override
                     public List<Object> apply(ResultSet rs) throws SQLException {
                         Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
@@ -6653,6 +6655,7 @@ public final class JdbcUtil {
                     private Object[] outputRow = null;
                     private DisposableObjArray output;
 
+                    @SuppressWarnings("hiding")
                     @Override
                     public R apply(ResultSet rs) throws SQLException {
                         Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
@@ -6870,6 +6873,7 @@ public final class JdbcUtil {
                     return new BiRowMapper<T>() {
                         private volatile String[] columnLabels = null;
 
+                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             final int columnCount = columnLabelList.size();
@@ -6926,6 +6930,7 @@ public final class JdbcUtil {
                         private final boolean isListOrArrayList = targetClass.equals(List.class) || targetClass.equals(ArrayList.class);
                         private volatile String[] columnLabels = null;
 
+                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             final int columnCount = columnLabelList.size();
@@ -6967,6 +6972,7 @@ public final class JdbcUtil {
                         private final boolean isLinkedHashMap = targetClass.equals(LinkedHashMap.class);
                         private volatile String[] columnLabels = null;
 
+                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             final int columnCount = columnLabelList.size();
@@ -6993,6 +6999,7 @@ public final class JdbcUtil {
                         private final boolean isLinkedHashMap = targetClass.equals(LinkedHashMap.class);
                         private volatile String[] columnLabels = null;
 
+                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             final int columnCount = columnLabelList.size();
@@ -7035,6 +7042,7 @@ public final class JdbcUtil {
                     private volatile PropInfo[] propInfos;
                     private volatile Type<?>[] columnTypes = null;
 
+                    @SuppressWarnings("hiding")
                     @Override
                     public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                         final int columnCount = columnLabelList.size();
@@ -7329,6 +7337,7 @@ public final class JdbcUtil {
                         private volatile int rsColumnCount = -1;
                         private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
 
+                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
@@ -7355,6 +7364,7 @@ public final class JdbcUtil {
                         private volatile int rsColumnCount = -1;
                         private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
 
+                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
@@ -7383,6 +7393,7 @@ public final class JdbcUtil {
                         private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
                         private String[] columnLabels = null;
 
+                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
@@ -7415,6 +7426,7 @@ public final class JdbcUtil {
                         private volatile String[] columnLabels = null;
                         private volatile PropInfo[] propInfos;
 
+                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
@@ -7483,6 +7495,7 @@ public final class JdbcUtil {
                         private volatile int rsColumnCount = -1;
                         private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
 
+                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
@@ -7798,7 +7811,7 @@ public final class JdbcUtil {
                 return initColumnGetter(rs.getMetaData().getColumnCount());
             }
 
-            Columns.ColumnGetter<?>[] initColumnGetter(final int columnCount) throws SQLException {
+            Columns.ColumnGetter<?>[] initColumnGetter(final int columnCount) {
                 final Columns.ColumnGetter<?>[] rsColumnGetters = new Columns.ColumnGetter<?>[columnCount + 1];
                 rsColumnGetters[0] = columnGetterMap.get(0);
 
@@ -7819,6 +7832,7 @@ public final class JdbcUtil {
                     private volatile int rsColumnCount = -1;
                     private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
 
+                    @SuppressWarnings("hiding")
                     @Override
                     public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
                         Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
@@ -7846,6 +7860,7 @@ public final class JdbcUtil {
          * @param args
          * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
          */
+        @SuppressWarnings("unused")
         default void beforeInvoke(final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             // empty action.
         }
@@ -7858,6 +7873,7 @@ public final class JdbcUtil {
          * @param args
          * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
          */
+        @SuppressWarnings("unused")
         default void afterInvoke(final Object result, final P proxy, final Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             // empty action.
         }
@@ -7866,7 +7882,7 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     static final class EmptyHandler implements JdbcUtil.Handler<Dao> {
 
-    };
+    }
 
     /**
      * This interface is designed to share/manager SQL queries by Java APIs/methods with static parameter types and return type, while hiding the SQL scripts.
@@ -10471,7 +10487,7 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws SQLException {
-            return batchUpdate(entities, DEFAULT_BATCH_SIZE);
+            return batchUpdate(entities, propNamesToUpdate, DEFAULT_BATCH_SIZE);
         }
 
         /**
@@ -12149,7 +12165,7 @@ public final class JdbcUtil {
         default List<T> list(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws SQLException {
             final List<T> result = getDao(this).list(selectPropNames, cond);
 
-            if (N.notNullOrEmpty(result)) {
+            if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
                 if (result.size() > JdbcUtil.DEFAULT_BATCH_SIZE) {
                     StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(it -> loadAllJoinEntities(it));
                 } else {
@@ -17977,7 +17993,7 @@ public final class JdbcUtil {
     private static final Tuple3<BiRowMapper, Function, BiConsumer> noIdGeneratorGetterSetter = Tuple.of(NO_BI_GENERATED_KEY_EXTRACTOR, entity -> null,
             BiConsumers.doNothing());
 
-    @SuppressWarnings({ "rawtypes", "deprecation" })
+    @SuppressWarnings({ "rawtypes", "deprecation", "null" })
     static <ID> Tuple3<BiRowMapper<ID>, Function<Object, ID>, BiConsumer<ID, Object>> getIdGeneratorGetterSetter(final Class<? extends Dao> daoInterface,
             final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
         if (entityClass == null || !ClassUtil.isEntity(entityClass)) {

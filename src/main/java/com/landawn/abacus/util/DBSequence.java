@@ -153,6 +153,7 @@ public final class DBSequence {
      * @param startVal
      * @param seqBufferSize
      */
+    @SuppressWarnings("hiding")
     public void reset(long startVal, int seqBufferSize) {
         this.seqBufferSize = seqBufferSize;
 

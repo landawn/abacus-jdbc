@@ -267,7 +267,7 @@ abstract class AbstractConnectionManager implements ConnectionManager {
      * @param properties
      * @return
      */
-    protected DataSource createJNDIDataSource(Map<String, String> properties) {
+    protected DataSource createJNDIDataSource(@SuppressWarnings("hiding") Map<String, String> properties) {
         String jndiName = connectionProperties.getProperty(JNDI_NAME);
 
         try {

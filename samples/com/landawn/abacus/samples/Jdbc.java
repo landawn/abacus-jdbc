@@ -61,7 +61,7 @@ public class Jdbc {
 
     // initialize DB schema.
     static {
-        JdbcUtil.enableSqlLog(true);
+        JdbcUtil.enableSqlLog();
         JdbcUtil.setMinExecutionTimeForSqlPerfLog(10);
 
         final String sql_user_drop_table = "DROP TABLE IF EXISTS user";

@@ -156,6 +156,7 @@ public final class SQLConnectionManager extends AbstractConnectionManager {
     /**
      * Update last SQL execution failure time.
      */
+    @SuppressWarnings("sync-override")
     @Override
     public void updateLastSQLExecutionFailureTime() {
         pool.lock();
