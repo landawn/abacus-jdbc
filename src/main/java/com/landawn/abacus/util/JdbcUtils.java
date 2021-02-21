@@ -74,8 +74,9 @@ import com.landawn.abacus.util.function.Function;
 public final class JdbcUtils {
     private static final Logger logger = LoggerFactory.getLogger(JdbcUtils.class);
 
-    private static final int DEFAULT_BATCH_SIZE = JdbcUtil.DEFAULT_BATCH_SIZE;
-    private static final int DEFAULT_FETCH_SIZE = JdbcUtil.DEFAULT_BATCH_SIZE;
+    static final int DEFAULT_BATCH_SIZE = JdbcUtil.DEFAULT_BATCH_SIZE;
+
+    static final int DEFAULT_FETCH_SIZE = 200;
 
     private JdbcUtils() {
         // singleton.
