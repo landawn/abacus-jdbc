@@ -1395,7 +1395,7 @@ public final class JdbcUtils {
         try {
             stmt = conn.prepareStatement(sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
             stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
-            stmt.setFetchSize(JdbcUtil.DEFAULT_BATCH_SIZE);
+            stmt.setFetchSize(DEFAULT_FETCH_SIZE);
 
             return exportCSV(out, stmt, selectColumnNames, offset, count, writeTitle, quoted);
         } catch (SQLException e) {
