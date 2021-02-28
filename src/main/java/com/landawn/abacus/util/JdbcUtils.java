@@ -76,7 +76,7 @@ public final class JdbcUtils {
 
     static final int DEFAULT_BATCH_SIZE = JdbcUtil.DEFAULT_BATCH_SIZE;
 
-    static final int DEFAULT_FETCH_SIZE = 200;
+    static final int DEFAULT_FETCH_SIZE = 1000;
 
     private JdbcUtils() {
         // singleton.
