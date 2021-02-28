@@ -1394,8 +1394,8 @@ public final class JdbcUtils {
 
         try {
             stmt = conn.prepareStatement(sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-            stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
-            stmt.setFetchSize(DEFAULT_FETCH_SIZE);
+
+            setFetchForBigResult(conn, stmt);
 
             return exportCSV(out, stmt, selectColumnNames, offset, count, writeTitle, quoted);
         } catch (SQLException e) {
@@ -2855,9 +2855,7 @@ public final class JdbcUtils {
         try {
             stmt = JdbcUtil.prepareStatement(conn, sql);
 
-            stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
-
-            stmt.setFetchSize(DEFAULT_FETCH_SIZE);
+            setFetchForBigResult(conn, stmt);
 
             parse(stmt, offset, count, processThreadNum, queueSize, rowParser, onComplete);
         } catch (SQLException e) {
@@ -3249,6 +3247,16 @@ public final class JdbcUtils {
         parse(selectStmt, offset, count, 0, inParallel ? DEFAULT_QUEUE_SIZE_FOR_ROW_PARSER : 0, rowParser, onComplete);
 
         return result.longValue();
+    }
+
+    private static void setFetchForBigResult(final Connection conn, PreparedStatement stmt) throws SQLException {
+        stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
+
+        if (JdbcUtil.getDBVersion(conn).isMySQL()) {
+            stmt.setFetchSize(Integer.MIN_VALUE);
+        } else {
+            stmt.setFetchSize(DEFAULT_FETCH_SIZE);
+        }
     }
 
 }
