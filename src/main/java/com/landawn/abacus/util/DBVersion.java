@@ -64,4 +64,12 @@ public enum DBVersion {
     DB2,
     SQL_SERVER,
     OTHERS;
+
+    public boolean isMySQL() {
+        return StringUtil.startsWithIgnoreCase(name(), "mysql");
+    }
+
+    public boolean isPostgreSQL() {
+        return StringUtil.startsWithIgnoreCase(name(), "postgresql");
+    }
 }
