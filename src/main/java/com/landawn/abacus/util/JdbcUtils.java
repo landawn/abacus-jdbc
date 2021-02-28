@@ -1309,6 +1309,7 @@ public final class JdbcUtils {
             while (offset-- > 0 && iter.hasNext()) {
                 iter.next();
             }
+
             T next = null;
             while (result < count && iter.hasNext()) {
                 next = iter.next();
