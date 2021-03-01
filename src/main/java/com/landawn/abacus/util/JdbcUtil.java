@@ -145,7 +145,7 @@ public final class JdbcUtil {
     // ...
     static final String CURRENT_DIR_PATH = "./";
 
-    static final AsyncExecutor asyncExecutor = new AsyncExecutor(Math.min(Math.max(64, IOUtil.CPU_CORES * 8), (IOUtil.MAX_MEMORY_IN_MB / 1024) * 32),
+    static final AsyncExecutor asyncExecutor = new AsyncExecutor(Math.max(64, Math.min(IOUtil.CPU_CORES * 8, IOUtil.MAX_MEMORY_IN_MB / 1024) * 32),
             Math.max(256, (IOUtil.MAX_MEMORY_IN_MB / 1024) * 64), 180L, TimeUnit.SECONDS);
 
     static final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super Object[]> DEFAULT_STMT_SETTER = new JdbcUtil.BiParametersSetter<PreparedStatement, Object[]>() {
