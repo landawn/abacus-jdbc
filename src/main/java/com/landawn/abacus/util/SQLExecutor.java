@@ -34,7 +34,6 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 
 import javax.sql.DataSource;
 
@@ -644,10 +643,7 @@ public class SQLExecutor {
 
         this._sqlMapper = sqlMapper == null ? new SQLMapper() : sqlMapper;
         this._namingPolicy = namingPolicy == null ? NamingPolicy.LOWER_CASE_WITH_UNDERSCORE : namingPolicy;
-        this._asyncExecutor = asyncExecutor == null
-                ? new AsyncExecutor(Math.min(Math.max(64, IOUtil.CPU_CORES * 8), (IOUtil.MAX_MEMORY_IN_MB / 1024) * 64),
-                        Math.max(256, (IOUtil.MAX_MEMORY_IN_MB / 1024) * 64), 180L, TimeUnit.SECONDS)
-                : asyncExecutor;
+        this._asyncExecutor = asyncExecutor == null ? JdbcUtil.asyncExecutor : asyncExecutor;
         this._isReadOnly = isReadOnly;
 
         int originalIsolationLevel;
