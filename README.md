@@ -82,9 +82,9 @@ compile 'com.landawn:abacus-jdbc:2.7.7'
 
 ## Recommended Java programming libraries/frameworks:
 [lombok](https://github.com/rzwitserloot/lombok), 
-[Jinq](https://github.com/landawn/Jinq), 
+[Jinq](https://github.com/my2iu/Jinq), 
 [jdbi](https://github.com/jdbi/jdbi), 
-[mybatis](https://github.com/mybatis/mybatis-3), 
+[Mybatis](https://github.com/mybatis/mybatis-3), 
 [Sharding-JDBC](https://github.com/apache/incubator-shardingsphere),
 [mapstruct](https://github.com/mapstruct/mapstruct)...[awesome-java](https://github.com/akullpp/awesome-java#database)
 
