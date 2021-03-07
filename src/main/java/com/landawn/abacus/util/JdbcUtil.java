@@ -159,23 +159,18 @@ import lombok.ToString;
  */
 public final class JdbcUtil {
 
-    /** The Constant logger. */
     static final Logger logger = LoggerFactory.getLogger(JdbcUtil.class);
 
-    /** The Constant DEFAULT_BATCH_SIZE. */
     public static final int DEFAULT_BATCH_SIZE = 200;
 
     static final int MAX_BATCH_SIZE = 1000;
 
-    /** The Constant CURRENT_DIR_PATH. */
     // ...
     static final String CURRENT_DIR_PATH = "./";
 
-    /** The async executor. */
     static final AsyncExecutor asyncExecutor = new AsyncExecutor(Math.max(64, Math.min(IOUtil.CPU_CORES * 8, IOUtil.MAX_MEMORY_IN_MB / 1024) * 32),
             Math.max(256, (IOUtil.MAX_MEMORY_IN_MB / 1024) * 64), 180L, TimeUnit.SECONDS);
 
-    /** The Constant DEFAULT_STMT_SETTER. */
     static final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super Object[]> DEFAULT_STMT_SETTER = new JdbcUtil.BiParametersSetter<PreparedStatement, Object[]>() {
         @Override
         public void accept(PreparedStatement stmt, Object[] parameters) throws SQLException {
