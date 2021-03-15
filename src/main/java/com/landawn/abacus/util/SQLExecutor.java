@@ -5779,6 +5779,11 @@ public class SQLExecutor {
             this.sqlExecutor = sqlExecutor;
             this.namingPolicy = namingPolicy;
 
+            if (!(namingPolicy == NamingPolicy.LOWER_CAMEL_CASE || namingPolicy == NamingPolicy.LOWER_CASE_WITH_UNDERSCORE
+                    || namingPolicy == NamingPolicy.UPPER_CASE_WITH_UNDERSCORE)) {
+                throw new IllegalArgumentException("Unsupported naming policy: " + namingPolicy);
+            }
+
             final List<String> idPropNames = ClassUtil.getIdFieldNames(entityClass, true);
             final boolean isFakeId = ClassUtil.isFakeId(idPropNames);
 
