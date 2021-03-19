@@ -3258,10 +3258,11 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
     }
 
     /**
-     * Note: using {@code select count(*) from ...}
+     * Uses {@code queryForInt()} with query {@code select count(*) from ...}
      *
      * @return
      * @throws SQLException the SQL exception
+     * @see #queryForInt()
      * @deprecated may be misused and it's inefficient.
      */
     @Deprecated
