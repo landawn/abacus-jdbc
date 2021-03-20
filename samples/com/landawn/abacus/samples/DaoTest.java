@@ -43,6 +43,7 @@ import com.landawn.abacus.util.JdbcUtil.RowConsumer;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Pair;
 import com.landawn.abacus.util.Profiler;
+import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLParser;
 import com.landawn.abacus.util.SQLTransaction;
@@ -52,6 +53,31 @@ import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 public class DaoTest {
+
+    @Test
+    public void test_preparedQuery() throws Exception {
+
+        List<User> users = IntStream.range(1, 1000)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                .toList();
+
+        userDao.batchInsertWithId(users);
+
+        List<User> dbUsers = userDao.prepareBigQuery(CF.ge("id", users.get(0).getId()))
+                .stream(User.class)
+                .onEach(it -> it.setCreateTime(null))
+                .sortedBy(it -> it.getId())
+                .toList();
+
+        assertEquals(users.get(0), dbUsers.get(0));
+        assertTrue(N.equals(users, dbUsers));
+
+        NSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toPreparedQuery(userDao.dataSource()).update();
+
+        NSC.deleteFrom(User.class)
+                .where(CF.ge("id", users.get(0).getId()))
+                .accept(sp -> JdbcUtil.executeUpdate(userDao.dataSource(), sp.sql, sp.parameters.toArray()));
+    }
 
     @Test
     public void test_parallel() throws Exception {

@@ -21,6 +21,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.math.BigDecimal;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -83,6 +84,10 @@ import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.JdbcUtil.Dao.NonDBOperation;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
+import com.landawn.abacus.util.SQLBuilder.PAC;
+import com.landawn.abacus.util.SQLBuilder.PLC;
+import com.landawn.abacus.util.SQLBuilder.PSB;
+import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.SQLTransaction.CreatedBy;
 import com.landawn.abacus.util.Tuple.Tuple2;
@@ -138,11 +143,11 @@ public final class JdbcUtil {
 
     static final Logger logger = LoggerFactory.getLogger(JdbcUtil.class);
 
-    static final int DEFAULT_BATCH_SIZE = 200;
+    public static final int DEFAULT_BATCH_SIZE = 200;
 
     // static final int MAX_BATCH_SIZE = 1000;
 
-    static final int DEFAULT_FETCH_SIZE_FOR_BIG_RESULT = 1000;
+    public static final int DEFAULT_FETCH_SIZE_FOR_BIG_RESULT = 1000;
 
     // ...
     static final String CURRENT_DIR_PATH = "./";
@@ -1817,7 +1822,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static PreparedQuery prepareBigQuery(final javax.sql.DataSource ds, final String sql) throws SQLException {
-        return prepareQuery(ds, sql).setFetchDirection(FetchDirection.FORWARD).setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        return prepareQuery(ds, sql).setFetchDirectionToForward().setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
     }
 
     /**
@@ -1831,7 +1836,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static PreparedQuery prepareBigQuery(final Connection conn, final String sql) throws SQLException {
-        return prepareQuery(conn, sql).setFetchDirection(FetchDirection.FORWARD).setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        return prepareQuery(conn, sql).setFetchDirectionToForward().setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
     }
 
     /**
@@ -2436,7 +2441,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static NamedQuery prepareBigNamedQuery(final javax.sql.DataSource ds, final String sql) throws SQLException {
-        return prepareNamedQuery(ds, sql).setFetchDirection(FetchDirection.FORWARD).setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        return prepareNamedQuery(ds, sql).setFetchDirectionToForward().setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
     }
 
     /**
@@ -2450,7 +2455,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static NamedQuery prepareBigNamedQuery(final Connection conn, final String sql) throws SQLException {
-        return prepareNamedQuery(conn, sql).setFetchDirection(FetchDirection.FORWARD).setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        return prepareNamedQuery(conn, sql).setFetchDirectionToForward().setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
     }
 
     /**
@@ -9021,6 +9026,65 @@ public final class JdbcUtil {
         default PreparedCallableQuery prepareCallableQuery(final String sql,
                 final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
             return JdbcUtil.prepareCallableQuery(dataSource(), sql, stmtCreator);
+        }
+
+        /**
+         * Prepare a {@code select} query by specified {@code cond}.
+         * <br />
+         * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
+         * 
+         * @param cond
+         * @return
+         * @throws SQLException
+         * @see {@link #prepareQuery(Collection, Condition)}
+         */
+        default PreparedQuery prepareQuery(final Condition cond) throws SQLException {
+            return prepareQuery(null, cond);
+        }
+
+        /**
+         * Prepare a {@code select} query by specified {@code selectPropNames} and {@code cond}.
+         * <br />
+         * 
+         * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
+         * 
+         * @param selectPropNames
+         * @param cond
+         * @return
+         * @throws SQLException
+         */
+        default PreparedQuery prepareQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
+            return getDaoPrepareQueryFunc(this).apply(selectPropNames, cond);
+        }
+
+        /**
+         * Prepare a big result {@code select} query by specified {@code cond}.
+         * <br />
+         * 
+         * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
+         * 
+         * @param cond
+         * @return
+         * @throws SQLException
+         * @see {@link #prepareBigQuery(Collection, Condition)}
+         */
+        default PreparedQuery prepareBigQuery(final Condition cond) throws SQLException {
+            return prepareBigQuery(null, cond);
+        }
+
+        /**
+         * Prepare a big result {@code select} query by specified {@code selectPropNames} and {@code cond}.
+         * <br />
+         * 
+         * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
+         * 
+         * @param selectPropNames
+         * @param cond
+         * @return
+         * @throws SQLException
+         */
+        default PreparedQuery prepareBigQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
+            return prepareQuery(selectPropNames, cond).setFetchDirectionToForward().setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
         }
 
         /**
@@ -17913,6 +17977,52 @@ public final class JdbcUtil {
         return (Tuple3) map.get(namingPolicy);
     }
 
+    @SuppressWarnings("rawtypes")
+    private static final Map<Class<? extends Dao>, Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>> daoPrepareQueryFuncPool = new ConcurrentHashMap<>();
+
+    @SuppressWarnings("rawtypes")
+    static Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException> getDaoPrepareQueryFunc(final Dao dao) {
+        final Class<? extends Dao> daoInterface = dao.getClass();
+
+        Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException> func = daoPrepareQueryFuncPool.get(daoInterface);
+
+        if (func == null) {
+            java.lang.reflect.Type[] typeArguments = null;
+
+            if (N.notNullOrEmpty(daoInterface.getGenericInterfaces()) && daoInterface.getGenericInterfaces()[0] instanceof ParameterizedType) {
+                final ParameterizedType parameterizedType = (ParameterizedType) daoInterface.getGenericInterfaces()[0];
+                typeArguments = parameterizedType.getActualTypeArguments();
+            }
+
+            final Class<? extends SQLBuilder> sbc = N.isNullOrEmpty(typeArguments) ? PSC.class
+                    : (typeArguments.length >= 2 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[1]) ? (Class) typeArguments[1]
+                            : (typeArguments.length >= 3 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[2]) ? (Class) typeArguments[2]
+                                    : PSC.class));
+
+            final Class<?> targetEntityClass = dao.targetEntityClass();
+
+            if (PSC.class.isAssignableFrom(sbc)) {
+                func = (selectPropNames, cond) -> (PreparedQuery) (selectPropNames == null ? PSC.selectFrom(targetEntityClass)
+                        : PSC.select(selectPropNames).from(targetEntityClass)).where(cond).toPreparedQuery(dao.dataSource());
+            } else if (PAC.class.isAssignableFrom(sbc)) {
+                func = (selectPropNames, cond) -> (PreparedQuery) (selectPropNames == null ? PAC.selectFrom(targetEntityClass)
+                        : PAC.select(selectPropNames).from(targetEntityClass)).where(cond).toPreparedQuery(dao.dataSource());
+            } else if (PLC.class.isAssignableFrom(sbc)) {
+                func = (selectPropNames, cond) -> (PreparedQuery) (selectPropNames == null ? PLC.selectFrom(targetEntityClass)
+                        : PLC.select(selectPropNames).from(targetEntityClass)).where(cond).toPreparedQuery(dao.dataSource());
+            } else if (PSB.class.isAssignableFrom(sbc)) {
+                func = (selectPropNames, cond) -> (PreparedQuery) (selectPropNames == null ? PSB.selectFrom(targetEntityClass)
+                        : PSB.select(selectPropNames).from(targetEntityClass)).where(cond).toPreparedQuery(dao.dataSource());
+            } else {
+                throw new IllegalArgumentException("SQLBuilder Type parameter must be: SQLBuilder.PSC/PAC/PLC/PSB. Can't be: " + sbc);
+            }
+
+            daoPrepareQueryFuncPool.put(daoInterface, func);
+        }
+
+        return func;
+    }
+
     private static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD getDao(final JoinEntityHelper<T, SB, TD> dao) {
         if (dao instanceof Dao) {
             return (TD) dao;
@@ -18134,4 +18244,8 @@ public final class JdbcUtil {
     //            }
     //        }
     //    }
+
+    static boolean isNullOrDefault(final Object value) {
+        return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
+    }
 }

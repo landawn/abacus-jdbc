@@ -78,7 +78,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  * @param <Stmt>
  * @param <This>
  */
-abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extends AbstractPreparedQuery<Stmt, This>> implements Closeable {
+public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extends AbstractPreparedQuery<Stmt, This>> implements Closeable {
 
     static final Logger logger = LoggerFactory.getLogger(AbstractPreparedQuery.class);
 
@@ -2004,6 +2004,16 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
         isFetchDirectionSet = true;
 
         return (This) this;
+    }
+
+    /**
+     * 
+     * @return
+     * @throws SQLException
+     * @see {@link #setFetchDirection(FetchDirection)}
+     */
+    public This setFetchDirectionToForward() throws SQLException {
+        return setFetchDirection(FetchDirection.FORWARD);
     }
 
     /**
