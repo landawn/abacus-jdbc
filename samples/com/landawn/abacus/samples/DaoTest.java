@@ -72,7 +72,17 @@ public class DaoTest {
         assertEquals(users.get(0), dbUsers.get(0));
         assertTrue(N.equals(users, dbUsers));
 
-        NSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toPreparedQuery(userDao.dataSource()).update();
+        dbUsers = userDao.prepareNamedQueryForBigResult(CF.ge("id", users.get(0).getId()))
+                .stream(User.class)
+                .onEach(it -> it.setCreateTime(null))
+                .sortedBy(it -> it.getId())
+                .toList();
+
+        assertEquals(users.get(0), dbUsers.get(0));
+        assertTrue(N.equals(users, dbUsers));
+
+        PSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toPreparedQuery(userDao.dataSource()).update();
+        NSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toNamedQuery(userDao.dataSource()).update();
 
         NSC.deleteFrom(User.class)
                 .where(CF.ge("id", users.get(0).getId()))

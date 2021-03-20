@@ -84,6 +84,10 @@ import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.JdbcUtil.Dao.NonDBOperation;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
+import com.landawn.abacus.util.SQLBuilder.NAC;
+import com.landawn.abacus.util.SQLBuilder.NLC;
+import com.landawn.abacus.util.SQLBuilder.NSB;
+import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PAC;
 import com.landawn.abacus.util.SQLBuilder.PLC;
 import com.landawn.abacus.util.SQLBuilder.PSB;
@@ -9054,7 +9058,7 @@ public final class JdbcUtil {
          * @throws SQLException
          */
         default PreparedQuery prepareQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
-            return getDaoPrepareQueryFunc(this).apply(selectPropNames, cond);
+            return getDaoPreparedQueryFunc(this)._1.apply(selectPropNames, cond);
         }
 
         /**
@@ -9085,6 +9089,65 @@ public final class JdbcUtil {
          */
         default PreparedQuery prepareQueryForBigResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
             return prepareQuery(selectPropNames, cond).setFetchDirectionToForward().setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        }
+
+        /**
+         * Prepare a {@code select} query by specified {@code cond}.
+         * <br />
+         * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
+         * 
+         * @param cond
+         * @return
+         * @throws SQLException
+         * @see {@link #prepareNamedQuery(Collection, Condition)}
+         */
+        default NamedQuery prepareNamedQuery(final Condition cond) throws SQLException {
+            return prepareNamedQuery(null, cond);
+        }
+
+        /**
+         * Prepare a {@code select} query by specified {@code selectPropNames} and {@code cond}.
+         * <br />
+         * 
+         * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
+         * 
+         * @param selectPropNames
+         * @param cond
+         * @return
+         * @throws SQLException
+         */
+        default NamedQuery prepareNamedQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
+            return getDaoPreparedQueryFunc(this)._2.apply(selectPropNames, cond);
+        }
+
+        /**
+         * Prepare a big result {@code select} query by specified {@code cond}.
+         * <br />
+         * 
+         * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
+         * 
+         * @param cond
+         * @return
+         * @throws SQLException
+         * @see {@link #prepareNamedQueryForBigResult(Collection, Condition)}
+         */
+        default NamedQuery prepareNamedQueryForBigResult(final Condition cond) throws SQLException {
+            return prepareNamedQueryForBigResult(null, cond);
+        }
+
+        /**
+         * Prepare a big result {@code select} query by specified {@code selectPropNames} and {@code cond}.
+         * <br />
+         * 
+         * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
+         * 
+         * @param selectPropNames
+         * @param cond
+         * @return
+         * @throws SQLException
+         */
+        default NamedQuery prepareNamedQueryForBigResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
+            return prepareNamedQuery(selectPropNames, cond).setFetchDirectionToForward().setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
         }
 
         /**
@@ -17978,15 +18041,17 @@ public final class JdbcUtil {
     }
 
     @SuppressWarnings("rawtypes")
-    private static final Map<Class<? extends Dao>, Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>> daoPrepareQueryFuncPool = new ConcurrentHashMap<>();
+    private static final Map<Class<? extends Dao>, Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>>> daoPrepareQueryFuncPool = new ConcurrentHashMap<>();
 
     @SuppressWarnings("rawtypes")
-    static Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException> getDaoPrepareQueryFunc(final Dao dao) {
+    static Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>> getDaoPreparedQueryFunc(
+            final Dao dao) {
         final Class<? extends Dao> daoInterface = dao.getClass();
 
-        Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException> func = daoPrepareQueryFuncPool.get(daoInterface);
+        Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>> tp = daoPrepareQueryFuncPool
+                .get(daoInterface);
 
-        if (func == null) {
+        if (tp == null) {
             java.lang.reflect.Type[] typeArguments = null;
 
             if (N.notNullOrEmpty(daoInterface.getGenericInterfaces()) && daoInterface.getGenericInterfaces()[0] instanceof ParameterizedType) {
@@ -18002,25 +18067,45 @@ public final class JdbcUtil {
             final Class<?> targetEntityClass = dao.targetEntityClass();
 
             if (PSC.class.isAssignableFrom(sbc)) {
-                func = (selectPropNames, cond) -> (PreparedQuery) (selectPropNames == null ? PSC.selectFrom(targetEntityClass)
-                        : PSC.select(selectPropNames).from(targetEntityClass)).where(cond).toPreparedQuery(dao.dataSource());
+                tp = Tuple.of((selectPropNames,
+                        cond) -> (PreparedQuery) (selectPropNames == null ? PSC.selectFrom(targetEntityClass)
+                                : PSC.select(selectPropNames).from(targetEntityClass)).where(cond).toPreparedQuery(dao.dataSource()),
+                        (selectPropNames,
+                                cond) -> (selectPropNames == null ? NSC.selectFrom(targetEntityClass) : NSC.select(selectPropNames).from(targetEntityClass))
+                                        .where(cond)
+                                        .toNamedQuery(dao.dataSource()));
             } else if (PAC.class.isAssignableFrom(sbc)) {
-                func = (selectPropNames, cond) -> (PreparedQuery) (selectPropNames == null ? PAC.selectFrom(targetEntityClass)
-                        : PAC.select(selectPropNames).from(targetEntityClass)).where(cond).toPreparedQuery(dao.dataSource());
+                tp = Tuple.of((selectPropNames,
+                        cond) -> (PreparedQuery) (selectPropNames == null ? PAC.selectFrom(targetEntityClass)
+                                : PAC.select(selectPropNames).from(targetEntityClass)).where(cond).toPreparedQuery(dao.dataSource()),
+                        (selectPropNames,
+                                cond) -> (selectPropNames == null ? NAC.selectFrom(targetEntityClass) : NAC.select(selectPropNames).from(targetEntityClass))
+                                        .where(cond)
+                                        .toNamedQuery(dao.dataSource()));
             } else if (PLC.class.isAssignableFrom(sbc)) {
-                func = (selectPropNames, cond) -> (PreparedQuery) (selectPropNames == null ? PLC.selectFrom(targetEntityClass)
-                        : PLC.select(selectPropNames).from(targetEntityClass)).where(cond).toPreparedQuery(dao.dataSource());
+                tp = Tuple.of((selectPropNames,
+                        cond) -> (PreparedQuery) (selectPropNames == null ? PLC.selectFrom(targetEntityClass)
+                                : PLC.select(selectPropNames).from(targetEntityClass)).where(cond).toPreparedQuery(dao.dataSource()),
+                        (selectPropNames,
+                                cond) -> (selectPropNames == null ? NLC.selectFrom(targetEntityClass) : NLC.select(selectPropNames).from(targetEntityClass))
+                                        .where(cond)
+                                        .toNamedQuery(dao.dataSource()));
             } else if (PSB.class.isAssignableFrom(sbc)) {
-                func = (selectPropNames, cond) -> (PreparedQuery) (selectPropNames == null ? PSB.selectFrom(targetEntityClass)
-                        : PSB.select(selectPropNames).from(targetEntityClass)).where(cond).toPreparedQuery(dao.dataSource());
+                tp = Tuple.of((selectPropNames,
+                        cond) -> (PreparedQuery) (selectPropNames == null ? PSB.selectFrom(targetEntityClass)
+                                : PSB.select(selectPropNames).from(targetEntityClass)).where(cond).toPreparedQuery(dao.dataSource()),
+                        (selectPropNames,
+                                cond) -> (selectPropNames == null ? NSB.selectFrom(targetEntityClass) : NSB.select(selectPropNames).from(targetEntityClass))
+                                        .where(cond)
+                                        .toNamedQuery(dao.dataSource()));
             } else {
                 throw new IllegalArgumentException("SQLBuilder Type parameter must be: SQLBuilder.PSC/PAC/PLC/PSB. Can't be: " + sbc);
             }
 
-            daoPrepareQueryFuncPool.put(daoInterface, func);
+            daoPrepareQueryFuncPool.put(daoInterface, tp);
         }
 
-        return func;
+        return tp;
     }
 
     private static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD getDao(final JoinEntityHelper<T, SB, TD> dao) {
