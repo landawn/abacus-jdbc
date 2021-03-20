@@ -692,7 +692,7 @@ final class JoinInfo {
     private Object getJoinPropValue(PropInfo propInfo, Object entity) {
         final Object value = propInfo.getPropValue(entity);
 
-        if (allowJoiningByNullOrDefaultValue == false && N.isNullOrDefault(value)) {
+        if (allowJoiningByNullOrDefaultValue == false && JdbcUtil.isNullOrDefault(value)) {
             throw new IllegalArgumentException("The join property value can't be null or default for property: " + propInfo.name
                     + ". Annotated the Dao class of " + entityClass + " with @Config{allowJoiningByNullOrDefaultValue = true} to avoid this exception");
         }

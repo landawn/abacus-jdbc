@@ -78,7 +78,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  * @param <Stmt>
  * @param <This>
  */
-abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extends AbstractPreparedQuery<Stmt, This>> implements Closeable {
+public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extends AbstractPreparedQuery<Stmt, This>> implements Closeable {
 
     static final Logger logger = LoggerFactory.getLogger(AbstractPreparedQuery.class);
 
@@ -2007,6 +2007,16 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
     }
 
     /**
+     * 
+     * @return
+     * @throws SQLException
+     * @see {@link #setFetchDirection(FetchDirection)}
+     */
+    public This setFetchDirectionToForward() throws SQLException {
+        return setFetchDirection(FetchDirection.FORWARD);
+    }
+
+    /**
      * Sets the fetch size.
      *
      * @param rows
@@ -3258,10 +3268,11 @@ abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extend
     }
 
     /**
-     * Note: using {@code select count(*) from ...}
+     * Uses {@code queryForInt()} with query {@code select count(*) from ...}
      *
      * @return
      * @throws SQLException the SQL exception
+     * @see #queryForInt()
      * @deprecated may be misused and it's inefficient.
      */
     @Deprecated

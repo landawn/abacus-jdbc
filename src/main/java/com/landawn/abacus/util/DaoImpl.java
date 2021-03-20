@@ -122,6 +122,8 @@ final class DaoImpl {
         // singleton for utility class.
     }
 
+    static final ThreadLocal<Boolean> isInDaoMethod_TL = ThreadLocal.withInitial(() -> false);
+
     private static final KryoParser kryoParser = ParserFactory.isKryoAvailable() ? ParserFactory.createKryoParser() : null;
 
     @SuppressWarnings("rawtypes")
@@ -3643,7 +3645,7 @@ final class DaoImpl {
                                 final Tuple2<BiFunction<Collection<String>, Integer, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
                                         .getBatchSelectSQLBuilderAndParamSetter(sbc);
 
-                                ExceptionalStream.of(entities).splitToList(JdbcUtil.MAX_BATCH_SIZE).forEach(bp -> {
+                                ExceptionalStream.of(entities).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(bp -> {
                                     if (propJoinInfo.isManyToManyJoin()) {
                                         final BiRowMapper<Pair<Object, Object>> pairBiRowMapper = new BiRowMapper<Pair<Object, Object>>() {
                                             private BiRowMapper<Object> biRowMapper = null;
@@ -3752,7 +3754,7 @@ final class DaoImpl {
                                     final Tuple3<IntFunction<String>, IntFunction<String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
                                             .getBatchDeleteSQLBuilderAndParamSetter(sbc);
 
-                                    result = ExceptionalStream.of(entities).splitToList(JdbcUtil.MAX_BATCH_SIZE).sumInt(bp -> {
+                                    result = ExceptionalStream.of(entities).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).sumInt(bp -> {
                                         if (tp._2 == null) {
                                             return joinEntityDao.prepareQuery(tp._1.apply(bp.size())).setParameters(bp, tp._3).update();
                                         } else {
@@ -4729,14 +4731,14 @@ final class DaoImpl {
                     hasRefreshCache.setTrue();
                 }
 
-                final List<JdbcUtil.Handler<?>> handlerList = StreamEx.of(m.getAnnotations())
+                final List<Tuple2<JdbcUtil.Handler, Boolean>> handlerList = StreamEx.of(m.getAnnotations())
                         .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(JdbcUtil.HandlerList.class))
                         .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
                                 : N.asList(((JdbcUtil.HandlerList) anno).value()))
                         .prepend(StreamEx.of(daoClassHandlerList).filter(h -> StreamEx.of(h.filter()).anyMatch(filterByMethodName)))
-                        .map(handlerAnno -> N.notNullOrEmpty(handlerAnno.qualifier())
+                        .map(handlerAnno -> Tuple.of((JdbcUtil.Handler) (N.notNullOrEmpty(handlerAnno.qualifier())
                                 ? daoClassHandlerMap.getOrDefault(handlerAnno.qualifier(), HandlerFactory.get(handlerAnno.qualifier()))
-                                : HandlerFactory.getOrCreate(handlerAnno.type()))
+                                : HandlerFactory.getOrCreate(handlerAnno.type())), handlerAnno.isForInvokeFromOutsideOfDaoOnly()))
                         .onEach(handler -> N.checkArgNotNull(handler,
                                 "No handler found/registered with qualifier or type in class/method: " + fullClassMethodName))
                         .toList();
@@ -4747,17 +4749,47 @@ final class DaoImpl {
                             m.getReturnType());
 
                     call = (proxy, args) -> {
-                        for (JdbcUtil.Handler handler : handlerList) {
-                            handler.beforeInvoke(proxy, args, methodSignature);
+                        final boolean isInDaoMethod = isInDaoMethod_TL.get();
+
+                        if (isInDaoMethod) {
+                            for (Tuple2<JdbcUtil.Handler, Boolean> tp : handlerList) {
+                                if (!tp._2.booleanValue()) {
+                                    tp._1.beforeInvoke(proxy, args, methodSignature);
+                                }
+                            }
+
+                            final Object result = temp.apply(proxy, args);
+
+                            Tuple2<JdbcUtil.Handler, Boolean> tp = null;
+
+                            for (int i = N.size(handlerList) - 1; i >= 0; i--) {
+                                tp = handlerList.get(i);
+
+                                if (!tp._2.booleanValue()) {
+                                    tp._1.afterInvoke(result, proxy, args, methodSignature);
+                                }
+                            }
+
+                            return result;
+                        } else {
+                            isInDaoMethod_TL.set(true);
+
+                            try {
+                                for (Tuple2<JdbcUtil.Handler, Boolean> tp : handlerList) {
+                                    tp._1.beforeInvoke(proxy, args, methodSignature);
+                                }
+
+                                final Object result = temp.apply(proxy, args);
+
+                                for (int i = N.size(handlerList) - 1; i >= 0; i--) {
+                                    handlerList.get(i)._1.afterInvoke(result, proxy, args, methodSignature);
+                                }
+
+                                return result;
+                            } finally {
+                                isInDaoMethod_TL.set(false);
+                            }
                         }
-
-                        final Object result = temp.apply(proxy, args);
-
-                        for (int i = N.size(handlerList) - 1; i >= 0; i--) {
-                            ((JdbcUtil.Handler) handlerList.get(i)).afterInvoke(result, proxy, args, methodSignature);
-                        }
-
-                        return result;
                     };
                 }
             }
