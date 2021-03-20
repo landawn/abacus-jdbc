@@ -63,7 +63,7 @@ public class DaoTest {
 
         userDao.batchInsertWithId(users);
 
-        List<User> dbUsers = userDao.prepareBigQuery(CF.ge("id", users.get(0).getId()))
+        List<User> dbUsers = userDao.prepareQueryForBigResult(CF.ge("id", users.get(0).getId()))
                 .stream(User.class)
                 .onEach(it -> it.setCreateTime(null))
                 .sortedBy(it -> it.getId())

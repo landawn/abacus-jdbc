@@ -1821,7 +1821,7 @@ public final class JdbcUtil {
      * @throws SQLException
      */
     @Beta
-    public static PreparedQuery prepareBigQuery(final javax.sql.DataSource ds, final String sql) throws SQLException {
+    public static PreparedQuery prepareQueryForBigResult(final javax.sql.DataSource ds, final String sql) throws SQLException {
         return prepareQuery(ds, sql).setFetchDirectionToForward().setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
     }
 
@@ -1835,7 +1835,7 @@ public final class JdbcUtil {
      * @throws SQLException
      */
     @Beta
-    public static PreparedQuery prepareBigQuery(final Connection conn, final String sql) throws SQLException {
+    public static PreparedQuery prepareQueryForBigResult(final Connection conn, final String sql) throws SQLException {
         return prepareQuery(conn, sql).setFetchDirectionToForward().setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
     }
 
@@ -2440,7 +2440,7 @@ public final class JdbcUtil {
      * @throws SQLException
      */
     @Beta
-    public static NamedQuery prepareBigNamedQuery(final javax.sql.DataSource ds, final String sql) throws SQLException {
+    public static NamedQuery prepareNamedQueryForBigResult(final javax.sql.DataSource ds, final String sql) throws SQLException {
         return prepareNamedQuery(ds, sql).setFetchDirectionToForward().setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
     }
 
@@ -2454,7 +2454,7 @@ public final class JdbcUtil {
      * @throws SQLException
      */
     @Beta
-    public static NamedQuery prepareBigNamedQuery(final Connection conn, final String sql) throws SQLException {
+    public static NamedQuery prepareNamedQueryForBigResult(final Connection conn, final String sql) throws SQLException {
         return prepareNamedQuery(conn, sql).setFetchDirectionToForward().setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
     }
 
@@ -9066,10 +9066,10 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException
-         * @see {@link #prepareBigQuery(Collection, Condition)}
+         * @see {@link #prepareQueryForBigResult(Collection, Condition)}
          */
-        default PreparedQuery prepareBigQuery(final Condition cond) throws SQLException {
-            return prepareBigQuery(null, cond);
+        default PreparedQuery prepareQueryForBigResult(final Condition cond) throws SQLException {
+            return prepareQueryForBigResult(null, cond);
         }
 
         /**
@@ -9083,7 +9083,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
-        default PreparedQuery prepareBigQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
+        default PreparedQuery prepareQueryForBigResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
             return prepareQuery(selectPropNames, cond).setFetchDirectionToForward().setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
         }
 
