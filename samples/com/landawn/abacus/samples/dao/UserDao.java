@@ -26,6 +26,7 @@ import com.landawn.abacus.util.stream.Stream;
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
 @Handler(type = UserDaoHandlerA.class)
 @Handler(qualifier = "handler1", filter = ".*")
+@Handler(qualifier = "handler2", filter = ".*", isForInvokeFromOutsideOfDaoOnly = true)
 @Dao.Config(addLimitForSingleQuery = true, callGenerateIdForInsertIfIdNotSet = false)
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
 

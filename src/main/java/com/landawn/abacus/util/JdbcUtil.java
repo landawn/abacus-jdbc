@@ -8523,6 +8523,13 @@ public final class JdbcUtil {
              * @return
              */
             String[] filter() default { ".*" };
+
+            /**
+             * This {@code Handler} will be ignored for the invoke from methods of the {@code Dao} if it's set to {@code true}. By default, it's {@code false}.
+             * 
+             * @return
+             */
+            boolean isForInvokeFromOutsideOfDaoOnly() default false;
         }
 
         // TODO: First of all, it's bad idea to implement cache in DAL layer?! and how if not?
