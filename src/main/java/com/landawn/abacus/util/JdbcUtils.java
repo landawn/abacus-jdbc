@@ -74,10 +74,6 @@ import com.landawn.abacus.util.function.Function;
 public final class JdbcUtils {
     private static final Logger logger = LoggerFactory.getLogger(JdbcUtils.class);
 
-    static final int DEFAULT_BATCH_SIZE = JdbcUtil.DEFAULT_BATCH_SIZE;
-
-    static final int DEFAULT_FETCH_SIZE = 1000;
-
     private JdbcUtils() {
         // singleton.
     }
@@ -139,7 +135,7 @@ public final class JdbcUtils {
      */
     public static int importData(final DataSet dataset, final Collection<String> selectColumnNames, final int offset, final int count, final Connection conn,
             final String insertSQL) throws UncheckedSQLException {
-        return importData(dataset, selectColumnNames, offset, count, conn, insertSQL, DEFAULT_BATCH_SIZE, 0);
+        return importData(dataset, selectColumnNames, offset, count, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0);
     }
 
     /**
@@ -245,7 +241,7 @@ public final class JdbcUtils {
     @SuppressWarnings("rawtypes")
     public static int importData(final DataSet dataset, final int offset, final int count, final Connection conn, final String insertSQL,
             final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException {
-        return importData(dataset, offset, count, conn, insertSQL, DEFAULT_BATCH_SIZE, 0, columnTypeMap);
+        return importData(dataset, offset, count, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
     }
 
     /**
@@ -351,7 +347,7 @@ public final class JdbcUtils {
      */
     public static int importData(final DataSet dataset, final int offset, final int count, final Connection conn, final String insertSQL,
             final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
-        return importData(dataset, offset, count, conn, insertSQL, DEFAULT_BATCH_SIZE, 0, stmtSetter);
+        return importData(dataset, offset, count, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
@@ -454,7 +450,7 @@ public final class JdbcUtils {
      */
     public static int importData(final DataSet dataset, final Collection<String> selectColumnNames, final int offset, final int count,
             final PreparedStatement stmt) throws UncheckedSQLException {
-        return importData(dataset, selectColumnNames, offset, count, stmt, DEFAULT_BATCH_SIZE, 0);
+        return importData(dataset, selectColumnNames, offset, count, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0);
     }
 
     /**
@@ -533,7 +529,7 @@ public final class JdbcUtils {
     @SuppressWarnings("rawtypes")
     public static int importData(final DataSet dataset, final int offset, final int count, final PreparedStatement stmt,
             final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException {
-        return importData(dataset, offset, count, stmt, DEFAULT_BATCH_SIZE, 0, columnTypeMap);
+        return importData(dataset, offset, count, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
     }
 
     /**
@@ -673,7 +669,7 @@ public final class JdbcUtils {
      */
     public static int importData(final DataSet dataset, final int offset, final int count, final PreparedStatement stmt,
             final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
-        return importData(dataset, offset, count, stmt, DEFAULT_BATCH_SIZE, 0, stmtSetter);
+        return importData(dataset, offset, count, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
@@ -769,7 +765,7 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> long importData(final File file, final Connection conn, final String insertSQL,
             final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
-        return importData(file, 0, Long.MAX_VALUE, conn, insertSQL, DEFAULT_BATCH_SIZE, 0, func);
+        return importData(file, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
 
     /**
@@ -814,7 +810,7 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> long importData(final File file, final PreparedStatement stmt, final Throwables.Function<String, Object[], E> func)
             throws UncheckedSQLException, E {
-        return importData(file, 0, Long.MAX_VALUE, stmt, DEFAULT_BATCH_SIZE, 0, func);
+        return importData(file, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
 
     /**
@@ -860,7 +856,7 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> long importData(final InputStream is, final Connection conn, final String insertSQL,
             final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
-        return importData(is, 0, Long.MAX_VALUE, conn, insertSQL, DEFAULT_BATCH_SIZE, 0, func);
+        return importData(is, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
 
     /**
@@ -905,7 +901,7 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> long importData(final InputStream is, final PreparedStatement stmt, final Throwables.Function<String, Object[], E> func)
             throws E {
-        return importData(is, 0, Long.MAX_VALUE, stmt, DEFAULT_BATCH_SIZE, 0, func);
+        return importData(is, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
 
     /**
@@ -943,7 +939,7 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> long importData(final Reader reader, final Connection conn, final String insertSQL,
             final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
-        return importData(reader, 0, Long.MAX_VALUE, conn, insertSQL, DEFAULT_BATCH_SIZE, 0, func);
+        return importData(reader, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
 
     /**
@@ -987,7 +983,7 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> long importData(final Reader reader, final PreparedStatement stmt, final Throwables.Function<String, Object[], E> func)
             throws E {
-        return importData(reader, 0, Long.MAX_VALUE, stmt, DEFAULT_BATCH_SIZE, 0, func);
+        return importData(reader, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
 
     /**
@@ -1071,7 +1067,7 @@ public final class JdbcUtils {
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, final Connection conn, final String insertSQL,
             final Throwables.Function<? super T, Object[], E> func) throws UncheckedSQLException, E {
-        return importData(iter, 0, Long.MAX_VALUE, conn, insertSQL, DEFAULT_BATCH_SIZE, 0, func);
+        return importData(iter, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
 
     /**
@@ -1118,7 +1114,7 @@ public final class JdbcUtils {
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, final PreparedStatement stmt,
             final Throwables.Function<? super T, Object[], E> func) throws E {
-        return importData(iter, 0, Long.MAX_VALUE, stmt, DEFAULT_BATCH_SIZE, 0, func);
+        return importData(iter, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
 
     /**
@@ -1195,7 +1191,7 @@ public final class JdbcUtils {
      */
     public static <T> long importData(final Iterator<T> iter, final Connection conn, final String insertSQL,
             final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) {
-        return importData(iter, 0, Long.MAX_VALUE, conn, insertSQL, DEFAULT_BATCH_SIZE, 0, stmtSetter);
+        return importData(iter, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
@@ -1259,7 +1255,7 @@ public final class JdbcUtils {
      */
     public static <T> long importData(final Iterator<T> iter, final PreparedStatement stmt,
             final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) {
-        return importData(iter, 0, Long.MAX_VALUE, stmt, DEFAULT_BATCH_SIZE, 0, stmtSetter);
+        return importData(iter, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
@@ -3126,8 +3122,8 @@ public final class JdbcUtils {
      */
     public static long copy(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql)
             throws UncheckedSQLException {
-        return copy(sourceConn, selectSql, DEFAULT_FETCH_SIZE, 0, Integer.MAX_VALUE, targetConn, insertSql, JdbcUtil.DEFAULT_STMT_SETTER, DEFAULT_BATCH_SIZE, 0,
-                false);
+        return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, 0, Integer.MAX_VALUE, targetConn, insertSql,
+                JdbcUtil.DEFAULT_STMT_SETTER, JdbcUtil.DEFAULT_BATCH_SIZE, 0, false);
     }
 
     /**
@@ -3181,7 +3177,7 @@ public final class JdbcUtils {
      */
     public static long copy(final PreparedStatement selectStmt, final PreparedStatement insertStmt,
             final JdbcUtil.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
-        return copy(selectStmt, 0, Integer.MAX_VALUE, insertStmt, stmtSetter, DEFAULT_BATCH_SIZE, 0, false);
+        return copy(selectStmt, 0, Integer.MAX_VALUE, insertStmt, stmtSetter, JdbcUtil.DEFAULT_BATCH_SIZE, 0, false);
     }
 
     /**
@@ -3256,7 +3252,7 @@ public final class JdbcUtils {
         if (JdbcUtil.getDBVersion(conn).isMySQL()) {
             stmt.setFetchSize(Integer.MIN_VALUE);
         } else {
-            stmt.setFetchSize(DEFAULT_FETCH_SIZE);
+            stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
         }
     }
 

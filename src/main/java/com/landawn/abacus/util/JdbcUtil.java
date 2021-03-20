@@ -138,9 +138,11 @@ public final class JdbcUtil {
 
     static final Logger logger = LoggerFactory.getLogger(JdbcUtil.class);
 
-    public static final int DEFAULT_BATCH_SIZE = 200;
+    static final int DEFAULT_BATCH_SIZE = 200;
 
-    static final int MAX_BATCH_SIZE = 1000;
+    // static final int MAX_BATCH_SIZE = 1000;
+
+    static final int DEFAULT_FETCH_SIZE_FOR_BIG_RESULT = 1000;
 
     // ...
     static final String CURRENT_DIR_PATH = "./";

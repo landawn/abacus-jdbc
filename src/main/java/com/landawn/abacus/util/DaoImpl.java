@@ -3643,7 +3643,7 @@ final class DaoImpl {
                                 final Tuple2<BiFunction<Collection<String>, Integer, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
                                         .getBatchSelectSQLBuilderAndParamSetter(sbc);
 
-                                ExceptionalStream.of(entities).splitToList(JdbcUtil.MAX_BATCH_SIZE).forEach(bp -> {
+                                ExceptionalStream.of(entities).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(bp -> {
                                     if (propJoinInfo.isManyToManyJoin()) {
                                         final BiRowMapper<Pair<Object, Object>> pairBiRowMapper = new BiRowMapper<Pair<Object, Object>>() {
                                             private BiRowMapper<Object> biRowMapper = null;
@@ -3752,7 +3752,7 @@ final class DaoImpl {
                                     final Tuple3<IntFunction<String>, IntFunction<String>, BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
                                             .getBatchDeleteSQLBuilderAndParamSetter(sbc);
 
-                                    result = ExceptionalStream.of(entities).splitToList(JdbcUtil.MAX_BATCH_SIZE).sumInt(bp -> {
+                                    result = ExceptionalStream.of(entities).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).sumInt(bp -> {
                                         if (tp._2 == null) {
                                             return joinEntityDao.prepareQuery(tp._1.apply(bp.size())).setParameters(bp, tp._3).update();
                                         } else {
