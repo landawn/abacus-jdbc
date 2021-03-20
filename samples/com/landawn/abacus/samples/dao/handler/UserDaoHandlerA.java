@@ -12,12 +12,12 @@ public class UserDaoHandlerA implements JdbcUtil.Handler<UserDao> {
 
     @Override
     public void beforeInvoke(final UserDao userDao, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-        N.println("UserDaoHandlerA.beforeInvoke: method: " + methodSignature);
+        N.println("UserDaoHandlerA.beforeInvoke: method: " + methodSignature._1.getName());
     }
 
     @Override
     public void afterInvoke(final Object result, final UserDao userDao, final Object[] args,
             final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-        N.println("UserDaoHandlerA.afterInvoke: method: result" + result);
+        N.println("UserDaoHandlerA.afterInvoke: method: " + methodSignature._1.getName() + ". result: " + result);
     }
 }

@@ -42,12 +42,12 @@ import com.landawn.abacus.util.SQLTransaction;
  */
 public class Jdbc {
     static {
-        HandlerFactory.register("handler1",
-                HandlerFactory.create((obj, args, methodSignature) -> N.println("handler1.beforeInvoke: method: " + methodSignature),
-                        (result, obj, args, methodSignature) -> N.println("handler1.afterInvoke: method: result" + result)));
-        HandlerFactory.register("handler2",
-                HandlerFactory.create((obj, args, methodSignature) -> N.println("handler2.beforeInvoke: method: " + methodSignature),
-                        (result, obj, args, methodSignature) -> N.println("handler2.afterInvoke: method: result" + result)));
+        HandlerFactory.register("handler1", HandlerFactory.create(
+                (obj, args, methodSignature) -> N.println("handler1.beforeInvoke: method: " + methodSignature._1.getName()),
+                (result, obj, args, methodSignature) -> N.println("handler1.afterInvoke: method: " + methodSignature._1.getName() + ". result: " + result)));
+        HandlerFactory.register("handler2", HandlerFactory.create(
+                (obj, args, methodSignature) -> N.println("handler2.beforeInvoke: method: " + methodSignature._1.getName()),
+                (result, obj, args, methodSignature) -> N.println("handler2.afterInvoke: method: " + methodSignature._1.getName() + ". result: " + result)));
 
         JdbcUtil.setIdExtractorForDao(EmployeeDao.class, rs -> rs.getInt(1));
         JdbcUtil.setIdExtractorForDao(UserDaoL.class, rs -> rs.getLong(1));
