@@ -15,12 +15,11 @@ public class Hello {
     public void test_expr() {
 
         String sql = PSC.update(User.class)
-                .set(N.asProps("firstName", CF.expr("first_name + 'abc'")))
+                .set(N.asProps("firstName", CF.expr("first_name + 'abc'"), "lastName", CF.expr("lastName + '123'")))
                 .where(CF.eq("firstName", CF.expr("first_name + 'abc'")))
                 .sql();
 
         N.println(sql);
-        
-        assertEquals("UPDATE user SET first_name = first_name + 'abc' WHERE first_name = first_name + 'abc'", sql);
+        assertEquals("UPDATE user SET FIRST_NAME = first_name + 'abc', last_name = last_name + '123' WHERE FIRST_NAME = first_name + 'abc'", sql);
     }
 }
