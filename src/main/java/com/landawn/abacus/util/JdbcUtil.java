@@ -1807,6 +1807,34 @@ public final class JdbcUtil {
     }
 
     /**
+     * Prepare {@code select} query for big result set. Fetch direction will be set to {@code FetchDirection.FORWARD} 
+     * and fetch size will be set to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
+     * 
+     * @param ds
+     * @param sql
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public static PreparedQuery prepareBigQuery(final javax.sql.DataSource ds, final String sql) throws SQLException {
+        return prepareQuery(ds, sql).setFetchDirection(FetchDirection.FORWARD).setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+    }
+
+    /**
+     * Prepare {@code select} query for big result set. Fetch direction will be set to {@code FetchDirection.FORWARD} 
+     * and fetch size will be set to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
+     * 
+     * @param conn
+     * @param sql
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public static PreparedQuery prepareBigQuery(final Connection conn, final String sql) throws SQLException {
+        return prepareQuery(conn, sql).setFetchDirection(FetchDirection.FORWARD).setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+    }
+
+    /**
      * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction} or in {@code Spring} with the same {@code DataSource} in the same thread,
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
@@ -2395,6 +2423,34 @@ public final class JdbcUtil {
         validateNamedSql(namedSql);
 
         return new NamedQuery(prepareStatement(conn, namedSql, stmtCreator), namedSql);
+    }
+
+    /**
+     * Prepare {@code select} query for big result set. Fetch direction will be set to {@code FetchDirection.FORWARD} 
+     * and fetch size will be set to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
+     * 
+     * @param ds
+     * @param sql
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public static NamedQuery prepareBigNamedQuery(final javax.sql.DataSource ds, final String sql) throws SQLException {
+        return prepareNamedQuery(ds, sql).setFetchDirection(FetchDirection.FORWARD).setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+    }
+
+    /**
+     * Prepare {@code select} query for big result set. Fetch direction will be set to {@code FetchDirection.FORWARD} 
+     * and fetch size will be set to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
+     * 
+     * @param conn
+     * @param sql
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public static NamedQuery prepareBigNamedQuery(final Connection conn, final String sql) throws SQLException {
+        return prepareNamedQuery(conn, sql).setFetchDirection(FetchDirection.FORWARD).setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
     }
 
     /**
