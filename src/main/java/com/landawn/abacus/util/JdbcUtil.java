@@ -9049,6 +9049,8 @@ public final class JdbcUtil {
          * @throws SQLException
          * @see {@link #prepareQuery(Collection, Condition)}
          */
+        @Beta
+        @NonDBOperation
         default PreparedQuery prepareQuery(final Condition cond) throws SQLException {
             return prepareQuery(null, cond);
         }
@@ -9064,6 +9066,8 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
+        @NonDBOperation
         default PreparedQuery prepareQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
             return getDaoPreparedQueryFunc(this)._1.apply(selectPropNames, cond);
         }
@@ -9079,6 +9083,8 @@ public final class JdbcUtil {
          * @throws SQLException
          * @see {@link #prepareQueryForBigResult(Collection, Condition)}
          */
+        @Beta
+        @NonDBOperation
         default PreparedQuery prepareQueryForBigResult(final Condition cond) throws SQLException {
             return prepareQueryForBigResult(null, cond);
         }
@@ -9094,6 +9100,8 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
+        @NonDBOperation
         default PreparedQuery prepareQueryForBigResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
             return prepareQuery(selectPropNames, cond).setFetchDirectionToForward().setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
         }
@@ -9108,6 +9116,8 @@ public final class JdbcUtil {
          * @throws SQLException
          * @see {@link #prepareNamedQuery(Collection, Condition)}
          */
+        @Beta
+        @NonDBOperation
         default NamedQuery prepareNamedQuery(final Condition cond) throws SQLException {
             return prepareNamedQuery(null, cond);
         }
@@ -9123,6 +9133,8 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
+        @NonDBOperation
         default NamedQuery prepareNamedQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
             return getDaoPreparedQueryFunc(this)._2.apply(selectPropNames, cond);
         }
@@ -9138,6 +9150,8 @@ public final class JdbcUtil {
          * @throws SQLException
          * @see {@link #prepareNamedQueryForBigResult(Collection, Condition)}
          */
+        @Beta
+        @NonDBOperation
         default NamedQuery prepareNamedQueryForBigResult(final Condition cond) throws SQLException {
             return prepareNamedQueryForBigResult(null, cond);
         }
@@ -9153,6 +9167,8 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
+        @NonDBOperation
         default NamedQuery prepareNamedQueryForBigResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
             return prepareNamedQuery(selectPropNames, cond).setFetchDirectionToForward().setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
         }
