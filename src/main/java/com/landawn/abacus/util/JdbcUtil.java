@@ -7869,7 +7869,7 @@ public final class JdbcUtil {
              */
             boolean allowJoiningByNullOrDefaultValue() default false;
 
-            //    // why we need to this?
+            //    // why do we need this?
             //    boolean excludePrepareQueryMethodsFromNonDBOpereation() default false;
         }
 
