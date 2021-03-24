@@ -7868,6 +7868,9 @@ public final class JdbcUtil {
              * @return
              */
             boolean allowJoiningByNullOrDefaultValue() default false;
+
+            //    // why we need to this?
+            //    boolean excludePrepareQueryMethodsFromNonDBOpereation() default false;
         }
 
         @Retention(RetentionPolicy.RUNTIME)
@@ -8637,6 +8640,22 @@ public final class JdbcUtil {
             String[] filter() default { "save", "insert", "update", "delete", "upsert", "execute" };
         }
 
+        /**
+         * Annotated methods in {@code Dao} for:
+         * 
+         * <li> No {@code Handler} is applied to {@code non-db Operation} </li>
+         * <li> No {@code sql/performance} log is applied to {@code non-db Operation} </li>
+         * <li> No {@code Transaction} annotation is applied to {@code non-db Operation} </li>
+         * 
+         * <br />
+         * By default, {@code targetEntityClass/dataSource/sqlMapper/executor/asyncExecutor/prepareQuery/prepareNamedQuery/prepareCallableQuery} methods in {@code Dao} are annotated with {@code NonDBOperation}.
+         *
+         * <br />
+         * <br />
+         * 
+         * @author haiyangl
+         *
+         */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.METHOD })
         static @interface NonDBOperation {
