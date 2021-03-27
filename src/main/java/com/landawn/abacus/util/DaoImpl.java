@@ -4739,7 +4739,7 @@ final class DaoImpl {
                         .map(handlerAnno -> Tuple.of((JdbcUtil.Handler) (N.notNullOrEmpty(handlerAnno.qualifier())
                                 ? daoClassHandlerMap.getOrDefault(handlerAnno.qualifier(), HandlerFactory.get(handlerAnno.qualifier()))
                                 : HandlerFactory.getOrCreate(handlerAnno.type())), handlerAnno.isForInvokeFromOutsideOfDaoOnly()))
-                        .onEach(handler -> N.checkArgNotNull(handler,
+                        .onEach(handler -> N.checkArgNotNull(handler._1,
                                 "No handler found/registered with qualifier or type in class/method: " + fullClassMethodName))
                         .toList();
 
