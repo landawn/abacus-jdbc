@@ -1664,7 +1664,7 @@ final class DaoImpl {
                 .filter(it -> it.isAnnotationPresent(SqlField.class))
                 .onEach(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()) && String.class.equals(it.getType()),
                         "Field annotated with @SqlField must be static&final String. but {} is not in Dao class {}.", it, daoInterface))
-                .onEach(it -> it.setAccessible(true))
+                .onEach(it -> ClassUtil.setAccessible(it, true))
                 .map(it -> Tuple.of(it.getAnnotation(SqlField.class), it))
                 .map(it -> Tuple.of(N.isNullOrEmpty(it._1.id()) ? it._2.getName() : it._1.id(), it._2))
                 .distinctBy(it -> it._1, (a, b) -> {
@@ -1924,10 +1924,9 @@ final class DaoImpl {
                 .flatMapp(it -> it.getDeclaredFields())
                 .append(StreamEx.of(allInterfaces).flatMapp(it -> it.getDeclaredClasses()).flatMapp(it -> it.getDeclaredFields()))
                 .filter(it -> JdbcUtil.Handler.class.isAssignableFrom(it.getType()))
-                .onEach(it -> N.checkArgument(
-                        Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()) && JdbcUtil.Handler.class.equals(it.getType()),
+                .onEach(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()),
                         "Handler Fields defined in Dao declared classes must be static&final Handler. but {} is not in Dao class {}.", it, daoInterface))
-                .onEach(it -> it.setAccessible(true))
+                .onEach(it -> ClassUtil.setAccessible(it, true))
                 .distinctBy(it -> it.getName(), (a, b) -> {
                     throw new IllegalArgumentException("Two Handler fields have the same id (or name): " + a + "," + b + " in Dao class: " + daoInterface);
                 })
