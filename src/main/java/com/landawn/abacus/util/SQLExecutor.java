@@ -38,6 +38,7 @@ import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.EntityId;
 import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.annotation.LazyEvaluation;
 import com.landawn.abacus.core.DirtyMarkerUtil;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -3882,6 +3883,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> stream(final Class<T> targetClass, final String sql, final Object... parameters) {
         return stream(targetClass, sql, StatementSetter.DEFAULT, parameters);
     }
@@ -3898,6 +3900,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> stream(final Class<T> targetClass, final String sql, final StatementSetter statementSetter, final Object... parameters) {
         return stream(targetClass, sql, statementSetter, null, parameters);
     }
@@ -3913,6 +3916,7 @@ public class SQLExecutor {
      * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
      * @return
      */
+    @LazyEvaluation
     public final <T> Stream<T> stream(final Class<T> targetClass, final String sql, final JdbcSettings jdbcSettings, final Object... parameters) {
         return stream(targetClass, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
     }
@@ -3930,6 +3934,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> stream(final Class<T> targetClass, final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings,
             final Object... parameters) {
         return stream(sql, statementSetter, BiRowMapper.to(targetClass), jdbcSettings, parameters);
@@ -3946,6 +3951,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> stream(final String sql, final JdbcUtil.BiRowMapper<T> rowMapper, final Object... parameters) {
         return stream(sql, StatementSetter.DEFAULT, rowMapper, parameters);
     }
@@ -3962,6 +3968,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> stream(final String sql, final StatementSetter statementSetter, final JdbcUtil.BiRowMapper<T> rowMapper,
             final Object... parameters) {
         return stream(sql, statementSetter, rowMapper, null, parameters);
@@ -3979,6 +3986,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> stream(final String sql, final JdbcUtil.BiRowMapper<T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters) {
         return stream(sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, parameters);
     }
@@ -4006,6 +4014,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> stream(final String sql, final StatementSetter statementSetter, final JdbcUtil.BiRowMapper<T> rowMapper,
             final JdbcSettings jdbcSettings, final Object... parameters) {
 
@@ -4191,6 +4200,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> streamAll(final Class<T> targetClass, final List<String> sqls, final JdbcSettings jdbcSettings, final Object... parameters) {
         return streamAll(targetClass, sqls, null, jdbcSettings, parameters);
     }
@@ -4209,6 +4219,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> streamAll(final Class<T> targetClass, final List<String> sqls, final StatementSetter statementSetter,
             final JdbcSettings jdbcSettings, final Object... parameters) {
         return streamAll(sqls, statementSetter, BiRowMapper.to(targetClass), jdbcSettings, parameters);
@@ -4227,6 +4238,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> streamAll(final List<String> sqls, final JdbcUtil.BiRowMapper<T> rowMapper, final JdbcSettings jdbcSettings,
             final Object... parameters) {
         return streamAll(sqls, null, rowMapper, jdbcSettings, parameters);
@@ -4246,6 +4258,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> streamAll(final List<String> sqls, final StatementSetter statementSetter, final JdbcUtil.BiRowMapper<T> rowMapper,
             final JdbcSettings jdbcSettings, final Object... parameters) {
         if (sqls.size() == 1) {

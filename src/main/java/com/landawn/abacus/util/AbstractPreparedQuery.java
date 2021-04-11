@@ -35,6 +35,7 @@ import java.util.concurrent.Executor;
 
 import com.landawn.abacus.DataSet;
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.annotation.LazyEvaluation;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
@@ -3065,6 +3066,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     // Will it cause confusion if it's called in transaction?
 
+    @LazyEvaluation
     public ExceptionalStream<Map<String, Object>, SQLException> stream() throws SQLException {
         return stream(BiRowMapper.TO_MAP);
     }
@@ -3077,6 +3079,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException the SQL exception
      */
+    @LazyEvaluation
     public <T> ExceptionalStream<T, SQLException> stream(final Class<T> targetClass) throws SQLException {
         return stream(BiRowMapper.to(targetClass));
     }
@@ -3090,6 +3093,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException the SQL exception
      */
+    @LazyEvaluation
     public <T> ExceptionalStream<T, SQLException> stream(final RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -3111,6 +3115,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException the SQL exception
      */
+    @LazyEvaluation
     public <T> ExceptionalStream<T, SQLException> stream(final BiRowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -3133,6 +3138,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
+    @LazyEvaluation
     public <T> ExceptionalStream<T, SQLException> stream(final RowFilter rowFilter, final RowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
@@ -3156,6 +3162,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException the SQL exception
      */
+    @LazyEvaluation
     public <T> ExceptionalStream<T, SQLException> stream(final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
