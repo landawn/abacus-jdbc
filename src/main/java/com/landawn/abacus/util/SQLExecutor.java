@@ -44,6 +44,7 @@ import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.EntityId;
 import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.annotation.LazyEvaluation;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.core.DirtyMarkerUtil;
@@ -4366,6 +4367,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> stream(final Class<T> targetClass, final String sql, final Object... parameters) {
         return stream(targetClass, sql, StatementSetter.DEFAULT, parameters);
     }
@@ -4382,6 +4384,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> stream(final Class<T> targetClass, final String sql, final StatementSetter statementSetter, final Object... parameters) {
         return stream(targetClass, sql, statementSetter, null, parameters);
     }
@@ -4397,6 +4400,7 @@ public class SQLExecutor {
      * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
      * @return
      */
+    @LazyEvaluation
     public final <T> Stream<T> stream(final Class<T> targetClass, final String sql, final JdbcSettings jdbcSettings, final Object... parameters) {
         return stream(targetClass, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
     }
@@ -4414,6 +4418,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> stream(final Class<T> targetClass, final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings,
             final Object... parameters) {
         return stream(sql, statementSetter, BiRowMapper.to(targetClass), jdbcSettings, parameters);
@@ -4430,6 +4435,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> stream(final String sql, final JdbcUtil.BiRowMapper<T> rowMapper, final Object... parameters) {
         return stream(sql, StatementSetter.DEFAULT, rowMapper, parameters);
     }
@@ -4446,6 +4452,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> stream(final String sql, final StatementSetter statementSetter, final JdbcUtil.BiRowMapper<T> rowMapper,
             final Object... parameters) {
         return stream(sql, statementSetter, rowMapper, null, parameters);
@@ -4463,6 +4470,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> stream(final String sql, final JdbcUtil.BiRowMapper<T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters) {
         return stream(sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, parameters);
     }
@@ -4490,6 +4498,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> stream(final String sql, final StatementSetter statementSetter, final JdbcUtil.BiRowMapper<T> rowMapper,
             final JdbcSettings jdbcSettings, final Object... parameters) {
 
@@ -4674,6 +4683,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> streamAll(final Class<T> targetClass, final String sql, final JdbcSettings jdbcSettings, final Object... parameters) {
         return streamAll(targetClass, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
     }
@@ -4692,6 +4702,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> streamAll(final Class<T> targetClass, final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings,
             final Object... parameters) {
         return streamAll(sql, statementSetter, BiRowMapper.to(targetClass), jdbcSettings, parameters);
@@ -4710,6 +4721,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> streamAll(final String sql, final JdbcUtil.BiRowMapper<T> rowMapper, final JdbcSettings jdbcSettings,
             final Object... parameters) {
         return streamAll(sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, parameters);
@@ -4729,6 +4741,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> streamAll(final String sql, final StatementSetter statementSetter, final JdbcUtil.BiRowMapper<T> rowMapper,
             final JdbcSettings jdbcSettings, final Object... parameters) {
         checkJdbcSettingsForAllQuery(jdbcSettings);
@@ -4770,6 +4783,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> streamAll(final Class<T> targetClass, final List<String> sqls, final JdbcSettings jdbcSettings, final Object... parameters) {
         return streamAll(targetClass, sqls, null, jdbcSettings, parameters);
     }
@@ -4788,6 +4802,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> streamAll(final Class<T> targetClass, final List<String> sqls, final StatementSetter statementSetter,
             final JdbcSettings jdbcSettings, final Object... parameters) {
         return streamAll(sqls, statementSetter, BiRowMapper.to(targetClass), jdbcSettings, parameters);
@@ -4806,6 +4821,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> streamAll(final List<String> sqls, final JdbcUtil.BiRowMapper<T> rowMapper, final JdbcSettings jdbcSettings,
             final Object... parameters) {
         return streamAll(sqls, null, rowMapper, jdbcSettings, parameters);
@@ -4825,6 +4841,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
+    @LazyEvaluation
     public final <T> Stream<T> streamAll(final List<String> sqls, final StatementSetter statementSetter, final JdbcUtil.BiRowMapper<T> rowMapper,
             final JdbcSettings jdbcSettings, final Object... parameters) {
         if (sqls.size() == 1) {
@@ -6754,6 +6771,7 @@ public class SQLExecutor {
          * @param whereCause
          * @return
          */
+        @LazyEvaluation
         public Stream<T> stream(final Condition whereCause) {
             return stream((Collection<String>) null, whereCause);
         }
@@ -6765,6 +6783,7 @@ public class SQLExecutor {
          * @param whereCause
          * @return
          */
+        @LazyEvaluation
         public Stream<T> stream(final Collection<String> selectPropNames, final Condition whereCause) {
             return stream(selectPropNames, whereCause, null);
         }
@@ -6777,6 +6796,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
+        @LazyEvaluation
         public Stream<T> stream(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
@@ -6790,6 +6810,7 @@ public class SQLExecutor {
          * @param whereCause
          * @return
          */
+        @LazyEvaluation
         public <R> Stream<R> stream(final String singleSelectPropName, final Condition whereCause) {
             return stream(singleSelectPropName, whereCause, null);
         }
@@ -6802,6 +6823,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
+        @LazyEvaluation
         public <R> Stream<R> stream(final String singleSelectPropName, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final PropInfo propInfo = entityInfo.getPropInfo(singleSelectPropName);
             final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
@@ -6818,6 +6840,7 @@ public class SQLExecutor {
          * @param whereCause
          * @return
          */
+        @LazyEvaluation
         public <R> Stream<R> stream(final String singleSelectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
             return stream(singleSelectPropName, rowMapper, whereCause, null);
         }
@@ -6832,6 +6855,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
+        @LazyEvaluation
         public <R> Stream<R> stream(final String singleSelectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             return stream(Arrays.asList(singleSelectPropName), rowMapper, whereCause, jdbcSettings);
@@ -6846,6 +6870,7 @@ public class SQLExecutor {
          * @param whereCause
          * @return
          */
+        @LazyEvaluation
         public <R> Stream<R> stream(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause) {
             return stream(selectPropNames, rowMapper, whereCause, null);
         }
@@ -6860,6 +6885,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
+        @LazyEvaluation
         public <R> Stream<R> stream(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             N.checkArgNotNull(rowMapper);
@@ -6878,6 +6904,7 @@ public class SQLExecutor {
          * @param whereCause
          * @return
          */
+        @LazyEvaluation
         public <R> Stream<R> stream(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause) {
             return stream(selectPropNames, rowMapper, whereCause, null);
         }
@@ -6892,6 +6919,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
+        @LazyEvaluation
         public <R> Stream<R> stream(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
@@ -6908,6 +6936,7 @@ public class SQLExecutor {
          * @return
          * @see SQLExecutor#streamAll(Class, String, StatementSetter, JdbcSettings, Object...)
          */
+        @LazyEvaluation
         public Stream<T> streamAll(final Condition whereCause, final JdbcSettings jdbcSettings) {
             return streamAll((Collection<String>) null, whereCause, jdbcSettings);
         }
@@ -6922,6 +6951,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
+        @LazyEvaluation
         public <R> Stream<R> streamAll(final String singleSelectPropName, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final PropInfo propInfo = entityInfo.getPropInfo(singleSelectPropName);
             final JdbcUtil.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
@@ -6940,6 +6970,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
+        @LazyEvaluation
         public <R> Stream<R> streamAll(final String singleSelectPropName, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             return streamAll(Arrays.asList(singleSelectPropName), rowMapper, whereCause, jdbcSettings);
@@ -6955,6 +6986,7 @@ public class SQLExecutor {
          * @return
          * @see SQLExecutor#streamAll(Class, String, StatementSetter, JdbcSettings, Object...)
          */
+        @LazyEvaluation
         public Stream<T> streamAll(final Collection<String> selectPropNames, final Condition whereCause, final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);
 
@@ -6972,6 +7004,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
+        @LazyEvaluation
         public <R> Stream<R> streamAll(final Collection<String> selectPropNames, final JdbcUtil.RowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             N.checkArgNotNull(rowMapper);
@@ -6993,6 +7026,7 @@ public class SQLExecutor {
          * @param jdbcSettings
          * @return
          */
+        @LazyEvaluation
         public <R> Stream<R> streamAll(final Collection<String> selectPropNames, final JdbcUtil.BiRowMapper<R> rowMapper, final Condition whereCause,
                 final JdbcSettings jdbcSettings) {
             final SP sp = prepareQuery(selectPropNames, whereCause);

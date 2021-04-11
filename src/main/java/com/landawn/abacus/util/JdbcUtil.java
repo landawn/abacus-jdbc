@@ -76,6 +76,7 @@ import com.landawn.abacus.EntityId;
 import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
+import com.landawn.abacus.annotation.LazyEvaluation;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.cache.Cache;
@@ -10050,6 +10051,7 @@ public final class JdbcUtil {
          * @param cond
          * @return
          */
+        @LazyEvaluation
         ExceptionalStream<T, SQLException> stream(final Condition cond);
 
         // Will it cause confusion if it's called in transaction?
@@ -10060,6 +10062,7 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          */
+        @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final RowMapper<R> rowMapper);
 
         // Will it cause confusion if it's called in transaction?
@@ -10070,6 +10073,7 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          */
+        @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final BiRowMapper<R> rowMapper);
 
         /**
@@ -10080,6 +10084,7 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          */
+        @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper);
 
         /**
@@ -10090,6 +10095,7 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          */
+        @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final BiRowFilter rowFilter, final BiRowMapper<R> rowMapper);
 
         // Will it cause confusion if it's called in transaction?
@@ -10100,6 +10106,7 @@ public final class JdbcUtil {
          * @param cond
          * @return
          */
+        @LazyEvaluation
         ExceptionalStream<T, SQLException> stream(final Collection<String> selectPropNames, final Condition cond);
 
         // Will it cause confusion if it's called in transaction?
@@ -10111,6 +10118,7 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          */
+        @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final RowMapper<R> rowMapper);
 
         // Will it cause confusion if it's called in transaction?
@@ -10122,6 +10130,7 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          */
+        @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper);
 
         // Will it cause confusion if it's called in transaction?
@@ -10134,6 +10143,7 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          */
+        @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, RowFilter rowFilter,
                 final RowMapper<R> rowMapper);
 
@@ -10147,6 +10157,7 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          */
+        @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter,
                 final BiRowMapper<R> rowMapper);
 
@@ -10157,6 +10168,7 @@ public final class JdbcUtil {
          * @param cond
          * @return
          */
+        @LazyEvaluation
         default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) {
             final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
             final RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
@@ -10173,6 +10185,7 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          */
+        @LazyEvaluation
         default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final RowMapper<R> rowMapper) {
             return stream(N.asList(singleSelectPropName), cond, rowMapper);
         }
@@ -10186,6 +10199,7 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          */
+        @LazyEvaluation
         default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final RowFilter rowFilter,
                 final RowMapper<R> rowMapper) {
             return stream(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
