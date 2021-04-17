@@ -1,6 +1,7 @@
 package codes.entity;
 
 import com.landawn.abacus.annotation.Column;
+import com.landawn.abacus.annotation.Table;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,6 +12,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Table("account")
 public class Account2 {
 
     @Column("ID")

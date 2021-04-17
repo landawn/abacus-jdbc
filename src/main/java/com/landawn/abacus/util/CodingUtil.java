@@ -19,7 +19,8 @@ import com.landawn.abacus.util.Tuple.Tuple3;
 public final class CodingUtil {
 
     static final String str = new StringBuilder() //
-            .append("import com.landawn.abacus.annotation.Column;\n\n")
+            .append("import com.landawn.abacus.annotation.Column;\n")
+            .append("import com.landawn.abacus.annotation.Table;\n\n")
             .append("import lombok.AllArgsConstructor;\n")
             .append("import lombok.Builder;\n")
             .append("import lombok.Data;\n")
@@ -84,8 +85,12 @@ public final class CodingUtil {
                 sb.append("package ").append(packageName + ";").append("\n").append("\n");
             }
 
-            sb.append(str);
-            sb.append("public class " + finalClassName).append(" {").append("\n");
+            sb.append(str) //
+                    .append("@Table(\"" + tableName + "\")")
+                    .append("\n")
+                    .append("public class " + finalClassName)
+                    .append(" {")
+                    .append("\n");
 
             final ResultSetMetaData metaData = rs.getMetaData();
             final int columnCount = metaData.getColumnCount();
