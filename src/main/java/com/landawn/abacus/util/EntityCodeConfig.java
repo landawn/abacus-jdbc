@@ -19,6 +19,7 @@ import java.lang.annotation.Annotation;
 import java.util.Collection;
 import java.util.List;
 
+import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 
 import lombok.AllArgsConstructor;
@@ -36,6 +37,8 @@ public class EntityCodeConfig {
     private String packageName;
     private String srcDir;
     private List<Tuple3<String, String, Class<?>>> customizedFields;
+    private List<Tuple2<String, String>> customizedFieldDbTypes;
+    // private List<Tuple2<String, String>> customizedJsonFields;
     private boolean useBoxedType;
     private boolean mapBigIntegerToLong;
     private boolean mapBigDecimalToDouble;

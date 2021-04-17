@@ -18425,8 +18425,6 @@ public final class JdbcUtil {
         final String className = configToUse.getClassName();
         final String packageName = configToUse.getPackageName();
         final String srcDir = configToUse.getSrcDir();
-        final List<Tuple3<String, String, Class<?>>> customizedFields = configToUse.getCustomizedFields();
-        configToUse.isUseBoxedType();
 
         final Set<String> readOnlyFields = configToUse.getReadOnlyFields() == null ? new HashSet<>() : new HashSet<>(configToUse.getReadOnlyFields());
 
@@ -18451,7 +18449,8 @@ public final class JdbcUtil {
         final boolean isJavaPersistenceColumn = "javax.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass));
         final boolean isJavaPersistenceId = "javax.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass));
 
-        final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = Maps.newMap(customizedFields, tp -> tp._1);
+        final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = Maps.newMap(N.nullToEmpty(configToUse.getCustomizedFields()), tp -> tp._1);
+        final Map<String, Tuple2<String, String>> customizedFieldDbTypeMap = Maps.newMap(N.nullToEmpty(configToUse.getCustomizedFieldDbTypes()), tp -> tp._1);
         final List<String> columnNameList = new ArrayList<>();
 
         try (PreparedStatement stmt = conn.prepareStatement("select * from " + tableName + " where 1 > 2"); //
@@ -18477,9 +18476,27 @@ public final class JdbcUtil {
                 sb.append("package ").append(packageName + ";").append("\n").append("\n");
             }
 
-            sb.append("import " + ClassUtil.getCanonicalClassName(columnAnnotationClass) + ";\n");
+            if (isJavaPersistenceColumn || isJavaPersistenceId || isJavaPersistenceTable) {
+                if (isJavaPersistenceColumn) {
+                    sb.append("import " + ClassUtil.getCanonicalClassName(columnAnnotationClass) + ";\n");
+                }
 
-            if (N.notNullOrEmpty(idFields)) {
+                if (isJavaPersistenceId && N.notNullOrEmpty(idFields)) {
+                    sb.append("import " + ClassUtil.getCanonicalClassName(idAnnotationClass) + ";\n");
+                }
+
+                if (isJavaPersistenceTable) {
+                    sb.append("import " + ClassUtil.getCanonicalClassName(tableAnnotationClass) + ";\n");
+                }
+
+                sb.append("\n");
+            }
+
+            if (!isJavaPersistenceColumn) {
+                sb.append("import " + ClassUtil.getCanonicalClassName(columnAnnotationClass) + ";\n");
+            }
+
+            if (!isJavaPersistenceId && N.notNullOrEmpty(idFields)) {
                 sb.append("import " + ClassUtil.getCanonicalClassName(idAnnotationClass) + ";\n");
             }
 
@@ -18491,7 +18508,15 @@ public final class JdbcUtil {
                 sb.append("import " + ClassUtil.getCanonicalClassName(ReadOnly.class) + ";\n");
             }
 
-            sb.append("import " + ClassUtil.getCanonicalClassName(tableAnnotationClass) + ";\n\n");
+            if (!isJavaPersistenceTable) {
+                sb.append("import " + ClassUtil.getCanonicalClassName(tableAnnotationClass) + ";\n");
+            }
+
+            if (N.notNullOrEmpty(customizedFieldDbTypeMap)) {
+                sb.append("import " + ClassUtil.getCanonicalClassName(com.landawn.abacus.annotation.Type.class) + ";\n");
+            }
+
+            sb.append("\n");
 
             sb.append(eccHeader) //
                     .append(isJavaPersistenceTable ? "@Table(name = \"" + tableName + "\")" : "@Table(\"" + tableName + "\")")
@@ -18530,10 +18555,15 @@ public final class JdbcUtil {
                     sb.append("    @NonUpdatable").append("\n");
                 }
 
-                sb.append(isJavaPersistenceColumn ? "    @Column(name = \"" + columnName + "\")" : "    @Column(\"" + columnName + "\")")
-                        .append("\n") //
-                        .append("    private " + columnClassName + " " + fieldName + ";")
-                        .append("\n");
+                sb.append(isJavaPersistenceColumn ? "    @Column(name = \"" + columnName + "\")" : "    @Column(\"" + columnName + "\")").append("\n");
+
+                final Tuple2<String, String> dbType = customizedFieldDbTypeMap.getOrDefault(fieldName, customizedFieldDbTypeMap.get(columnName));
+
+                if (dbType != null) {
+                    sb.append("    @Type(name = \"" + dbType._2 + "\")").append("\n");
+                }
+
+                sb.append("    private " + columnClassName + " " + fieldName + ";").append("\n");
             }
 
             if (idFields.size() > 0) {

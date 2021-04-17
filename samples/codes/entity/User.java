@@ -1,9 +1,11 @@
 package codes.entity;
 
 import javax.persistence.Column;
+import javax.persistence.Table;
+
 import com.landawn.abacus.annotation.NonUpdatable;
 import com.landawn.abacus.annotation.ReadOnly;
-import javax.persistence.Table;
+import com.landawn.abacus.annotation.Type;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -35,6 +37,7 @@ public class User {
 
     @NonUpdatable
     @Column(name = "CREATE_TIME")
+    @Type(name = "List<String>")
     private java.util.Date create_time;
 
 }

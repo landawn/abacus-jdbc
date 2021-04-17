@@ -348,6 +348,7 @@ public class Jdbc {
                 .columnAnnotationClass(javax.persistence.Column.class)
                 .tableAnnotationClass(javax.persistence.Table.class)
                 .customizedFields(N.asList(Tuple.of("createTime", "create_time", java.util.Date.class)))
+                .customizedFieldDbTypes(N.asList(Tuple.of("create_time", "List<String>")))
                 .build();
 
         str = JdbcUtil.generateEntityClass(dataSource, "user", ecc);
