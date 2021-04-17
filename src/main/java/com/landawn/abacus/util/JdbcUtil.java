@@ -26,6 +26,7 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.Blob;
 import java.sql.CallableStatement;
 import java.sql.Clob;
@@ -18416,33 +18417,35 @@ public final class JdbcUtil {
         }
     }
 
+    private static final EntityCodeConfig defaultEntityCodeConfig = new EntityCodeConfig();
+
     public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
+        final EntityCodeConfig configToUse = config == null ? defaultEntityCodeConfig : config;
 
-        final String className = config == null ? null : config.getClassName();
-        final String packageName = config == null ? null : config.getPackageName();
-        final String srcDir = config == null ? null : config.getSrcDir();
-        final List<Tuple3<String, String, Class<?>>> customizedFields = config == null ? null : config.getCustomizedFields();
-        final boolean useBoxedType = config == null ? false : config.isUseBoxedType();
+        final String className = configToUse.getClassName();
+        final String packageName = configToUse.getPackageName();
+        final String srcDir = configToUse.getSrcDir();
+        final List<Tuple3<String, String, Class<?>>> customizedFields = configToUse.getCustomizedFields();
+        configToUse.isUseBoxedType();
 
-        final Set<String> readOnlyFields = config == null || config.getReadOnlyFields() == null ? new HashSet<>() : new HashSet<>(config.getReadOnlyFields());
+        final Set<String> readOnlyFields = configToUse.getReadOnlyFields() == null ? new HashSet<>() : new HashSet<>(configToUse.getReadOnlyFields());
 
-        final Set<String> nonUpdatableFields = config == null || config.getNonUpdatableFields() == null ? new HashSet<>()
-                : new HashSet<>(config.getNonUpdatableFields());
+        final Set<String> nonUpdatableFields = configToUse.getNonUpdatableFields() == null ? new HashSet<>()
+                : new HashSet<>(configToUse.getNonUpdatableFields());
 
-        final Set<String> idFields = config == null || config.getIdFields() == null ? new HashSet<>() : new HashSet<>(config.getIdFields());
+        final Set<String> idFields = configToUse.getIdFields() == null ? new HashSet<>() : new HashSet<>(configToUse.getIdFields());
 
-        if (config != null && N.notNullOrEmpty(config.getIdField())) {
-            idFields.add(config.getIdField());
+        if (N.notNullOrEmpty(configToUse.getIdField())) {
+            idFields.add(configToUse.getIdField());
         }
 
-        final Class<? extends Annotation> tableAnnotationClass = config == null || config.getTableAnnotationClass() == null ? Table.class
-                : config.getTableAnnotationClass();
+        final Class<? extends Annotation> tableAnnotationClass = configToUse.getTableAnnotationClass() == null ? Table.class
+                : configToUse.getTableAnnotationClass();
 
-        final Class<? extends Annotation> columnAnnotationClass = config == null || config.getColumnAnnotationClass() == null ? Column.class
-                : config.getColumnAnnotationClass();
+        final Class<? extends Annotation> columnAnnotationClass = configToUse.getColumnAnnotationClass() == null ? Column.class
+                : configToUse.getColumnAnnotationClass();
 
-        final Class<? extends Annotation> idAnnotationClass = config == null || config.getIdAnnotationClass() == null ? Id.class
-                : config.getIdAnnotationClass();
+        final Class<? extends Annotation> idAnnotationClass = configToUse.getIdAnnotationClass() == null ? Id.class : configToUse.getIdAnnotationClass();
 
         final boolean isJavaPersistenceTable = "javax.persistence.Table".equals(ClassUtil.getCanonicalClassName(tableAnnotationClass));
         final boolean isJavaPersistenceColumn = "javax.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass));
@@ -18508,8 +18511,8 @@ public final class JdbcUtil {
                         : customizedField._2;
 
                 final String columnClassName = customizedField == null || customizedField._3 == null
-                        ? getColumnClassName(rsmd.getColumnClassName(i), !useBoxedType)
-                        : getColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3), false);
+                        ? getColumnClassName(rsmd.getColumnClassName(i), false, configToUse)
+                        : getColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
 
                 sb.append("\n");
 
@@ -18589,9 +18592,19 @@ public final class JdbcUtil {
     private static final Map<String, String> eccClassNameMap = N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short", "short", "Integer",
             "int", "Long", "long", "Float", "float", "Double", "double");
 
-    private static String getColumnClassName(final String columnClassName, final boolean convertToPrimitveType) {
+    private static String getColumnClassName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
         String className = columnClassName.replace("java.lang.", "");
 
-        return convertToPrimitveType ? eccClassNameMap.getOrDefault(className, className) : className;
+        if (isCustomizedType) {
+            return className;
+        } else if (configToUse.isMapBigIntegerToLong() && ClassUtil.getCanonicalClassName(BigInteger.class).equals(columnClassName)) {
+            return "long";
+        } else if (configToUse.isMapBigDecimalToDouble() && ClassUtil.getCanonicalClassName(BigDecimal.class).equals(columnClassName)) {
+            return "double";
+        } else if (!configToUse.isUseBoxedType()) {
+            return eccClassNameMap.getOrDefault(className, className);
+        } else {
+            return className;
+        }
     }
 }

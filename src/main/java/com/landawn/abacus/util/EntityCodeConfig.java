@@ -37,6 +37,8 @@ public class EntityCodeConfig {
     private String srcDir;
     private List<Tuple3<String, String, Class<?>>> customizedFields;
     private boolean useBoxedType;
+    private boolean mapBigIntegerToLong;
+    private boolean mapBigDecimalToDouble;
     private Collection<String> readOnlyFields;
     private Collection<String> nonUpdatableFields;
     private Collection<String> idFields;
