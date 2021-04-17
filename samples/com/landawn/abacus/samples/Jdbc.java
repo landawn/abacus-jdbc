@@ -136,7 +136,8 @@ public class Jdbc {
             final String sql_employee_dept_relationship_drop_table = "DROP TABLE IF EXISTS employee_project";
             final String sql_employee_dept_relationship_creat_table = "CREATE TABLE IF NOT EXISTS employee_project (" //
                     + "employee_id int(11) NOT NULL, " //
-                    + "project_id int(11) NOT NULL)";
+                    + "project_id int(11) NOT NULL, " //
+                    + "create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)";
 
             JdbcUtil.executeUpdate(dataSource, sql_employee_dept_relationship_drop_table);
             JdbcUtil.executeUpdate(dataSource, sql_employee_dept_relationship_creat_table);

@@ -4986,21 +4986,43 @@ public final class JdbcUtil {
         }
     }
 
+    static final Predicate<Object> defaultIdTester = id -> JdbcUtil.isDefaultIdPropValue(id);
+
     /**
      * Checks if is default id prop value.
      *
-     * @param propValue
+     * @param value
      * @return true, if is default id prop value
      * @deprecated for internal only.
      */
     @Deprecated
     @Internal
-    public static boolean isDefaultIdPropValue(final Object propValue) {
-        return (propValue == null) || (propValue instanceof Number && (((Number) propValue).longValue() == 0));
+    public static boolean isDefaultIdPropValue(final Object value) {
+        if ((value == null) || (value instanceof Number && (((Number) value).longValue() == 0))) {
+            return true;
+        } else if (value instanceof EntityId) {
+            return Stream.of(((EntityId) value).entrySet()).allMatch(it -> JdbcUtil.isDefaultIdPropValue(it.getValue()));
+        } else if (ClassUtil.isEntity(value.getClass())) {
+            final Class<?> entityClass = value.getClass();
+            final List<String> idPropNameList = ClassUtil.getIdFieldNames(entityClass);
+
+            if (N.isNullOrEmpty(idPropNameList)) {
+                return false;
+            } else {
+                final EntityInfo idEntityInfo = ParserUtil.getEntityInfo(entityClass);
+                return Stream.of(idPropNameList).allMatch(idName -> JdbcUtil.isDefaultIdPropValue(idEntityInfo.getPropValue(value, idName)));
+            }
+        }
+
+        return false;
     }
 
-    static <ID> boolean isAllNullIds(List<ID> ids) {
-        return N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(JdbcUtil::isDefaultIdPropValue);
+    static <ID> boolean isAllNullIds(final List<ID> ids) {
+        return isAllNullIds(ids, defaultIdTester);
+    }
+
+    static <ID> boolean isAllNullIds(final List<ID> ids, final Predicate<Object> isDefaultIdTester) {
+        return N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(isDefaultIdTester);
     }
 
     public static Collection<String> getInsertPropNames(final Object entity) {
