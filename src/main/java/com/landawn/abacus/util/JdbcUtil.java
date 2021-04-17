@@ -63,8 +63,11 @@ import com.landawn.abacus.EntityId;
 import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Column;
+import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.LazyEvaluation;
+import com.landawn.abacus.annotation.NonUpdatable;
+import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.annotation.Table;
@@ -18396,24 +18399,24 @@ public final class JdbcUtil {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
     }
 
-    public static String writeEntityClass(final DataSource ds, final String tableName) {
-        return writeEntityClass(ds, tableName, null);
+    public static String generateEntityClass(final DataSource ds, final String tableName) {
+        return generateEntityClass(ds, tableName, null);
     }
 
-    public static String writeEntityClass(final Connection conn, final String tableName) {
-        return writeEntityClass(conn, tableName, null);
+    public static String generateEntityClass(final Connection conn, final String tableName) {
+        return generateEntityClass(conn, tableName, null);
     }
 
-    public static String writeEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
+    public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
         try (Connection conn = ds.getConnection()) {
-            return writeEntityClass(conn, tableName, config);
+            return generateEntityClass(conn, tableName, config);
 
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
 
-    public static String writeEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
+    public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
 
         final String className = config == null ? null : config.getClassName();
         final String packageName = config == null ? null : config.getPackageName();
@@ -18421,19 +18424,47 @@ public final class JdbcUtil {
         final List<Tuple3<String, String, Class<?>>> customizedFields = config == null ? null : config.getCustomizedFields();
         final boolean useBoxedType = config == null ? false : config.isUseBoxedType();
 
+        final Set<String> readOnlyFields = config == null || config.getReadOnlyFields() == null ? new HashSet<>() : new HashSet<>(config.getReadOnlyFields());
+
+        final Set<String> nonUpdatableFields = config == null || config.getNonUpdatableFields() == null ? new HashSet<>()
+                : new HashSet<>(config.getNonUpdatableFields());
+
+        final Set<String> idFields = config == null || config.getIdFields() == null ? new HashSet<>() : new HashSet<>(config.getIdFields());
+
+        if (config != null && N.notNullOrEmpty(config.getIdField())) {
+            idFields.add(config.getIdField());
+        }
+
         final Class<? extends Annotation> tableAnnotationClass = config == null || config.getTableAnnotationClass() == null ? Table.class
                 : config.getTableAnnotationClass();
 
         final Class<? extends Annotation> columnAnnotationClass = config == null || config.getColumnAnnotationClass() == null ? Column.class
                 : config.getColumnAnnotationClass();
 
-        final boolean isJavaPersistenceColumn = "javax.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass));
+        final Class<? extends Annotation> idAnnotationClass = config == null || config.getIdAnnotationClass() == null ? Id.class
+                : config.getIdAnnotationClass();
+
         final boolean isJavaPersistenceTable = "javax.persistence.Table".equals(ClassUtil.getCanonicalClassName(tableAnnotationClass));
+        final boolean isJavaPersistenceColumn = "javax.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass));
+        "javax.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass));
 
         final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = Maps.newMap(customizedFields, tp -> tp._1);
 
         try (PreparedStatement stmt = conn.prepareStatement("select * from " + tableName + " where 1 > 2"); ResultSet rs = stmt.executeQuery()) {
             String finalClassName = N.isNullOrEmpty(className) ? StringUtil.capitalize(StringUtil.toCamelCase(tableName)) : className;
+
+            if (N.commonSet(readOnlyFields, nonUpdatableFields).size() > 0) {
+                throw new RuntimeException("Fields: " + N.commonSet(readOnlyFields, nonUpdatableFields)
+                        + " can't be read-only and non-updatable at the same time in entity class: " + finalClassName);
+            }
+
+            if (idFields.size() == 0) {
+                try (ResultSet pkColumns = conn.getMetaData().getPrimaryKeys(null, null, tableName)) {
+                    while (pkColumns.next()) {
+                        idFields.add(pkColumns.getString("COLUMN_NAME"));
+                    }
+                }
+            }
 
             final StringBuilder sb = new StringBuilder();
 
@@ -18441,8 +18472,21 @@ public final class JdbcUtil {
                 sb.append("package ").append(packageName + ";").append("\n").append("\n");
             }
 
-            sb.append("import " + ClassUtil.getCanonicalClassName(columnAnnotationClass) + ";\n") //
-                    .append("import " + ClassUtil.getCanonicalClassName(tableAnnotationClass) + ";\n\n");
+            sb.append("import " + ClassUtil.getCanonicalClassName(columnAnnotationClass) + ";\n");
+
+            if (N.notNullOrEmpty(idFields)) {
+                sb.append("import " + ClassUtil.getCanonicalClassName(idAnnotationClass) + ";\n");
+            }
+
+            if (N.notNullOrEmpty(nonUpdatableFields)) {
+                sb.append("import " + ClassUtil.getCanonicalClassName(NonUpdatable.class) + ";\n");
+            }
+
+            if (N.notNullOrEmpty(readOnlyFields)) {
+                sb.append("import " + ClassUtil.getCanonicalClassName(ReadOnly.class) + ";\n");
+            }
+
+            sb.append("import " + ClassUtil.getCanonicalClassName(tableAnnotationClass) + ";\n\n");
 
             sb.append(eccHeader) //
                     .append(isJavaPersistenceTable ? "@Table(name = \"" + tableName + "\")" : "@Table(\"" + tableName + "\")")
@@ -18451,11 +18495,11 @@ public final class JdbcUtil {
                     .append(" {")
                     .append("\n");
 
-            final ResultSetMetaData metaData = rs.getMetaData();
-            final int columnCount = metaData.getColumnCount();
+            final ResultSetMetaData rsmd = rs.getMetaData();
+            final int columnCount = rsmd.getColumnCount();
 
             for (int i = 1; i <= columnCount; i++) {
-                final String columnName = metaData.getColumnName(i);
+                final String columnName = rsmd.getColumnName(i);
 
                 final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(StringUtil.toCamelCase(columnName),
                         customizedFieldMap.get(columnName));
@@ -18464,14 +18508,37 @@ public final class JdbcUtil {
                         : customizedField._2;
 
                 final String columnClassName = customizedField == null || customizedField._3 == null
-                        ? getColumnClassName(metaData.getColumnClassName(i), !useBoxedType)
+                        ? getColumnClassName(rsmd.getColumnClassName(i), !useBoxedType)
                         : getColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3), false);
 
-                sb.append("\n") //
-                        .append(isJavaPersistenceColumn ? "    @Column(name = \"" + columnName + "\")" : "    @Column(\"" + columnName + "\")")
+                sb.append("\n");
+
+                if (idFields.remove(fieldName) || idFields.remove(columnName)) {
+                    sb.append("    @Id").append("\n");
+                }
+
+                if (readOnlyFields.remove(fieldName) || readOnlyFields.remove(columnName)) {
+                    sb.append("    @ReadOnly").append("\n");
+                } else if (nonUpdatableFields.remove(fieldName) || nonUpdatableFields.remove(columnName)) {
+                    sb.append("    @NonUpdatable").append("\n");
+                }
+
+                sb.append(isJavaPersistenceColumn ? "    @Column(name = \"" + columnName + "\")" : "    @Column(\"" + columnName + "\")")
                         .append("\n") //
                         .append("    private " + columnClassName + " " + fieldName + ";")
                         .append("\n");
+            }
+
+            if (idFields.size() > 0) {
+                throw new RuntimeException("Id fields: " + idFields + " are not found in entity class: " + finalClassName);
+            }
+
+            if (readOnlyFields.size() > 0) {
+                throw new RuntimeException("Read-only fields: " + readOnlyFields + " are not found in entity class: " + finalClassName);
+            }
+
+            if (nonUpdatableFields.size() > 0) {
+                throw new RuntimeException("Non-updatable fields: " + nonUpdatableFields + " are not found in entity class: " + finalClassName);
             }
 
             sb.append("\n").append("}").append("\n");

@@ -16,6 +16,7 @@
 package com.landawn.abacus.util;
 
 import java.lang.annotation.Annotation;
+import java.util.Collection;
 import java.util.List;
 
 import com.landawn.abacus.util.Tuple.Tuple3;
@@ -36,7 +37,12 @@ public class EntityCodeConfig {
     private String srcDir;
     private List<Tuple3<String, String, Class<?>>> customizedFields;
     private boolean useBoxedType;
+    private Collection<String> readOnlyFields;
+    private Collection<String> nonUpdatableFields;
+    private Collection<String> idFields;
+    private String idField;
     private Class<? extends Annotation> tableAnnotationClass;
     private Class<? extends Annotation> columnAnnotationClass;
+    private Class<? extends Annotation> idAnnotationClass;
 
 }

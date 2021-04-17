@@ -1,6 +1,9 @@
 package codes.entity;
 
 import com.landawn.abacus.annotation.Column;
+import com.landawn.abacus.annotation.Id;
+import com.landawn.abacus.annotation.NonUpdatable;
+import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Table;
 
 import lombok.AllArgsConstructor;
@@ -15,6 +18,8 @@ import lombok.NoArgsConstructor;
 @Table("account")
 public class Account {
 
+    @Id
+    @NonUpdatable
     @Column("ID")
     private long id;
 
@@ -27,6 +32,7 @@ public class Account {
     @Column("EMAIL_ADDRESS")
     private String emailAddress;
 
+    @ReadOnly
     @Column("CREATE_TIME")
     private java.sql.Timestamp createTime;
 
