@@ -77,7 +77,7 @@ public final class CodingUtil {
         final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = Maps.newMap(customizedFields, tp -> tp._1);
 
         try (PreparedStatement stmt = conn.prepareStatement("select * from " + tableName + " where 1 > 2"); ResultSet rs = stmt.executeQuery()) {
-            String finalClassName = N.isNullOrEmpty(className) ? StringUtil.capitalize(ClassUtil.formalizePropName(tableName)) : className;
+            String finalClassName = N.isNullOrEmpty(className) ? StringUtil.capitalize(StringUtil.toCamelCase(tableName)) : className;
 
             final StringBuilder sb = new StringBuilder();
 
@@ -98,10 +98,10 @@ public final class CodingUtil {
             for (int i = 1; i <= columnCount; i++) {
                 final String columnName = metaData.getColumnName(i);
 
-                final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(ClassUtil.formalizePropName(columnName),
+                final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(StringUtil.toCamelCase(columnName),
                         customizedFieldMap.get(columnName));
 
-                final String fieldName = customizedField == null || N.isNullOrEmpty(customizedField._2) ? ClassUtil.formalizePropName(columnName)
+                final String fieldName = customizedField == null || N.isNullOrEmpty(customizedField._2) ? StringUtil.toCamelCase(columnName)
                         : customizedField._2;
 
                 final String columnClassName = customizedField == null || customizedField._3 == null ? getColumnClassName(metaData.getColumnClassName(i))
