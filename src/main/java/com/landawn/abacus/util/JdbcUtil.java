@@ -15,6 +15,9 @@
  */
 package com.landawn.abacus.util;
 
+import java.io.File;
+import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
@@ -59,16 +62,19 @@ import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.EntityId;
 import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.LazyEvaluation;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
+import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.cache.Cache;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.core.DirtyMarkerUtil;
 import com.landawn.abacus.core.RowDataSet;
 import com.landawn.abacus.core.Seid;
 import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.UncheckedIOException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
@@ -18388,5 +18394,137 @@ public final class JdbcUtil {
 
     static boolean isNullOrDefault(final Object value) {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
+    }
+
+    public static String writeEntityClass(final DataSource ds, final String tableName) {
+        return writeEntityClass(ds, tableName, null);
+    }
+
+    public static String writeEntityClass(final Connection conn, final String tableName) {
+        return writeEntityClass(conn, tableName, null);
+    }
+
+    public static String writeEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
+        try (Connection conn = ds.getConnection()) {
+            return writeEntityClass(conn, tableName, config);
+
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    public static String writeEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
+
+        final String className = config == null ? null : config.getClassName();
+        final String packageName = config == null ? null : config.getPackageName();
+        final String srcDir = config == null ? null : config.getSrcDir();
+        final List<Tuple3<String, String, Class<?>>> customizedFields = config == null ? null : config.getCustomizedFields();
+        final boolean useBoxedType = config == null ? false : config.isUseBoxedType();
+
+        final Class<? extends Annotation> tableAnnotationClass = config == null || config.getTableAnnotationClass() == null ? Table.class
+                : config.getTableAnnotationClass();
+
+        final Class<? extends Annotation> columnAnnotationClass = config == null || config.getColumnAnnotationClass() == null ? Column.class
+                : config.getColumnAnnotationClass();
+
+        final boolean isJavaPersistenceColumn = "javax.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass));
+        final boolean isJavaPersistenceTable = "javax.persistence.Table".equals(ClassUtil.getCanonicalClassName(tableAnnotationClass));
+
+        final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = Maps.newMap(customizedFields, tp -> tp._1);
+
+        try (PreparedStatement stmt = conn.prepareStatement("select * from " + tableName + " where 1 > 2"); ResultSet rs = stmt.executeQuery()) {
+            String finalClassName = N.isNullOrEmpty(className) ? StringUtil.capitalize(StringUtil.toCamelCase(tableName)) : className;
+
+            final StringBuilder sb = new StringBuilder();
+
+            if (N.notNullOrEmpty(packageName)) {
+                sb.append("package ").append(packageName + ";").append("\n").append("\n");
+            }
+
+            sb.append("import " + ClassUtil.getCanonicalClassName(columnAnnotationClass) + ";\n") //
+                    .append("import " + ClassUtil.getCanonicalClassName(tableAnnotationClass) + ";\n\n");
+
+            sb.append(eccHeader) //
+                    .append(isJavaPersistenceTable ? "@Table(name = \"" + tableName + "\")" : "@Table(\"" + tableName + "\")")
+                    .append("\n")
+                    .append("public class " + finalClassName)
+                    .append(" {")
+                    .append("\n");
+
+            final ResultSetMetaData metaData = rs.getMetaData();
+            final int columnCount = metaData.getColumnCount();
+
+            for (int i = 1; i <= columnCount; i++) {
+                final String columnName = metaData.getColumnName(i);
+
+                final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(StringUtil.toCamelCase(columnName),
+                        customizedFieldMap.get(columnName));
+
+                final String fieldName = customizedField == null || N.isNullOrEmpty(customizedField._2) ? StringUtil.toCamelCase(columnName)
+                        : customizedField._2;
+
+                final String columnClassName = customizedField == null || customizedField._3 == null
+                        ? getColumnClassName(metaData.getColumnClassName(i), !useBoxedType)
+                        : getColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3), false);
+
+                sb.append("\n") //
+                        .append(isJavaPersistenceColumn ? "    @Column(name = \"" + columnName + "\")" : "    @Column(\"" + columnName + "\")")
+                        .append("\n") //
+                        .append("    private " + columnClassName + " " + fieldName + ";")
+                        .append("\n");
+            }
+
+            sb.append("\n").append("}").append("\n");
+
+            final String result = sb.toString();
+
+            if (N.notNullOrEmpty(srcDir)) {
+                String packageDir = srcDir;
+
+                if (N.notNullOrEmpty(packageName)) {
+                    if (!(packageDir.endsWith("/") || packageDir.endsWith("\\"))) {
+                        packageDir += "/";
+                    }
+
+                    packageDir += StringUtil.replaceAll(packageName, ".", "/");
+                }
+
+                IOUtil.mkdirsIfNotExists(new File(packageDir));
+
+                File file = new File(packageDir + "/" + finalClassName + ".java");
+
+                IOUtil.createIfNotExists(file);
+
+                IOUtil.write(file, result);
+            }
+
+            return result;
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    static final String eccHeader = new StringBuilder() //
+            .append("import lombok.AllArgsConstructor;\n")
+            .append("import lombok.Builder;\n")
+            .append("import lombok.Data;\n")
+            .append("import lombok.NoArgsConstructor;\n")
+            .append("\n")
+            .append("@Builder\n")
+            .append("@Data\n")
+            .append("@NoArgsConstructor\n")
+            .append("@AllArgsConstructor\n")
+            .toString();
+
+    @SuppressWarnings("deprecation")
+    private static final Map<String, String> eccClassNameMap = N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short", "short", "Integer",
+            "int", "Long", "long", "Float", "float", "Double", "double");
+
+    private static String getColumnClassName(final String columnClassName, final boolean convertToPrimitveType) {
+        String className = columnClassName.replace("java.lang.", "");
+
+        return convertToPrimitveType ? eccClassNameMap.getOrDefault(className, className) : className;
     }
 }
