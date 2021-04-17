@@ -2,6 +2,7 @@ package com.landawn.abacus.util;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -12,6 +13,8 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import com.landawn.abacus.annotation.Column;
+import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.exception.UncheckedIOException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.util.Tuple.Tuple3;
@@ -19,8 +22,6 @@ import com.landawn.abacus.util.Tuple.Tuple3;
 public final class CodingUtil {
 
     static final String str = new StringBuilder() //
-            .append("import com.landawn.abacus.annotation.Column;\n")
-            .append("import com.landawn.abacus.annotation.Table;\n\n")
             .append("import lombok.AllArgsConstructor;\n")
             .append("import lombok.Builder;\n")
             .append("import lombok.Data;\n")
@@ -37,42 +38,38 @@ public final class CodingUtil {
     }
 
     public static String writeEntityClass(final DataSource ds, final String tableName) {
-        return writeEntityClass(ds, tableName, null, null);
+        return writeEntityClass(ds, tableName, null);
     }
 
     public static String writeEntityClass(final Connection conn, final String tableName) {
-        return writeEntityClass(conn, tableName, null, null);
+        return writeEntityClass(conn, tableName, null);
     }
 
-    public static String writeEntityClass(final DataSource ds, final String tableName, final String className, final String packageName) {
-        return writeEntityClass(ds, tableName, className, packageName, null);
-    }
-
-    public static String writeEntityClass(final Connection conn, final String tableName, final String className, final String packageName) {
-        return writeEntityClass(conn, tableName, className, packageName, null);
-    }
-
-    public static String writeEntityClass(final DataSource ds, final String tableName, final String className, final String packageName, final String srcDir) {
-        return writeEntityClass(ds, tableName, className, packageName, srcDir, null);
-    }
-
-    public static String writeEntityClass(final Connection conn, final String tableName, final String className, final String packageName,
-            final String srcDir) {
-        return writeEntityClass(conn, tableName, className, packageName, srcDir, null);
-    }
-
-    public static String writeEntityClass(final DataSource ds, final String tableName, final String className, final String packageName, final String srcDir,
-            final List<Tuple3<String, String, Class<?>>> customizedFields) {
+    public static String writeEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
         try (Connection conn = ds.getConnection()) {
-            return writeEntityClass(conn, tableName, className, packageName, srcDir, customizedFields);
+            return writeEntityClass(conn, tableName, config);
 
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
 
-    public static String writeEntityClass(final Connection conn, final String tableName, final String className, final String packageName, final String srcDir,
-            final List<Tuple3<String, String, Class<?>>> customizedFields) {
+    public static String writeEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
+
+        final String className = config == null ? null : config.getClassName();
+        final String packageName = config == null ? null : config.getPackageName();
+        final String srcDir = config == null ? null : config.getSrcDir();
+        final List<Tuple3<String, String, Class<?>>> customizedFields = config == null ? null : config.getCustomizedFields();
+        final boolean useBoxedType = config == null ? false : config.isUseBoxedType();
+
+        final Class<? extends Annotation> tableAnnotationClass = config == null || config.getTableAnnotationClass() == null ? Table.class
+                : config.getTableAnnotationClass();
+
+        final Class<? extends Annotation> columnAnnotationClass = config == null || config.getColumnAnnotationClass() == null ? Column.class
+                : config.getColumnAnnotationClass();
+
+        final boolean isJavaPersistenceColumn = "javax.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass));
+        final boolean isJavaPersistenceTable = "javax.persistence.Table".equals(ClassUtil.getCanonicalClassName(tableAnnotationClass));
 
         final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = Maps.newMap(customizedFields, tp -> tp._1);
 
@@ -85,8 +82,11 @@ public final class CodingUtil {
                 sb.append("package ").append(packageName + ";").append("\n").append("\n");
             }
 
+            sb.append("import " + ClassUtil.getCanonicalClassName(columnAnnotationClass) + ";\n") //
+                    .append("import " + ClassUtil.getCanonicalClassName(tableAnnotationClass) + ";\n\n");
+
             sb.append(str) //
-                    .append("@Table(\"" + tableName + "\")")
+                    .append(isJavaPersistenceTable ? "@Table(name = \"" + tableName + "\")" : "@Table(\"" + tableName + "\")")
                     .append("\n")
                     .append("public class " + finalClassName)
                     .append(" {")
@@ -104,11 +104,12 @@ public final class CodingUtil {
                 final String fieldName = customizedField == null || N.isNullOrEmpty(customizedField._2) ? StringUtil.toCamelCase(columnName)
                         : customizedField._2;
 
-                final String columnClassName = customizedField == null || customizedField._3 == null ? getColumnClassName(metaData.getColumnClassName(i))
-                        : getColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3));
+                final String columnClassName = customizedField == null || customizedField._3 == null
+                        ? getColumnClassName(metaData.getColumnClassName(i), !useBoxedType)
+                        : getColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3), false);
 
                 sb.append("\n") //
-                        .append("    @Column(\"" + columnName + "\")")
+                        .append(isJavaPersistenceColumn ? "    @Column(name = \"" + columnName + "\")" : "    @Column(\"" + columnName + "\")")
                         .append("\n") //
                         .append("    private " + columnClassName + " " + fieldName + ";")
                         .append("\n");
@@ -150,9 +151,9 @@ public final class CodingUtil {
     private static final Map<String, String> classNameMap = N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short", "short", "Integer",
             "int", "Long", "long", "Float", "float", "Double", "double");
 
-    private static String getColumnClassName(final String columnClassName) {
+    private static String getColumnClassName(final String columnClassName, final boolean convertToPrimitveType) {
         String className = columnClassName.replace("java.lang.", "");
 
-        return classNameMap.getOrDefault(className, className);
+        return convertToPrimitveType ? classNameMap.getOrDefault(className, className) : className;
     }
 }

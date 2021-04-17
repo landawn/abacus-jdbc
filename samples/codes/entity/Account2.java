@@ -1,7 +1,7 @@
 package codes.entity;
 
-import com.landawn.abacus.annotation.Column;
-import com.landawn.abacus.annotation.Table;
+import javax.persistence.Column;
+import javax.persistence.Table;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,22 +12,22 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("account")
+@Table(name = "account")
 public class Account2 {
 
-    @Column("ID")
-    private long id;
+    @Column(name = "ID")
+    private Long id;
 
-    @Column("FIRST_NAME")
+    @Column(name = "FIRST_NAME")
     private String firstName;
 
-    @Column("LAST_NAME")
+    @Column(name = "LAST_NAME")
     private String lastName;
 
-    @Column("EMAIL_ADDRESS")
+    @Column(name = "EMAIL_ADDRESS")
     private String emailAddress;
 
-    @Column("CREATE_TIME")
+    @Column(name = "CREATE_TIME")
     private java.util.Date create_time;
 
 }
