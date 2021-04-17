@@ -18449,11 +18449,13 @@ public final class JdbcUtil {
 
         final boolean isJavaPersistenceTable = "javax.persistence.Table".equals(ClassUtil.getCanonicalClassName(tableAnnotationClass));
         final boolean isJavaPersistenceColumn = "javax.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass));
-        "javax.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass));
+        final boolean isJavaPersistenceId = "javax.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass));
 
         final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = Maps.newMap(customizedFields, tp -> tp._1);
+        final List<String> columnNameList = new ArrayList<>();
 
-        try (PreparedStatement stmt = conn.prepareStatement("select * from " + tableName + " where 1 > 2"); ResultSet rs = stmt.executeQuery()) {
+        try (PreparedStatement stmt = conn.prepareStatement("select * from " + tableName + " where 1 > 2"); //
+                ResultSet rs = stmt.executeQuery()) {
             String finalClassName = N.isNullOrEmpty(className) ? StringUtil.capitalize(StringUtil.toCamelCase(tableName)) : className;
 
             if (N.commonSet(readOnlyFields, nonUpdatableFields).size() > 0) {
@@ -18504,6 +18506,8 @@ public final class JdbcUtil {
             for (int i = 1; i <= columnCount; i++) {
                 final String columnName = rsmd.getColumnName(i);
 
+                columnNameList.add(columnName);
+
                 final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(StringUtil.toCamelCase(columnName),
                         customizedFieldMap.get(columnName));
 
@@ -18517,7 +18521,7 @@ public final class JdbcUtil {
                 sb.append("\n");
 
                 if (idFields.remove(fieldName) || idFields.remove(columnName)) {
-                    sb.append("    @Id").append("\n");
+                    sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append("\n");
                 }
 
                 if (readOnlyFields.remove(fieldName) || readOnlyFields.remove(columnName)) {
@@ -18533,15 +18537,18 @@ public final class JdbcUtil {
             }
 
             if (idFields.size() > 0) {
-                throw new RuntimeException("Id fields: " + idFields + " are not found in entity class: " + finalClassName);
+                throw new RuntimeException("Id fields: " + idFields + " are not found in entity class: " + finalClassName + ", table: " + tableName
+                        + ": with columns: " + columnNameList);
             }
 
             if (readOnlyFields.size() > 0) {
-                throw new RuntimeException("Read-only fields: " + readOnlyFields + " are not found in entity class: " + finalClassName);
+                throw new RuntimeException("Read-only fields: " + readOnlyFields + " are not found in entity class: " + finalClassName + ", table: " + tableName
+                        + ": with columns: " + columnNameList);
             }
 
             if (nonUpdatableFields.size() > 0) {
-                throw new RuntimeException("Non-updatable fields: " + nonUpdatableFields + " are not found in entity class: " + finalClassName);
+                throw new RuntimeException("Non-updatable fields: " + nonUpdatableFields + " are not found in entity class: " + finalClassName + ", table: "
+                        + tableName + ": with columns: " + columnNameList);
             }
 
             sb.append("\n").append("}").append("\n");
