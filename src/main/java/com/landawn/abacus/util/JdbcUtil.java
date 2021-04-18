@@ -3729,7 +3729,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished.
+     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * <br />
+     * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
      * @param resultSet
      * @return
@@ -3747,7 +3749,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished.
+     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * <br />
+     * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
      * @param <T>
      * @param targetClass Array/List/Map or Entity with getter/setter methods.
@@ -3762,7 +3766,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished.
+     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * <br />
+     * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
      * @param <T>
      * @param resultSet
@@ -3833,6 +3839,17 @@ public final class JdbcUtil {
         };
     }
 
+    /**
+     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * <br />
+     * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
+     * 
+     * @param <T>
+     * @param resultSet
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     */
     public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<T> rowMapper) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowFilter, "rowFilter");
@@ -3881,7 +3898,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished.
+     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * <br />
+     * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
      * @param <T>
      * @param resultSet
@@ -3957,6 +3976,17 @@ public final class JdbcUtil {
         };
     }
 
+    /**
+     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * <br />
+     * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
+     * 
+     * @param <T>
+     * @param resultSet
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     */
     public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowFilter, "rowFilter");
@@ -4010,7 +4040,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished.
+     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * <br />
+     * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
      * @param <T>
      * @param resultSet
@@ -4027,7 +4059,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished.
+     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * <br />
+     * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
      * @param <T>
      * @param resultSet
@@ -4060,10 +4094,10 @@ public final class JdbcUtil {
 
         final Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
-        return ExceptionalStream.of(Array.asList(supplier), SQLException.class)
+        return ExceptionalStream.just(supplier, SQLException.class)
+                .onClose(() -> supplier.get().close())
                 .flatMap(it -> ExceptionalStream.newStream(it.get()))
-                .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
-                .onClose(() -> supplier.get().close());
+                .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
     }
 
     public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowFilter rowFilter, final RowMapper<T> rowMapper) {
@@ -4073,10 +4107,10 @@ public final class JdbcUtil {
 
         final Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
-        return ExceptionalStream.of(Array.asList(supplier), SQLException.class)
+        return ExceptionalStream.just(supplier, SQLException.class)
+                .onClose(() -> supplier.get().close())
                 .flatMap(it -> ExceptionalStream.newStream(it.get()))
-                .flatMap(rs -> JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
-                .onClose(() -> supplier.get().close());
+                .flatMap(rs -> JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
     }
 
     public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowMapper<T> rowMapper) {
@@ -4085,10 +4119,10 @@ public final class JdbcUtil {
 
         final Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
-        return ExceptionalStream.of(Array.asList(supplier), SQLException.class)
+        return ExceptionalStream.just(supplier, SQLException.class)
+                .onClose(() -> supplier.get().close())
                 .flatMap(it -> ExceptionalStream.newStream(it.get()))
-                .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
-                .onClose(() -> supplier.get().close());
+                .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
     }
 
     public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter,
@@ -4099,10 +4133,10 @@ public final class JdbcUtil {
 
         final Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
-        return ExceptionalStream.of(Array.asList(supplier), SQLException.class)
+        return ExceptionalStream.just(supplier, SQLException.class)
+                .onClose(() -> supplier.get().close())
                 .flatMap(it -> ExceptionalStream.newStream(it.get()))
-                .flatMap(rs -> JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
-                .onClose(() -> supplier.get().close());
+                .flatMap(rs -> JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
     }
 
     static ExceptionalIterator<ResultSet, SQLException> iterateAllResultSets(final Statement stmt) throws SQLException {
