@@ -74,6 +74,7 @@ import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.cache.Cache;
 import com.landawn.abacus.condition.Condition;
+import com.landawn.abacus.condition.ConditionFactory;
 import com.landawn.abacus.core.DirtyMarkerUtil;
 import com.landawn.abacus.core.RowDataSet;
 import com.landawn.abacus.core.Seid;
@@ -9331,6 +9332,8 @@ public final class JdbcUtil {
          * @param cond
          * @return true, if successful
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         boolean exists(final Condition cond) throws SQLException;
 
@@ -9339,6 +9342,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         int count(final Condition cond) throws SQLException;
 
@@ -9347,6 +9352,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         Optional<T> findFirst(final Condition cond) throws SQLException;
 
@@ -9355,6 +9362,8 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> Optional<R> findFirst(final Condition cond, final RowMapper<R> rowMapper) throws SQLException;
 
@@ -9363,6 +9372,8 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> Optional<R> findFirst(final Condition cond, final BiRowMapper<R> rowMapper) throws SQLException;
 
@@ -9372,6 +9383,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
@@ -9382,6 +9395,8 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final RowMapper<R> rowMapper) throws SQLException;
 
@@ -9392,6 +9407,8 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper) throws SQLException;
 
@@ -9401,6 +9418,8 @@ public final class JdbcUtil {
          * @return
          * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         Optional<T> findOnlyOne(final Condition cond) throws DuplicatedResultException, SQLException;
 
@@ -9410,6 +9429,8 @@ public final class JdbcUtil {
          * @return
          * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> Optional<R> findOnlyOne(final Condition cond, final RowMapper<R> rowMapper) throws DuplicatedResultException, SQLException;
 
@@ -9419,6 +9440,8 @@ public final class JdbcUtil {
          * @return
          * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> Optional<R> findOnlyOne(final Condition cond, final BiRowMapper<R> rowMapper) throws DuplicatedResultException, SQLException;
 
@@ -9429,6 +9452,8 @@ public final class JdbcUtil {
          * @return
          * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicatedResultException, SQLException;
 
@@ -9452,6 +9477,8 @@ public final class JdbcUtil {
          * @return
          * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper)
                 throws DuplicatedResultException, SQLException;
@@ -9463,6 +9490,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -9473,6 +9502,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -9483,6 +9514,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -9493,6 +9526,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -9503,6 +9538,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -9513,6 +9550,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -9523,6 +9562,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -9533,6 +9574,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -9543,6 +9586,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         Nullable<String> queryForString(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -9553,6 +9598,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -9563,6 +9610,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -9573,6 +9622,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -9585,6 +9636,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -9598,6 +9651,8 @@ public final class JdbcUtil {
          * @return
          * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -9611,6 +9666,8 @@ public final class JdbcUtil {
          * @return
          * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
                 throws DuplicatedResultException, SQLException;
@@ -9624,6 +9681,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
                 throws DuplicatedResultException, SQLException;
@@ -9633,6 +9692,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         DataSet query(final Condition cond) throws SQLException;
 
@@ -9642,6 +9703,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         DataSet query(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
@@ -9651,6 +9714,8 @@ public final class JdbcUtil {
          * @param resultExtrator
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> R query(final Condition cond, final ResultExtractor<R> resultExtrator) throws SQLException;
 
@@ -9661,6 +9726,8 @@ public final class JdbcUtil {
          * @param resultExtrator
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> R query(final Collection<String> selectPropNames, final Condition cond, final ResultExtractor<R> resultExtrator) throws SQLException;
 
@@ -9680,6 +9747,8 @@ public final class JdbcUtil {
          * @param resultExtrator
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> R query(final Collection<String> selectPropNames, final Condition cond, final BiResultExtractor<R> resultExtrator) throws SQLException;
 
@@ -9688,6 +9757,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         List<T> list(final Condition cond) throws SQLException;
 
@@ -9697,6 +9768,8 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> List<R> list(final Condition cond, final RowMapper<R> rowMapper) throws SQLException;
 
@@ -9706,6 +9779,8 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> List<R> list(final Condition cond, final BiRowMapper<R> rowMapper) throws SQLException;
 
@@ -9716,6 +9791,8 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> List<R> list(final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper) throws SQLException;
 
@@ -9726,6 +9803,8 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> List<R> list(final Condition cond, final BiRowFilter rowFilter, final BiRowMapper<R> rowMapper) throws SQLException;
 
@@ -9735,6 +9814,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         List<T> list(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
@@ -9745,6 +9826,8 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final RowMapper<R> rowMapper) throws SQLException;
 
@@ -9755,6 +9838,8 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper) throws SQLException;
 
@@ -9766,6 +9851,8 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper)
                 throws SQLException;
@@ -9778,6 +9865,8 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter, final BiRowMapper<R> rowMapper)
                 throws SQLException;
@@ -9788,6 +9877,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws SQLException {
             final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
@@ -9803,6 +9894,8 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         default <R> List<R> list(final String singleSelectPropName, final Condition cond, final RowMapper<R> rowMapper) throws SQLException {
             return list(N.asList(singleSelectPropName), cond, rowMapper);
@@ -9816,6 +9909,8 @@ public final class JdbcUtil {
          * @param rowMapper
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         default <R> List<R> list(final String singleSelectPropName, final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper)
                 throws SQLException {
@@ -9828,6 +9923,8 @@ public final class JdbcUtil {
          *
          * @param cond
          * @return
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         @LazyEvaluation
         ExceptionalStream<T, SQLException> stream(final Condition cond);
@@ -9839,6 +9936,8 @@ public final class JdbcUtil {
          * @param cond
          * @param rowMapper
          * @return
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final RowMapper<R> rowMapper);
@@ -9850,6 +9949,8 @@ public final class JdbcUtil {
          * @param cond
          * @param rowMapper
          * @return
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final BiRowMapper<R> rowMapper);
@@ -9861,6 +9962,8 @@ public final class JdbcUtil {
          * @param rowFilter
          * @param rowMapper
          * @return
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper);
@@ -9872,6 +9975,8 @@ public final class JdbcUtil {
          * @param rowFilter
          * @param rowMapper
          * @return
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final BiRowFilter rowFilter, final BiRowMapper<R> rowMapper);
@@ -9883,6 +9988,8 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
          * @return
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         @LazyEvaluation
         ExceptionalStream<T, SQLException> stream(final Collection<String> selectPropNames, final Condition cond);
@@ -9895,6 +10002,8 @@ public final class JdbcUtil {
          * @param cond
          * @param rowMapper
          * @return
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final RowMapper<R> rowMapper);
@@ -9907,6 +10016,8 @@ public final class JdbcUtil {
          * @param cond
          * @param rowMapper
          * @return
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final BiRowMapper<R> rowMapper);
@@ -9920,6 +10031,8 @@ public final class JdbcUtil {
          * @param rowFilter
          * @param rowMapper
          * @return
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, RowFilter rowFilter,
@@ -9934,6 +10047,8 @@ public final class JdbcUtil {
          * @param rowFilter
          * @param rowMapper
          * @return
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         @LazyEvaluation
         <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter,
@@ -9945,6 +10060,8 @@ public final class JdbcUtil {
          * @param singleSelectPropName
          * @param cond
          * @return
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         @LazyEvaluation
         default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) {
@@ -9962,6 +10079,8 @@ public final class JdbcUtil {
          * @param cond
          * @param rowMapper
          * @return
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         @LazyEvaluation
         default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final RowMapper<R> rowMapper) {
@@ -9976,6 +10095,8 @@ public final class JdbcUtil {
          * @param cond
          * @param rowMapper
          * @return
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         @LazyEvaluation
         default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final RowFilter rowFilter,
@@ -9989,6 +10110,8 @@ public final class JdbcUtil {
          * @param rowConsumer
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         void forEach(final Condition cond, final RowConsumer rowConsumer) throws SQLException;
 
@@ -9998,6 +10121,8 @@ public final class JdbcUtil {
          * @param rowConsumer
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         void forEach(final Condition cond, final BiRowConsumer rowConsumer) throws SQLException;
 
@@ -10008,6 +10133,8 @@ public final class JdbcUtil {
          * @param rowConsumer
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         void forEach(final Condition cond, final RowFilter rowFilter, final RowConsumer rowConsumer) throws SQLException;
 
@@ -10018,6 +10145,8 @@ public final class JdbcUtil {
          * @param rowConsumer
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         void forEach(final Condition cond, final BiRowFilter rowFilter, final BiRowConsumer rowConsumer) throws SQLException;
 
@@ -10028,6 +10157,8 @@ public final class JdbcUtil {
          * @param rowConsumer
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         void forEach(final Collection<String> selectPropNames, final Condition cond, final RowConsumer rowConsumer) throws SQLException;
 
@@ -10038,6 +10169,8 @@ public final class JdbcUtil {
          * @param rowConsumer
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         void forEach(final Collection<String> selectPropNames, final Condition cond, final BiRowConsumer rowConsumer) throws SQLException;
 
@@ -10049,6 +10182,8 @@ public final class JdbcUtil {
          * @param rowConsumer
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         void forEach(final Collection<String> selectPropNames, final Condition cond, final RowFilter rowFilter, final RowConsumer rowConsumer)
                 throws SQLException;
@@ -10061,6 +10196,8 @@ public final class JdbcUtil {
          * @param rowConsumer
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         void forEach(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter, final BiRowConsumer rowConsumer)
                 throws SQLException;
@@ -10072,6 +10209,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         default int update(final String propName, final Object propValue, final Condition cond) throws SQLException {
             final Map<String, Object> updateProps = new HashMap<>();
@@ -10087,6 +10226,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         int update(final Map<String, Object> updateProps, final Condition cond) throws SQLException;
 
@@ -10097,6 +10238,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         default int update(final T entity, final Condition cond) throws SQLException {
             return update(Maps.entity2Map(entity), cond);
@@ -10109,6 +10252,8 @@ public final class JdbcUtil {
          * @param cond to verify if the record exists or not.
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         default T upsert(final T entity, final Condition cond) throws SQLException {
             N.checkArgNotNull(cond, "cond");
@@ -10130,6 +10275,8 @@ public final class JdbcUtil {
          * @param cond
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         int delete(final Condition cond) throws SQLException;
 
@@ -10511,6 +10658,8 @@ public final class JdbcUtil {
          * @param cond to verify if the record exists or not.
          * @return
          * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
          */
         @Override
         default T upsert(final T entity, final Condition cond) throws SQLException {
@@ -10862,6 +11011,8 @@ public final class JdbcUtil {
      * @param <T>
      * @param <SB>
      * @param <TD>
+     * @see com.landawn.abacus.condition.ConditionFactory
+     * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     @Beta
     public static interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, TD>> extends CrudDao<T, Long, SB, TD> {
@@ -10905,6 +11056,8 @@ public final class JdbcUtil {
      * @param <T>
      * @param <SB>
      * @param <TD>
+     * @see com.landawn.abacus.condition.ConditionFactory
+     * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     @Beta
     public static interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T, SB, TD>> extends Dao<T, SB, TD> {
@@ -10992,6 +11145,8 @@ public final class JdbcUtil {
      * @param <T>
      * @param <SB>
      * @param <TD>
+     * @see com.landawn.abacus.condition.ConditionFactory
+     * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     @Beta
     public static interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T, SB, TD>> extends NoUpdateDao<T, SB, TD> {
@@ -11428,6 +11583,8 @@ public final class JdbcUtil {
      * @param <ID>
      * @param <SB>
      * @param <TD>
+     * @see com.landawn.abacus.condition.ConditionFactory
+     * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     @Beta
     public static interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpdateCrudDao<T, ID, SB, TD>>
@@ -11757,6 +11914,8 @@ public final class JdbcUtil {
      * @param <ID>
      * @param <SB>
      * @param <TD>
+     * @see com.landawn.abacus.condition.ConditionFactory
+     * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     @Beta
     public static interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOnlyCrudDao<T, ID, SB, TD>>
@@ -11952,6 +12111,16 @@ public final class JdbcUtil {
             extends ReadOnlyCrudDao<T, Long, SB, TD>, NoUpdateCrudDaoL<T, SB, TD> {
     }
 
+    /**
+     * 
+     * @author haiyangl
+     *
+     * @param <T>
+     * @param <SB>
+     * @param <TD>
+     * @see com.landawn.abacus.condition.ConditionFactory
+     * @see com.landawn.abacus.condition.ConditionFactory.CF
+     */
     public static interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
         /**
@@ -13701,6 +13870,16 @@ public final class JdbcUtil {
 
     }
 
+    /**
+     * 
+     * @author haiyangl
+     *
+     * @param <T>
+     * @param <SB>
+     * @param <TD>
+     * @see com.landawn.abacus.condition.ConditionFactory
+     * @see com.landawn.abacus.condition.ConditionFactory.CF
+     */
     public static interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends Dao<T, SB, TD> {
         /**
          *
@@ -15279,6 +15458,8 @@ public final class JdbcUtil {
      * @param <T>
      * @param <SB>
      * @param <TD>
+     * @see com.landawn.abacus.condition.ConditionFactory
+     * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     @Beta
     public static interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends UncheckedNoUpdateDao<T, SB, TD>>
@@ -15525,6 +15706,8 @@ public final class JdbcUtil {
      * @param <ID>
      * @param <SB>
      * @param <TD>
+     * @see com.landawn.abacus.condition.ConditionFactory
+     * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     @Beta
     public static interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends UncheckedNoUpdateCrudDao<T, ID, SB, TD>>
@@ -16050,6 +16233,16 @@ public final class JdbcUtil {
         }
     }
 
+    /**
+     * 
+     * @author haiyangl
+     *
+     * @param <T>
+     * @param <SB>
+     * @param <TD>
+     * @see com.landawn.abacus.condition.ConditionFactory
+     * @see com.landawn.abacus.condition.ConditionFactory.CF
+     */
     public static interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
 
         /**
