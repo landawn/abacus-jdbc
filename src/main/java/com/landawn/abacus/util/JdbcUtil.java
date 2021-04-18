@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
@@ -33,6 +34,7 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.Blob;
 import java.sql.CallableStatement;
 import java.sql.Clob;
@@ -75,10 +77,15 @@ import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.EntityId;
 import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.annotation.Column;
+import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.LazyEvaluation;
+import com.landawn.abacus.annotation.NonUpdatable;
+import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
+import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.cache.Cache;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.core.DirtyMarkerUtil;
@@ -5230,21 +5237,43 @@ public final class JdbcUtil {
         }
     }
 
+    static final Predicate<Object> defaultIdTester = id -> JdbcUtil.isDefaultIdPropValue(id);
+
     /**
      * Checks if is default id prop value.
      *
-     * @param propValue
+     * @param value
      * @return true, if is default id prop value
      * @deprecated for internal only.
      */
     @Deprecated
     @Internal
-    public static boolean isDefaultIdPropValue(final Object propValue) {
-        return (propValue == null) || (propValue instanceof Number && (((Number) propValue).longValue() == 0));
+    public static boolean isDefaultIdPropValue(final Object value) {
+        if ((value == null) || (value instanceof Number && (((Number) value).longValue() == 0))) {
+            return true;
+        } else if (value instanceof EntityId) {
+            return Stream.of(((EntityId) value).entrySet()).allMatch(it -> JdbcUtil.isDefaultIdPropValue(it.getValue()));
+        } else if (ClassUtil.isEntity(value.getClass())) {
+            final Class<?> entityClass = value.getClass();
+            final List<String> idPropNameList = ClassUtil.getIdFieldNames(entityClass);
+
+            if (N.isNullOrEmpty(idPropNameList)) {
+                return false;
+            } else {
+                final EntityInfo idEntityInfo = ParserUtil.getEntityInfo(entityClass);
+                return Stream.of(idPropNameList).allMatch(idName -> JdbcUtil.isDefaultIdPropValue(idEntityInfo.getPropValue(value, idName)));
+            }
+        }
+
+        return false;
     }
 
-    static <ID> boolean isAllNullIds(List<ID> ids) {
-        return N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(JdbcUtil::isDefaultIdPropValue);
+    static <ID> boolean isAllNullIds(final List<ID> ids) {
+        return isAllNullIds(ids, defaultIdTester);
+    }
+
+    static <ID> boolean isAllNullIds(final List<ID> ids, final Predicate<Object> isDefaultIdTester) {
+        return N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(isDefaultIdTester);
     }
 
     public static Collection<String> getInsertPropNames(final Object entity) {
@@ -18642,5 +18671,250 @@ public final class JdbcUtil {
 
     static boolean isNullOrDefault(final Object value) {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
+    }
+
+    public static String generateEntityClass(final DataSource ds, final String tableName) {
+        return generateEntityClass(ds, tableName, null);
+    }
+
+    public static String generateEntityClass(final Connection conn, final String tableName) {
+        return generateEntityClass(conn, tableName, null);
+    }
+
+    public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
+        try (Connection conn = ds.getConnection()) {
+            return generateEntityClass(conn, tableName, config);
+
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    private static final EntityCodeConfig defaultEntityCodeConfig = new EntityCodeConfig();
+
+    public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
+        final EntityCodeConfig configToUse = config == null ? defaultEntityCodeConfig : config;
+
+        final String className = configToUse.getClassName();
+        final String packageName = configToUse.getPackageName();
+        final String srcDir = configToUse.getSrcDir();
+
+        final Set<String> readOnlyFields = configToUse.getReadOnlyFields() == null ? new HashSet<>() : new HashSet<>(configToUse.getReadOnlyFields());
+
+        final Set<String> nonUpdatableFields = configToUse.getNonUpdatableFields() == null ? new HashSet<>()
+                : new HashSet<>(configToUse.getNonUpdatableFields());
+
+        final Set<String> idFields = configToUse.getIdFields() == null ? new HashSet<>() : new HashSet<>(configToUse.getIdFields());
+
+        if (N.notNullOrEmpty(configToUse.getIdField())) {
+            idFields.add(configToUse.getIdField());
+        }
+
+        final Class<? extends Annotation> tableAnnotationClass = configToUse.getTableAnnotationClass() == null ? Table.class
+                : configToUse.getTableAnnotationClass();
+
+        final Class<? extends Annotation> columnAnnotationClass = configToUse.getColumnAnnotationClass() == null ? Column.class
+                : configToUse.getColumnAnnotationClass();
+
+        final Class<? extends Annotation> idAnnotationClass = configToUse.getIdAnnotationClass() == null ? Id.class : configToUse.getIdAnnotationClass();
+
+        final boolean isJavaPersistenceTable = "javax.persistence.Table".equals(ClassUtil.getCanonicalClassName(tableAnnotationClass));
+        final boolean isJavaPersistenceColumn = "javax.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass));
+        final boolean isJavaPersistenceId = "javax.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass));
+
+        final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = Maps.newMap(N.nullToEmpty(configToUse.getCustomizedFields()), tp -> tp._1);
+        final Map<String, Tuple2<String, String>> customizedFieldDbTypeMap = Maps.newMap(N.nullToEmpty(configToUse.getCustomizedFieldDbTypes()), tp -> tp._1);
+        final List<String> columnNameList = new ArrayList<>();
+
+        try (PreparedStatement stmt = conn.prepareStatement("select * from " + tableName + " where 1 > 2"); //
+                ResultSet rs = stmt.executeQuery()) {
+            String finalClassName = N.isNullOrEmpty(className) ? StringUtil.capitalize(StringUtil.toCamelCase(tableName)) : className;
+
+            if (N.commonSet(readOnlyFields, nonUpdatableFields).size() > 0) {
+                throw new RuntimeException("Fields: " + N.commonSet(readOnlyFields, nonUpdatableFields)
+                        + " can't be read-only and non-updatable at the same time in entity class: " + finalClassName);
+            }
+
+            if (idFields.size() == 0) {
+                try (ResultSet pkColumns = conn.getMetaData().getPrimaryKeys(null, null, tableName)) {
+                    while (pkColumns.next()) {
+                        idFields.add(pkColumns.getString("COLUMN_NAME"));
+                    }
+                }
+            }
+
+            final StringBuilder sb = new StringBuilder();
+
+            if (N.notNullOrEmpty(packageName)) {
+                sb.append("package ").append(packageName + ";").append("\n").append("\n");
+            }
+
+            if (isJavaPersistenceColumn || isJavaPersistenceId || isJavaPersistenceTable) {
+                if (isJavaPersistenceColumn) {
+                    sb.append("import " + ClassUtil.getCanonicalClassName(columnAnnotationClass) + ";\n");
+                }
+
+                if (isJavaPersistenceId && N.notNullOrEmpty(idFields)) {
+                    sb.append("import " + ClassUtil.getCanonicalClassName(idAnnotationClass) + ";\n");
+                }
+
+                if (isJavaPersistenceTable) {
+                    sb.append("import " + ClassUtil.getCanonicalClassName(tableAnnotationClass) + ";\n");
+                }
+
+                sb.append("\n");
+            }
+
+            if (!isJavaPersistenceColumn) {
+                sb.append("import " + ClassUtil.getCanonicalClassName(columnAnnotationClass) + ";\n");
+            }
+
+            if (!isJavaPersistenceId && N.notNullOrEmpty(idFields)) {
+                sb.append("import " + ClassUtil.getCanonicalClassName(idAnnotationClass) + ";\n");
+            }
+
+            if (N.notNullOrEmpty(nonUpdatableFields)) {
+                sb.append("import " + ClassUtil.getCanonicalClassName(NonUpdatable.class) + ";\n");
+            }
+
+            if (N.notNullOrEmpty(readOnlyFields)) {
+                sb.append("import " + ClassUtil.getCanonicalClassName(ReadOnly.class) + ";\n");
+            }
+
+            if (!isJavaPersistenceTable) {
+                sb.append("import " + ClassUtil.getCanonicalClassName(tableAnnotationClass) + ";\n");
+            }
+
+            if (N.notNullOrEmpty(customizedFieldDbTypeMap)) {
+                sb.append("import " + ClassUtil.getCanonicalClassName(com.landawn.abacus.annotation.Type.class) + ";\n");
+            }
+
+            sb.append("\n");
+
+            sb.append(eccHeader) //
+                    .append(isJavaPersistenceTable ? "@Table(name = \"" + tableName + "\")" : "@Table(\"" + tableName + "\")")
+                    .append("\n")
+                    .append("public class " + finalClassName)
+                    .append(" {")
+                    .append("\n");
+
+            final ResultSetMetaData rsmd = rs.getMetaData();
+            final int columnCount = rsmd.getColumnCount();
+
+            for (int i = 1; i <= columnCount; i++) {
+                final String columnName = rsmd.getColumnName(i);
+
+                columnNameList.add(columnName);
+
+                final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(StringUtil.toCamelCase(columnName),
+                        customizedFieldMap.get(columnName));
+
+                final String fieldName = customizedField == null || N.isNullOrEmpty(customizedField._2) ? StringUtil.toCamelCase(columnName)
+                        : customizedField._2;
+
+                final String columnClassName = customizedField == null || customizedField._3 == null
+                        ? getColumnClassName(rsmd.getColumnClassName(i), false, configToUse)
+                        : getColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
+
+                sb.append("\n");
+
+                if (idFields.remove(fieldName) || idFields.remove(columnName)) {
+                    sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append("\n");
+                }
+
+                if (readOnlyFields.remove(fieldName) || readOnlyFields.remove(columnName)) {
+                    sb.append("    @ReadOnly").append("\n");
+                } else if (nonUpdatableFields.remove(fieldName) || nonUpdatableFields.remove(columnName)) {
+                    sb.append("    @NonUpdatable").append("\n");
+                }
+
+                sb.append(isJavaPersistenceColumn ? "    @Column(name = \"" + columnName + "\")" : "    @Column(\"" + columnName + "\")").append("\n");
+
+                final Tuple2<String, String> dbType = customizedFieldDbTypeMap.getOrDefault(fieldName, customizedFieldDbTypeMap.get(columnName));
+
+                if (dbType != null) {
+                    sb.append("    @Type(name = \"" + dbType._2 + "\")").append("\n");
+                }
+
+                sb.append("    private " + columnClassName + " " + fieldName + ";").append("\n");
+            }
+
+            if (idFields.size() > 0) {
+                throw new RuntimeException("Id fields: " + idFields + " are not found in entity class: " + finalClassName + ", table: " + tableName
+                        + ": with columns: " + columnNameList);
+            }
+
+            if (readOnlyFields.size() > 0) {
+                throw new RuntimeException("Read-only fields: " + readOnlyFields + " are not found in entity class: " + finalClassName + ", table: " + tableName
+                        + ": with columns: " + columnNameList);
+            }
+
+            if (nonUpdatableFields.size() > 0) {
+                throw new RuntimeException("Non-updatable fields: " + nonUpdatableFields + " are not found in entity class: " + finalClassName + ", table: "
+                        + tableName + ": with columns: " + columnNameList);
+            }
+
+            sb.append("\n").append("}").append("\n");
+
+            final String result = sb.toString();
+
+            if (N.notNullOrEmpty(srcDir)) {
+                String packageDir = srcDir;
+
+                if (N.notNullOrEmpty(packageName)) {
+                    if (!(packageDir.endsWith("/") || packageDir.endsWith("\\"))) {
+                        packageDir += "/";
+                    }
+
+                    packageDir += StringUtil.replaceAll(packageName, ".", "/");
+                }
+
+                IOUtil.mkdirsIfNotExists(new File(packageDir));
+
+                File file = new File(packageDir + "/" + finalClassName + ".java");
+
+                IOUtil.createIfNotExists(file);
+
+                IOUtil.write(file, result);
+            }
+
+            return result;
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    static final String eccHeader = new StringBuilder() //
+            .append("import lombok.AllArgsConstructor;\n")
+            .append("import lombok.Builder;\n")
+            .append("import lombok.Data;\n")
+            .append("import lombok.NoArgsConstructor;\n")
+            .append("\n")
+            .append("@Builder\n")
+            .append("@Data\n")
+            .append("@NoArgsConstructor\n")
+            .append("@AllArgsConstructor\n")
+            .toString();
+
+    @SuppressWarnings("deprecation")
+    private static final Map<String, String> eccClassNameMap = N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short", "short", "Integer",
+            "int", "Long", "long", "Float", "float", "Double", "double");
+
+    private static String getColumnClassName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
+        String className = columnClassName.replace("java.lang.", "");
+
+        if (isCustomizedType) {
+            return className;
+        } else if (configToUse.isMapBigIntegerToLong() && ClassUtil.getCanonicalClassName(BigInteger.class).equals(columnClassName)) {
+            return "long";
+        } else if (configToUse.isMapBigDecimalToDouble() && ClassUtil.getCanonicalClassName(BigDecimal.class).equals(columnClassName)) {
+            return "double";
+        } else if (!configToUse.isUseBoxedType()) {
+            return eccClassNameMap.getOrDefault(className, className);
+        } else {
+            return className;
+        }
     }
 }
