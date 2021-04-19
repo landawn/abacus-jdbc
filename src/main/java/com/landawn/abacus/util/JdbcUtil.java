@@ -5438,6 +5438,9 @@ public final class JdbcUtil {
             }
         };
 
+        /**
+         * @param rs this {@code ResultSet} will be closed after {@code apply(rs)} call. So don't save/return the input {@code ResultSet}.
+         */
         @Override
         T apply(ResultSet rs) throws SQLException;
 
@@ -5769,6 +5772,10 @@ public final class JdbcUtil {
             }
         };
 
+        /**
+         * @param rs this {@code ResultSet} will be closed after {@code apply(rs, columnLabels)} call. So don't save/return the input {@code ResultSet}.
+         * @param columnLabels
+         */
         @Override
         T apply(ResultSet rs, List<String> columnLabels) throws SQLException;
 
