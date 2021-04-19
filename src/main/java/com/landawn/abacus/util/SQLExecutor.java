@@ -4151,37 +4151,14 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> T query(final Connection conn, final String sql, final StatementSetter statementSetter, final ResultExtractor<T> resultExtractor,
+    public final <T> T query(final Connection inputConn, final String sql, final StatementSetter statementSetter, final ResultExtractor<T> resultExtractor,
             final JdbcSettings jdbcSettings, final Object... parameters) {
-        return query(null, conn, sql, statementSetter, new ResultSetExtractor<T>() {
-            @Override
-            public T extractData(Class<?> targetClass, ParsedSql parsedSql, ResultSet rs, final JdbcSettings jdbcSettings2) throws SQLException {
-                return resultExtractor.apply(rs, jdbcSettings2);
-            }
-
-        }, jdbcSettings, parameters);
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param targetClass
-     * @param inputConn
-     * @param sql
-     * @param statementSetter
-     * @param resultExtractor
-     * @param jdbcSettings
-     * @param parameters
-     * @return
-     */
-    protected <T> T query(final Class<T> targetClass, final Connection inputConn, final String sql, StatementSetter statementSetter,
-            ResultSetExtractor<T> resultExtractor, JdbcSettings jdbcSettings, final Object... parameters) {
         final ParsedSql parsedSql = getParsedSql(sql);
-        statementSetter = checkStatementSetter(parsedSql, statementSetter);
-        resultExtractor = checkResultSetExtractor(parsedSql, resultExtractor);
-        jdbcSettings = checkJdbcSettings(jdbcSettings, parsedSql, _sqlMapper.getAttrs(sql));
+        final StatementSetter statementSetterToUse = checkStatementSetter(parsedSql, statementSetter);
+        final ResultExtractor<T> resultExtractorToUse = resultExtractor == null ? (ResultExtractor<T>) ResultExtractor.TO_DATA_SET : resultExtractor;
+        final JdbcSettings jdbcSettingsToUse = checkJdbcSettings(jdbcSettings, parsedSql, _sqlMapper.getAttrs(sql));
+        final boolean isFromStreamQuery = resultExtractorToUse == RESULT_SET_EXTRACTOR_FOR_STREAM_ONLY;
 
-        final boolean isFromStreamQuery = resultExtractor == RESULT_SET_EXTRACTOR_ONLY_FOR_STREAM;
         boolean noException = false;
 
         T result = null;
@@ -4192,19 +4169,19 @@ public class SQLExecutor {
         ResultSet rs = null;
 
         try {
-            ds = getDataSource(parsedSql.getParameterizedSql(), parameters, jdbcSettings);
+            ds = getDataSource(parsedSql.getParameterizedSql(), parameters, jdbcSettingsToUse);
 
-            localConn = getConnection(inputConn, ds, jdbcSettings, SQLOperation.SELECT);
+            localConn = getConnection(inputConn, ds, jdbcSettingsToUse, SQLOperation.SELECT);
 
-            stmt = prepareStatement(ds, localConn, parsedSql, statementSetter, jdbcSettings, false, false, parameters);
+            stmt = prepareStatement(ds, localConn, parsedSql, statementSetterToUse, jdbcSettingsToUse, false, false, parameters);
 
-            if (jdbcSettings == null || jdbcSettings.getFetchDirection() == -1) {
+            if (jdbcSettingsToUse == null || jdbcSettingsToUse.getFetchDirection() == -1) {
                 stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
             }
 
             rs = JdbcUtil.executeQuery(stmt);
 
-            result = resultExtractor.extractData(targetClass, parsedSql, rs, jdbcSettings);
+            result = resultExtractorToUse.apply(rs, jdbcSettingsToUse);
 
             noException = true;
         } catch (SQLException e) {
@@ -4475,14 +4452,7 @@ public class SQLExecutor {
         return stream(sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, parameters);
     }
 
-    /** The Constant RESULT_SET_EXTRACTOR. */
-    private static final ResultSetExtractor<ResultSet> RESULT_SET_EXTRACTOR_ONLY_FOR_STREAM = new ResultSetExtractor<ResultSet>() {
-        @Override
-        public ResultSet extractData(final Class<?> targetClass, final ParsedSql parsedSql, final ResultSet rs, final JdbcSettings jdbcSettings)
-                throws SQLException {
-            return rs;
-        }
-    };
+    private static final ResultExtractor<ResultSet> RESULT_SET_EXTRACTOR_FOR_STREAM_ONLY = (rs, jdbcSettings) -> rs;
 
     /**
      *
@@ -4525,7 +4495,7 @@ public class SQLExecutor {
                     ResultSet resultSet = null;
 
                     try {
-                        resultSet = query(null, localConn, sql, statementSetter, RESULT_SET_EXTRACTOR_ONLY_FOR_STREAM, newJdbcSettings, parameters);
+                        resultSet = query(localConn, sql, statementSetter, RESULT_SET_EXTRACTOR_FOR_STREAM_ONLY, newJdbcSettings, parameters);
                         final ResultSet rs = resultSet;
 
                         internalIter = new ObjIteratorEx<T>() {
@@ -5539,23 +5509,6 @@ public class SQLExecutor {
         }
 
         return statementSetter;
-    }
-
-    /**
-     * Check result set extractor.
-     *
-     * @param <T>
-     * @param parsedSql
-     * @param resultExtractor
-     * @return
-     */
-    @SuppressWarnings("unchecked")
-    protected <T> ResultSetExtractor<T> checkResultSetExtractor(@SuppressWarnings("unused") final ParsedSql parsedSql, ResultSetExtractor<T> resultExtractor) {
-        if (resultExtractor == null) {
-            resultExtractor = (ResultSetExtractor<T>) ResultExtractor.TO_DATA_SET;
-        }
-
-        return resultExtractor;
     }
 
     /**
@@ -9369,25 +9322,5 @@ public class SQLExecutor {
         static <R> ResultExtractor<R> to(final Throwables.Function<DataSet, R, SQLException> after) {
             return (rs, jdbcSettings) -> after.apply(TO_DATA_SET.apply(rs, jdbcSettings));
         }
-    }
-
-    /**
-     * Refer to http://landawn.com/introduction-to-jdbc.html about how to read columns/rows from <code>java.sql.ResultSet</code>
-     *
-     * @author Haiyang Li
-     * @param <T>
-     */
-    interface ResultSetExtractor<T> {
-
-        /**
-         *
-         * @param targetClass
-         * @param parsedSql
-         * @param rs
-         * @param jdbcSettings
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        T extractData(final Class<?> targetClass, final ParsedSql parsedSql, final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException;
     }
 }

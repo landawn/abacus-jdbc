@@ -1259,12 +1259,22 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
+        ExceptionalIterator<ResultSet, SQLException> iter = null;
+
         try {
             JdbcUtil.execute(cstmt);
 
-            return ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(cstmt)).map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator)).toList();
+            iter = JdbcUtil.iterateAllResultSets(cstmt);
+
+            return ExceptionalStream.newStream(iter).map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator)).toList();
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 
@@ -1279,12 +1289,22 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
+        ExceptionalIterator<ResultSet, SQLException> iter = null;
+
         try {
             JdbcUtil.execute(cstmt);
 
-            return ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(cstmt)).map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator)).toList();
+            iter = JdbcUtil.iterateAllResultSets(cstmt);
+
+            return ExceptionalStream.newStream(iter).map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator)).toList();
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 
@@ -1371,16 +1391,24 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
+        ExceptionalIterator<ResultSet, SQLException> iter = null;
+
         try {
             JdbcUtil.execute(cstmt);
 
-            final List<R> resultList = ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(cstmt))
-                    .map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator))
-                    .toList();
+            iter = JdbcUtil.iterateAllResultSets(cstmt);
+
+            final List<R> resultList = ExceptionalStream.newStream(iter).map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator)).toList();
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 
@@ -1395,16 +1423,24 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
+        ExceptionalIterator<ResultSet, SQLException> iter = null;
+
         try {
             JdbcUtil.execute(cstmt);
 
-            final List<R> resultList = ExceptionalStream.newStream(JdbcUtil.iterateAllResultSets(cstmt))
-                    .map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator))
-                    .toList();
+            iter = JdbcUtil.iterateAllResultSets(cstmt);
+
+            final List<R> resultList = ExceptionalStream.newStream(iter).map(rs -> JdbcUtil.extractAndCloseResultSet(rs, resultExtrator)).toList();
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 
@@ -1422,10 +1458,12 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         checkArgNotNull(resultExtrator2, "resultExtrator2");
         assertNotClosed();
 
+        ExceptionalIterator<ResultSet, SQLException> iter = null;
+
         try {
             JdbcUtil.execute(cstmt);
 
-            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(cstmt);
+            iter = JdbcUtil.iterateAllResultSets(cstmt);
 
             R1 result1 = null;
             R2 result2 = null;
@@ -1440,7 +1478,13 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
 
             return Tuple.of(result1, result2);
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 
@@ -1459,10 +1503,12 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         checkArgNotNull(resultExtrator2, "resultExtrator2");
         assertNotClosed();
 
+        ExceptionalIterator<ResultSet, SQLException> iter = null;
+
         try {
             JdbcUtil.execute(cstmt);
 
-            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(cstmt);
+            iter = JdbcUtil.iterateAllResultSets(cstmt);
 
             R1 result1 = null;
             R2 result2 = null;
@@ -1477,7 +1523,13 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
 
             return Tuple.of(result1, result2, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 
@@ -1499,10 +1551,12 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         checkArgNotNull(resultExtrator3, "resultExtrator3");
         assertNotClosed();
 
+        ExceptionalIterator<ResultSet, SQLException> iter = null;
+
         try {
             JdbcUtil.execute(cstmt);
 
-            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(cstmt);
+            iter = JdbcUtil.iterateAllResultSets(cstmt);
 
             R1 result1 = null;
             R2 result2 = null;
@@ -1522,7 +1576,13 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
 
             return Tuple.of(result1, result2, result3);
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 
@@ -1544,10 +1604,12 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         checkArgNotNull(resultExtrator3, "resultExtrator3");
         assertNotClosed();
 
+        ExceptionalIterator<ResultSet, SQLException> iter = null;
+
         try {
             JdbcUtil.execute(cstmt);
 
-            final ExceptionalIterator<ResultSet, SQLException> iter = JdbcUtil.iterateAllResultSets(cstmt);
+            iter = JdbcUtil.iterateAllResultSets(cstmt);
 
             R1 result1 = null;
             R2 result2 = null;
@@ -1567,7 +1629,13 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
 
             return Tuple.of(result1, result2, result3, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 

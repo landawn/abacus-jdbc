@@ -3067,6 +3067,15 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     // Will it cause confusion if it's called in transaction?
 
+    /**
+     * 
+     * @return
+     * @throws SQLException
+     * @see {@link #query(ResultExtractor)}
+     * @see {@link #query(BiResultExtractor)}
+     * @see JdbcUtil.ResultExtractor
+     * @see JdbcUtil.BiResultExtractor
+     */
     @LazyEvaluation
     public ExceptionalStream<Map<String, Object>, SQLException> stream() throws SQLException {
         return stream(BiRowMapper.TO_MAP);
@@ -3079,6 +3088,10 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @param targetClass
      * @return
      * @throws SQLException the SQL exception
+     * @see {@link #query(ResultExtractor)}
+     * @see {@link #query(BiResultExtractor)}
+     * @see JdbcUtil.ResultExtractor
+     * @see JdbcUtil.BiResultExtractor
      */
     @LazyEvaluation
     public <T> ExceptionalStream<T, SQLException> stream(final Class<T> targetClass) throws SQLException {
@@ -3093,6 +3106,10 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @param rowMapper
      * @return
      * @throws SQLException the SQL exception
+     * @see {@link #query(ResultExtractor)}
+     * @see {@link #query(BiResultExtractor)}
+     * @see JdbcUtil.ResultExtractor
+     * @see JdbcUtil.BiResultExtractor
      */
     @LazyEvaluation
     public <T> ExceptionalStream<T, SQLException> stream(final RowMapper<T> rowMapper) throws SQLException {
@@ -3115,6 +3132,10 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @param rowMapper
      * @return
      * @throws SQLException the SQL exception
+     * @see {@link #query(ResultExtractor)}
+     * @see {@link #query(BiResultExtractor)}
+     * @see JdbcUtil.ResultExtractor
+     * @see JdbcUtil.BiResultExtractor
      */
     @LazyEvaluation
     public <T> ExceptionalStream<T, SQLException> stream(final BiRowMapper<T> rowMapper) throws SQLException {
@@ -3138,6 +3159,10 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @param rowMapper
      * @return
      * @throws SQLException
+     * @see {@link #query(ResultExtractor)}
+     * @see {@link #query(BiResultExtractor)}
+     * @see JdbcUtil.ResultExtractor
+     * @see JdbcUtil.BiResultExtractor
      */
     @LazyEvaluation
     public <T> ExceptionalStream<T, SQLException> stream(final RowFilter rowFilter, final RowMapper<T> rowMapper) throws SQLException {
@@ -3162,6 +3187,10 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @param rowMapper
      * @return
      * @throws SQLException the SQL exception
+     * @see {@link #query(ResultExtractor)}
+     * @see {@link #query(BiResultExtractor)}
+     * @see JdbcUtil.ResultExtractor
+     * @see JdbcUtil.BiResultExtractor
      */
     @LazyEvaluation
     public <T> ExceptionalStream<T, SQLException> stream(final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) throws SQLException {
