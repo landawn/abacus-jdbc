@@ -46,10 +46,8 @@ import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
-import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
-import com.landawn.abacus.util.JdbcUtil.RowExtractor;
-import com.landawn.abacus.util.JdbcUtil.RowFilter;
+import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.SqlLogConfig;
 import com.landawn.abacus.util.SQLTransaction.CreatedBy;
 import com.landawn.abacus.util.StringUtil.Strings;
@@ -64,10 +62,8 @@ import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.BiConsumer;
-import com.landawn.abacus.util.function.BinaryOperator;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.function.Supplier;
-import com.landawn.abacus.util.stream.Collector;
 import com.landawn.abacus.util.stream.ObjIteratorEx;
 import com.landawn.abacus.util.stream.Stream;
 
@@ -182,21 +178,17 @@ public class SQLExecutor {
     static final String QUERY_WITH_DATA_SOURCE = "queryWithDataSource";
 
     /** The Constant EXISTS_RESULT_SET_EXTRACTOR. */
-    private static final ResultSetExtractor<Boolean> EXISTS_RESULT_SET_EXTRACTOR = new ResultSetExtractor<Boolean>() {
+    private static final ResultExtractor<Boolean> EXISTS_RESULT_SET_EXTRACTOR = new ResultExtractor<Boolean>() {
         @Override
-        public Boolean apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+        public Boolean apply(final ResultSet rs) throws SQLException {
             return rs.next();
         }
     };
 
     /** The Constant COUNT_RESULT_SET_EXTRACTOR. */
-    private static final ResultSetExtractor<Integer> COUNT_RESULT_SET_EXTRACTOR = new ResultSetExtractor<Integer>() {
+    private static final ResultExtractor<Integer> COUNT_RESULT_SET_EXTRACTOR = new ResultExtractor<Integer>() {
         @Override
-        public Integer apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+        public Integer apply(final ResultSet rs) throws SQLException {
             int cnt = 0;
 
             while (rs.next()) {
@@ -208,11 +200,9 @@ public class SQLExecutor {
     };
 
     /** The Constant SINGLE_BOOLEAN_EXTRACTOR. */
-    private static final ResultSetExtractor<OptionalBoolean> SINGLE_BOOLEAN_EXTRACTOR = new ResultSetExtractor<OptionalBoolean>() {
+    private static final ResultExtractor<OptionalBoolean> SINGLE_BOOLEAN_EXTRACTOR = new ResultExtractor<OptionalBoolean>() {
         @Override
-        public OptionalBoolean apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+        public OptionalBoolean apply(final ResultSet rs) throws SQLException {
             if (rs.next()) {
                 return OptionalBoolean.of(rs.getBoolean(1));
             }
@@ -225,11 +215,9 @@ public class SQLExecutor {
     private static final Type<Character> charType = TypeFactory.getType(char.class);
 
     /** The Constant SINGLE_CHAR_EXTRACTOR. */
-    private static final ResultSetExtractor<OptionalChar> SINGLE_CHAR_EXTRACTOR = new ResultSetExtractor<OptionalChar>() {
+    private static final ResultExtractor<OptionalChar> SINGLE_CHAR_EXTRACTOR = new ResultExtractor<OptionalChar>() {
         @Override
-        public OptionalChar apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+        public OptionalChar apply(final ResultSet rs) throws SQLException {
             if (rs.next()) {
                 return OptionalChar.of(charType.get(rs, 1));
             }
@@ -239,11 +227,9 @@ public class SQLExecutor {
     };
 
     /** The Constant SINGLE_BYTE_EXTRACTOR. */
-    private static final ResultSetExtractor<OptionalByte> SINGLE_BYTE_EXTRACTOR = new ResultSetExtractor<OptionalByte>() {
+    private static final ResultExtractor<OptionalByte> SINGLE_BYTE_EXTRACTOR = new ResultExtractor<OptionalByte>() {
         @Override
-        public OptionalByte apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+        public OptionalByte apply(final ResultSet rs) throws SQLException {
             if (rs.next()) {
                 return OptionalByte.of(rs.getByte(1));
             }
@@ -253,11 +239,9 @@ public class SQLExecutor {
     };
 
     /** The Constant SINGLE_SHORT_EXTRACTOR. */
-    private static final ResultSetExtractor<OptionalShort> SINGLE_SHORT_EXTRACTOR = new ResultSetExtractor<OptionalShort>() {
+    private static final ResultExtractor<OptionalShort> SINGLE_SHORT_EXTRACTOR = new ResultExtractor<OptionalShort>() {
         @Override
-        public OptionalShort apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+        public OptionalShort apply(final ResultSet rs) throws SQLException {
             if (rs.next()) {
                 return OptionalShort.of(rs.getShort(1));
             }
@@ -267,11 +251,9 @@ public class SQLExecutor {
     };
 
     /** The Constant SINGLE_INT_EXTRACTOR. */
-    private static final ResultSetExtractor<OptionalInt> SINGLE_INT_EXTRACTOR = new ResultSetExtractor<OptionalInt>() {
+    private static final ResultExtractor<OptionalInt> SINGLE_INT_EXTRACTOR = new ResultExtractor<OptionalInt>() {
         @Override
-        public OptionalInt apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+        public OptionalInt apply(final ResultSet rs) throws SQLException {
             if (rs.next()) {
                 return OptionalInt.of(rs.getInt(1));
             }
@@ -281,11 +263,9 @@ public class SQLExecutor {
     };
 
     /** The Constant SINGLE_LONG_EXTRACTOR. */
-    private static final ResultSetExtractor<OptionalLong> SINGLE_LONG_EXTRACTOR = new ResultSetExtractor<OptionalLong>() {
+    private static final ResultExtractor<OptionalLong> SINGLE_LONG_EXTRACTOR = new ResultExtractor<OptionalLong>() {
         @Override
-        public OptionalLong apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+        public OptionalLong apply(final ResultSet rs) throws SQLException {
             if (rs.next()) {
                 return OptionalLong.of(rs.getLong(1));
             }
@@ -295,11 +275,9 @@ public class SQLExecutor {
     };
 
     /** The Constant SINGLE_FLOAT_EXTRACTOR. */
-    private static final ResultSetExtractor<OptionalFloat> SINGLE_FLOAT_EXTRACTOR = new ResultSetExtractor<OptionalFloat>() {
+    private static final ResultExtractor<OptionalFloat> SINGLE_FLOAT_EXTRACTOR = new ResultExtractor<OptionalFloat>() {
         @Override
-        public OptionalFloat apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+        public OptionalFloat apply(final ResultSet rs) throws SQLException {
             if (rs.next()) {
                 return OptionalFloat.of(rs.getFloat(1));
             }
@@ -309,11 +287,9 @@ public class SQLExecutor {
     };
 
     /** The Constant SINGLE_DOUBLE_EXTRACTOR. */
-    private static final ResultSetExtractor<OptionalDouble> SINGLE_DOUBLE_EXTRACTOR = new ResultSetExtractor<OptionalDouble>() {
+    private static final ResultExtractor<OptionalDouble> SINGLE_DOUBLE_EXTRACTOR = new ResultExtractor<OptionalDouble>() {
         @Override
-        public OptionalDouble apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+        public OptionalDouble apply(final ResultSet rs) throws SQLException {
             if (rs.next()) {
                 return OptionalDouble.of(rs.getDouble(1));
             }
@@ -323,11 +299,9 @@ public class SQLExecutor {
     };
 
     /** The Constant SINGLE_BIG_DECIMAL_EXTRACTOR. */
-    private static final ResultSetExtractor<Nullable<BigDecimal>> SINGLE_BIG_DECIMAL_EXTRACTOR = new ResultSetExtractor<Nullable<BigDecimal>>() {
+    private static final ResultExtractor<Nullable<BigDecimal>> SINGLE_BIG_DECIMAL_EXTRACTOR = new ResultExtractor<Nullable<BigDecimal>>() {
         @Override
-        public Nullable<BigDecimal> apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+        public Nullable<BigDecimal> apply(final ResultSet rs) throws SQLException {
             if (rs.next()) {
                 return Nullable.of(rs.getBigDecimal(1));
             }
@@ -337,11 +311,9 @@ public class SQLExecutor {
     };
 
     /** The Constant SINGLE_STRING_EXTRACTOR. */
-    private static final ResultSetExtractor<Nullable<String>> SINGLE_STRING_EXTRACTOR = new ResultSetExtractor<Nullable<String>>() {
+    private static final ResultExtractor<Nullable<String>> SINGLE_STRING_EXTRACTOR = new ResultExtractor<Nullable<String>>() {
         @Override
-        public Nullable<String> apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+        public Nullable<String> apply(final ResultSet rs) throws SQLException {
             if (rs.next()) {
                 return Nullable.of(rs.getString(1));
             }
@@ -351,11 +323,9 @@ public class SQLExecutor {
     };
 
     /** The Constant SINGLE_DATE_EXTRACTOR. */
-    private static final ResultSetExtractor<Nullable<Date>> SINGLE_DATE_EXTRACTOR = new ResultSetExtractor<Nullable<Date>>() {
+    private static final ResultExtractor<Nullable<Date>> SINGLE_DATE_EXTRACTOR = new ResultExtractor<Nullable<Date>>() {
         @Override
-        public Nullable<Date> apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+        public Nullable<Date> apply(final ResultSet rs) throws SQLException {
             if (rs.next()) {
                 return Nullable.of(rs.getDate(1));
             }
@@ -365,11 +335,9 @@ public class SQLExecutor {
     };
 
     /** The Constant SINGLE_TIME_EXTRACTOR. */
-    private static final ResultSetExtractor<Nullable<Time>> SINGLE_TIME_EXTRACTOR = new ResultSetExtractor<Nullable<Time>>() {
+    private static final ResultExtractor<Nullable<Time>> SINGLE_TIME_EXTRACTOR = new ResultExtractor<Nullable<Time>>() {
         @Override
-        public Nullable<Time> apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+        public Nullable<Time> apply(final ResultSet rs) throws SQLException {
             if (rs.next()) {
                 return Nullable.of(rs.getTime(1));
             }
@@ -379,11 +347,9 @@ public class SQLExecutor {
     };
 
     /** The Constant SINGLE_TIMESTAMP_EXTRACTOR. */
-    private static final ResultSetExtractor<Nullable<Timestamp>> SINGLE_TIMESTAMP_EXTRACTOR = new ResultSetExtractor<Nullable<Timestamp>>() {
+    private static final ResultExtractor<Nullable<Timestamp>> SINGLE_TIMESTAMP_EXTRACTOR = new ResultExtractor<Nullable<Timestamp>>() {
         @Override
-        public Nullable<Timestamp> apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+        public Nullable<Timestamp> apply(final ResultSet rs) throws SQLException {
             if (rs.next()) {
                 return Nullable.of(rs.getTimestamp(1));
             }
@@ -2277,15 +2243,9 @@ public class SQLExecutor {
             JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
         N.checkArgNotNull(rowMapper, "rowMapper");
 
-        final ResultSetExtractor<T> resultExtractor = new ResultSetExtractor<T>() {
+        final ResultExtractor<T> resultExtractor = new ResultExtractor<T>() {
             @Override
-            public T apply(ResultSet rs, final JdbcSettings jdbcSettings2) throws SQLException {
-                int offset = jdbcSettings2.getOffset();
-
-                if (offset > 0) {
-                    JdbcUtil.skip(rs, offset);
-                }
-
+            public T apply(ResultSet rs) throws SQLException {
                 T result = null;
 
                 if (rs.next()) {
@@ -2561,15 +2521,9 @@ public class SQLExecutor {
             final JdbcUtil.RowMapper<T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters) {
         N.checkArgNotNull(rowMapper, "rowMapper");
 
-        final ResultSetExtractor<T> resultExtractor = new ResultSetExtractor<T>() {
+        final ResultExtractor<T> resultExtractor = new ResultExtractor<T>() {
             @Override
-            public T apply(ResultSet rs, final JdbcSettings jdbcSettings2) throws SQLException {
-                int offset = jdbcSettings2.getOffset();
-
-                if (offset > 0) {
-                    JdbcUtil.skip(rs, offset);
-                }
-
+            public T apply(ResultSet rs) throws SQLException {
                 return rs.next() ? Objects.requireNonNull(rowMapper.apply(rs)) : null;
             }
         };
@@ -2817,20 +2771,14 @@ public class SQLExecutor {
             final JdbcSettings jdbcSettings, final Object... parameters) {
         N.checkArgNotNull(rowMapper);
 
-        final ResultSetExtractor<List<T>> resultExtractor = new ResultSetExtractor<List<T>>() {
+        final ResultExtractor<List<T>> resultExtractor = new ResultExtractor<List<T>>() {
             @Override
-            public List<T> apply(ResultSet rs, final JdbcSettings jdbcSettings2) throws SQLException {
-                int offset = jdbcSettings2.getOffset();
-                int count = jdbcSettings2.getCount();
+            public List<T> apply(ResultSet rs) throws SQLException {
 
-                if (offset > 0) {
-                    JdbcUtil.skip(rs, offset);
-                }
-
-                final List<T> result = new ArrayList<>(N.min(count, 16));
+                final List<T> result = new ArrayList<>();
                 final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
-                while (count-- > 0 && rs.next()) {
+                while (rs.next()) {
                     result.add(rowMapper.apply(rs, columnLabels));
                 }
 
@@ -3243,7 +3191,7 @@ public class SQLExecutor {
     }
 
     /** The single result extractor pool. */
-    private final ObjectPool<Class<?>, ResultSetExtractor<Nullable<?>>> singleResultExtractorPool = new ObjectPool<>(64);
+    private final ObjectPool<Class<?>, ResultExtractor<Nullable<?>>> singleResultExtractorPool = new ObjectPool<>(64);
 
     /**
      * Creates the single result extractor.
@@ -3252,16 +3200,14 @@ public class SQLExecutor {
      * @param targetClass
      * @return
      */
-    private <V> ResultSetExtractor<Nullable<V>> createSingleResultExtractor(final Class<V> targetClass) {
+    private <V> ResultExtractor<Nullable<V>> createSingleResultExtractor(final Class<V> targetClass) {
         @SuppressWarnings("rawtypes")
-        ResultSetExtractor result = singleResultExtractorPool.get(targetClass);
+        ResultExtractor result = singleResultExtractorPool.get(targetClass);
 
         if (result == null) {
-            result = new ResultSetExtractor<Nullable<V>>() {
+            result = new ResultExtractor<Nullable<V>>() {
                 @Override
-                public Nullable<V> apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-                    JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+                public Nullable<V> apply(final ResultSet rs) throws SQLException {
                     if (rs.next()) {
                         return Nullable.of(N.convert(JdbcUtil.getColumnValue(rs, 1), targetClass));
                     }
@@ -3433,7 +3379,7 @@ public class SQLExecutor {
     }
 
     /** The unique result extractor pool. */
-    private final ObjectPool<Class<?>, ResultSetExtractor<Nullable<?>>> uniqueResultExtractorPool = new ObjectPool<>(64);
+    private final ObjectPool<Class<?>, ResultExtractor<Nullable<?>>> uniqueResultExtractorPool = new ObjectPool<>(64);
 
     /**
      * Creates the unique result extractor.
@@ -3442,16 +3388,14 @@ public class SQLExecutor {
      * @param targetClass
      * @return
      */
-    private <V> ResultSetExtractor<Nullable<V>> createUniqueResultExtractor(final Class<V> targetClass) {
+    private <V> ResultExtractor<Nullable<V>> createUniqueResultExtractor(final Class<V> targetClass) {
         @SuppressWarnings("rawtypes")
-        ResultSetExtractor result = uniqueResultExtractorPool.get(targetClass);
+        ResultExtractor result = uniqueResultExtractorPool.get(targetClass);
 
         if (result == null) {
-            result = new ResultSetExtractor<Nullable<V>>() {
+            result = new ResultExtractor<Nullable<V>>() {
                 @Override
-                public Nullable<V> apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-                    JdbcUtil.skip(rs, jdbcSettings.getOffset());
-
+                public Nullable<V> apply(final ResultSet rs) throws SQLException {
                     if (rs.next()) {
                         final Nullable<V> ret = Nullable.of(N.convert(JdbcUtil.getColumnValue(rs, 1), targetClass));
 
@@ -3518,7 +3462,7 @@ public class SQLExecutor {
      */
     @SafeVarargs
     public final DataSet query(final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings, final Object... parameters) {
-        return query(sql, statementSetter, ResultSetExtractor.TO_DATA_SET, jdbcSettings, parameters);
+        return query(sql, statementSetter, ResultExtractor.TO_DATA_SET, jdbcSettings, parameters);
     }
 
     /**
@@ -3530,7 +3474,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> T query(final String sql, final ResultSetExtractor<T> resultExtractor, final Object... parameters) {
+    public final <T> T query(final String sql, final ResultExtractor<T> resultExtractor, final Object... parameters) {
         return query(sql, StatementSetter.DEFAULT, resultExtractor, parameters);
     }
 
@@ -3544,7 +3488,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> T query(final String sql, final StatementSetter statementSetter, final ResultSetExtractor<T> resultExtractor, final Object... parameters) {
+    public final <T> T query(final String sql, final StatementSetter statementSetter, final ResultExtractor<T> resultExtractor, final Object... parameters) {
         return query(sql, statementSetter, resultExtractor, null, parameters);
     }
 
@@ -3558,7 +3502,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> T query(final String sql, final ResultSetExtractor<T> resultExtractor, final JdbcSettings jdbcSettings, final Object... parameters) {
+    public final <T> T query(final String sql, final ResultExtractor<T> resultExtractor, final JdbcSettings jdbcSettings, final Object... parameters) {
         return query(sql, StatementSetter.DEFAULT, resultExtractor, jdbcSettings, parameters);
     }
 
@@ -3596,8 +3540,8 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> T query(final String sql, final StatementSetter statementSetter, final ResultSetExtractor<T> resultExtractor,
-            final JdbcSettings jdbcSettings, final Object... parameters) {
+    public final <T> T query(final String sql, final StatementSetter statementSetter, final ResultExtractor<T> resultExtractor, final JdbcSettings jdbcSettings,
+            final Object... parameters) {
         return query(null, sql, statementSetter, resultExtractor, jdbcSettings, parameters);
     }
 
@@ -3651,7 +3595,7 @@ public class SQLExecutor {
     @SafeVarargs
     public final DataSet query(final Connection conn, final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings,
             final Object... parameters) {
-        return query(conn, sql, statementSetter, ResultSetExtractor.TO_DATA_SET, jdbcSettings, parameters);
+        return query(conn, sql, statementSetter, ResultExtractor.TO_DATA_SET, jdbcSettings, parameters);
     }
 
     /**
@@ -3664,7 +3608,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> T query(final Connection conn, final String sql, final ResultSetExtractor<T> resultExtractor, final Object... parameters) {
+    public final <T> T query(final Connection conn, final String sql, final ResultExtractor<T> resultExtractor, final Object... parameters) {
         return query(conn, sql, StatementSetter.DEFAULT, resultExtractor, parameters);
     }
 
@@ -3679,7 +3623,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> T query(final Connection conn, final String sql, final StatementSetter statementSetter, final ResultSetExtractor<T> resultExtractor,
+    public final <T> T query(final Connection conn, final String sql, final StatementSetter statementSetter, final ResultExtractor<T> resultExtractor,
             final Object... parameters) {
         return query(conn, sql, statementSetter, resultExtractor, null, parameters);
     }
@@ -3695,7 +3639,7 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> T query(final Connection conn, final String sql, final ResultSetExtractor<T> resultExtractor, final JdbcSettings jdbcSettings,
+    public final <T> T query(final Connection conn, final String sql, final ResultExtractor<T> resultExtractor, final JdbcSettings jdbcSettings,
             final Object... parameters) {
         return query(conn, sql, StatementSetter.DEFAULT, resultExtractor, jdbcSettings, parameters);
     }
@@ -3735,11 +3679,11 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> T query(final Connection inputConn, final String sql, final StatementSetter statementSetter, final ResultSetExtractor<T> resultExtractor,
+    public final <T> T query(final Connection inputConn, final String sql, final StatementSetter statementSetter, final ResultExtractor<T> resultExtractor,
             final JdbcSettings jdbcSettings, final Object... parameters) {
         final ParsedSql parsedSql = getParsedSql(sql);
         final StatementSetter statementSetterToUse = checkStatementSetter(parsedSql, statementSetter);
-        final ResultSetExtractor<T> resultExtractorToUse = resultExtractor == null ? (ResultSetExtractor<T>) ResultSetExtractor.TO_DATA_SET : resultExtractor;
+        final ResultExtractor<T> resultExtractorToUse = resultExtractor == null ? (ResultExtractor<T>) ResultExtractor.TO_DATA_SET : resultExtractor;
         final JdbcSettings jdbcSettingsToUse = checkJdbcSettings(jdbcSettings, parsedSql, _sqlMapper.getAttrs(sql));
         final boolean isFromStreamQuery = resultExtractorToUse == RESULT_EXTRACTOR_FOR_STREAM_ONLY;
 
@@ -3765,7 +3709,7 @@ public class SQLExecutor {
 
             rs = JdbcUtil.executeQuery(stmt);
 
-            result = resultExtractorToUse.apply(rs, jdbcSettingsToUse);
+            result = resultExtractorToUse.apply(rs);
 
             noException = true;
         } catch (SQLException e) {
@@ -3969,7 +3913,7 @@ public class SQLExecutor {
     }
 
     /** The Constant RESULT_SET_EXTRACTOR. */
-    private static final ResultSetExtractor<ResultSet> RESULT_EXTRACTOR_FOR_STREAM_ONLY = (rs, jdbcSettings) -> rs;
+    private static final ResultExtractor<ResultSet> RESULT_EXTRACTOR_FOR_STREAM_ONLY = rs -> rs;
 
     /**
      *
@@ -5062,612 +5006,6 @@ public class SQLExecutor {
 
         static StatementSetter create(Throwables.BiConsumer<NamedQuery, Object[], SQLException> stmtSetter) {
             return (parsedSql, stmt, parameters) -> stmtSetter.accept(new NamedQuery(stmt, parsedSql), parameters);
-        }
-    }
-
-    /**
-     * Refer to http://landawn.com/introduction-to-jdbc.html about how to read columns/rows from <code>java.sql.ResultSet</code>
-     *
-     * @author Haiyang Li
-     * @param <T>
-     */
-    public interface ResultSetExtractor<T> extends Throwables.BiFunction<ResultSet, JdbcSettings, T, SQLException> {
-
-        ResultSetExtractor<DataSet> TO_DATA_SET = (rs, jdbcSettings) -> JdbcUtil.extractData(rs, jdbcSettings.getOffset(), jdbcSettings.getCount(), false);
-
-        /**
-         * @deprecated please use {@code TO_DATA_SET}
-         */
-        @Deprecated
-        ResultSetExtractor<DataSet> DATA_SET = TO_DATA_SET;
-
-        /**
-         *
-         * @param rs this {@code ResultSet} will be closed after {@code apply(rs)} call. So don't save/return the input {@code ResultSet}.
-         * @param jdbcSettings
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        @Override
-        T apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException;
-
-        default <R> ResultSetExtractor<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
-            N.checkArgNotNull(after);
-
-            return (rs, jdbcSettings) -> after.apply(apply(rs, jdbcSettings));
-        }
-
-        static <T> ResultSetExtractor<T> create(Throwables.Function<ResultSet, T, SQLException> resultExtractor) {
-            return (rs, jdbcSettings) -> resultExtractor.apply(rs);
-        }
-
-        static <T> ResultSetExtractor<T> create(Throwables.BiFunction<ResultSet, List<String>, T, SQLException> resultExtractor) {
-            return (rs, jdbcSettings) -> resultExtractor.apply(rs, JdbcUtil.getColumnLabelList(rs));
-        }
-
-        static <T> ResultSetExtractor<T> create(Throwables.TriFunction<ResultSet, List<String>, JdbcSettings, T, SQLException> resultExtractor) {
-            return (rs, jdbcSettings) -> resultExtractor.apply(rs, JdbcUtil.getColumnLabelList(rs), jdbcSettings);
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param keyExtractor
-         * @param valueExtractor
-         * @return
-         */
-        static <K, V> ResultSetExtractor<Map<K, V>> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor) {
-            return toMap(keyExtractor, valueExtractor, Suppliers.<K, V> ofMap());
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <M>
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param supplier
-         * @return
-         */
-        static <K, V, M extends Map<K, V>> ResultSetExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
-                final Supplier<? extends M> supplier) {
-            return toMap(keyExtractor, valueExtractor, Fn.<V> throwingMerger(), supplier);
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param mergeFunction
-         * @return
-         * @see {@link Fn.throwingMerger()}
-         * @see {@link Fn.replacingMerger()}
-         * @see {@link Fn.ignoringMerger()}
-         */
-        static <K, V> ResultSetExtractor<Map<K, V>> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
-                final BinaryOperator<V> mergeFunction) {
-            return toMap(keyExtractor, valueExtractor, mergeFunction, Suppliers.<K, V> ofMap());
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <M>
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param mergeFunction
-         * @param supplier
-         * @return
-         * @see {@link Fn.throwingMerger()}
-         * @see {@link Fn.replacingMerger()}
-         * @see {@link Fn.ignoringMerger()}
-         */
-        static <K, V, M extends Map<K, V>> ResultSetExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
-                final BinaryOperator<V> mergeFunction, final Supplier<? extends M> supplier) {
-            N.checkArgNotNull(keyExtractor, "keyExtractor");
-            N.checkArgNotNull(valueExtractor, "valueExtractor");
-            N.checkArgNotNull(mergeFunction, "mergeFunction");
-            N.checkArgNotNull(supplier, "supplier");
-
-            return new ResultSetExtractor<M>() {
-                @Override
-                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-                    final int offset = jdbcSettings.getOffset();
-                    int count = jdbcSettings.getCount();
-
-                    JdbcUtil.skip(rs, offset);
-
-                    final M result = supplier.get();
-
-                    while (count-- > 0 && rs.next()) {
-                        Maps.merge(result, keyExtractor.apply(rs), valueExtractor.apply(rs), mergeFunction);
-                    }
-
-                    return result;
-                }
-            };
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <A>
-         * @param <D>
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param downstream
-         * @return
-         */
-        static <K, V, A, D> ResultSetExtractor<Map<K, D>> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
-                final Collector<? super V, A, D> downstream) {
-            return toMap(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <A>
-         * @param <D>
-         * @param <M>
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param downstream
-         * @param supplier
-         * @return
-         */
-        static <K, V, A, D, M extends Map<K, D>> ResultSetExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor,
-                final JdbcUtil.RowMapper<V> valueExtractor, final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
-            N.checkArgNotNull(keyExtractor, "keyExtractor");
-            N.checkArgNotNull(valueExtractor, "valueExtractor");
-            N.checkArgNotNull(downstream, "downstream");
-            N.checkArgNotNull(supplier, "supplier");
-
-            return new ResultSetExtractor<M>() {
-                @Override
-                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-                    final int offset = jdbcSettings.getOffset();
-                    int count = jdbcSettings.getCount();
-
-                    JdbcUtil.skip(rs, offset);
-
-                    final Supplier<A> downstreamSupplier = downstream.supplier();
-                    final BiConsumer<A, ? super V> downstreamAccumulator = downstream.accumulator();
-                    final Function<A, D> downstreamFinisher = downstream.finisher();
-
-                    final M result = supplier.get();
-                    final Map<K, A> tmp = (Map<K, A>) result;
-                    K key = null;
-                    A container = null;
-
-                    while (count-- > 0 && rs.next()) {
-                        key = keyExtractor.apply(rs);
-                        container = tmp.get(key);
-
-                        if (container == null) {
-                            container = downstreamSupplier.get();
-                            tmp.put(key, container);
-                        }
-
-                        downstreamAccumulator.accept(container, valueExtractor.apply(rs));
-                    }
-
-                    for (Map.Entry<K, D> entry : result.entrySet()) {
-                        entry.setValue(downstreamFinisher.apply((A) entry.getValue()));
-                    }
-
-                    return result;
-                }
-            };
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param keyExtractor
-         * @param valueExtractor
-         * @return
-         */
-        static <K, V> ResultSetExtractor<Map<K, V>> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor) {
-            return toMap(keyExtractor, valueExtractor, Suppliers.<K, V> ofMap());
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <M>
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param supplier
-         * @return
-         */
-        static <K, V, M extends Map<K, V>> ResultSetExtractor<M> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
-                final Supplier<? extends M> supplier) {
-            return toMap(keyExtractor, valueExtractor, Fn.<V> throwingMerger(), supplier);
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param mergeFunction
-         * @return
-         * @see {@link Fn.throwingMerger()}
-         * @see {@link Fn.replacingMerger()}
-         * @see {@link Fn.ignoringMerger()}
-         */
-        static <K, V> ResultSetExtractor<Map<K, V>> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
-                final BinaryOperator<V> mergeFunction) {
-            return toMap(keyExtractor, valueExtractor, mergeFunction, Suppliers.<K, V> ofMap());
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <M>
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param mergeFunction
-         * @param supplier
-         * @return
-         * @see {@link Fn.throwingMerger()}
-         * @see {@link Fn.replacingMerger()}
-         * @see {@link Fn.ignoringMerger()}
-         */
-        static <K, V, M extends Map<K, V>> ResultSetExtractor<M> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
-                final BinaryOperator<V> mergeFunction, final Supplier<? extends M> supplier) {
-            N.checkArgNotNull(keyExtractor, "keyExtractor");
-            N.checkArgNotNull(valueExtractor, "valueExtractor");
-            N.checkArgNotNull(mergeFunction, "mergeFunction");
-            N.checkArgNotNull(supplier, "supplier");
-
-            return new ResultSetExtractor<M>() {
-                @Override
-                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-                    final int offset = jdbcSettings.getOffset();
-                    int count = jdbcSettings.getCount();
-
-                    JdbcUtil.skip(rs, offset);
-
-                    final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
-                    final M result = supplier.get();
-
-                    while (count-- > 0 && rs.next()) {
-                        Maps.merge(result, keyExtractor.apply(rs, columnLabels), valueExtractor.apply(rs, columnLabels), mergeFunction);
-                    }
-
-                    return result;
-                }
-            };
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <A>
-         * @param <D>
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param downstream
-         * @return
-         */
-        static <K, V, A, D> ResultSetExtractor<Map<K, D>> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
-                final Collector<? super V, A, D> downstream) {
-            return toMap(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <A>
-         * @param <D>
-         * @param <M>
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param downstream
-         * @param supplier
-         * @return
-         */
-        static <K, V, A, D, M extends Map<K, D>> ResultSetExtractor<M> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
-                final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
-            N.checkArgNotNull(keyExtractor, "keyExtractor");
-            N.checkArgNotNull(valueExtractor, "valueExtractor");
-            N.checkArgNotNull(downstream, "downstream");
-            N.checkArgNotNull(supplier, "supplier");
-
-            return new ResultSetExtractor<M>() {
-                @Override
-                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-                    final int offset = jdbcSettings.getOffset();
-                    int count = jdbcSettings.getCount();
-
-                    JdbcUtil.skip(rs, offset);
-
-                    final Supplier<A> downstreamSupplier = downstream.supplier();
-                    final BiConsumer<A, ? super V> downstreamAccumulator = downstream.accumulator();
-                    final Function<A, D> downstreamFinisher = downstream.finisher();
-
-                    final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
-                    final M result = supplier.get();
-                    final Map<K, A> tmp = (Map<K, A>) result;
-                    K key = null;
-                    A container = null;
-
-                    while (count-- > 0 && rs.next()) {
-                        key = keyExtractor.apply(rs, columnLabels);
-                        container = tmp.get(key);
-
-                        if (container == null) {
-                            container = downstreamSupplier.get();
-                            tmp.put(key, container);
-                        }
-
-                        downstreamAccumulator.accept(container, valueExtractor.apply(rs, columnLabels));
-                    }
-
-                    for (Map.Entry<K, D> entry : result.entrySet()) {
-                        entry.setValue(downstreamFinisher.apply((A) entry.getValue()));
-                    }
-
-                    return result;
-                }
-            };
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param keyExtractor
-         * @param valueExtractor
-         * @return
-         */
-        static <K, V> ResultSetExtractor<ListMultimap<K, V>> toMultimap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor) {
-            return toMultimap(keyExtractor, valueExtractor, Suppliers.<K, V> ofListMultimap());
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <C>
-         * @param <M>
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param multimapSupplier
-         * @return
-         */
-        static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> ResultSetExtractor<M> toMultimap(final JdbcUtil.RowMapper<K> keyExtractor,
-                final JdbcUtil.RowMapper<V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
-            N.checkArgNotNull(keyExtractor, "keyExtractor");
-            N.checkArgNotNull(valueExtractor, "valueExtractor");
-            N.checkArgNotNull(multimapSupplier, "multimapSupplier");
-
-            return new ResultSetExtractor<M>() {
-                @Override
-                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-                    final int offset = jdbcSettings.getOffset();
-                    int count = jdbcSettings.getCount();
-
-                    JdbcUtil.skip(rs, offset);
-
-                    final M result = multimapSupplier.get();
-
-                    while (count-- > 0 && rs.next()) {
-                        result.put(keyExtractor.apply(rs), valueExtractor.apply(rs));
-                    }
-
-                    return result;
-                }
-            };
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param keyExtractor
-         * @param valueExtractor
-         * @return
-         */
-        static <K, V> ResultSetExtractor<ListMultimap<K, V>> toMultimap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor) {
-            return toMultimap(keyExtractor, valueExtractor, Suppliers.<K, V> ofListMultimap());
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <C>
-         * @param <M>
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param multimapSupplier
-         * @return
-         */
-        static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> ResultSetExtractor<M> toMultimap(final BiRowMapper<K> keyExtractor,
-                final BiRowMapper<V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
-            N.checkArgNotNull(keyExtractor, "keyExtractor");
-            N.checkArgNotNull(valueExtractor, "valueExtractor");
-            N.checkArgNotNull(multimapSupplier, "multimapSupplier");
-
-            return new ResultSetExtractor<M>() {
-                @Override
-                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-                    final int offset = jdbcSettings.getOffset();
-                    int count = jdbcSettings.getCount();
-
-                    JdbcUtil.skip(rs, offset);
-
-                    final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
-                    final M result = multimapSupplier.get();
-
-                    while (count-- > 0 && rs.next()) {
-                        result.put(keyExtractor.apply(rs, columnLabels), valueExtractor.apply(rs, columnLabels));
-                    }
-
-                    return result;
-                }
-            };
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param keyExtractor
-         * @param valueExtractor
-         * @return
-         */
-        static <K, V> ResultSetExtractor<Map<K, List<V>>> groupTo(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor) {
-            return groupTo(keyExtractor, valueExtractor, Suppliers.<K, List<V>> ofMap());
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <M>
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param supplier
-         * @return
-         */
-        static <K, V, M extends Map<K, List<V>>> ResultSetExtractor<M> groupTo(final JdbcUtil.RowMapper<K> keyExtractor,
-                final JdbcUtil.RowMapper<V> valueExtractor, final Supplier<? extends M> supplier) {
-            N.checkArgNotNull(keyExtractor, "keyExtractor");
-            N.checkArgNotNull(valueExtractor, "valueExtractor");
-            N.checkArgNotNull(supplier, "supplier");
-
-            return new ResultSetExtractor<M>() {
-                @Override
-                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-                    final int offset = jdbcSettings.getOffset();
-                    int count = jdbcSettings.getCount();
-
-                    JdbcUtil.skip(rs, offset);
-
-                    final M result = supplier.get();
-                    K key = null;
-                    List<V> value = null;
-
-                    while (count-- > 0 && rs.next()) {
-                        key = keyExtractor.apply(rs);
-                        value = result.get(key);
-
-                        if (value == null) {
-                            value = new ArrayList<>();
-                            result.put(key, value);
-                        }
-
-                        value.add(valueExtractor.apply(rs));
-                    }
-
-                    return result;
-                }
-            };
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param keyExtractor
-         * @param valueExtractor
-         * @return
-         */
-        static <K, V> ResultSetExtractor<Map<K, List<V>>> groupTo(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor) {
-            return groupTo(keyExtractor, valueExtractor, Suppliers.<K, List<V>> ofMap());
-        }
-
-        /**
-         *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <M>
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param supplier
-         * @return
-         */
-        static <K, V, M extends Map<K, List<V>>> ResultSetExtractor<M> groupTo(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
-                final Supplier<? extends M> supplier) {
-            N.checkArgNotNull(keyExtractor, "keyExtractor");
-            N.checkArgNotNull(valueExtractor, "valueExtractor");
-            N.checkArgNotNull(supplier, "supplier");
-
-            return new ResultSetExtractor<M>() {
-                @Override
-                public M apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-                    final int offset = jdbcSettings.getOffset();
-                    int count = jdbcSettings.getCount();
-
-                    JdbcUtil.skip(rs, offset);
-
-                    final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
-                    final M result = supplier.get();
-                    K key = null;
-                    List<V> value = null;
-
-                    while (count-- > 0 && rs.next()) {
-                        key = keyExtractor.apply(rs, columnLabels);
-                        value = result.get(key);
-
-                        if (value == null) {
-                            value = new ArrayList<>();
-                            result.put(key, value);
-                        }
-
-                        value.add(valueExtractor.apply(rs, columnLabels));
-                    }
-
-                    return result;
-                }
-            };
-        }
-
-        static ResultSetExtractor<DataSet> toDataSet(final RowFilter rowFilter) {
-            return new ResultSetExtractor<DataSet>() {
-                @Override
-                public DataSet apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-                    return JdbcUtil.extractData(rs, jdbcSettings.getOffset(), jdbcSettings.getCount(), rowFilter, false);
-                }
-            };
-        }
-
-        static ResultSetExtractor<DataSet> toDataSet(final RowExtractor rowExtractor) {
-            return new ResultSetExtractor<DataSet>() {
-                @Override
-                public DataSet apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-                    return JdbcUtil.extractData(rs, jdbcSettings.getOffset(), jdbcSettings.getCount(), rowExtractor, false);
-                }
-            };
-        }
-
-        static ResultSetExtractor<DataSet> toDataSet(final RowFilter rowFilter, final RowExtractor rowExtractor) {
-            return new ResultSetExtractor<DataSet>() {
-                @Override
-                public DataSet apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-                    return JdbcUtil.extractData(rs, jdbcSettings.getOffset(), jdbcSettings.getCount(), rowFilter, rowExtractor, false);
-                }
-            };
-        }
-
-        static <R> ResultSetExtractor<R> to(final Throwables.Function<DataSet, R, SQLException> after) {
-            return (rs, jdbcSettings) -> after.apply(TO_DATA_SET.apply(rs, jdbcSettings));
         }
     }
 }
