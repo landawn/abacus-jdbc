@@ -59,10 +59,6 @@ public final class JdbcSettings {
 
     private int resultSetHoldability = -1;
 
-    private int offset = 0;
-
-    private int count = Integer.MAX_VALUE;
-
     private boolean queryInParallel = false;
 
     private IsolationLevel isolationLevel = null;
@@ -106,8 +102,6 @@ public final class JdbcSettings {
         copy.resultSetType = this.resultSetType;
         copy.resultSetConcurrency = this.resultSetConcurrency;
         copy.resultSetHoldability = this.resultSetHoldability;
-        copy.offset = this.offset;
-        copy.count = this.count;
         copy.queryInParallel = this.queryInParallel;
         copy.isolationLevel = this.isolationLevel;
         copy.noTransactionForStream = this.noTransactionForStream;

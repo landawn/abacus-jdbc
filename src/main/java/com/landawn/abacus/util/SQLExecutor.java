@@ -3943,10 +3943,6 @@ public class SQLExecutor {
                     final Connection inputConn = null;
 
                     final JdbcSettings newJdbcSettings = jdbcSettings == null ? _jdbcSettings.copy() : jdbcSettings.copy();
-                    final int offset = newJdbcSettings.getOffset();
-                    final int count = newJdbcSettings.getCount();
-                    newJdbcSettings.setOffset(0);
-                    newJdbcSettings.setCount(Integer.MAX_VALUE);
 
                     final boolean noTransactionForStream = newJdbcSettings.noTransactionForStream();
                     final ParsedSql parsedSql = ParsedSql.parse(sql);
@@ -3960,20 +3956,14 @@ public class SQLExecutor {
                         final ResultSet rs = resultSet;
 
                         internalIter = new ObjIteratorEx<T>() {
-                            private boolean skipped = false;
                             private boolean hasNext = false;
-                            private int cnt = 0;
                             private List<String> columnLabels = null;
 
                             @Override
                             public boolean hasNext() {
-                                if (skipped == false) {
-                                    skip();
-                                }
-
                                 if (hasNext == false) {
                                     try {
-                                        if (cnt++ < count && rs.next()) {
+                                        if (rs.next()) {
                                             hasNext = true;
                                         }
                                     } catch (SQLException e) {
@@ -4003,15 +3993,11 @@ public class SQLExecutor {
                             public void advance(long n) {
                                 N.checkArgNotNegative(n, "n");
 
-                                if (skipped == false) {
-                                    skip();
-                                }
-
                                 final long m = hasNext ? n - 1 : n;
                                 hasNext = false;
 
                                 try {
-                                    JdbcUtil.skip(rs, Math.min(m, count - cnt));
+                                    JdbcUtil.skip(rs, m);
                                 } catch (SQLException e) {
                                     throw new UncheckedSQLException(e);
                                 }
@@ -4019,15 +4005,11 @@ public class SQLExecutor {
 
                             @Override
                             public long count() {
-                                if (skipped == false) {
-                                    skip();
-                                }
-
                                 long result = hasNext ? 1 : 0;
                                 hasNext = false;
 
                                 try {
-                                    while (cnt++ < count && rs.next()) {
+                                    while (rs.next()) {
                                         result++;
                                     }
                                 } catch (SQLException e) {
@@ -4046,22 +4028,6 @@ public class SQLExecutor {
                                         JdbcUtil.closeQuietly(localConn);
                                     } else {
                                         SQLExecutor.this.close(localConn, inputConn, ds);
-                                    }
-                                }
-                            }
-
-                            private void skip() {
-                                if (skipped == false) {
-                                    skipped = true;
-
-                                    try {
-                                        columnLabels = JdbcUtil.getColumnLabelList(rs);
-
-                                        if (offset > 0) {
-                                            JdbcUtil.skip(rs, offset);
-                                        }
-                                    } catch (SQLException e) {
-                                        throw new UncheckedSQLException(e);
                                     }
                                 }
                             }
@@ -4093,8 +4059,7 @@ public class SQLExecutor {
         });
     }
 
-    @SuppressWarnings("static-method")
-    private Connection directGetConnectionFromPool(final DataSource ds) throws UncheckedSQLException {
+    private static Connection directGetConnectionFromPool(final DataSource ds) throws UncheckedSQLException {
         try {
             return ds.getConnection();
         } catch (SQLException e) {
@@ -4853,10 +4818,6 @@ public class SQLExecutor {
             newJdbcSettings = setJdbcSettingsForParsedSql(_jdbcSettings, parsedSql, attrs);
         } else {
             newJdbcSettings = setJdbcSettingsForParsedSql(jdbcSettings, parsedSql, attrs);
-        }
-
-        if ((newJdbcSettings.getOffset() < 0) || (newJdbcSettings.getCount() < 0)) {
-            throw new IllegalArgumentException("offset or count can't be less than 0: " + newJdbcSettings.getOffset() + ", " + newJdbcSettings.getCount());
         }
 
         return newJdbcSettings;
