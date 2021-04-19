@@ -22,7 +22,7 @@ import java.util.concurrent.Callable;
 import com.landawn.abacus.DataSet;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
-import com.landawn.abacus.util.SQLExecutor.ResultExtractor;
+import com.landawn.abacus.util.SQLExecutor.ResultSetExtractor;
 import com.landawn.abacus.util.SQLExecutor.StatementSetter;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
@@ -2924,7 +2924,7 @@ public final class AsyncSQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> ContinuableFuture<T> query(final String sql, final ResultExtractor<T> resultExtractor, final Object... parameters) {
+    public final <T> ContinuableFuture<T> query(final String sql, final ResultSetExtractor<T> resultExtractor, final Object... parameters) {
         return asyncExecutor.execute(new Callable<T>() {
             @Override
             public T call() throws Exception {
@@ -2943,7 +2943,7 @@ public final class AsyncSQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> ContinuableFuture<T> query(final String sql, final StatementSetter statementSetter, final ResultExtractor<T> resultExtractor,
+    public final <T> ContinuableFuture<T> query(final String sql, final StatementSetter statementSetter, final ResultSetExtractor<T> resultExtractor,
             final Object... parameters) {
         return asyncExecutor.execute(new Callable<T>() {
             @Override
@@ -2963,7 +2963,7 @@ public final class AsyncSQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> ContinuableFuture<T> query(final String sql, final ResultExtractor<T> resultExtractor, final JdbcSettings jdbcSettings,
+    public final <T> ContinuableFuture<T> query(final String sql, final ResultSetExtractor<T> resultExtractor, final JdbcSettings jdbcSettings,
             final Object... parameters) {
         return asyncExecutor.execute(new Callable<T>() {
             @Override
@@ -2984,7 +2984,7 @@ public final class AsyncSQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> ContinuableFuture<T> query(final String sql, final StatementSetter statementSetter, final ResultExtractor<T> resultExtractor,
+    public final <T> ContinuableFuture<T> query(final String sql, final StatementSetter statementSetter, final ResultSetExtractor<T> resultExtractor,
             final JdbcSettings jdbcSettings, final Object... parameters) {
         return asyncExecutor.execute(new Callable<T>() {
             @Override
@@ -3077,7 +3077,7 @@ public final class AsyncSQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> ContinuableFuture<T> query(final Connection conn, final String sql, final ResultExtractor<T> resultExtractor, final Object... parameters) {
+    public final <T> ContinuableFuture<T> query(final Connection conn, final String sql, final ResultSetExtractor<T> resultExtractor, final Object... parameters) {
         return asyncExecutor.execute(new Callable<T>() {
             @Override
             public T call() throws Exception {
@@ -3098,7 +3098,7 @@ public final class AsyncSQLExecutor {
      */
     @SafeVarargs
     public final <T> ContinuableFuture<T> query(final Connection conn, final String sql, final StatementSetter statementSetter,
-            final ResultExtractor<T> resultExtractor, final Object... parameters) {
+            final ResultSetExtractor<T> resultExtractor, final Object... parameters) {
         return asyncExecutor.execute(new Callable<T>() {
             @Override
             public T call() throws Exception {
@@ -3118,7 +3118,7 @@ public final class AsyncSQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> ContinuableFuture<T> query(final Connection conn, final String sql, final ResultExtractor<T> resultExtractor,
+    public final <T> ContinuableFuture<T> query(final Connection conn, final String sql, final ResultSetExtractor<T> resultExtractor,
             final JdbcSettings jdbcSettings, final Object... parameters) {
         return asyncExecutor.execute(new Callable<T>() {
             @Override
@@ -3141,7 +3141,7 @@ public final class AsyncSQLExecutor {
      */
     @SafeVarargs
     public final <T> ContinuableFuture<T> query(final Connection conn, final String sql, final StatementSetter statementSetter,
-            final ResultExtractor<T> resultExtractor, final JdbcSettings jdbcSettings, final Object... parameters) {
+            final ResultSetExtractor<T> resultExtractor, final JdbcSettings jdbcSettings, final Object... parameters) {
         return asyncExecutor.execute(new Callable<T>() {
             @Override
             public T call() throws Exception {
