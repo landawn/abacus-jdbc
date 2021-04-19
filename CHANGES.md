@@ -1,3 +1,8 @@
+### 1.22.12
+
+* Improvements and bug fix.
+
+
 ### 1.22.11
 
 * Add `JdbcUtil.generateEntityClass`.
