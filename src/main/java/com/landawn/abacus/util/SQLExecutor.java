@@ -4012,8 +4012,8 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> T query(final String sql, final StatementSetter statementSetter, final ResultSetExtractor<T> resultExtractor, final JdbcSettings jdbcSettings,
-            final Object... parameters) {
+    public final <T> T query(final String sql, final StatementSetter statementSetter, final ResultSetExtractor<T> resultExtractor,
+            final JdbcSettings jdbcSettings, final Object... parameters) {
         return query(null, sql, statementSetter, resultExtractor, jdbcSettings, parameters);
     }
 
@@ -8736,7 +8736,7 @@ public class SQLExecutor {
 
         /**
          *
-         * @param rs
+         * @param rs this {@code ResultSet} will be closed after {@code apply(rs)} call. So don't save/return the input {@code ResultSet}.
          * @param jdbcSettings
          * @return
          * @throws SQLException the SQL exception
@@ -8875,8 +8875,8 @@ public class SQLExecutor {
          * @param supplier
          * @return
          */
-        static <K, V, A, D, M extends Map<K, D>> ResultSetExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
-                final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
+        static <K, V, A, D, M extends Map<K, D>> ResultSetExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor,
+                final JdbcUtil.RowMapper<V> valueExtractor, final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(downstream, "downstream");
