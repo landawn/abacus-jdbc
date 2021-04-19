@@ -3596,8 +3596,8 @@ public class SQLExecutor {
      * @return
      */
     @SafeVarargs
-    public final <T> T query(final String sql, final StatementSetter statementSetter, final ResultSetExtractor<T> resultExtractor, final JdbcSettings jdbcSettings,
-            final Object... parameters) {
+    public final <T> T query(final String sql, final StatementSetter statementSetter, final ResultSetExtractor<T> resultExtractor,
+            final JdbcSettings jdbcSettings, final Object... parameters) {
         return query(null, sql, statementSetter, resultExtractor, jdbcSettings, parameters);
     }
 
@@ -3782,7 +3782,7 @@ public class SQLExecutor {
                         close(localConn, inputConn, ds);
                     }
 
-                    throw new UnsupportedOperationException("The return type of 'ResultExtractor' can't be 'ResultSet'.");
+                    throw new UnsupportedOperationException("The return type of 'ResultSetExtractor' can't be 'ResultSet'.");
                 }
             } else {
                 try {
@@ -3969,12 +3969,7 @@ public class SQLExecutor {
     }
 
     /** The Constant RESULT_SET_EXTRACTOR. */
-    private static final ResultSetExtractor<ResultSet> RESULT_EXTRACTOR_FOR_STREAM_ONLY = new ResultSetExtractor<ResultSet>() {
-        @Override
-        public ResultSet apply(final ResultSet rs, final JdbcSettings jdbcSettings) throws SQLException {
-            return rs;
-        }
-    };
+    private static final ResultSetExtractor<ResultSet> RESULT_EXTRACTOR_FOR_STREAM_ONLY = (rs, jdbcSettings) -> rs;
 
     /**
      *
@@ -5227,8 +5222,8 @@ public class SQLExecutor {
          * @param supplier
          * @return
          */
-        static <K, V, A, D, M extends Map<K, D>> ResultSetExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor, final JdbcUtil.RowMapper<V> valueExtractor,
-                final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
+        static <K, V, A, D, M extends Map<K, D>> ResultSetExtractor<M> toMap(final JdbcUtil.RowMapper<K> keyExtractor,
+                final JdbcUtil.RowMapper<V> valueExtractor, final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(downstream, "downstream");
