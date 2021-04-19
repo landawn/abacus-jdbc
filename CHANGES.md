@@ -1,3 +1,8 @@
+### 2.7.12
+
+* Improvements and bug fix.
+
+
 ### 2.7.11
 
 * Add `JdbcUtil.generateEntityClass`.
