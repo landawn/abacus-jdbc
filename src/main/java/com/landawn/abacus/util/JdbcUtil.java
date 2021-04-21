@@ -18658,6 +18658,26 @@ public final class JdbcUtil {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
     }
 
+    static final String eccHeader = new StringBuilder() //
+            .append("import lombok.AllArgsConstructor;\n")
+            .append("import lombok.Builder;\n")
+            .append("import lombok.Data;\n")
+            .append("import lombok.NoArgsConstructor;\n")
+            .append("\n")
+            .append("@Builder\n")
+            .append("@Data\n")
+            .append("@NoArgsConstructor\n")
+            .append("@AllArgsConstructor\n")
+            .toString();
+
+    @SuppressWarnings("deprecation")
+    private static final Map<String, String> eccClassNameMap = N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short", "short", "Integer",
+            "int", "Long", "long", "Float", "float", "Double", "double");
+
+    private static final EntityCodeConfig defaultEntityCodeConfig = EntityCodeConfig.builder()
+            .fieldNameConverter((tn, cn) -> StringUtil.toCamelCase(cn))
+            .build();
+
     public static String generateEntityClass(final DataSource ds, final String tableName) {
         return generateEntityClass(ds, tableName, null);
     }
@@ -18674,8 +18694,6 @@ public final class JdbcUtil {
             throw new UncheckedSQLException(e);
         }
     }
-
-    private static final EntityCodeConfig defaultEntityCodeConfig = new EntityCodeConfig();
 
     public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
         final EntityCodeConfig configToUse = config == null ? defaultEntityCodeConfig : config;
@@ -18875,22 +18893,6 @@ public final class JdbcUtil {
             throw new UncheckedIOException(e);
         }
     }
-
-    static final String eccHeader = new StringBuilder() //
-            .append("import lombok.AllArgsConstructor;\n")
-            .append("import lombok.Builder;\n")
-            .append("import lombok.Data;\n")
-            .append("import lombok.NoArgsConstructor;\n")
-            .append("\n")
-            .append("@Builder\n")
-            .append("@Data\n")
-            .append("@NoArgsConstructor\n")
-            .append("@AllArgsConstructor\n")
-            .toString();
-
-    @SuppressWarnings("deprecation")
-    private static final Map<String, String> eccClassNameMap = N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short", "short", "Integer",
-            "int", "Long", "long", "Float", "float", "Double", "double");
 
     private static String getColumnCanonicalClassName(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
         String columnClassName = rsmd.getColumnClassName(columnIndex);
