@@ -29,6 +29,28 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * A sample, just a sample, not a general configuration required.
+ * <pre> 
+ * EntityCodeConfig ecc = EntityCodeConfig.builder()
+ *        .className("User")
+ *        .packageName("codes.entity")
+ *        .srcDir("./samples")
+ *        .fieldNameConverter((tableName, columnName) -> StringUtil.toCamelCase(columnName))
+ *        .fieldTypeConverter((tableName, columnName, fieldName, columnClassName) -> ClassUtil.getCanonicalClassName(ClassUtil.forClass(columnClassName)) // columnClassName <- resultSetMetaData.getColumnClassName(columnIndex);
+ *                .replace("java.lang.", ""))
+ *        .useBoxedType(false)
+ *        .readOnlyFields(N.asSet("id"))
+ *        .nonUpdatableFields(N.asSet("create_time"))
+ *        // .idAnnotationClass(javax.persistence.Id.class)
+ *        // .columnAnnotationClass(javax.persistence.Column.class)
+ *        // .tableAnnotationClass(javax.persistence.Table.class)
+ *        .customizedFields(N.asList(Tuple.of("createTime", "create_time", java.util.Date.class)))
+ *        .customizedFieldDbTypes(N.asList(Tuple.of("create_time", "List<String>")))
+ *        .build();
+ * </pre>
+ *
+ */
 @Builder
 @Data
 @NoArgsConstructor
