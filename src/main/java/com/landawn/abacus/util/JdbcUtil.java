@@ -120,12 +120,14 @@ import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.BiConsumer;
+import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.BiPredicate;
 import com.landawn.abacus.util.function.BinaryOperator;
 import com.landawn.abacus.util.function.Consumer;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.function.IntFunction;
 import com.landawn.abacus.util.function.Predicate;
+import com.landawn.abacus.util.function.QuadFunction;
 import com.landawn.abacus.util.function.Supplier;
 import com.landawn.abacus.util.stream.Collector;
 import com.landawn.abacus.util.stream.EntryStream;
@@ -18682,6 +18684,10 @@ public final class JdbcUtil {
         final String packageName = configToUse.getPackageName();
         final String srcDir = configToUse.getSrcDir();
 
+        final BiFunction<String, String, String> fieldNameConverter = configToUse.getFieldNameConverter() == null ? (tn, cn) -> StringUtil.toCamelCase(cn)
+                : configToUse.getFieldNameConverter();
+        final QuadFunction<String, String, String, String, String> fieldTypeConverter = configToUse.getFieldTypeConverter();
+
         final Set<String> readOnlyFields = configToUse.getReadOnlyFields() == null ? new HashSet<>() : new HashSet<>(configToUse.getReadOnlyFields());
 
         final Set<String> nonUpdatableFields = configToUse.getNonUpdatableFields() == null ? new HashSet<>()
@@ -18792,12 +18798,11 @@ public final class JdbcUtil {
                 final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(StringUtil.toCamelCase(columnName),
                         customizedFieldMap.get(columnName));
 
-                final String fieldName = customizedField == null || N.isNullOrEmpty(customizedField._2) ? StringUtil.toCamelCase(columnName)
+                final String fieldName = customizedField == null || N.isNullOrEmpty(customizedField._2) ? fieldNameConverter.apply(tableName, columnName)
                         : customizedField._2;
 
                 final String columnClassName = customizedField == null || customizedField._3 == null
-                        ? (configToUse.getFieldTypeConverter() != null
-                                ? configToUse.getFieldTypeConverter().apply(tableName, columnName, fieldName, getColumnCanonicalClassName(rsmd, i))
+                        ? (fieldTypeConverter != null ? fieldTypeConverter.apply(tableName, columnName, fieldName, getColumnCanonicalClassName(rsmd, i))
                                 : getColumnClassName(getColumnCanonicalClassName(rsmd, i), false, configToUse))
                         : getColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
 
