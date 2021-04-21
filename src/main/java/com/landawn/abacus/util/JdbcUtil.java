@@ -18675,7 +18675,7 @@ public final class JdbcUtil {
             "int", "Long", "long", "Float", "float", "Double", "double");
 
     private static final EntityCodeConfig defaultEntityCodeConfig = EntityCodeConfig.builder()
-            .fieldNameConverter((tn, cn) -> StringUtil.toCamelCase(cn))
+            .fieldNameConverter((tableName, columnName) -> StringUtil.toCamelCase(columnName))
             .build();
 
     public static String generateEntityClass(final DataSource ds, final String tableName) {
