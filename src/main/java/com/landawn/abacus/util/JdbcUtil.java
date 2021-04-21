@@ -18824,20 +18824,20 @@ public final class JdbcUtil {
                 sb.append("    private " + columnClassName + " " + fieldName + ";").append("\n");
             }
 
-            if (idFields.size() > 0) {
-                throw new RuntimeException("Id fields: " + idFields + " are not found in entity class: " + finalClassName + ", table: " + tableName
-                        + ": with columns: " + columnNameList);
-            }
-
-            if (readOnlyFields.size() > 0) {
-                throw new RuntimeException("Read-only fields: " + readOnlyFields + " are not found in entity class: " + finalClassName + ", table: " + tableName
-                        + ": with columns: " + columnNameList);
-            }
-
-            if (nonUpdatableFields.size() > 0) {
-                throw new RuntimeException("Non-updatable fields: " + nonUpdatableFields + " are not found in entity class: " + finalClassName + ", table: "
-                        + tableName + ": with columns: " + columnNameList);
-            }
+            //    if (idFields.size() > 0) {
+            //        throw new RuntimeException("Id fields: " + idFields + " are not found in entity class: " + finalClassName + ", table: " + tableName
+            //                + ": with columns: " + columnNameList);
+            //    }
+            //
+            //    if (readOnlyFields.size() > 0) {
+            //        throw new RuntimeException("Read-only fields: " + readOnlyFields + " are not found in entity class: " + finalClassName + ", table: " + tableName
+            //                + ": with columns: " + columnNameList);
+            //    }
+            //
+            //    if (nonUpdatableFields.size() > 0) {
+            //        throw new RuntimeException("Non-updatable fields: " + nonUpdatableFields + " are not found in entity class: " + finalClassName + ", table: "
+            //                + tableName + ": with columns: " + columnNameList);
+            //    }
 
             sb.append("\n").append("}").append("\n");
 
