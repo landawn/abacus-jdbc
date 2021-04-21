@@ -139,12 +139,14 @@ import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.BiConsumer;
+import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.BiPredicate;
 import com.landawn.abacus.util.function.BinaryOperator;
 import com.landawn.abacus.util.function.Consumer;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.function.IntFunction;
 import com.landawn.abacus.util.function.Predicate;
+import com.landawn.abacus.util.function.QuadFunction;
 import com.landawn.abacus.util.function.Supplier;
 import com.landawn.abacus.util.stream.Collector;
 import com.landawn.abacus.util.stream.EntryStream;
@@ -18907,6 +18909,26 @@ public final class JdbcUtil {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
     }
 
+    static final String eccHeader = new StringBuilder() //
+            .append("import lombok.AllArgsConstructor;\n")
+            .append("import lombok.Builder;\n")
+            .append("import lombok.Data;\n")
+            .append("import lombok.NoArgsConstructor;\n")
+            .append("\n")
+            .append("@Builder\n")
+            .append("@Data\n")
+            .append("@NoArgsConstructor\n")
+            .append("@AllArgsConstructor\n")
+            .toString();
+
+    @SuppressWarnings("deprecation")
+    private static final Map<String, String> eccClassNameMap = N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short", "short", "Integer",
+            "int", "Long", "long", "Float", "float", "Double", "double");
+
+    private static final EntityCodeConfig defaultEntityCodeConfig = EntityCodeConfig.builder()
+            .fieldNameConverter((tableName, columnName) -> StringUtil.toCamelCase(columnName))
+            .build();
+
     public static String generateEntityClass(final DataSource ds, final String tableName) {
         return generateEntityClass(ds, tableName, null);
     }
@@ -18924,14 +18946,16 @@ public final class JdbcUtil {
         }
     }
 
-    private static final EntityCodeConfig defaultEntityCodeConfig = new EntityCodeConfig();
-
     public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
         final EntityCodeConfig configToUse = config == null ? defaultEntityCodeConfig : config;
 
         final String className = configToUse.getClassName();
         final String packageName = configToUse.getPackageName();
         final String srcDir = configToUse.getSrcDir();
+
+        final BiFunction<String, String, String> fieldNameConverter = configToUse.getFieldNameConverter() == null ? (tn, cn) -> StringUtil.toCamelCase(cn)
+                : configToUse.getFieldNameConverter();
+        final QuadFunction<String, String, String, String, String> fieldTypeConverter = configToUse.getFieldTypeConverter();
 
         final Set<String> readOnlyFields = configToUse.getReadOnlyFields() == null ? new HashSet<>() : new HashSet<>(configToUse.getReadOnlyFields());
 
@@ -19043,11 +19067,12 @@ public final class JdbcUtil {
                 final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(StringUtil.toCamelCase(columnName),
                         customizedFieldMap.get(columnName));
 
-                final String fieldName = customizedField == null || N.isNullOrEmpty(customizedField._2) ? StringUtil.toCamelCase(columnName)
+                final String fieldName = customizedField == null || N.isNullOrEmpty(customizedField._2) ? fieldNameConverter.apply(tableName, columnName)
                         : customizedField._2;
 
                 final String columnClassName = customizedField == null || customizedField._3 == null
-                        ? getColumnClassName(rsmd.getColumnClassName(i), false, configToUse)
+                        ? (fieldTypeConverter != null ? fieldTypeConverter.apply(tableName, columnName, fieldName, getColumnCanonicalClassName(rsmd, i))
+                                : getColumnClassName(getColumnCanonicalClassName(rsmd, i), false, configToUse))
                         : getColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
 
                 sb.append("\n");
@@ -19073,20 +19098,20 @@ public final class JdbcUtil {
                 sb.append("    private " + columnClassName + " " + fieldName + ";").append("\n");
             }
 
-            if (idFields.size() > 0) {
-                throw new RuntimeException("Id fields: " + idFields + " are not found in entity class: " + finalClassName + ", table: " + tableName
-                        + ": with columns: " + columnNameList);
-            }
-
-            if (readOnlyFields.size() > 0) {
-                throw new RuntimeException("Read-only fields: " + readOnlyFields + " are not found in entity class: " + finalClassName + ", table: " + tableName
-                        + ": with columns: " + columnNameList);
-            }
-
-            if (nonUpdatableFields.size() > 0) {
-                throw new RuntimeException("Non-updatable fields: " + nonUpdatableFields + " are not found in entity class: " + finalClassName + ", table: "
-                        + tableName + ": with columns: " + columnNameList);
-            }
+            //    if (idFields.size() > 0) {
+            //        throw new RuntimeException("Id fields: " + idFields + " are not found in entity class: " + finalClassName + ", table: " + tableName
+            //                + ": with columns: " + columnNameList);
+            //    }
+            //
+            //    if (readOnlyFields.size() > 0) {
+            //        throw new RuntimeException("Read-only fields: " + readOnlyFields + " are not found in entity class: " + finalClassName + ", table: " + tableName
+            //                + ": with columns: " + columnNameList);
+            //    }
+            //
+            //    if (nonUpdatableFields.size() > 0) {
+            //        throw new RuntimeException("Non-updatable fields: " + nonUpdatableFields + " are not found in entity class: " + finalClassName + ", table: "
+            //                + tableName + ": with columns: " + columnNameList);
+            //    }
 
             sb.append("\n").append("}").append("\n");
 
@@ -19120,21 +19145,15 @@ public final class JdbcUtil {
         }
     }
 
-    static final String eccHeader = new StringBuilder() //
-            .append("import lombok.AllArgsConstructor;\n")
-            .append("import lombok.Builder;\n")
-            .append("import lombok.Data;\n")
-            .append("import lombok.NoArgsConstructor;\n")
-            .append("\n")
-            .append("@Builder\n")
-            .append("@Data\n")
-            .append("@NoArgsConstructor\n")
-            .append("@AllArgsConstructor\n")
-            .toString();
+    private static String getColumnCanonicalClassName(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
+        String columnClassName = rsmd.getColumnClassName(columnIndex);
 
-    @SuppressWarnings("deprecation")
-    private static final Map<String, String> eccClassNameMap = N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short", "short", "Integer",
-            "int", "Long", "long", "Float", "float", "Double", "double");
+        try {
+            return ClassUtil.getCanonicalClassName(ClassUtil.forClass(columnClassName));
+        } catch (Throwable e) {
+            return columnClassName;
+        }
+    }
 
     private static String getColumnClassName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
         String className = columnClassName.replace("java.lang.", "");

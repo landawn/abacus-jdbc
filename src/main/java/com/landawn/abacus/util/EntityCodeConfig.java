@@ -21,12 +21,36 @@ import java.util.List;
 
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.function.BiFunction;
+import com.landawn.abacus.util.function.QuadFunction;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * A sample, just a sample, not a general configuration required.
+ * <pre> 
+ * EntityCodeConfig ecc = EntityCodeConfig.builder()
+ *        .className("User")
+ *        .packageName("codes.entity")
+ *        .srcDir("./samples")
+ *        .fieldNameConverter((tableName, columnName) -> StringUtil.toCamelCase(columnName))
+ *        .fieldTypeConverter((tableName, columnName, fieldName, columnClassName) -> ClassUtil.getCanonicalClassName(ClassUtil.forClass(columnClassName)) // columnClassName <- resultSetMetaData.getColumnClassName(columnIndex);
+ *                .replace("java.lang.", ""))
+ *        .useBoxedType(false)
+ *        .readOnlyFields(N.asSet("id"))
+ *        .nonUpdatableFields(N.asSet("create_time"))
+ *        // .idAnnotationClass(javax.persistence.Id.class)
+ *        // .columnAnnotationClass(javax.persistence.Column.class)
+ *        // .tableAnnotationClass(javax.persistence.Table.class)
+ *        .customizedFields(N.asList(Tuple.of("createTime", "create_time", java.util.Date.class)))
+ *        .customizedFieldDbTypes(N.asList(Tuple.of("create_time", "List<String>")))
+ *        .build();
+ * </pre>
+ *
+ */
 @Builder
 @Data
 @NoArgsConstructor
@@ -36,6 +60,14 @@ public class EntityCodeConfig {
     private String className;
     private String packageName;
     private String srcDir;
+    /**
+     * First parameter in the function is table name, 2nd is column name.
+     */
+    private BiFunction<String, String, String> fieldNameConverter;
+    /**
+     * First parameter in the function is table name, 2nd is column name, 3rd is field name, 4th is column class name.
+     */
+    private QuadFunction<String, String, String, String, String> fieldTypeConverter;
     private List<Tuple3<String, String, Class<?>>> customizedFields;
     private List<Tuple2<String, String>> customizedFieldDbTypes;
     // private List<Tuple2<String, String>> customizedJsonFields;
