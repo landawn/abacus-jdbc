@@ -1030,7 +1030,7 @@ public final class JdbcUtil {
             final int columnIndex = getColumnIndex(metaData, columnLabel);
 
             if (className != null && className.startsWith("oracle.sql.DATE")) {
-                final String metaDataClassName = metaData.getColumnClassName(columnIndex);
+                final String metaDataClassName = getColumnCanonicalClassName(metaData, columnIndex);
 
                 if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
                     obj = rs.getTimestamp(columnLabel);
@@ -1038,7 +1038,7 @@ public final class JdbcUtil {
                     obj = rs.getDate(columnLabel);
                 }
             } else if (obj instanceof java.sql.Date) {
-                if ("java.sql.Timestamp".equals(metaData.getColumnClassName(columnIndex))) {
+                if ("java.sql.Timestamp".equals(getColumnCanonicalClassName(metaData, columnIndex))) {
                     obj = rs.getTimestamp(columnLabel);
                 }
             }
@@ -18796,7 +18796,9 @@ public final class JdbcUtil {
                         : customizedField._2;
 
                 final String columnClassName = customizedField == null || customizedField._3 == null
-                        ? getColumnClassName(rsmd.getColumnClassName(i), false, configToUse)
+                        ? (configToUse.getFieldTypeConverter() != null
+                                ? configToUse.getFieldTypeConverter().apply(tableName, columnName, fieldName, getColumnCanonicalClassName(rsmd, i))
+                                : getColumnClassName(getColumnCanonicalClassName(rsmd, i), false, configToUse))
                         : getColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
 
                 sb.append("\n");
@@ -18884,6 +18886,16 @@ public final class JdbcUtil {
     @SuppressWarnings("deprecation")
     private static final Map<String, String> eccClassNameMap = N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short", "short", "Integer",
             "int", "Long", "long", "Float", "float", "Double", "double");
+
+    private static String getColumnCanonicalClassName(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
+        String columnClassName = rsmd.getColumnClassName(columnIndex);
+
+        try {
+            return ClassUtil.getCanonicalClassName(ClassUtil.forClass(columnClassName));
+        } catch (Throwable e) {
+            return columnClassName;
+        }
+    }
 
     private static String getColumnClassName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
         String className = columnClassName.replace("java.lang.", "");

@@ -21,6 +21,7 @@ import java.util.List;
 
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.function.QuadFunction;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -38,6 +39,10 @@ public class EntityCodeConfig {
     private String srcDir;
     private List<Tuple3<String, String, Class<?>>> customizedFields;
     private List<Tuple2<String, String>> customizedFieldDbTypes;
+    /**
+     * First parameter in the function is table name, 2nd is column name, 3rd is field name, 4th is column class name.
+     */
+    private QuadFunction<String, String, String, String, String> fieldTypeConverter;
     // private List<Tuple2<String, String>> customizedJsonFields;
     private boolean useBoxedType;
     private boolean mapBigIntegerToLong;
