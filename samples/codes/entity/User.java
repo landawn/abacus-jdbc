@@ -40,4 +40,15 @@ public class User {
     @Type(name = "List<String>")
     private java.util.Date create_time;
 
+    public User copy() {
+        final User copy = new User();
+        copy.id = this.id;
+        copy.firstName = this.firstName;
+        copy.lastName = this.lastName;
+        copy.prop1 = this.prop1;
+        copy.email = this.email;
+        copy.create_time = this.create_time;
+        return copy;
+    }
+
 }

@@ -81,5 +81,6 @@ public class EntityCodeConfig {
     private Class<? extends Annotation> tableAnnotationClass;
     private Class<? extends Annotation> columnAnnotationClass;
     private Class<? extends Annotation> idAnnotationClass;
+    private boolean generateCopyMethod;
 
 }

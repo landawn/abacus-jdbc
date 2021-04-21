@@ -18731,7 +18731,6 @@ public final class JdbcUtil {
 
         final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = Maps.newMap(N.nullToEmpty(configToUse.getCustomizedFields()), tp -> tp._1);
         final Map<String, Tuple2<String, String>> customizedFieldDbTypeMap = Maps.newMap(N.nullToEmpty(configToUse.getCustomizedFieldDbTypes()), tp -> tp._1);
-        final List<String> columnNameList = new ArrayList<>();
 
         try (PreparedStatement stmt = conn.prepareStatement("select * from " + tableName + " where 1 > 2"); //
                 ResultSet rs = stmt.executeQuery()) {
@@ -18805,13 +18804,14 @@ public final class JdbcUtil {
                     .append(" {")
                     .append("\n");
 
+            final List<String> columnNameList = new ArrayList<>();
+            final List<String> fieldNameList = new ArrayList<>();
+
             final ResultSetMetaData rsmd = rs.getMetaData();
             final int columnCount = rsmd.getColumnCount();
 
             for (int i = 1; i <= columnCount; i++) {
                 final String columnName = rsmd.getColumnName(i);
-
-                columnNameList.add(columnName);
 
                 final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(StringUtil.toCamelCase(columnName),
                         customizedFieldMap.get(columnName));
@@ -18825,6 +18825,9 @@ public final class JdbcUtil {
                         : getColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
 
                 sb.append("\n");
+
+                columnNameList.add(columnName);
+                fieldNameList.add(fieldName);
 
                 if (idFields.remove(fieldName) || idFields.remove(columnName)) {
                     sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append("\n");
@@ -18861,6 +18864,21 @@ public final class JdbcUtil {
             //        throw new RuntimeException("Non-updatable fields: " + nonUpdatableFields + " are not found in entity class: " + finalClassName + ", table: "
             //                + tableName + ": with columns: " + columnNameList);
             //    }
+
+            if (configToUse.isGenerateCopyMethod()) {
+                sb.append('\n')
+                        .append("    public " + className + " copy() {")
+                        .append('\n') //
+                        .append("        final " + className + " copy = new " + className + "();")
+                        .append('\n'); //
+
+                for (String fieldName : fieldNameList) {
+                    sb.append("        copy." + fieldName + " = this." + fieldName + ";").append('\n');
+                }
+
+                sb.append("        return copy;").append('\n').append("    }").append('\n');
+
+            }
 
             sb.append("\n").append("}").append("\n");
 
