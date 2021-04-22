@@ -67,8 +67,6 @@ import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.LazyEvaluation;
-import com.landawn.abacus.annotation.NonUpdatable;
-import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.annotation.Table;
@@ -18658,17 +18656,15 @@ public final class JdbcUtil {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
     }
 
-    static final String eccHeader = new StringBuilder() //
-            .append("import lombok.AllArgsConstructor;\n")
-            .append("import lombok.Builder;\n")
-            .append("import lombok.Data;\n")
-            .append("import lombok.NoArgsConstructor;\n")
-            .append("\n")
-            .append("@Builder\n")
-            .append("@Data\n")
-            .append("@NoArgsConstructor\n")
-            .append("@AllArgsConstructor\n")
-            .toString();
+    static final String eccImports = "import javax.persistence.Column;\r\n" + "import javax.persistence.Id;\r\n" + "import javax.persistence.Table;\r\n"
+            + "\r\n" + "import com.landawn.abacus.annotation.Column;\r\n" + "import com.landawn.abacus.annotation.Id;\r\n"
+            + "import com.landawn.abacus.annotation.JsonXmlConfig;\r\n" + "import com.landawn.abacus.annotation.NonUpdatable;\r\n"
+            + "import com.landawn.abacus.annotation.ReadOnly;\r\n" + "import com.landawn.abacus.annotation.Table;\r\n"
+            + "import com.landawn.abacus.annotation.Type;\r\n" + "import com.landawn.abacus.annotation.Type.EnumBy;\r\n"
+            + "import com.landawn.abacus.util.NamingPolicy;\r\n" + "\r\n" + "import lombok.AllArgsConstructor;\r\n" + "import lombok.Builder;\r\n"
+            + "import lombok.Data;\r\n" + "import lombok.NoArgsConstructor;\r\n" + "import lombok.experimental.Accessors;\r\n";
+
+    static final String eccClassAnnos = "@Builder\r\n" + "@Data\r\n" + "@NoArgsConstructor\r\n" + "@AllArgsConstructor\r\n" + "@Accessors(chain = true)\r\n";
 
     @SuppressWarnings("deprecation")
     private static final Map<String, String> eccClassNameMap = N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short", "short", "Integer",
@@ -18752,57 +18748,111 @@ public final class JdbcUtil {
             final StringBuilder sb = new StringBuilder();
 
             if (N.notNullOrEmpty(packageName)) {
-                sb.append("package ").append(packageName + ";").append("\n").append("\n");
+                sb.append("package ").append(packageName + ";").append("\r\n");
             }
 
-            if (isJavaPersistenceColumn || isJavaPersistenceId || isJavaPersistenceTable) {
-                if (isJavaPersistenceColumn) {
-                    sb.append("import " + ClassUtil.getCanonicalClassName(columnAnnotationClass) + ";\n");
+            String headPart = eccImports + "\r\n" + eccClassAnnos;
+
+            if (isJavaPersistenceColumn) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.Column;\r\n", "");
+            } else {
+                headPart = headPart.replace("import javax.persistence.Column;\r\n", "");
+            }
+
+            if (isJavaPersistenceTable) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.Table;\r\n", "");
+            } else {
+                headPart = headPart.replace("import javax.persistence.Table;\r\n", "");
+            }
+
+            if (N.isNullOrEmpty(idFields)) {
+                headPart = headPart.replace("import javax.persistence.Id;\r\n", "");
+                headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\r\n", "");
+            } else if (isJavaPersistenceId) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\r\n", "");
+            } else {
+                headPart = headPart.replace("import javax.persistence.Id;\r\n", "");
+            }
+
+            if (N.isNullOrEmpty(nonUpdatableFields)) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.NonUpdatable;\r\n", "");
+            }
+
+            if (N.isNullOrEmpty(readOnlyFields)) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.ReadOnly;\r\n", "");
+            }
+
+            if (N.isNullOrEmpty(customizedFieldDbTypeMap)) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.Type;\r\n", "");
+            }
+
+            if (configToUse.getJsonXmlConfig() == null || configToUse.getJsonXmlConfig().getNamingPolicy() == null) {
+                headPart = headPart.replace("import com.landawn.abacus.util.NamingPolicy;\r\n", "");
+            }
+
+            if (configToUse.getJsonXmlConfig() == null || configToUse.getJsonXmlConfig().getEnumerated() == null) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.Type.EnumBy;\r\n", "");
+            }
+
+            if (configToUse.getJsonXmlConfig() == null) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.JsonXmlConfig;\r\n", "");
+            }
+
+            if (!configToUse.isGenerateBuilder()) {
+                headPart = headPart.replace("import lombok.Builder;\r\n", "").replace("@Builder\r\n", "");
+            }
+
+            if (!configToUse.isChainAccessor()) {
+                headPart = headPart.replace("import lombok.experimental.Accessors;\r\n", "").replace("@Accessors(chain = true)\r\n", "");
+            }
+
+            if (headPart.contains("javax.persistence.")) {
+                sb.append("\r\n");
+            }
+
+            sb.append(headPart);
+
+            if (configToUse.getJsonXmlConfig() != null) {
+                EntityCodeConfig.JsonXmlConfig eccJsonXmlConfig = configToUse.getJsonXmlConfig();
+
+                final List<String> tmp = new ArrayList<>();
+
+                if (eccJsonXmlConfig.getNamingPolicy() != null) {
+                    tmp.add("namingPolicy = " + eccJsonXmlConfig.getNamingPolicy());
                 }
 
-                if (isJavaPersistenceId && N.notNullOrEmpty(idFields)) {
-                    sb.append("import " + ClassUtil.getCanonicalClassName(idAnnotationClass) + ";\n");
+                if (N.notNullOrEmpty(eccJsonXmlConfig.getIgnoredFields())) {
+                    tmp.add("ignoredFields = " + Splitter.with(",")
+                            .trimResults()
+                            .splitToStream(eccJsonXmlConfig.getIgnoredFields())
+                            .map(it -> '\"' + it + '\"')
+                            .join(", ", "{", "}"));
                 }
 
-                if (isJavaPersistenceTable) {
-                    sb.append("import " + ClassUtil.getCanonicalClassName(tableAnnotationClass) + ";\n");
+                if (N.notNullOrEmpty(eccJsonXmlConfig.getDateFormat())) {
+                    tmp.add("dateFormat = \"" + eccJsonXmlConfig.getDateFormat() + "\"");
                 }
 
-                sb.append("\n");
+                if (N.notNullOrEmpty(eccJsonXmlConfig.getTimeZone())) {
+                    tmp.add("timeZone = \"" + eccJsonXmlConfig.getTimeZone() + "\"");
+                }
+
+                if (N.notNullOrEmpty(eccJsonXmlConfig.getNumberFormat())) {
+                    tmp.add("numberFormat = \"" + eccJsonXmlConfig.getNumberFormat() + "\"");
+                }
+
+                if (eccJsonXmlConfig.getEnumerated() != null) {
+                    tmp.add("enumerated = EnumBy." + eccJsonXmlConfig.getEnumerated().name() + "");
+                }
+
+                sb.append("@JsonXmlConfig" + StringUtil.join(tmp, ", ", "(", ")"));
             }
 
-            if (!isJavaPersistenceColumn) {
-                sb.append("import " + ClassUtil.getCanonicalClassName(columnAnnotationClass) + ";\n");
-            }
-
-            if (!isJavaPersistenceId && N.notNullOrEmpty(idFields)) {
-                sb.append("import " + ClassUtil.getCanonicalClassName(idAnnotationClass) + ";\n");
-            }
-
-            if (N.notNullOrEmpty(nonUpdatableFields)) {
-                sb.append("import " + ClassUtil.getCanonicalClassName(NonUpdatable.class) + ";\n");
-            }
-
-            if (N.notNullOrEmpty(readOnlyFields)) {
-                sb.append("import " + ClassUtil.getCanonicalClassName(ReadOnly.class) + ";\n");
-            }
-
-            if (!isJavaPersistenceTable) {
-                sb.append("import " + ClassUtil.getCanonicalClassName(tableAnnotationClass) + ";\n");
-            }
-
-            if (N.notNullOrEmpty(customizedFieldDbTypeMap)) {
-                sb.append("import " + ClassUtil.getCanonicalClassName(com.landawn.abacus.annotation.Type.class) + ";\n");
-            }
-
-            sb.append("\n");
-
-            sb.append(eccHeader) //
-                    .append(isJavaPersistenceTable ? "@Table(name = \"" + tableName + "\")" : "@Table(\"" + tableName + "\")")
-                    .append("\n")
+            sb.append(isJavaPersistenceTable ? "@Table(name = \"" + tableName + "\")" : "@Table(\"" + tableName + "\")")
+                    .append("\r\n")
                     .append("public class " + finalClassName)
                     .append(" {")
-                    .append("\n");
+                    .append("\r\n");
 
             final List<String> columnNameList = new ArrayList<>();
             final List<String> fieldNameList = new ArrayList<>();
@@ -18824,30 +18874,30 @@ public final class JdbcUtil {
                                 : getColumnClassName(getColumnCanonicalClassName(rsmd, i), false, configToUse))
                         : getColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
 
-                sb.append("\n");
+                sb.append("\r\n");
 
                 columnNameList.add(columnName);
                 fieldNameList.add(fieldName);
 
                 if (idFields.remove(fieldName) || idFields.remove(columnName)) {
-                    sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append("\n");
+                    sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append("\r\n");
                 }
 
                 if (readOnlyFields.remove(fieldName) || readOnlyFields.remove(columnName)) {
-                    sb.append("    @ReadOnly").append("\n");
+                    sb.append("    @ReadOnly").append("\r\n");
                 } else if (nonUpdatableFields.remove(fieldName) || nonUpdatableFields.remove(columnName)) {
-                    sb.append("    @NonUpdatable").append("\n");
+                    sb.append("    @NonUpdatable").append("\r\n");
                 }
 
-                sb.append(isJavaPersistenceColumn ? "    @Column(name = \"" + columnName + "\")" : "    @Column(\"" + columnName + "\")").append("\n");
+                sb.append(isJavaPersistenceColumn ? "    @Column(name = \"" + columnName + "\")" : "    @Column(\"" + columnName + "\")").append("\r\n");
 
                 final Tuple2<String, String> dbType = customizedFieldDbTypeMap.getOrDefault(fieldName, customizedFieldDbTypeMap.get(columnName));
 
                 if (dbType != null) {
-                    sb.append("    @Type(name = \"" + dbType._2 + "\")").append("\n");
+                    sb.append("    @Type(name = \"" + dbType._2 + "\")").append("\r\n");
                 }
 
-                sb.append("    private " + columnClassName + " " + fieldName + ";").append("\n");
+                sb.append("    private " + columnClassName + " " + fieldName + ";").append("\r\n");
             }
 
             //    if (idFields.size() > 0) {
@@ -18866,23 +18916,23 @@ public final class JdbcUtil {
             //    }
 
             if (configToUse.isGenerateCopyMethod()) {
-                sb.append('\n')
+                sb.append("\r\n")
                         .append("    public " + className + " copy() {")
-                        .append('\n') //
+                        .append("\r\n") //
                         .append("        final " + className + " copy = new " + className + "();")
-                        .append('\n'); //
+                        .append("\r\n"); //
 
                 for (String fieldName : fieldNameList) {
-                    sb.append("        copy." + fieldName + " = this." + fieldName + ";").append('\n');
+                    sb.append("        copy." + fieldName + " = this." + fieldName + ";").append("\r\n");
                 }
 
-                sb.append("        return copy;").append('\n').append("    }").append('\n');
+                sb.append("        return copy;").append("\r\n").append("    }").append("\r\n");
 
             }
 
-            sb.append("\n").append("}").append("\n");
+            sb.append("\r\n").append("}").append("\r\n");
 
-            final String result = sb.toString();
+            String result = sb.toString();
 
             if (N.notNullOrEmpty(srcDir)) {
                 String packageDir = srcDir;

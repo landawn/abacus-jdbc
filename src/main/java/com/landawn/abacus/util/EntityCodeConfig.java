@@ -19,6 +19,8 @@ import java.lang.annotation.Annotation;
 import java.util.Collection;
 import java.util.List;
 
+import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.annotation.Type.EnumBy;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.function.BiFunction;
@@ -45,8 +47,8 @@ import lombok.NoArgsConstructor;
  *        // .idAnnotationClass(javax.persistence.Id.class)
  *        // .columnAnnotationClass(javax.persistence.Column.class)
  *        // .tableAnnotationClass(javax.persistence.Table.class)
- *        .customizedFields(N.asList(Tuple.of("createTime", "create_time", java.util.Date.class)))
- *        .customizedFieldDbTypes(N.asList(Tuple.of("create_time", "List<String>")))
+ *        .customizedFields(N.asList(Tuple.of("columnName", "fieldName", java.util.Date.class)))
+ *        .customizedFieldDbTypes(N.asList(Tuple.of("fieldName", "List<String>")))
  *        .build();
  * </pre>
  *
@@ -70,17 +72,47 @@ public class EntityCodeConfig {
     private QuadFunction<String, String, String, String, String> fieldTypeConverter;
     private List<Tuple3<String, String, Class<?>>> customizedFields;
     private List<Tuple2<String, String>> customizedFieldDbTypes;
-    // private List<Tuple2<String, String>> customizedJsonFields;
+
     private boolean useBoxedType;
     private boolean mapBigIntegerToLong;
     private boolean mapBigDecimalToDouble;
+
     private Collection<String> readOnlyFields;
     private Collection<String> nonUpdatableFields;
     private Collection<String> idFields;
     private String idField;
+
     private Class<? extends Annotation> tableAnnotationClass;
     private Class<? extends Annotation> columnAnnotationClass;
     private Class<? extends Annotation> idAnnotationClass;
+
+    private boolean chainAccessor;
+    private boolean generateBuilder;
     private boolean generateCopyMethod;
 
+    // private List<Tuple2<String, String>> customizedJsonFields;
+    @Beta
+    private JsonXmlConfig jsonXmlConfig;
+
+    /**
+     *  
+     * @see com.landawn.abacus.annotation.JsonXmlConfig
+     */
+    @Builder
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class JsonXmlConfig {
+        private NamingPolicy namingPolicy;
+
+        private String ignoredFields;
+
+        private String dateFormat;
+
+        private String timeZone;
+
+        private String numberFormat;
+
+        private EnumBy enumerated;
+    }
 }
