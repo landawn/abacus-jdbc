@@ -13,6 +13,7 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.IsolationLevel;
+import com.landawn.abacus.annotation.Type.EnumBy;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.samples.dao.AddressDao;
@@ -33,6 +34,7 @@ import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.HandlerFactory;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLExecutor;
@@ -345,15 +347,24 @@ public class Jdbc {
                 .srcDir("./samples")
                 .useBoxedType(true)
                 .readOnlyFields(N.asSet("id"))
+                .idField("id")
                 .nonUpdatableFields(N.asSet("create_time"))
                 .idAnnotationClass(javax.persistence.Id.class)
-                .columnAnnotationClass(javax.persistence.Column.class)
+                // .columnAnnotationClass(javax.persistence.Column.class)
                 .tableAnnotationClass(javax.persistence.Table.class)
                 .customizedFields(N.asList(Tuple.of("createTime", "create_time", java.util.Date.class)))
                 .customizedFieldDbTypes(N.asList(Tuple.of("create_time", "List<String>")))
                 .chainAccessor(true)
                 .generateBuilder(true)
                 .generateCopyMethod(true)
+                .jsonXmlConfig(EntityCodeConfig.JsonXmlConfig.builder()
+                        .namingPolicy(NamingPolicy.UPPER_CASE_WITH_UNDERSCORE)
+                        .ignoredFields("id,   create_time")
+                        .dateFormat("yyyy-mm-dd\\\"T\\\"")
+                        .numberFormat("#.###")
+                        .timeZone("PDT")
+                        .enumerated(EnumBy.ORDINAL)
+                        .build())
                 .build();
 
         str = JdbcUtil.generateEntityClass(dataSource, "user", ecc);

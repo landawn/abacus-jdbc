@@ -18818,7 +18818,7 @@ public final class JdbcUtil {
                 final List<String> tmp = new ArrayList<>();
 
                 if (eccJsonXmlConfig.getNamingPolicy() != null) {
-                    tmp.add("namingPolicy = " + eccJsonXmlConfig.getNamingPolicy());
+                    tmp.add("namingPolicy = NamingPolicy." + eccJsonXmlConfig.getNamingPolicy().name());
                 }
 
                 if (N.notNullOrEmpty(eccJsonXmlConfig.getIgnoredFields())) {
@@ -18826,7 +18826,7 @@ public final class JdbcUtil {
                             .trimResults()
                             .splitToStream(eccJsonXmlConfig.getIgnoredFields())
                             .map(it -> '\"' + it + '\"')
-                            .join(", ", "{", "}"));
+                            .join(", ", "{ ", " }"));
                 }
 
                 if (N.notNullOrEmpty(eccJsonXmlConfig.getDateFormat())) {
@@ -18845,7 +18845,7 @@ public final class JdbcUtil {
                     tmp.add("enumerated = EnumBy." + eccJsonXmlConfig.getEnumerated().name() + "");
                 }
 
-                sb.append("@JsonXmlConfig" + StringUtil.join(tmp, ", ", "(", ")"));
+                sb.append("@JsonXmlConfig" + Joiner.with(", ", "(", ")").appendAll(tmp).toString()).append("\r\n");
             }
 
             sb.append(isJavaPersistenceTable ? "@Table(name = \"" + tableName + "\")" : "@Table(\"" + tableName + "\")")
