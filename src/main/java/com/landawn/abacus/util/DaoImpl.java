@@ -668,6 +668,8 @@ final class DaoImpl {
         return (boolean.class.equals(returnType) || Boolean.class.equals(returnType))
                 && ((methodName.startsWith("exists") && (methodName.length() == 6 || Character.isUpperCase(methodName.charAt(6))))
                         || (methodName.startsWith("exist") && (methodName.length() == 5 || Character.isUpperCase(methodName.charAt(5))))
+                        || (methodName.startsWith("notExists") && (methodName.length() == 9 || Character.isUpperCase(methodName.charAt(9))))
+                        || (methodName.startsWith("notExist") && (methodName.length() == 8 || Character.isUpperCase(methodName.charAt(8))))
                         || (methodName.startsWith("has") && (methodName.length() == 3 || Character.isUpperCase(methodName.charAt(3)))));
     }
 

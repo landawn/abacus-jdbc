@@ -7842,7 +7842,7 @@ public final class JdbcUtil {
      *          <li>Or else if the return type of the method is {@code List}, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"/"findOnlyOne"}, {@code PreparedQuery#list(Class)} will be called.</li>
      *      </ul>
      *      <ul>
-     *          <li>Or else if the return type of the method is {@code boolean/Boolean}, and the method name starts with {@code "exist"/"exists"/"has"}, {@code PreparedQuery#exist()} will be called.</li>
+     *          <li>Or else if the return type of the method is {@code boolean/Boolean}, and the method name starts with {@code "exist"/"exists"/"notExists"/"has"}, {@code PreparedQuery#exist()} will be called.</li>
      *      </ul>
      *      <ul>
      *          <li>Or else, {@code PreparedQuery#queryForSingleResult(Class).orElse(N.defaultValueOf(returnType)} will be called.</li>
@@ -9371,12 +9371,27 @@ public final class JdbcUtil {
         /**
          *
          * @param cond
-         * @return true, if successful
+         * @return true, if there is at least one record found.
          * @throws SQLException the SQL exception
          * @see ConditionFactory
          * @see ConditionFactory.CF
+         * @see AbstractPreparedQuery#exists()
          */
         boolean exists(final Condition cond) throws SQLException;
+
+        /**
+         *
+         * @param cond
+         * @return true, if there is no record found.
+         * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
+         * @see AbstractPreparedQuery#notExists()
+         */
+        @Beta
+        default boolean notExists(final Condition cond) throws SQLException {
+            return !exists(cond);
+        }
 
         /**
          *
@@ -10608,8 +10623,21 @@ public final class JdbcUtil {
          * @param id
          * @return true, if successful
          * @throws SQLException the SQL exception
+         * @see AbstractPreparedQuery#exists()
          */
         boolean exists(final ID id) throws SQLException;
+
+        /**
+         * 
+         * @param id
+         * @return
+         * @throws SQLException
+         * @see AbstractPreparedQuery#notExists()
+         */
+        @Beta
+        default boolean notExists(final ID id) throws SQLException {
+            return !exists(id);
+        }
 
         /**
          *
@@ -11074,8 +11102,27 @@ public final class JdbcUtil {
             return gett(Long.valueOf(id), selectPropNames);
         }
 
+        /**
+         * 
+         * @param id
+         * @return
+         * @throws SQLException
+         * @see AbstractPreparedQuery#exists()
+         */
         default boolean exists(final long id) throws SQLException {
             return exists(Long.valueOf(id));
+        }
+
+        /**
+         * 
+         * @param id
+         * @return
+         * @throws SQLException
+         * @see AbstractPreparedQuery#notExists()
+         */
+        @Beta
+        default boolean notExists(final long id) throws SQLException {
+            return !exists(id);
         }
 
         default int update(final String propName, final Object propValue, final long id) throws SQLException {
@@ -14036,11 +14083,27 @@ public final class JdbcUtil {
         /**
          *
          * @param cond
-         * @return true, if successful
+         * @return true, if there is at least one record found.
          * @throws UncheckedSQLException the unchecked SQL exception
+         * @see AbstractPreparedQuery#exists()
          */
         @Override
         boolean exists(final Condition cond) throws UncheckedSQLException;
+
+        /**
+        *
+        * @param cond
+        * @return true, if there is no record found.
+        * @throws SQLException the SQL exception
+        * @see ConditionFactory
+        * @see ConditionFactory.CF
+        * @see AbstractPreparedQuery#notExists()
+        */
+        @Beta
+        @Override
+        default boolean notExists(final Condition cond) throws UncheckedSQLException {
+            return !exists(cond);
+        }
 
         /**
          *
@@ -14980,9 +15043,20 @@ public final class JdbcUtil {
          * @param id
          * @return true, if successful
          * @throws UncheckedSQLException the unchecked SQL exception
+         * @see AbstractPreparedQuery#exists()
          */
         @Override
         boolean exists(final ID id) throws UncheckedSQLException;
+
+        /**
+         * @param id
+         * @see AbstractPreparedQuery#notExists()
+         */
+        @Beta
+        @Override
+        default boolean notExists(final ID id) throws UncheckedSQLException {
+            return !exists(id);
+        }
 
         /**
          *
@@ -15472,9 +15546,23 @@ public final class JdbcUtil {
             return gett(Long.valueOf(id), selectPropNames);
         }
 
+        /**
+         * @param id
+         * @see AbstractPreparedQuery#exists()
+         */
         @Override
         default boolean exists(final long id) throws UncheckedSQLException {
             return exists(Long.valueOf(id));
+        }
+
+        /**
+         * @param id
+         * @see AbstractPreparedQuery#notExists()
+         */
+        @Beta
+        @Override
+        default boolean notExists(final long id) throws UncheckedSQLException {
+            return !exists(id);
         }
 
         @Override

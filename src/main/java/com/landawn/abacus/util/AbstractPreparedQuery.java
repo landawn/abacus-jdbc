@@ -3209,7 +3209,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * Note: using {@code select 1 from ...}, not {@code select count(*) from ...}.
      *
-     * @return true, if successful
+     * @return true, if there is at least one record found.
      * @throws SQLException the SQL exception
      */
     public boolean exists() throws SQLException {
@@ -3220,6 +3220,21 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         } finally {
             closeAfterExecutionIfAllowed();
         }
+    }
+
+    /**
+     * Why adding {@code notExists()}? not just {@code exists() == false} or {@code !exists()}?
+     * Because {@code notExists()} is not minor case. It's a general case. {@code not exists} is better expression than {@code exists() == false} or {@code !exists()}.
+     * <br />
+     * Note: using {@code select 1 from ...}, not {@code select count(*) from ...}.
+     *
+     * @return true, if there is no record found.
+     * @throws SQLException the SQL exception
+     * @see #exists()
+     */
+    @Beta
+    public boolean notExists() throws SQLException {
+        return !exists();
     }
 
     /**

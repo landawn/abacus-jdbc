@@ -1634,6 +1634,31 @@ public class SQLExecutor {
     }
 
     /**
+    *
+    * @param sql
+    * @param parameters
+    * @return true, if successful
+    */
+    @Beta
+    @SafeVarargs
+    public final boolean notExists(final String sql, final Object... parameters) {
+        return !exists(sql, parameters);
+    }
+
+    /**
+    *
+    * @param conn
+    * @param sql
+    * @param parameters
+    * @return true, if successful
+    */
+    @Beta
+    @SafeVarargs
+    public final boolean notExists(final Connection conn, final String sql, final Object... parameters) {
+        return !exists(conn, sql, parameters);
+    }
+
+    /**
      *
      * @param sql
      * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
