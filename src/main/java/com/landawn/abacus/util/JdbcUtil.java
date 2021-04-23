@@ -81,8 +81,6 @@ import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.LazyEvaluation;
-import com.landawn.abacus.annotation.NonUpdatable;
-import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.annotation.Table;
@@ -1283,7 +1281,7 @@ public final class JdbcUtil {
             final int columnIndex = getColumnIndex(metaData, columnLabel);
 
             if (className != null && className.startsWith("oracle.sql.DATE")) {
-                final String metaDataClassName = metaData.getColumnClassName(columnIndex);
+                final String metaDataClassName = getColumnCanonicalClassName(metaData, columnIndex);
 
                 if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
                     obj = rs.getTimestamp(columnLabel);
@@ -1291,7 +1289,7 @@ public final class JdbcUtil {
                     obj = rs.getDate(columnLabel);
                 }
             } else if (obj instanceof java.sql.Date) {
-                if ("java.sql.Timestamp".equals(metaData.getColumnClassName(columnIndex))) {
+                if ("java.sql.Timestamp".equals(getColumnCanonicalClassName(metaData, columnIndex))) {
                     obj = rs.getTimestamp(columnLabel);
                 }
             }
@@ -8095,7 +8093,7 @@ public final class JdbcUtil {
      *          <li>Or else if the return type of the method is {@code List}, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"/"findOnlyOne"}, {@code PreparedQuery#list(Class)} will be called.</li>
      *      </ul>
      *      <ul>
-     *          <li>Or else if the return type of the method is {@code boolean/Boolean}, and the method name starts with {@code "exist"/"exists"/"has"}, {@code PreparedQuery#exist()} will be called.</li>
+     *          <li>Or else if the return type of the method is {@code boolean/Boolean}, and the method name starts with {@code "exist"/"exists"/"notExists"/"has"}, {@code PreparedQuery#exist()} will be called.</li>
      *      </ul>
      *      <ul>
      *          <li>Or else, {@code PreparedQuery#queryForSingleResult(Class).orElse(N.defaultValueOf(returnType)} will be called.</li>
@@ -9624,12 +9622,27 @@ public final class JdbcUtil {
         /**
          *
          * @param cond
-         * @return true, if successful
+         * @return true, if there is at least one record found.
          * @throws SQLException the SQL exception
          * @see ConditionFactory
          * @see ConditionFactory.CF
+         * @see AbstractPreparedQuery#exists()
          */
         boolean exists(final Condition cond) throws SQLException;
+
+        /**
+         *
+         * @param cond
+         * @return true, if there is no record found.
+         * @throws SQLException the SQL exception
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
+         * @see AbstractPreparedQuery#notExists()
+         */
+        @Beta
+        default boolean notExists(final Condition cond) throws SQLException {
+            return !exists(cond);
+        }
 
         /**
          *
@@ -10861,8 +10874,21 @@ public final class JdbcUtil {
          * @param id
          * @return true, if successful
          * @throws SQLException the SQL exception
+         * @see AbstractPreparedQuery#exists()
          */
         boolean exists(final ID id) throws SQLException;
+
+        /**
+         * 
+         * @param id
+         * @return
+         * @throws SQLException
+         * @see AbstractPreparedQuery#notExists()
+         */
+        @Beta
+        default boolean notExists(final ID id) throws SQLException {
+            return !exists(id);
+        }
 
         /**
          *
@@ -11327,8 +11353,27 @@ public final class JdbcUtil {
             return gett(Long.valueOf(id), selectPropNames);
         }
 
+        /**
+         * 
+         * @param id
+         * @return
+         * @throws SQLException
+         * @see AbstractPreparedQuery#exists()
+         */
         default boolean exists(final long id) throws SQLException {
             return exists(Long.valueOf(id));
+        }
+
+        /**
+         * 
+         * @param id
+         * @return
+         * @throws SQLException
+         * @see AbstractPreparedQuery#notExists()
+         */
+        @Beta
+        default boolean notExists(final long id) throws SQLException {
+            return !exists(id);
         }
 
         default int update(final String propName, final Object propValue, final long id) throws SQLException {
@@ -14289,11 +14334,27 @@ public final class JdbcUtil {
         /**
          *
          * @param cond
-         * @return true, if successful
+         * @return true, if there is at least one record found.
          * @throws UncheckedSQLException the unchecked SQL exception
+         * @see AbstractPreparedQuery#exists()
          */
         @Override
         boolean exists(final Condition cond) throws UncheckedSQLException;
+
+        /**
+        *
+        * @param cond
+        * @return true, if there is no record found.
+        * @throws SQLException the SQL exception
+        * @see ConditionFactory
+        * @see ConditionFactory.CF
+        * @see AbstractPreparedQuery#notExists()
+        */
+        @Beta
+        @Override
+        default boolean notExists(final Condition cond) throws UncheckedSQLException {
+            return !exists(cond);
+        }
 
         /**
          *
@@ -15233,9 +15294,20 @@ public final class JdbcUtil {
          * @param id
          * @return true, if successful
          * @throws UncheckedSQLException the unchecked SQL exception
+         * @see AbstractPreparedQuery#exists()
          */
         @Override
         boolean exists(final ID id) throws UncheckedSQLException;
+
+        /**
+         * @param id
+         * @see AbstractPreparedQuery#notExists()
+         */
+        @Beta
+        @Override
+        default boolean notExists(final ID id) throws UncheckedSQLException {
+            return !exists(id);
+        }
 
         /**
          *
@@ -15725,9 +15797,23 @@ public final class JdbcUtil {
             return gett(Long.valueOf(id), selectPropNames);
         }
 
+        /**
+         * @param id
+         * @see AbstractPreparedQuery#exists()
+         */
         @Override
         default boolean exists(final long id) throws UncheckedSQLException {
             return exists(Long.valueOf(id));
+        }
+
+        /**
+         * @param id
+         * @see AbstractPreparedQuery#notExists()
+         */
+        @Beta
+        @Override
+        default boolean notExists(final long id) throws UncheckedSQLException {
+            return !exists(id);
         }
 
         @Override
@@ -18909,17 +18995,15 @@ public final class JdbcUtil {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
     }
 
-    static final String eccHeader = new StringBuilder() //
-            .append("import lombok.AllArgsConstructor;\n")
-            .append("import lombok.Builder;\n")
-            .append("import lombok.Data;\n")
-            .append("import lombok.NoArgsConstructor;\n")
-            .append("\n")
-            .append("@Builder\n")
-            .append("@Data\n")
-            .append("@NoArgsConstructor\n")
-            .append("@AllArgsConstructor\n")
-            .toString();
+    static final String eccImports = "import javax.persistence.Column;\r\n" + "import javax.persistence.Id;\r\n" + "import javax.persistence.Table;\r\n"
+            + "\r\n" + "import com.landawn.abacus.annotation.Column;\r\n" + "import com.landawn.abacus.annotation.Id;\r\n"
+            + "import com.landawn.abacus.annotation.JsonXmlConfig;\r\n" + "import com.landawn.abacus.annotation.NonUpdatable;\r\n"
+            + "import com.landawn.abacus.annotation.ReadOnly;\r\n" + "import com.landawn.abacus.annotation.Table;\r\n"
+            + "import com.landawn.abacus.annotation.Type;\r\n" + "import com.landawn.abacus.annotation.Type.EnumBy;\r\n"
+            + "import com.landawn.abacus.util.NamingPolicy;\r\n" + "\r\n" + "import lombok.AllArgsConstructor;\r\n" + "import lombok.Builder;\r\n"
+            + "import lombok.Data;\r\n" + "import lombok.NoArgsConstructor;\r\n" + "import lombok.experimental.Accessors;\r\n";
+
+    static final String eccClassAnnos = "@Builder\r\n" + "@Data\r\n" + "@NoArgsConstructor\r\n" + "@AllArgsConstructor\r\n" + "@Accessors(chain = true)\r\n";
 
     @SuppressWarnings("deprecation")
     private static final Map<String, String> eccClassNameMap = N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short", "short", "Integer",
@@ -18982,7 +19066,6 @@ public final class JdbcUtil {
 
         final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = Maps.newMap(N.nullToEmpty(configToUse.getCustomizedFields()), tp -> tp._1);
         final Map<String, Tuple2<String, String>> customizedFieldDbTypeMap = Maps.newMap(N.nullToEmpty(configToUse.getCustomizedFieldDbTypes()), tp -> tp._1);
-        final List<String> columnNameList = new ArrayList<>();
 
         try (PreparedStatement stmt = conn.prepareStatement("select * from " + tableName + " where 1 > 2"); //
                 ResultSet rs = stmt.executeQuery()) {
@@ -19004,65 +19087,120 @@ public final class JdbcUtil {
             final StringBuilder sb = new StringBuilder();
 
             if (N.notNullOrEmpty(packageName)) {
-                sb.append("package ").append(packageName + ";").append("\n").append("\n");
+                sb.append("package ").append(packageName + ";").append("\r\n");
             }
 
-            if (isJavaPersistenceColumn || isJavaPersistenceId || isJavaPersistenceTable) {
-                if (isJavaPersistenceColumn) {
-                    sb.append("import " + ClassUtil.getCanonicalClassName(columnAnnotationClass) + ";\n");
+            String headPart = eccImports + "\r\n" + eccClassAnnos;
+
+            if (isJavaPersistenceColumn) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.Column;\r\n", "");
+            } else {
+                headPart = headPart.replace("import javax.persistence.Column;\r\n", "");
+            }
+
+            if (isJavaPersistenceTable) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.Table;\r\n", "");
+            } else {
+                headPart = headPart.replace("import javax.persistence.Table;\r\n", "");
+            }
+
+            if (N.isNullOrEmpty(idFields)) {
+                headPart = headPart.replace("import javax.persistence.Id;\r\n", "");
+                headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\r\n", "");
+            } else if (isJavaPersistenceId) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\r\n", "");
+            } else {
+                headPart = headPart.replace("import javax.persistence.Id;\r\n", "");
+            }
+
+            if (N.isNullOrEmpty(nonUpdatableFields)) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.NonUpdatable;\r\n", "");
+            }
+
+            if (N.isNullOrEmpty(readOnlyFields)) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.ReadOnly;\r\n", "");
+            }
+
+            if (N.isNullOrEmpty(customizedFieldDbTypeMap)) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.Type;\r\n", "");
+            }
+
+            if (configToUse.getJsonXmlConfig() == null || configToUse.getJsonXmlConfig().getNamingPolicy() == null) {
+                headPart = headPart.replace("import com.landawn.abacus.util.NamingPolicy;\r\n", "");
+            }
+
+            if (configToUse.getJsonXmlConfig() == null || configToUse.getJsonXmlConfig().getEnumerated() == null) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.Type.EnumBy;\r\n", "");
+            }
+
+            if (configToUse.getJsonXmlConfig() == null) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.JsonXmlConfig;\r\n", "");
+            }
+
+            if (!configToUse.isGenerateBuilder()) {
+                headPart = headPart.replace("import lombok.Builder;\r\n", "").replace("@Builder\r\n", "");
+            }
+
+            if (!configToUse.isChainAccessor()) {
+                headPart = headPart.replace("import lombok.experimental.Accessors;\r\n", "").replace("@Accessors(chain = true)\r\n", "");
+            }
+
+            if (headPart.contains("javax.persistence.")) {
+                sb.append("\r\n");
+            }
+
+            sb.append(headPart);
+
+            if (configToUse.getJsonXmlConfig() != null) {
+                EntityCodeConfig.JsonXmlConfig eccJsonXmlConfig = configToUse.getJsonXmlConfig();
+
+                final List<String> tmp = new ArrayList<>();
+
+                if (eccJsonXmlConfig.getNamingPolicy() != null) {
+                    tmp.add("namingPolicy = NamingPolicy." + eccJsonXmlConfig.getNamingPolicy().name());
                 }
 
-                if (isJavaPersistenceId && N.notNullOrEmpty(idFields)) {
-                    sb.append("import " + ClassUtil.getCanonicalClassName(idAnnotationClass) + ";\n");
+                if (N.notNullOrEmpty(eccJsonXmlConfig.getIgnoredFields())) {
+                    tmp.add("ignoredFields = " + Splitter.with(",")
+                            .trimResults()
+                            .splitToStream(eccJsonXmlConfig.getIgnoredFields())
+                            .map(it -> '\"' + it + '\"')
+                            .join(", ", "{ ", " }"));
                 }
 
-                if (isJavaPersistenceTable) {
-                    sb.append("import " + ClassUtil.getCanonicalClassName(tableAnnotationClass) + ";\n");
+                if (N.notNullOrEmpty(eccJsonXmlConfig.getDateFormat())) {
+                    tmp.add("dateFormat = \"" + eccJsonXmlConfig.getDateFormat() + "\"");
                 }
 
-                sb.append("\n");
+                if (N.notNullOrEmpty(eccJsonXmlConfig.getTimeZone())) {
+                    tmp.add("timeZone = \"" + eccJsonXmlConfig.getTimeZone() + "\"");
+                }
+
+                if (N.notNullOrEmpty(eccJsonXmlConfig.getNumberFormat())) {
+                    tmp.add("numberFormat = \"" + eccJsonXmlConfig.getNumberFormat() + "\"");
+                }
+
+                if (eccJsonXmlConfig.getEnumerated() != null) {
+                    tmp.add("enumerated = EnumBy." + eccJsonXmlConfig.getEnumerated().name() + "");
+                }
+
+                sb.append("@JsonXmlConfig" + StringUtil.join(tmp, ", ", "(", ")")).append("\r\n");
             }
 
-            if (!isJavaPersistenceColumn) {
-                sb.append("import " + ClassUtil.getCanonicalClassName(columnAnnotationClass) + ";\n");
-            }
-
-            if (!isJavaPersistenceId && N.notNullOrEmpty(idFields)) {
-                sb.append("import " + ClassUtil.getCanonicalClassName(idAnnotationClass) + ";\n");
-            }
-
-            if (N.notNullOrEmpty(nonUpdatableFields)) {
-                sb.append("import " + ClassUtil.getCanonicalClassName(NonUpdatable.class) + ";\n");
-            }
-
-            if (N.notNullOrEmpty(readOnlyFields)) {
-                sb.append("import " + ClassUtil.getCanonicalClassName(ReadOnly.class) + ";\n");
-            }
-
-            if (!isJavaPersistenceTable) {
-                sb.append("import " + ClassUtil.getCanonicalClassName(tableAnnotationClass) + ";\n");
-            }
-
-            if (N.notNullOrEmpty(customizedFieldDbTypeMap)) {
-                sb.append("import " + ClassUtil.getCanonicalClassName(com.landawn.abacus.annotation.Type.class) + ";\n");
-            }
-
-            sb.append("\n");
-
-            sb.append(eccHeader) //
-                    .append(isJavaPersistenceTable ? "@Table(name = \"" + tableName + "\")" : "@Table(\"" + tableName + "\")")
-                    .append("\n")
+            sb.append(isJavaPersistenceTable ? "@Table(name = \"" + tableName + "\")" : "@Table(\"" + tableName + "\")")
+                    .append("\r\n")
                     .append("public class " + finalClassName)
                     .append(" {")
-                    .append("\n");
+                    .append("\r\n");
+
+            final List<String> columnNameList = new ArrayList<>();
+            final List<String> fieldNameList = new ArrayList<>();
 
             final ResultSetMetaData rsmd = rs.getMetaData();
             final int columnCount = rsmd.getColumnCount();
 
             for (int i = 1; i <= columnCount; i++) {
                 final String columnName = rsmd.getColumnName(i);
-
-                columnNameList.add(columnName);
 
                 final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(StringUtil.toCamelCase(columnName),
                         customizedFieldMap.get(columnName));
@@ -19075,27 +19213,30 @@ public final class JdbcUtil {
                                 : getColumnClassName(getColumnCanonicalClassName(rsmd, i), false, configToUse))
                         : getColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
 
-                sb.append("\n");
+                sb.append("\r\n");
+
+                columnNameList.add(columnName);
+                fieldNameList.add(fieldName);
 
                 if (idFields.remove(fieldName) || idFields.remove(columnName)) {
-                    sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append("\n");
+                    sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append("\r\n");
                 }
 
                 if (readOnlyFields.remove(fieldName) || readOnlyFields.remove(columnName)) {
-                    sb.append("    @ReadOnly").append("\n");
+                    sb.append("    @ReadOnly").append("\r\n");
                 } else if (nonUpdatableFields.remove(fieldName) || nonUpdatableFields.remove(columnName)) {
-                    sb.append("    @NonUpdatable").append("\n");
+                    sb.append("    @NonUpdatable").append("\r\n");
                 }
 
-                sb.append(isJavaPersistenceColumn ? "    @Column(name = \"" + columnName + "\")" : "    @Column(\"" + columnName + "\")").append("\n");
+                sb.append(isJavaPersistenceColumn ? "    @Column(name = \"" + columnName + "\")" : "    @Column(\"" + columnName + "\")").append("\r\n");
 
                 final Tuple2<String, String> dbType = customizedFieldDbTypeMap.getOrDefault(fieldName, customizedFieldDbTypeMap.get(columnName));
 
                 if (dbType != null) {
-                    sb.append("    @Type(name = \"" + dbType._2 + "\")").append("\n");
+                    sb.append("    @Type(name = \"" + dbType._2 + "\")").append("\r\n");
                 }
 
-                sb.append("    private " + columnClassName + " " + fieldName + ";").append("\n");
+                sb.append("    private " + columnClassName + " " + fieldName + ";").append("\r\n");
             }
 
             //    if (idFields.size() > 0) {
@@ -19113,9 +19254,24 @@ public final class JdbcUtil {
             //                + tableName + ": with columns: " + columnNameList);
             //    }
 
-            sb.append("\n").append("}").append("\n");
+            if (configToUse.isGenerateCopyMethod()) {
+                sb.append("\r\n")
+                        .append("    public " + className + " copy() {")
+                        .append("\r\n") //
+                        .append("        final " + className + " copy = new " + className + "();")
+                        .append("\r\n"); //
 
-            final String result = sb.toString();
+                for (String fieldName : fieldNameList) {
+                    sb.append("        copy." + fieldName + " = this." + fieldName + ";").append("\r\n");
+                }
+
+                sb.append("        return copy;").append("\r\n").append("    }").append("\r\n");
+
+            }
+
+            sb.append("\r\n").append("}").append("\r\n");
+
+            String result = sb.toString();
 
             if (N.notNullOrEmpty(srcDir)) {
                 String packageDir = srcDir;
