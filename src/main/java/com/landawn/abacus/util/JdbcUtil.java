@@ -18933,7 +18933,7 @@ public final class JdbcUtil {
                     tmp.add("enumerated = EnumBy." + eccJsonXmlConfig.getEnumerated().name() + "");
                 }
 
-                sb.append("@JsonXmlConfig" + Joiner.with(", ", "(", ")").appendAll(tmp).toString()).append("\r\n");
+                sb.append("@JsonXmlConfig" + StringUtil.join(tmp, ", ", "(", ")")).append("\r\n");
             }
 
             sb.append(isJavaPersistenceTable ? "@Table(name = \"" + tableName + "\")" : "@Table(\"" + tableName + "\")")
