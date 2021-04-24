@@ -3992,11 +3992,10 @@ public final class JdbcUtil {
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
-        return ExceptionalStream.newStream(iterate(resultSet, rowFilter, rowMapper, null));
+        return ExceptionalStream.newStream(iterate(resultSet, rowFilter, rowMapper));
     }
 
-    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper,
-            final Throwables.Runnable<SQLException> onClose) {
+    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) {
         return new ExceptionalIterator<T, SQLException>() {
             private List<String> columnLabels = null;
             private boolean hasNext;
@@ -4028,13 +4027,6 @@ public final class JdbcUtil {
                 hasNext = false;
 
                 return rowMapper.apply(resultSet, columnLabels);
-            }
-
-            @Override
-            public void close() throws SQLException {
-                if (onClose != null) {
-                    onClose.run();
-                }
             }
         };
     }
@@ -4088,6 +4080,16 @@ public final class JdbcUtil {
         return stream(resultSet, rowMapper);
     }
 
+    /**
+     * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
+     * <br />
+     * {@code JdbcUtil.streamAllResultSets(stmt, rowMapper).onClose(Fn.closeQuietly(stmt))...}
+     * 
+     * @param <T>
+     * @param stmt
+     * @param rowMapper
+     * @return
+     */
     public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowMapper<T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -4100,6 +4102,17 @@ public final class JdbcUtil {
                 .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
     }
 
+    /**
+     * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
+     * <br />
+     * {@code JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).onClose(Fn.closeQuietly(stmt))...}
+     * 
+     * @param <T>
+     * @param stmt
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     */
     public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowFilter rowFilter, final RowMapper<T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowFilter, "rowFilter");
@@ -4113,6 +4126,16 @@ public final class JdbcUtil {
                 .flatMap(rs -> JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
     }
 
+    /**
+     * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
+     * <br />
+     * {@code JdbcUtil.streamAllResultSets(stmt, rowMapper).onClose(Fn.closeQuietly(stmt))...}
+     * 
+     * @param <T>
+     * @param stmt
+     * @param rowMapper
+     * @return
+     */
     public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowMapper<T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -4125,6 +4148,17 @@ public final class JdbcUtil {
                 .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
     }
 
+    /**
+     * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
+     * <br />
+     * {@code JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).onClose(Fn.closeQuietly(stmt))...}
+     * 
+     * @param <T>
+     * @param stmt
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     */
     public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter,
             final BiRowMapper<T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
@@ -11078,7 +11112,7 @@ public final class JdbcUtil {
      *  
      *
      * @param <T>
-     * @param <SB>
+     * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
      * @param <TD>
      * @see com.landawn.abacus.condition.ConditionFactory
      * @see com.landawn.abacus.condition.ConditionFactory.CF
@@ -13963,7 +13997,7 @@ public final class JdbcUtil {
      * @author haiyangl
      *
      * @param <T>
-     * @param <SB>
+     * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
      * @param <TD>
      * @see com.landawn.abacus.condition.ConditionFactory
      * @see com.landawn.abacus.condition.ConditionFactory.CF
@@ -15519,7 +15553,7 @@ public final class JdbcUtil {
      *  
      *
      * @param <T>
-     * @param <SB>
+     * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
      * @param <TD>
      */
     @Beta
@@ -15585,7 +15619,7 @@ public final class JdbcUtil {
      * TODO
      *
      * @param <T>
-     * @param <SB>
+     * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
      * @param <TD>
      * @see com.landawn.abacus.condition.ConditionFactory
      * @see com.landawn.abacus.condition.ConditionFactory.CF
@@ -15675,7 +15709,7 @@ public final class JdbcUtil {
      * TODO
      *
      * @param <T>
-     * @param <SB>
+     * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
      * @param <TD>
      */
     @Beta
@@ -15833,7 +15867,7 @@ public final class JdbcUtil {
      *
      * @param <T>
      * @param <ID>
-     * @param <SB>
+     * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
      * @param <TD>
      * @see com.landawn.abacus.condition.ConditionFactory
      * @see com.landawn.abacus.condition.ConditionFactory.CF
@@ -16367,7 +16401,7 @@ public final class JdbcUtil {
      * @author haiyangl
      *
      * @param <T>
-     * @param <SB>
+     * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
      * @param <TD>
      * @see com.landawn.abacus.condition.ConditionFactory
      * @see com.landawn.abacus.condition.ConditionFactory.CF
