@@ -5473,7 +5473,9 @@ public final class JdbcUtil {
         };
 
         /**
-         * @param rs this {@code ResultSet} will be closed after {@code apply(rs)} call. So don't save/return the input {@code ResultSet}.
+         * In a lot of scenarios, including PreparedQuery/Dao/SQLExecutor, the input {@code ResultSet} will be closed after {@code apply(rs)} call. So don't save/return the input {@code ResultSet}.
+         * 
+         * @param rs 
          */
         @Override
         T apply(ResultSet rs) throws SQLException;
@@ -5807,7 +5809,9 @@ public final class JdbcUtil {
         };
 
         /**
-         * @param rs this {@code ResultSet} will be closed after {@code apply(rs, columnLabels)} call. So don't save/return the input {@code ResultSet}.
+         * In a lot of scenarios, including PreparedQuery/Dao/SQLExecutor, the input {@code ResultSet} will be closed after {@code apply(rs)} call. So don't save/return the input {@code ResultSet}.
+         * 
+         * @param rs
          * @param columnLabels
          */
         @Override
