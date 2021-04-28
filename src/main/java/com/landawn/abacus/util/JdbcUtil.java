@@ -11194,12 +11194,12 @@ public final class JdbcUtil {
     @Beta
     public static interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T, SB, TD>> extends Dao<T, SB, TD> {
         /**
-        *
-        * @param query
-        * @return
-        * @throws UnsupportedOperationException if the specified {@code query} is not a select sql statement.
-        * @throws SQLException
-        */
+         *
+         * @param query
+         * @return
+         * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
+         * @throws SQLException
+         */
         @Override
         @NonDBOperation
         default PreparedQuery prepareQuery(final String query) throws UnsupportedOperationException, SQLException {
@@ -11211,14 +11211,14 @@ public final class JdbcUtil {
         }
 
         /**
-        *
-        * @param query
-        * @param generateKeys
-        * @return
-        * @throws UnsupportedOperationException
-        * @throws SQLException
-        * @deprecated unsupported Operation
-        */
+         *
+         * @param query
+         * @param generateKeys
+         * @return
+         * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
         @Deprecated
         @Override
         @NonDBOperation
@@ -11235,7 +11235,7 @@ public final class JdbcUtil {
         * @param query
         * @param returnColumnIndexes
         * @return
-        * @throws UnsupportedOperationException
+        * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
         * @throws SQLException
         * @deprecated unsupported Operation
         */
@@ -11255,7 +11255,7 @@ public final class JdbcUtil {
         * @param query
         * @param returnColumnIndexes
         * @return
-        * @throws UnsupportedOperationException
+        * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
         * @throws SQLException
         * @deprecated unsupported Operation
         */
@@ -11291,7 +11291,7 @@ public final class JdbcUtil {
         *
         * @param namedQuery
         * @return
-        * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a select sql statement.
+        * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
         * @throws SQLException
         */
         @Override
@@ -11309,7 +11309,7 @@ public final class JdbcUtil {
         * @param namedQuery
         * @param generateKeys
         * @return
-        * @throws UnsupportedOperationException
+        * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
         * @throws SQLException
         * @deprecated unsupported Operation
         */
@@ -11329,7 +11329,7 @@ public final class JdbcUtil {
         * @param namedQuery
         * @param returnColumnIndexes
         * @return
-        * @throws UnsupportedOperationException
+        * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
         * @throws SQLException
         * @deprecated unsupported Operation
         */
@@ -11349,7 +11349,7 @@ public final class JdbcUtil {
         * @param namedQuery
         * @param returnColumnNames
         * @return
-        * @throws UnsupportedOperationException
+        * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
         * @throws SQLException
         * @deprecated unsupported Operation
         */
@@ -11386,7 +11386,7 @@ public final class JdbcUtil {
         *
         * @param namedQuery the named query
         * @return
-        * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a select sql statement.
+        * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
         * @throws SQLException
         */
         @Override
@@ -11404,7 +11404,7 @@ public final class JdbcUtil {
         * @param namedQuery the named query
         * @param generateKeys
         * @return
-        * @throws UnsupportedOperationException
+        * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
         * @throws SQLException
         * @deprecated unsupported Operation
         */
@@ -11424,7 +11424,7 @@ public final class JdbcUtil {
         * @param namedQuery
         * @param returnColumnIndexes
         * @return
-        * @throws UnsupportedOperationException
+        * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
         * @throws SQLException
         * @deprecated unsupported Operation
         */
@@ -11444,7 +11444,7 @@ public final class JdbcUtil {
         * @param namedQuery
         * @param returnColumnNames
         * @return
-        * @throws UnsupportedOperationException
+        * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
         * @throws SQLException
         * @deprecated unsupported Operation
         */
@@ -11602,7 +11602,7 @@ public final class JdbcUtil {
         *
         * @param query
         * @return
-        * @throws UnsupportedOperationException if the specified {@code query} is not a select sql statement.
+        * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select} sql statement.
         * @throws SQLException
         */
         @Override
@@ -11628,11 +11628,7 @@ public final class JdbcUtil {
         @Override
         @NonDBOperation
         default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
-            if (!JdbcUtil.isSelectQuery(query)) {
-                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
-            }
-
-            return JdbcUtil.prepareQuery(dataSource(), query, generateKeys);
+            throw new UnsupportedOperationException();
         }
 
         /**
@@ -11648,11 +11644,7 @@ public final class JdbcUtil {
         @Override
         @NonDBOperation
         default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
-            if (!JdbcUtil.isSelectQuery(query)) {
-                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
-            }
-
-            return JdbcUtil.prepareQuery(dataSource(), query, returnColumnIndexes);
+            throw new UnsupportedOperationException();
         }
 
         /**
@@ -11668,18 +11660,14 @@ public final class JdbcUtil {
         @Override
         @NonDBOperation
         default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
-            if (!JdbcUtil.isSelectQuery(query)) {
-                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
-            }
-
-            return JdbcUtil.prepareQuery(dataSource(), query, returnColumnNames);
+            throw new UnsupportedOperationException();
         }
 
         /**
         *
         * @param namedQuery
         * @return
-        * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a select sql statement.
+        * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a {@code select} sql statement.
         * @throws SQLException
         */
         @Override
@@ -11705,11 +11693,7 @@ public final class JdbcUtil {
         @Override
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
-            if (!JdbcUtil.isSelectQuery(namedQuery)) {
-                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
-            }
-
-            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, generateKeys);
+            throw new UnsupportedOperationException();
         }
 
         /**
@@ -11725,11 +11709,7 @@ public final class JdbcUtil {
         @Override
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
-            if (!JdbcUtil.isSelectQuery(namedQuery)) {
-                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
-            }
-
-            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
+            throw new UnsupportedOperationException();
         }
 
         /**
@@ -11745,18 +11725,14 @@ public final class JdbcUtil {
         @Override
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
-            if (!JdbcUtil.isSelectQuery(namedQuery)) {
-                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
-            }
-
-            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
+            throw new UnsupportedOperationException();
         }
 
         /**
         *
         * @param namedQuery the named query
         * @return
-        * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a select sql statement.
+        * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a {@code select} sql statement.
         * @throws SQLException
         */
         @Override
@@ -11782,11 +11758,7 @@ public final class JdbcUtil {
         @Override
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
-            if (!JdbcUtil.isSelectQuery(namedQuery.sql())) {
-                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
-            }
-
-            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, generateKeys);
+            throw new UnsupportedOperationException();
         }
 
         /**
@@ -11802,11 +11774,7 @@ public final class JdbcUtil {
         @Override
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
-            if (!JdbcUtil.isSelectQuery(namedQuery.sql())) {
-                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
-            }
-
-            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
+            throw new UnsupportedOperationException();
         }
 
         /**
@@ -11822,11 +11790,7 @@ public final class JdbcUtil {
         @Override
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
-            if (!JdbcUtil.isSelectQuery(namedQuery.sql())) {
-                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
-            }
-
-            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
+            throw new UnsupportedOperationException();
         }
 
         /**

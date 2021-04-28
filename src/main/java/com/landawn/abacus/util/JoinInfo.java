@@ -113,8 +113,7 @@ final class JoinInfo {
                 .flatMapp(it -> StringUtil.split(joinColumnPairs[0], '=', true))
                 .filter(it -> it.indexOf('.') > 0)
                 .map(it -> it.substring(0, it.indexOf('.')).trim())
-                .anyMatch(it -> !(it.equalsIgnoreCase(entityInfo.tableName.orElse(entityInfo.simpleClassName))
-                        || it.equalsIgnoreCase(referencedEntityInfo.tableName.orElse(referencedEntityInfo.simpleClassName))));
+                .anyMatch(it -> !(it.equalsIgnoreCase(entityInfo.simpleClassName) || it.equalsIgnoreCase(referencedEntityInfo.simpleClassName)));
 
         // Many to many joined by third table
         if (isManyToManyJoin) {
