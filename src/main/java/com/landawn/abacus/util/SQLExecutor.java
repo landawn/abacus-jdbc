@@ -3494,7 +3494,7 @@ public class SQLExecutor {
      *
      * @param <T>
      * @param sql
-     * @param resultExtractor
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param parameters
      * @return
      */
@@ -3508,7 +3508,7 @@ public class SQLExecutor {
      * @param <T>
      * @param sql
      * @param statementSetter
-     * @param resultExtractor
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param parameters
      * @return
      */
@@ -3521,7 +3521,7 @@ public class SQLExecutor {
      *
      * @param <T>
      * @param sql
-     * @param resultExtractor
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param jdbcSettings
      * @param parameters
      * @return
@@ -3558,7 +3558,7 @@ public class SQLExecutor {
      * @param <T>
      * @param sql
      * @param statementSetter
-     * @param resultExtractor
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param jdbcSettings
      * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
      * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
@@ -3628,7 +3628,7 @@ public class SQLExecutor {
      * @param <T>
      * @param conn
      * @param sql
-     * @param resultExtractor
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param parameters
      * @return
      */
@@ -3643,7 +3643,7 @@ public class SQLExecutor {
      * @param conn
      * @param sql
      * @param statementSetter
-     * @param resultExtractor
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param parameters
      * @return
      */
@@ -3658,7 +3658,7 @@ public class SQLExecutor {
      * @param <T>
      * @param conn
      * @param sql
-     * @param resultExtractor
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param jdbcSettings
      * @param parameters
      * @return
@@ -3697,7 +3697,7 @@ public class SQLExecutor {
      * @param conn
      * @param sql
      * @param statementSetter
-     * @param resultExtractor
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param jdbcSettings
      * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
      * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.

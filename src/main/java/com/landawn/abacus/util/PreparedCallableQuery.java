@@ -1251,7 +1251,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     /**
      * 
      * @param <R>
-     * @param resultExtrator
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1281,7 +1281,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     /**
      * 
      * @param <R>
-     * @param resultExtrator
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1320,7 +1320,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     /**
      * 
      * @param <R>
-     * @param resultExtrator
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return the {@code R} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1345,7 +1345,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     /**
      * 
      * @param <R>
-     * @param resultExtrator
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return the {@code R} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1383,7 +1383,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     /**
      * 
      * @param <R>
-     * @param resultExtrator
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1415,7 +1415,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     /**
      * 
      * @param <R>
-     * @param resultExtrator
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1448,8 +1448,8 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * 
      * @param <R1>
      * @param <R2>
-     * @param resultExtrator1
-     * @param resultExtrator2
+     * @param resultExtrator1 Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtrator2 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return {@code R1/R2} extracted from the first two {@code ResultSets} returned by the executed procedure.
      * @throws SQLException
      */
@@ -1492,8 +1492,8 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * 
      * @param <R1>
      * @param <R2>
-     * @param resultExtrator1
-     * @param resultExtrator2
+     * @param resultExtrator1 Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtrator2 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return {@code R1/R2} extracted from the first two {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1538,9 +1538,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param <R1>
      * @param <R2>
      * @param <R3>
-     * @param resultExtrator1
-     * @param resultExtrator2
-     * @param resultExtrator3
+     * @param resultExtrator1 Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtrator2 Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtrator3 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return {@code R1/R2/R3} extracted from the first three {@code ResultSets} returned by the executed procedure.
      * @throws SQLException
      */
@@ -1591,9 +1591,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param <R1>
      * @param <R2>
      * @param <R3>
-     * @param resultExtrator1
-     * @param resultExtrator2
-     * @param resultExtrator3
+     * @param resultExtrator1 Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtrator2 Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtrator3 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return {@code R1/R2/R3} extracted from the first three {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */

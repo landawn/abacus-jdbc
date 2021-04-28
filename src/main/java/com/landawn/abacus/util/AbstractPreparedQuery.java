@@ -2423,7 +2423,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      *
      * @param <R>
-     * @param resultExtrator
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return
      * @throws SQLException the SQL exception
      */
@@ -2441,7 +2441,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      *
      * @param <R>
-     * @param resultExtrator
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return
      * @throws SQLException the SQL exception
      */

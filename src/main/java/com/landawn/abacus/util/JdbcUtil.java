@@ -8848,7 +8848,9 @@ public final class JdbcUtil {
         /**
          *
          * @return
+         * @deprecated for internal use only.
          */
+        @Deprecated
         @NonDBOperation
         Class<T> targetEntityClass();
 
@@ -8861,12 +8863,26 @@ public final class JdbcUtil {
 
         // SQLExecutor sqlExecutor();
 
+        /**
+         * 
+         * @return
+         */
         @NonDBOperation
         SQLMapper sqlMapper();
 
+        /**
+         * 
+         * @deprecated for internal use only.
+         */
+        @Deprecated
         @NonDBOperation
         Executor executor();
 
+        /**
+         * 
+         * @deprecated for internal use only.
+         */
+        @Deprecated
         @NonDBOperation
         AsyncExecutor asyncExecutor();
 
@@ -9805,7 +9821,7 @@ public final class JdbcUtil {
         /**
          *
          * @param cond
-         * @param resultExtrator
+         * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
          * @return
          * @throws SQLException the SQL exception
          * @see ConditionFactory
@@ -9817,7 +9833,7 @@ public final class JdbcUtil {
          *
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
-         * @param resultExtrator
+         * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
          * @return
          * @throws SQLException the SQL exception
          * @see ConditionFactory
@@ -9828,7 +9844,7 @@ public final class JdbcUtil {
         /**
          *
          * @param cond
-         * @param resultExtrator
+         * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
          * @return
          * @throws SQLException the SQL exception
          */
@@ -9838,7 +9854,7 @@ public final class JdbcUtil {
          *
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
-         * @param resultExtrator
+         * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
          * @return
          * @throws SQLException the SQL exception
          * @see ConditionFactory
@@ -11024,6 +11040,14 @@ public final class JdbcUtil {
         }
 
         /**
+         *
+         * @param entity
+         * @return
+         * @throws SQLException the SQL exception
+         */
+        int delete(final T entity) throws SQLException;
+
+        /**
          * Delete by id.
          *
          * @param id
@@ -11031,24 +11055,6 @@ public final class JdbcUtil {
          * @throws SQLException the SQL exception
          */
         int deleteById(final ID id) throws SQLException;
-
-        /**
-         *
-         * @param entity
-         * @return
-         * @throws SQLException the SQL exception
-         */
-        int delete(final T entity) throws SQLException;
-        //
-        //    /**
-        //     *
-        //     * @param entity
-        //     * @param onDeleteAction It should be defined and done in DB server side.
-        //     * @return
-        //     * @throws SQLException the SQL exception
-        //     */
-        //    @Beta
-        //    int delete(final T entity, final OnDeleteAction onDeleteAction) throws SQLException;
 
         /**
          *
@@ -11898,6 +11904,20 @@ public final class JdbcUtil {
         }
 
         /**
+         *
+         * @param entity
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int delete(final T entity) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
          * Delete by id.
          *
          * @param id
@@ -11909,20 +11929,6 @@ public final class JdbcUtil {
         @Deprecated
         @Override
         default int deleteById(final ID id) throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         *
-         * @param entity
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
-        @Deprecated
-        @Override
-        default int delete(final T entity) throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -14098,8 +14104,8 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          * @see CrudDao#batchInsert(Collection)
          */
-        @Override
         @Beta
+        @Override
         default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws UncheckedSQLException {
             batchSave(namedInsertSQL, entitiesToSave, DEFAULT_BATCH_SIZE);
         }
@@ -14114,8 +14120,8 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          * @see CrudDao#batchInsert(Collection)
          */
-        @Override
         @Beta
+        @Override
         void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave, final int batchSize) throws UncheckedSQLException;
 
         /**
@@ -14490,7 +14496,7 @@ public final class JdbcUtil {
         /**
          *
          * @param cond
-         * @param resultExtrator
+         * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
          * @return
          * @throws UncheckedSQLException the unchecked SQL exception
          */
@@ -14501,7 +14507,7 @@ public final class JdbcUtil {
          *
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
-         * @param resultExtrator
+         * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
          * @return
          * @throws UncheckedSQLException the unchecked SQL exception
          */
@@ -14511,7 +14517,7 @@ public final class JdbcUtil {
         /**
          *
          * @param cond
-         * @param resultExtrator
+         * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
          * @return
          * @throws UncheckedSQLException the unchecked SQL exception
          */
@@ -14522,7 +14528,7 @@ public final class JdbcUtil {
          *
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
-         * @param resultExtrator
+         * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
          * @return
          * @throws UncheckedSQLException the unchecked SQL exception
          */
@@ -14956,8 +14962,8 @@ public final class JdbcUtil {
          * @return
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities) throws UncheckedSQLException {
             return batchInsert(namedInsertSQL, entities, DEFAULT_BATCH_SIZE);
         }
@@ -14970,8 +14976,8 @@ public final class JdbcUtil {
          * @return
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
 
         /**
@@ -15459,6 +15465,15 @@ public final class JdbcUtil {
         }
 
         /**
+         *
+         * @param entity
+         * @return
+         * @throws UncheckedSQLException the unchecked SQL exception
+         */
+        @Override
+        int delete(final T entity) throws UncheckedSQLException;
+
+        /**
          * Delete by id.
          *
          * @param id
@@ -15467,25 +15482,6 @@ public final class JdbcUtil {
          */
         @Override
         int deleteById(final ID id) throws UncheckedSQLException;
-
-        /**
-         *
-         * @param entity
-         * @return
-         * @throws UncheckedSQLException the unchecked SQL exception
-         */
-        @Override
-        int delete(final T entity) throws UncheckedSQLException;
-        //
-        //    /**
-        //     *
-        //     * @param entity
-        //     * @param onDeleteAction It should be defined and done in DB server side.
-        //     * @return
-        //     * @throws UncheckedSQLException the unchecked SQL exception
-        //     */
-        //    @Beta
-        //    int delete(final T entity, final OnDeleteAction onDeleteAction) throws UncheckedSQLException;
 
         /**
          *
@@ -16062,6 +16058,20 @@ public final class JdbcUtil {
         }
 
         /**
+         *
+         * @param entity
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int delete(final T entity) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
          * Delete by id.
          *
          * @param id
@@ -16073,20 +16083,6 @@ public final class JdbcUtil {
         @Deprecated
         @Override
         default int deleteById(final ID id) throws UnsupportedOperationException, UncheckedSQLException {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         *
-         * @param entity
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws UncheckedSQLException
-         * @deprecated unsupported Operation
-         */
-        @Deprecated
-        @Override
-        default int delete(final T entity) throws UnsupportedOperationException, UncheckedSQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -16547,8 +16543,8 @@ public final class JdbcUtil {
          * @return
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default List<T> list(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws UncheckedSQLException {
             final List<T> result = getDao(this).list(selectPropNames, cond);
 
@@ -16571,8 +16567,8 @@ public final class JdbcUtil {
          * @return
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default List<T> list(final Collection<String> selectPropNames, final Collection<? extends Class<?>> joinEntitiesToLoad, final Condition cond)
                 throws UncheckedSQLException {
             final List<T> result = getDao(this).list(selectPropNames, cond);
@@ -16602,8 +16598,8 @@ public final class JdbcUtil {
          * @return
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default List<T> list(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond)
                 throws UncheckedSQLException {
             final List<T> result = getDao(this).list(selectPropNames, cond);
@@ -16749,8 +16745,8 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 loadJoinEntities(entity, joinEntityPropNames, executor());
@@ -16766,8 +16762,8 @@ public final class JdbcUtil {
          * @param executor
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
             if (N.isNullOrEmpty(joinEntityPropNames)) {
                 return;
@@ -16804,8 +16800,8 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
                 throws UncheckedSQLException {
             if (inParallel) {
@@ -16822,8 +16818,8 @@ public final class JdbcUtil {
          * @param executor
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
                 throws UncheckedSQLException {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
@@ -16853,8 +16849,8 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadAllJoinEntities(final T entity, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 loadAllJoinEntities(entity, executor());
@@ -16869,8 +16865,8 @@ public final class JdbcUtil {
          * @param executor
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException {
             loadJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
         }
@@ -16895,8 +16891,8 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 loadAllJoinEntities(entities, executor());
@@ -16911,8 +16907,8 @@ public final class JdbcUtil {
          * @param executor
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
             if (N.isNullOrEmpty(entities)) {
                 return;
@@ -17075,8 +17071,8 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel)
                 throws UncheckedSQLException {
             if (inParallel) {
@@ -17093,8 +17089,8 @@ public final class JdbcUtil {
          * @param executor
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final Executor executor)
                 throws UncheckedSQLException {
             if (N.isNullOrEmpty(joinEntityPropNames)) {
@@ -17132,8 +17128,8 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
                 throws UncheckedSQLException {
             if (inParallel) {
@@ -17150,8 +17146,8 @@ public final class JdbcUtil {
          * @param executor
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
                 throws UncheckedSQLException {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
@@ -17181,8 +17177,8 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 loadJoinEntitiesIfNull(entity, executor());
@@ -17197,8 +17193,8 @@ public final class JdbcUtil {
          * @param executor
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws UncheckedSQLException {
             loadJoinEntitiesIfNull(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
         }
@@ -17223,8 +17219,8 @@ public final class JdbcUtil {
          * @param inParallel
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 loadJoinEntitiesIfNull(entities, executor());
@@ -17239,8 +17235,8 @@ public final class JdbcUtil {
          * @param executor
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
             if (N.isNullOrEmpty(entities)) {
                 return;
@@ -17383,9 +17379,9 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
-        @Override
-        @Deprecated
         @Beta
+        @Deprecated
+        @Override
         default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 return deleteJoinEntities(entity, joinEntityPropNames, executor());
@@ -17403,9 +17399,9 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
-        @Override
-        @Deprecated
         @Beta
+        @Deprecated
+        @Override
         default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
             if (N.isNullOrEmpty(joinEntityPropNames)) {
                 return 0;
@@ -17460,9 +17456,9 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
-        @Override
-        @Deprecated
         @Beta
+        @Deprecated
+        @Override
         default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
                 throws UncheckedSQLException {
             if (inParallel) {
@@ -17481,9 +17477,9 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
-        @Override
-        @Deprecated
         @Beta
+        @Deprecated
+        @Override
         default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
                 throws UncheckedSQLException {
             if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
@@ -17516,9 +17512,9 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
-        @Override
-        @Deprecated
         @Beta
+        @Deprecated
+        @Override
         default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 return deleteAllJoinEntities(entity, executor());
@@ -17535,9 +17531,9 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
-        @Override
-        @Deprecated
         @Beta
+        @Deprecated
+        @Override
         default int deleteAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException {
             return deleteJoinEntities(entity, getEntityJoinInfo(targetDaoInterface(), targetEntityClass()).keySet(), executor);
         }
@@ -17565,9 +17561,9 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
          */
-        @Override
-        @Deprecated
         @Beta
+        @Deprecated
+        @Override
         default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
             if (inParallel) {
                 return deleteAllJoinEntities(entities, executor());
@@ -17584,9 +17580,9 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException the unchecked SQL exception
          * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
          */
-        @Override
-        @Deprecated
         @Beta
+        @Deprecated
+        @Override
         default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
             if (N.isNullOrEmpty(entities)) {
                 return 0;
@@ -17790,8 +17786,8 @@ public final class JdbcUtil {
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad)
                 throws DuplicatedResultException, UncheckedSQLException {
             return batchGet(ids, null, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
@@ -17806,8 +17802,8 @@ public final class JdbcUtil {
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities)
                 throws DuplicatedResultException, UncheckedSQLException {
             return batchGet(ids, null, JdbcUtil.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
@@ -17823,8 +17819,8 @@ public final class JdbcUtil {
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
                 throws DuplicatedResultException, UncheckedSQLException {
             return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
@@ -17840,8 +17836,8 @@ public final class JdbcUtil {
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames,
                 final Collection<? extends Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
             return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
@@ -17857,8 +17853,8 @@ public final class JdbcUtil {
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
                 throws DuplicatedResultException, UncheckedSQLException {
             return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
@@ -17875,8 +17871,8 @@ public final class JdbcUtil {
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
                 final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
             final List<T> result = getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
@@ -17903,8 +17899,8 @@ public final class JdbcUtil {
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
                 final Collection<? extends Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
             final List<T> result = getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
@@ -17936,8 +17932,8 @@ public final class JdbcUtil {
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
-        @Override
         @Beta
+        @Override
         default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
                 final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException {
             final List<T> result = getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
