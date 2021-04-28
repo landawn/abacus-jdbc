@@ -11193,6 +11193,322 @@ public final class JdbcUtil {
      */
     @Beta
     public static interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T, SB, TD>> extends Dao<T, SB, TD> {
+        /**
+        *
+        * @param query
+        * @return
+        * @throws UnsupportedOperationException if the specified {@code query} is not a select sql statement.
+        * @throws SQLException
+        */
+        @Override
+        @NonDBOperation
+        default PreparedQuery prepareQuery(final String query) throws UnsupportedOperationException, SQLException {
+            if (!(JdbcUtil.isSelectQuery(query) || JdbcUtil.isInsertQuery(query))) {
+                throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
+            }
+
+            return JdbcUtil.prepareQuery(dataSource(), query);
+        }
+
+        /**
+        *
+        * @param query
+        * @param generateKeys
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
+            if (!(JdbcUtil.isSelectQuery(query) || JdbcUtil.isInsertQuery(query))) {
+                throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
+            }
+
+            return JdbcUtil.prepareQuery(dataSource(), query, generateKeys);
+        }
+
+        /**
+        *
+        * @param query
+        * @param returnColumnIndexes
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
+            if (!(JdbcUtil.isSelectQuery(query) || JdbcUtil.isInsertQuery(query))) {
+                throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
+            }
+
+            return JdbcUtil.prepareQuery(dataSource(), query, returnColumnIndexes);
+        }
+
+        /**
+        *
+        * @param query
+        * @param returnColumnIndexes
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
+            if (!(JdbcUtil.isSelectQuery(query) || JdbcUtil.isInsertQuery(query))) {
+                throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
+            }
+
+            return JdbcUtil.prepareQuery(dataSource(), query, returnColumnNames);
+        }
+
+        /**
+        *
+        * @param query
+        * @param stmtCreator
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default PreparedQuery prepareQuery(final String query, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
+                throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+        *
+        * @param namedQuery
+        * @return
+        * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a select sql statement.
+        * @throws SQLException
+        */
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final String namedQuery) throws UnsupportedOperationException, SQLException {
+            if (!(JdbcUtil.isSelectQuery(namedQuery) || JdbcUtil.isInsertQuery(namedQuery))) {
+                throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
+            }
+
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery);
+        }
+
+        /**
+        *
+        * @param namedQuery
+        * @param generateKeys
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
+            if (!(JdbcUtil.isSelectQuery(namedQuery) || JdbcUtil.isInsertQuery(namedQuery))) {
+                throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
+            }
+
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, generateKeys);
+        }
+
+        /**
+        *
+        * @param namedQuery
+        * @param returnColumnIndexes
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
+            if (!(JdbcUtil.isSelectQuery(namedQuery) || JdbcUtil.isInsertQuery(namedQuery))) {
+                throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
+            }
+
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
+        }
+
+        /**
+        *
+        * @param namedQuery
+        * @param returnColumnNames
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
+            if (!(JdbcUtil.isSelectQuery(namedQuery) || JdbcUtil.isInsertQuery(namedQuery))) {
+                throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
+            }
+
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
+        }
+
+        /**
+        *
+        * @param namedQuery
+        * @param stmtCreator
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final String namedQuery,
+                final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
+                throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+        *
+        * @param namedQuery the named query
+        * @return
+        * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a select sql statement.
+        * @throws SQLException
+        */
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final ParsedSql namedQuery) throws UnsupportedOperationException, SQLException {
+            if (!(JdbcUtil.isSelectQuery(namedQuery.sql()) || JdbcUtil.isInsertQuery(namedQuery.sql()))) {
+                throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
+            }
+
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery);
+        }
+
+        /**
+        *
+        * @param namedQuery the named query
+        * @param generateKeys
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
+            if (!(JdbcUtil.isSelectQuery(namedQuery.sql()) || JdbcUtil.isInsertQuery(namedQuery.sql()))) {
+                throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
+            }
+
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, generateKeys);
+        }
+
+        /**
+        *
+        * @param namedQuery
+        * @param returnColumnIndexes
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
+            if (!(JdbcUtil.isSelectQuery(namedQuery.sql()) || JdbcUtil.isInsertQuery(namedQuery.sql()))) {
+                throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
+            }
+
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
+        }
+
+        /**
+        *
+        * @param namedQuery
+        * @param returnColumnNames
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
+            if (!(JdbcUtil.isSelectQuery(namedQuery.sql()) || JdbcUtil.isInsertQuery(namedQuery.sql()))) {
+                throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
+            }
+
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
+        }
+
+        /**
+        *
+        * @param namedQuery the named query
+        * @param stmtCreator
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final ParsedSql namedQuery,
+                final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
+                throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+        *
+        * @param query
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default PreparedCallableQuery prepareCallableQuery(final String query) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+        *
+        * @param query
+        * @param stmtCreator
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
+        @Deprecated
+        @Override
+        @NonDBOperation
+        default PreparedCallableQuery prepareCallableQuery(final String query,
+                final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
+                throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
 
         /**
          *
@@ -11283,12 +11599,12 @@ public final class JdbcUtil {
     @Beta
     public static interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T, SB, TD>> extends NoUpdateDao<T, SB, TD> {
         /**
-         *
-         * @param query
-         * @return
-         * @throws UnsupportedOperationException if the specified {@code query} is not a select sql statement.
-         * @throws SQLException
-         */
+        *
+        * @param query
+        * @return
+        * @throws UnsupportedOperationException if the specified {@code query} is not a select sql statement.
+        * @throws SQLException
+        */
         @Override
         @NonDBOperation
         default PreparedQuery prepareQuery(final String query) throws UnsupportedOperationException, SQLException {
@@ -11300,77 +11616,72 @@ public final class JdbcUtil {
         }
 
         /**
-         *
-         * @param query
-         * @param generateKeys
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
+        *
+        * @param query
+        * @param generateKeys
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
         @Deprecated
         @Override
         @NonDBOperation
         default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
+            if (!JdbcUtil.isSelectQuery(query)) {
+                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
+            }
+
+            return JdbcUtil.prepareQuery(dataSource(), query, generateKeys);
         }
 
         /**
-         *
-         * @param query
-         * @param returnColumnIndexes
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
+        *
+        * @param query
+        * @param returnColumnIndexes
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
         @Deprecated
         @Override
         @NonDBOperation
         default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
+            if (!JdbcUtil.isSelectQuery(query)) {
+                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
+            }
+
+            return JdbcUtil.prepareQuery(dataSource(), query, returnColumnIndexes);
         }
 
         /**
-         *
-         * @param query
-         * @param returnColumnIndexes
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
+        *
+        * @param query
+        * @param returnColumnIndexes
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
         @Deprecated
         @Override
         @NonDBOperation
         default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
+            if (!JdbcUtil.isSelectQuery(query)) {
+                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
+            }
+
+            return JdbcUtil.prepareQuery(dataSource(), query, returnColumnNames);
         }
 
         /**
-         *
-         * @param sql
-         * @param stmtCreator
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
-        @Deprecated
-        @Override
-        @NonDBOperation
-        default PreparedQuery prepareQuery(final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-                throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         *
-         * @param namedQuery
-         * @return
-         * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a select sql statement.
-         * @throws SQLException
-         */
+        *
+        * @param namedQuery
+        * @return
+        * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a select sql statement.
+        * @throws SQLException
+        */
         @Override
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery) throws UnsupportedOperationException, SQLException {
@@ -11382,185 +11693,140 @@ public final class JdbcUtil {
         }
 
         /**
-         *
-         * @param namedQuery
-         * @param generateKeys
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
+        *
+        * @param namedQuery
+        * @param generateKeys
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
         @Deprecated
         @Override
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
+            if (!JdbcUtil.isSelectQuery(namedQuery)) {
+                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
+            }
+
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, generateKeys);
         }
 
         /**
-         *
-         * @param namedQuery
-         * @param returnColumnIndexes
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
+        *
+        * @param namedQuery
+        * @param returnColumnIndexes
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
         @Deprecated
         @Override
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
+            if (!JdbcUtil.isSelectQuery(namedQuery)) {
+                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
+            }
+
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
         }
 
         /**
-         *
-         * @param namedQuery
-         * @param returnColumnNames
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
+        *
+        * @param namedQuery
+        * @param returnColumnNames
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
         @Deprecated
         @Override
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         *
-         * @param namedQuery
-         * @param stmtCreator
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
-        @Deprecated
-        @Override
-        @NonDBOperation
-        default NamedQuery prepareNamedQuery(final String namedQuery,
-                final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-                throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         *
-         * @param namedSql the named query
-         * @return
-         * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a select sql statement.
-         * @throws SQLException
-         */
-        @Override
-        @NonDBOperation
-        default NamedQuery prepareNamedQuery(final ParsedSql namedSql) throws UnsupportedOperationException, SQLException {
-            if (!JdbcUtil.isSelectQuery(namedSql.sql())) {
+            if (!JdbcUtil.isSelectQuery(namedQuery)) {
                 throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
             }
 
-            return JdbcUtil.prepareNamedQuery(dataSource(), namedSql);
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
         }
 
         /**
-         *
-         * @param namedSql the named query
-         * @param generateKeys
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
+        *
+        * @param namedQuery the named query
+        * @return
+        * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a select sql statement.
+        * @throws SQLException
+        */
+        @Override
+        @NonDBOperation
+        default NamedQuery prepareNamedQuery(final ParsedSql namedQuery) throws UnsupportedOperationException, SQLException {
+            if (!JdbcUtil.isSelectQuery(namedQuery.sql())) {
+                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
+            }
+
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery);
+        }
+
+        /**
+        *
+        * @param namedQuery the named query
+        * @param generateKeys
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
         @Deprecated
         @Override
         @NonDBOperation
-        default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
+        default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
+            if (!JdbcUtil.isSelectQuery(namedQuery.sql())) {
+                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
+            }
+
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, generateKeys);
         }
 
         /**
-         *
-         * @param namedQuery
-         * @param returnColumnIndexes
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
+        *
+        * @param namedQuery
+        * @param returnColumnIndexes
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
         @Deprecated
         @Override
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
+            if (!JdbcUtil.isSelectQuery(namedQuery.sql())) {
+                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
+            }
+
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
         }
 
         /**
-         *
-         * @param namedQuery
-         * @param returnColumnNames
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
+        *
+        * @param namedQuery
+        * @param returnColumnNames
+        * @return
+        * @throws UnsupportedOperationException
+        * @throws SQLException
+        * @deprecated unsupported Operation
+        */
         @Deprecated
         @Override
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
-        }
+            if (!JdbcUtil.isSelectQuery(namedQuery.sql())) {
+                throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
+            }
 
-        /**
-         *
-         * @param namedSql the named query
-         * @param stmtCreator
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
-        @Deprecated
-        @Override
-        @NonDBOperation
-        default NamedQuery prepareNamedQuery(final ParsedSql namedSql,
-                final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-                throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         *
-         * @param query
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
-        @Deprecated
-        @Override
-        @NonDBOperation
-        default PreparedCallableQuery prepareCallableQuery(final String query) throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         *
-         * @param sql
-         * @param stmtCreator
-         * @return
-         * @throws UnsupportedOperationException
-         * @throws SQLException
-         * @deprecated unsupported Operation
-         */
-        @Deprecated
-        @Override
-        @NonDBOperation
-        default PreparedCallableQuery prepareCallableQuery(final String sql,
-                final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
-                throws UnsupportedOperationException, SQLException {
-            throw new UnsupportedOperationException();
+            return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
         }
 
         /**
@@ -18278,6 +18544,10 @@ public final class JdbcUtil {
 
     static boolean isSelectQuery(String sql) throws UnsupportedOperationException {
         return sql.startsWith("select ") || sql.startsWith("SELECT ") || StringUtil.startsWithIgnoreCase(StringUtil.trim(sql), "select ");
+    }
+
+    static boolean isInsertQuery(String sql) throws UnsupportedOperationException {
+        return sql.startsWith("insert ") || sql.startsWith("INSERT ") || StringUtil.startsWithIgnoreCase(StringUtil.trim(sql), "insert ");
     }
 
     static final Throwables.Consumer<? super Exception, SQLException> throwSQLExceptionAction = e -> {
