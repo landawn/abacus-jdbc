@@ -977,9 +977,9 @@ public final class JdbcUtil {
         } else if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
             obj = rs.getTimestamp(columnIndex);
         } else if (className != null && className.startsWith("oracle.sql.DATE")) {
-            final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
+            final String columnClassName = rs.getMetaData().getColumnClassName(columnIndex);
 
-            if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
+            if ("java.sql.Timestamp".equals(columnClassName) || "oracle.sql.TIMESTAMP".equals(columnClassName)) {
                 obj = rs.getTimestamp(columnIndex);
             } else {
                 obj = rs.getDate(columnIndex);
@@ -1030,7 +1030,7 @@ public final class JdbcUtil {
             final int columnIndex = getColumnIndex(metaData, columnLabel);
 
             if (className != null && className.startsWith("oracle.sql.DATE")) {
-                final String metaDataClassName = getColumnCanonicalClassName(metaData, columnIndex);
+                final String metaDataClassName = metaData.getColumnClassName(columnIndex);
 
                 if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
                     obj = rs.getTimestamp(columnLabel);
@@ -1038,7 +1038,7 @@ public final class JdbcUtil {
                     obj = rs.getDate(columnLabel);
                 }
             } else if (obj instanceof java.sql.Date) {
-                if ("java.sql.Timestamp".equals(getColumnCanonicalClassName(metaData, columnIndex))) {
+                if ("java.sql.Timestamp".equals(metaData.getColumnClassName(columnIndex))) {
                     obj = rs.getTimestamp(columnLabel);
                 }
             }
