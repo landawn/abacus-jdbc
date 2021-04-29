@@ -159,6 +159,8 @@ public final class JdbcUtil {
 
     static final Logger logger = LoggerFactory.getLogger(JdbcUtil.class);
 
+    static final Logger sqlLogger = LoggerFactory.getLogger("com.landawn.abacus.jdbc.SQL");
+
     public static final int DEFAULT_BATCH_SIZE = 200;
 
     // static final int MAX_BATCH_SIZE = 1000;
@@ -3284,7 +3286,7 @@ public final class JdbcUtil {
     static ResultSet executeQuery(PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
-        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && logger.isInfoEnabled()) {
+        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled()) {
             final long startTime = System.currentTimeMillis();
 
             try {
@@ -3306,7 +3308,7 @@ public final class JdbcUtil {
     static int executeUpdate(PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
-        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && logger.isInfoEnabled()) {
+        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled()) {
             final long startTime = System.currentTimeMillis();
 
             try {
@@ -3328,7 +3330,7 @@ public final class JdbcUtil {
     static int[] executeBatch(Statement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
-        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && logger.isInfoEnabled()) {
+        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled()) {
             final long startTime = System.currentTimeMillis();
 
             try {
@@ -3358,7 +3360,7 @@ public final class JdbcUtil {
     static long[] executeLargeBatch(Statement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
-        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && logger.isInfoEnabled()) {
+        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled()) {
             final long startTime = System.currentTimeMillis();
 
             try {
@@ -3388,7 +3390,7 @@ public final class JdbcUtil {
     static boolean execute(PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
-        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && logger.isInfoEnabled()) {
+        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled()) {
             final long startTime = System.currentTimeMillis();
 
             try {
@@ -4829,7 +4831,7 @@ public final class JdbcUtil {
     }
 
     static void logSql(final String sql) {
-        if (logger.isDebugEnabled() == false) {
+        if (sqlLogger.isDebugEnabled() == false) {
             return;
         }
 
@@ -4837,9 +4839,9 @@ public final class JdbcUtil {
 
         if (isSqlLogAllowed && sqlLogConfig.isEnabled) {
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
-                logger.debug("[SQL]: " + sql);
+                sqlLogger.debug("[SQL]: " + sql);
             } else {
-                logger.debug("[SQL]: " + sql.substring(0, sqlLogConfig.maxSqlLogLength));
+                sqlLogger.debug("[SQL]: " + sql.substring(0, sqlLogConfig.maxSqlLogLength));
             }
         }
     }
@@ -4890,7 +4892,7 @@ public final class JdbcUtil {
     }
 
     static void logSqlPerf(final Statement stmt, final SqlLogConfig sqlLogConfig, final long startTime) {
-        if (logger.isInfoEnabled() == false) {
+        if (sqlLogger.isInfoEnabled() == false) {
             return;
         }
 
@@ -4900,9 +4902,9 @@ public final class JdbcUtil {
             final String sql = stmt.toString();
 
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
-                logger.info(StringUtil.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", sql));
+                sqlLogger.info(StringUtil.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", sql));
             } else {
-                logger.info(StringUtil.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", sql.substring(0, sqlLogConfig.maxSqlLogLength)));
+                sqlLogger.info(StringUtil.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", sql.substring(0, sqlLogConfig.maxSqlLogLength)));
             }
         }
     }
