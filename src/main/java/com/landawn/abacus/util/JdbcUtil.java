@@ -19319,13 +19319,17 @@ public final class JdbcUtil {
     }
 
     private static String getColumnCanonicalClassName(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
-        String columnClassName = rsmd.getColumnClassName(columnIndex);
+        String className = rsmd.getColumnClassName(columnIndex);
 
         try {
-            return ClassUtil.getCanonicalClassName(ClassUtil.forClass(columnClassName));
+            className = ClassUtil.getCanonicalClassName(ClassUtil.forClass(className));
         } catch (Throwable e) {
-            return columnClassName;
+            // ignore.
         }
+
+        className = className.replace("java.lang.", "");
+
+        return eccClassNameMap.getOrDefault(className, className);
     }
 
     private static String getColumnClassName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
