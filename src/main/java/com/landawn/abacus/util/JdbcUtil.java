@@ -167,6 +167,23 @@ public final class JdbcUtil {
 
     public static final int DEFAULT_FETCH_SIZE_FOR_BIG_RESULT = 1000;
 
+    public static final Function<Statement, String> DEFAULT_SQL_EXTRACTOR = stmt -> {
+        String sql = stmt.toString();
+
+        if (sql.startsWith("Hikari")) {
+            String delimitor = "wrapping ";
+            int idx = sql.indexOf(delimitor);
+
+            if (idx > 0) {
+                sql = sql.substring(idx + delimitor.length());
+            }
+        }
+
+        return sql;
+    };
+
+    static Function<Statement, String> sqlExtractor = DEFAULT_SQL_EXTRACTOR;
+
     // ...
     static final String CURRENT_DIR_PATH = "./";
 
@@ -4899,7 +4916,8 @@ public final class JdbcUtil {
         final long elapsedTime = System.currentTimeMillis() - startTime;
 
         if (elapsedTime >= sqlLogConfig.minExecutionTimeForSqlPerfLog) {
-            final String sql = stmt.toString();
+            final Function<Statement, String> sqlExtractor = N.defaultIfNull(JdbcUtil.sqlExtractor, JdbcUtil.DEFAULT_SQL_EXTRACTOR);
+            final String sql = sqlExtractor.apply(stmt);
 
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
                 sqlLogger.info(StringUtil.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", sql));
@@ -5131,6 +5149,14 @@ public final class JdbcUtil {
 
     public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
         return SQLBuilder.getUpdatePropNames(entityClass, excludedPropNames);
+    }
+
+    public static Function<Statement, String> getSqlExtractor() {
+        return sqlExtractor;
+    }
+
+    public static void setSqlExtractor(final Function<Statement, String> sqlExtractor) {
+        JdbcUtil.sqlExtractor = sqlExtractor;
     }
 
     @Beta
