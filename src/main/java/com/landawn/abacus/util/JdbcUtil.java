@@ -184,6 +184,9 @@ public final class JdbcUtil {
 
     static Function<Statement, String> sqlExtractor = DEFAULT_SQL_EXTRACTOR;
 
+    // TODO is it right to do it?
+    // static final KeyedObjectPool<Statement, PoolableWrapper<String>> stmtPoolForSql = PoolFactory.createKeyedObjectPool(1000, 3000);
+
     // ...
     static final String CURRENT_DIR_PATH = "./";
 
@@ -4862,6 +4865,15 @@ public final class JdbcUtil {
             }
         }
     }
+
+    // TODO is it right to do it?
+    //    static <ST extends Statement> ST checkStatement(ST stmt, String sql) {
+    //        if (isSqlPerfLogAllowed && N.notNullOrEmpty(sql)) {
+    //            stmtPoolForSql.put(stmt, Poolable.wrap(sql, 3000, 3000));
+    //        }
+    //
+    //        return stmt;
+    //    }
 
     static final long DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG = 3000L;
 
