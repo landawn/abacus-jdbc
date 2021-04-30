@@ -4831,13 +4831,13 @@ public final class JdbcUtil {
     }
 
     static void logSql(final String sql) {
-        if (sqlLogger.isDebugEnabled() == false) {
+        if (isSqlLogAllowed == false || sqlLogger.isDebugEnabled() == false) {
             return;
         }
 
         final SqlLogConfig sqlLogConfig = isSQLLogEnabled_TL.get();
 
-        if (isSqlLogAllowed && sqlLogConfig.isEnabled) {
+        if (sqlLogConfig.isEnabled) {
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
                 sqlLogger.debug("[SQL]: " + sql);
             } else {
@@ -4892,13 +4892,13 @@ public final class JdbcUtil {
     }
 
     static void logSqlPerf(final Statement stmt, final SqlLogConfig sqlLogConfig, final long startTime) {
-        if (sqlLogger.isInfoEnabled() == false) {
+        if (isSqlPerfLogAllowed == false || sqlLogger.isInfoEnabled() == false) {
             return;
         }
 
         final long elapsedTime = System.currentTimeMillis() - startTime;
 
-        if (isSqlPerfLogAllowed && elapsedTime >= sqlLogConfig.minExecutionTimeForSqlPerfLog) {
+        if (elapsedTime >= sqlLogConfig.minExecutionTimeForSqlPerfLog) {
             final String sql = stmt.toString();
 
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
@@ -19024,10 +19024,6 @@ public final class JdbcUtil {
 
     static final String eccClassAnnos = "@Builder\r\n" + "@Data\r\n" + "@NoArgsConstructor\r\n" + "@AllArgsConstructor\r\n" + "@Accessors(chain = true)\r\n";
 
-    @SuppressWarnings("deprecation")
-    private static final Map<String, String> eccClassNameMap = N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short", "short", "Integer",
-            "int", "Long", "long", "Float", "float", "Double", "double");
-
     private static final EntityCodeConfig defaultEntityCodeConfig = EntityCodeConfig.builder()
             .fieldNameConverter((tableName, columnName) -> StringUtil.toCamelCase(columnName))
             .build();
@@ -19228,9 +19224,9 @@ public final class JdbcUtil {
                         : customizedField._2;
 
                 final String columnClassName = customizedField == null || customizedField._3 == null
-                        ? (fieldTypeConverter != null ? fieldTypeConverter.apply(tableName, columnName, fieldName, getColumnCanonicalClassName(rsmd, i))
-                                : getColumnClassName(getColumnCanonicalClassName(rsmd, i), false, configToUse))
-                        : getColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
+                        ? (fieldTypeConverter != null ? fieldTypeConverter.apply(tableName, columnName, fieldName, getColumnClassName(rsmd, i))
+                                : getClassName(getColumnClassName(rsmd, i), false, configToUse))
+                        : getClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
 
                 sb.append("\r\n");
 
@@ -19320,7 +19316,11 @@ public final class JdbcUtil {
         }
     }
 
-    private static String getColumnCanonicalClassName(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
+    @SuppressWarnings("deprecation")
+    private static final BiMap<String, String> eccClassNameMap = BiMap.from(N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short", "short",
+            "Integer", "int", "Long", "long", "Float", "float", "Double", "double"));
+
+    private static String getColumnClassName(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
         String className = rsmd.getColumnClassName(columnIndex);
 
         try {
@@ -19334,7 +19334,7 @@ public final class JdbcUtil {
         return eccClassNameMap.getOrDefault(className, className);
     }
 
-    private static String getColumnClassName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
+    private static String getClassName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
         String className = columnClassName.replace("java.lang.", "");
 
         if (isCustomizedType) {
@@ -19343,8 +19343,8 @@ public final class JdbcUtil {
             return "long";
         } else if (configToUse.isMapBigDecimalToDouble() && ClassUtil.getCanonicalClassName(BigDecimal.class).equals(columnClassName)) {
             return "double";
-        } else if (!configToUse.isUseBoxedType()) {
-            return eccClassNameMap.getOrDefault(className, className);
+        } else if (configToUse.isUseBoxedType()) {
+            return eccClassNameMap.containsValue(className) ? eccClassNameMap.getByValue(className) : className;
         } else {
             return className;
         }
