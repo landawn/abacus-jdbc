@@ -840,14 +840,6 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         return this;
     }
 
-    private void addOutParameters(OutParam outParameter) {
-        if (outParams == null) {
-            outParams = new ArrayList<>();
-        }
-
-        outParams.add(outParameter);
-    }
-
     /**
      * Register out parameter.
      *
@@ -1088,6 +1080,14 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         }
 
         return this;
+    }
+
+    private void addOutParameters(OutParam outParameter) {
+        if (outParams == null) {
+            outParams = new ArrayList<>();
+        }
+    
+        outParams.add(outParameter);
     }
 
     @Override

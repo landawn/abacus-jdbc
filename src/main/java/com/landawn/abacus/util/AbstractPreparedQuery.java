@@ -1342,6 +1342,30 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    //    /**
+    //     * 
+    //     * @param paramSetter
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    public This setParameters(final BiParametersSetter<? super This, ? super Stmt> paramSetter) throws SQLException {
+    //        checkArgNotNull(paramSetter, "paramSetter");
+    //
+    //        boolean noException = false;
+    //
+    //        try {
+    //            paramSetter.accept((This) this, stmt);
+    //
+    //            noException = true;
+    //        } finally {
+    //            if (noException == false) {
+    //                close();
+    //            }
+    //        }
+    //
+    //        return (This) this;
+    //    }
+
     /**
      * Sets the parameters.
      *
@@ -1368,6 +1392,25 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
         return (This) this;
     }
+
+    //    public <T> This setParameters(final T parameters, final Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException> paramSetter)
+    //            throws SQLException {
+    //        checkArgNotNull(paramSetter, "paramSetter");
+    //
+    //        boolean noException = false;
+    //
+    //        try {
+    //            paramSetter.accept((This) this, stmt, parameters);
+    //
+    //            noException = true;
+    //        } finally {
+    //            if (noException == false) {
+    //                close();
+    //            }
+    //        }
+    //
+    //        return (This) this;
+    //    }
 
     /**
      * Sets the parameters.
@@ -1546,6 +1589,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException the SQL exception
      */
+    @Beta
     public This settParameters(ParametersSetter<? super This> paramSetter) throws SQLException {
         checkArgNotNull(paramSetter, "paramSetter");
 
@@ -1572,6 +1616,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException the SQL exception
      */
+    @Beta
     public <T> This settParameters(final T parameter, BiParametersSetter<? super This, ? super T> paramSetter) throws SQLException {
         checkArgNotNull(paramSetter, "paramSetter");
 
@@ -1747,6 +1792,21 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     * @param <T>
+     * @param batchParameters
+     * @param batchParameters
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public <T> This addBatchParameters(final Iterator<T> batchParameters, final Class<T> type) throws SQLException {
+        checkArgNotNull(batchParameters, "batchParameters");
+
+        return addBatchParameters(N.toList(batchParameters), type);
+    }
+
     //    /**
     //     * 
     //     * @param batchParameters
@@ -1842,6 +1902,55 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    //    /**
+    //     * @param <T>
+    //     * @param batchParameters
+    //     * @param parametersSetter
+    //     * @return
+    //     * @throws SQLException the SQL exception
+    //     */
+    //    @Beta
+    //    public <T> This addBatchParametters(final Collection<T> batchParameters, BiParametersSetter<? super Stmt, ? super T> parametersSetter) throws SQLException {
+    //        checkArgNotNull(batchParameters, "batchParameters");
+    //        checkArgNotNull(parametersSetter, "parametersSetter");
+    //
+    //        return addBatchParametters(batchParameters.iterator(), parametersSetter);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param <T>
+    //     * @param batchParameters
+    //     * @param parametersSetter
+    //     * @return
+    //     * @throws SQLException the SQL exception
+    //     */
+    //    @Beta
+    //    public <T> This addBatchParametters(final Iterator<T> batchParameters, BiParametersSetter<? super Stmt, ? super T> parametersSetter) throws SQLException {
+    //        checkArgNotNull(batchParameters, "batchParameters");
+    //        checkArgNotNull(parametersSetter, "parametersSetter");
+    //
+    //        boolean noException = false;
+    //
+    //        try {
+    //            final Iterator<T> iter = batchParameters;
+    //
+    //            while (iter.hasNext()) {
+    //                parametersSetter.accept(stmt, iter.next());
+    //                stmt.addBatch();
+    //                isBatch = true;
+    //            }
+    //
+    //            noException = true;
+    //        } finally {
+    //            if (noException == false) {
+    //                close();
+    //            }
+    //        }
+    //
+    //        return (This) this;
+    //    }
+
     /**
      * @param <T>
      * @param batchParameters
@@ -1879,55 +1988,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
             while (iter.hasNext()) {
                 parametersSetter.accept((This) this, stmt, iter.next());
-                stmt.addBatch();
-                isBatch = true;
-            }
-
-            noException = true;
-        } finally {
-            if (noException == false) {
-                close();
-            }
-        }
-
-        return (This) this;
-    }
-
-    /**
-     * @param <T>
-     * @param batchParameters
-     * @param parametersSetter
-     * @return
-     * @throws SQLException the SQL exception
-     */
-    @Beta
-    public <T> This addBatchParametters(final Collection<T> batchParameters, BiParametersSetter<? super Stmt, ? super T> parametersSetter) throws SQLException {
-        checkArgNotNull(batchParameters, "batchParameters");
-        checkArgNotNull(parametersSetter, "parametersSetter");
-
-        return addBatchParametters(batchParameters.iterator(), parametersSetter);
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param batchParameters
-     * @param parametersSetter
-     * @return
-     * @throws SQLException the SQL exception
-     */
-    @Beta
-    public <T> This addBatchParametters(final Iterator<T> batchParameters, BiParametersSetter<? super Stmt, ? super T> parametersSetter) throws SQLException {
-        checkArgNotNull(batchParameters, "batchParameters");
-        checkArgNotNull(parametersSetter, "parametersSetter");
-
-        boolean noException = false;
-
-        try {
-            final Iterator<T> iter = batchParameters;
-
-            while (iter.hasNext()) {
-                parametersSetter.accept(stmt, iter.next());
                 stmt.addBatch();
                 isBatch = true;
             }
