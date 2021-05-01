@@ -552,8 +552,6 @@ final class DaoImpl {
     @SuppressWarnings("rawtypes")
     private static JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Collection> collParamsSetter = (q, p) -> q.setParameters(p);
 
-    private static JdbcUtil.BiParametersSetter<NamedQuery, Map<String, ?>> mapParamsSetter = (NamedQuery q, Map<String, ?> p) -> q.setParameters(p);
-
     private static JdbcUtil.BiParametersSetter<NamedQuery, Object> objParamsSetter = (NamedQuery q, Object p) -> q.setParameters(p);
 
     /**
@@ -3405,9 +3403,10 @@ final class DaoImpl {
                             final Object id = args[1];
                             N.checkArgNotNullOrEmpty(props, "updateProps");
 
-                            final String query = namedUpdateFunc.apply(entityClass).set(props.keySet()).where(idCond).sql();
+                            final Condition cond = isEntityId ? CF.id2Cond((EntityId) id) : (id instanceof Map ? CF.eqAnd((Map<String, ?>) id) : CF.eqAnd(id));
 
-                            return proxy.prepareNamedQuery(query).settParameters(props, mapParamsSetter).settParameters(id, idParamSetter).update();
+                            final SP sp = parameterizedUpdateFunc.apply(entityClass).set(props).append(cond).pair();
+                            return proxy.prepareQuery(sp.sql).settParameters(sp.parameters, collParamsSetter).update();
                         };
                     } else if (methodName.equals("batchUpdate") && paramLen == 2 && int.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
