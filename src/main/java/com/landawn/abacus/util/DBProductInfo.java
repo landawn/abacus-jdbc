@@ -15,13 +15,9 @@
  */
 package com.landawn.abacus.util;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Value;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Value
 public class DBProductInfo {
 
     private String productName;
