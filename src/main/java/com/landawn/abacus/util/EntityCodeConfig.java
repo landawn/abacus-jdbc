@@ -57,7 +57,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class EntityCodeConfig {
+public final class EntityCodeConfig {
 
     private String className;
     private String packageName;

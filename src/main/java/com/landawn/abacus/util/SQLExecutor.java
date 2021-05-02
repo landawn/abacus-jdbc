@@ -166,7 +166,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html">http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html</a>
  * @since 0.8
  */
-public class SQLExecutor {
+public final class SQLExecutor {
 
     /** The Constant logger. */
     private static final Logger logger = LoggerFactory.getLogger(SQLExecutor.class);
@@ -4006,6 +4006,10 @@ public class SQLExecutor {
                                 }
 
                                 try {
+                                    if (columnLabels == null) {
+                                        columnLabels = JdbcUtil.getColumnLabelList(rs);
+                                    }
+
                                     final T result = rowMapper.apply(rs, columnLabels);
                                     hasNext = false;
                                     return result;

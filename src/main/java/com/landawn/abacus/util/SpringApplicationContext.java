@@ -19,7 +19,7 @@ package com.landawn.abacus.util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
-class SpringApplicationContext {
+final class SpringApplicationContext {
 
     @Autowired
     private ApplicationContext appContext;
