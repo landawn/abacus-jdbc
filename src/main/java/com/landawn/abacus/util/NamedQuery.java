@@ -2696,12 +2696,14 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
         final Class<?> cls = entity.getClass();
         final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
         PropInfo propInfo = null;
-        Object propValue;
+        Object propValue = null;
+        Type<Object> dbType = null;
         IntList indexes = null;
 
         for (String parameterName : parameterNames) {
             propInfo = entityInfo.getPropInfo(parameterName);
             propValue = propInfo.getPropValue(entity);
+            dbType = propInfo.dbType;
 
             indexes = paramNameIndexMap.get(parameterName);
 
@@ -2710,17 +2712,17 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
                 throw new IllegalArgumentException("Not found named parameter: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    propInfo.dbType.set(stmt, indexes.get(0), propValue);
+                    dbType.set(stmt, indexes.get(0), propValue);
                 } else if (indexes.size() == 2) {
-                    propInfo.dbType.set(stmt, indexes.get(0), propValue);
-                    propInfo.dbType.set(stmt, indexes.get(1), propValue);
+                    dbType.set(stmt, indexes.get(0), propValue);
+                    dbType.set(stmt, indexes.get(1), propValue);
                 } else if (indexes.size() == 3) {
-                    propInfo.dbType.set(stmt, indexes.get(0), propValue);
-                    propInfo.dbType.set(stmt, indexes.get(1), propValue);
-                    propInfo.dbType.set(stmt, indexes.get(2), propValue);
+                    dbType.set(stmt, indexes.get(0), propValue);
+                    dbType.set(stmt, indexes.get(1), propValue);
+                    dbType.set(stmt, indexes.get(2), propValue);
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        propInfo.dbType.set(stmt, indexes.get(i), propValue);
+                        dbType.set(stmt, indexes.get(i), propValue);
                     }
                 }
             }

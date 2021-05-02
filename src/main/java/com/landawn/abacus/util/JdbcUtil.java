@@ -10382,7 +10382,7 @@ public final class JdbcUtil {
         int update(final Map<String, Object> updateProps, final Condition cond) throws SQLException;
 
         /**
-         * Update all the records found by specified {@code cond} with all the properties from specified {@code entity}.
+         * Update all the records found by specified {@code cond} with the properties from specified {@code entity}.
          * 
          * @param entity
          * @param cond
@@ -10391,7 +10391,26 @@ public final class JdbcUtil {
          * @see ConditionFactory
          * @see ConditionFactory.CF
          */
-        int update(final T entity, final Condition cond) throws SQLException;
+        default int update(final T entity, final Condition cond) throws SQLException {
+            @SuppressWarnings("deprecation")
+            final Collection<String> propNamesToUpdate = ClassUtil.isDirtyMarker(targetEntityClass()) ? ((DirtyMarker) entity).dirtyPropNames()
+                    : SQLBuilder.getUpdatePropNames(targetEntityClass(), null);
+
+            return update(entity, propNamesToUpdate, cond);
+        }
+
+        /**
+         * Update all the records found by specified {@code cond} with specified {@code propNamesToUpdate} from specified {@code entity}.
+         * 
+         * @param entity
+         * @param cond
+         * @param propNamesToUpdate
+         * @return
+         * @throws SQLException
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
+         */
+        int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws SQLException;
 
         /**
          * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
@@ -11578,8 +11597,7 @@ public final class JdbcUtil {
             throw new UnsupportedOperationException();
         }
 
-        /**
-         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+        /** 
          *
          * @param entity
          * @param cond to verify if the record exists or not.
@@ -11591,6 +11609,24 @@ public final class JdbcUtil {
         @Deprecated
         @Override
         default int update(final T entity, final Condition cond) throws UnsupportedOperationException, SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Update all the records found by specified {@code cond} with specified {@code propNamesToUpdate} from specified {@code entity}.
+         * 
+         * @param entity
+         * @param cond
+         * @param propNamesToUpdate
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws SQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond)
+                throws UnsupportedOperationException, SQLException {
             throw new UnsupportedOperationException();
         }
 
@@ -15072,7 +15108,7 @@ public final class JdbcUtil {
         int update(final Map<String, Object> updateProps, final Condition cond) throws UncheckedSQLException;
 
         /**
-         * Update all the records found by specified {@code cond} with all the properties from specified {@code entity}.
+         * Update all the records found by specified {@code cond} with the properties from specified {@code entity}.
          * 
          * @param entity
          * @param cond
@@ -15080,7 +15116,27 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException
          */
         @Override
-        int update(final T entity, final Condition cond) throws UncheckedSQLException;
+        default int update(final T entity, final Condition cond) throws UncheckedSQLException {
+            @SuppressWarnings("deprecation")
+            final Collection<String> propNamesToUpdate = ClassUtil.isDirtyMarker(targetEntityClass()) ? ((DirtyMarker) entity).dirtyPropNames()
+                    : SQLBuilder.getUpdatePropNames(targetEntityClass(), null);
+
+            return update(entity, propNamesToUpdate, cond);
+        }
+
+        /**
+         * Update all the records found by specified {@code cond} with specified {@code propNamesToUpdate} from specified {@code entity}.
+         * 
+         * @param entity
+         * @param cond
+         * @param propNamesToUpdate
+         * @return
+         * @throws SQLException
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
+         */
+        @Override
+        int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws UncheckedSQLException;
 
         /**
          * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
@@ -15925,8 +15981,6 @@ public final class JdbcUtil {
         }
 
         /**
-         * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
-         *
          * @param entity
          * @param cond to verify if the record exists or not.
          * @return
@@ -15937,6 +15991,22 @@ public final class JdbcUtil {
         @Deprecated
         @Override
         default int update(final T entity, final Condition cond) throws UnsupportedOperationException, UncheckedSQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        /** 
+         * @param entity
+         * @param cond
+         * @param propNamesToUpdate
+         * @return
+         * @throws UnsupportedOperationException
+         * @throws UncheckedSQLException
+         * @deprecated unsupported Operation
+         */
+        @Deprecated
+        @Override
+        default int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond)
+                throws UnsupportedOperationException, UncheckedSQLException {
             throw new UnsupportedOperationException();
         }
 

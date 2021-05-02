@@ -2902,14 +2902,12 @@ final class DaoImpl {
                             final SP sp = parameterizedUpdateFunc.apply(entityClass).set(props).append(cond).pair();
                             return proxy.prepareQuery(sp.sql).settParameters(sp.parameters, collParamsSetter).update();
                         };
-                    } else if (methodName.equals("update") && paramLen == 2 && !Map.class.equals(paramTypes[0])
-                            && Condition.class.isAssignableFrom(paramTypes[1])) {
+                    } else if (methodName.equals("update") && paramLen == 3 && !Map.class.equals(paramTypes[0])
+                            && Collection.class.isAssignableFrom(paramTypes[1]) && Condition.class.isAssignableFrom(paramTypes[2])) {
                         call = (proxy, args) -> {
                             final Object entity = args[0];
-                            final Condition cond = (Condition) args[1];
-                            final DirtyMarker dirtyMarkerEntity = isDirtyMarker ? (DirtyMarker) entity : null;
-                            final Collection<String> propNamesToUpdate = isDirtyMarker ? dirtyMarkerEntity.dirtyPropNames()
-                                    : SQLBuilder.getUpdatePropNames(entityClass, null);
+                            final Collection<String> propNamesToUpdate = (Collection<String>) args[1];
+                            final Condition cond = (Condition) args[2];
 
                             N.checkArgNotNullOrEmpty(propNamesToUpdate, "No field to update.");
 
@@ -2935,7 +2933,7 @@ final class DaoImpl {
                             final int result = proxy.prepareQuery(sp.sql).settParameters(entity, paramsSetter).update();
 
                             if (isDirtyMarker) {
-                                DirtyMarkerUtil.markDirty(dirtyMarkerEntity, false);
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propNamesToUpdate, false);
                             }
 
                             return result;
