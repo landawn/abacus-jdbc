@@ -8822,7 +8822,7 @@ public final class JdbcUtil {
              * 
              * @return
              */
-            String[] filter() default { "query", "queryFor", "list", "get", "find", "findFirst", "findOnlyOne", "exist", "count" };
+            String[] filter() default { "query", "queryFor", "list", "get", "find", "findFirst", "findOnlyOne", "exist", "notExist", "count" };
 
             // TODO: second, what will key be like?: {methodName=[args]} -> JSON or kryo? 
             // KeyGenerator keyGenerator() default KeyGenerator.JSON; KeyGenerator.JSON/KRYO;
