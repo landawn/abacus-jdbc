@@ -2678,17 +2678,17 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
      *
      * @param <T>
      * @param paramaters
-     * @param parametersSetter
+     * @param paramsSetter
      * @return
      * @throws SQLException the SQL exception
      */
-    public <T> NamedQuery setParameters(final T paramaters, TriParametersSetter<? super NamedQuery, ? super T> parametersSetter) throws SQLException {
-        checkArgNotNull(parametersSetter, "parametersSetter");
+    public <T> NamedQuery setParameters(final T paramaters, TriParametersSetter<? super NamedQuery, ? super T> paramsSetter) throws SQLException {
+        checkArgNotNull(paramsSetter, "paramsSetter");
 
         boolean noException = false;
 
         try {
-            parametersSetter.accept(namedSql, this, paramaters);
+            paramsSetter.accept(namedSql, this, paramaters);
 
             noException = true;
         } finally {

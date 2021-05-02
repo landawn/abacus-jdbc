@@ -1320,17 +1320,17 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * Sets the parameters.
      *
-     * @param paramSetter
+     * @param paramsSetter
      * @return
      * @throws SQLException the SQL exception
      */
-    public This setParameters(final ParametersSetter<? super Stmt> paramSetter) throws SQLException {
-        checkArgNotNull(paramSetter, "paramSetter");
+    public This setParameters(final ParametersSetter<? super Stmt> paramsSetter) throws SQLException {
+        checkArgNotNull(paramsSetter, "paramsSetter");
 
         boolean noException = false;
 
         try {
-            paramSetter.accept(stmt);
+            paramsSetter.accept(stmt);
 
             noException = true;
         } finally {
@@ -1344,17 +1344,17 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     //    /**
     //     * 
-    //     * @param paramSetter
+    //     * @param paramsSetter
     //     * @return
     //     * @throws SQLException
     //     */
-    //    public This setParameters(final BiParametersSetter<? super This, ? super Stmt> paramSetter) throws SQLException {
-    //        checkArgNotNull(paramSetter, "paramSetter");
+    //    public This setParameters(final BiParametersSetter<? super This, ? super Stmt> paramsSetter) throws SQLException {
+    //        checkArgNotNull(paramsSetter, "paramsSetter");
     //
     //        boolean noException = false;
     //
     //        try {
-    //            paramSetter.accept((This) this, stmt);
+    //            paramsSetter.accept((This) this, stmt);
     //
     //            noException = true;
     //        } finally {
@@ -1371,17 +1371,17 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      *
      * @param <T>
      * @param parameters
-     * @param paramSetter
+     * @param paramsSetter
      * @return
      * @throws SQLException the SQL exception
      */
-    public <T> This setParameters(final T parameters, final BiParametersSetter<? super Stmt, ? super T> paramSetter) throws SQLException {
-        checkArgNotNull(paramSetter, "paramSetter");
+    public <T> This setParameters(final T parameters, final BiParametersSetter<? super Stmt, ? super T> paramsSetter) throws SQLException {
+        checkArgNotNull(paramsSetter, "paramsSetter");
 
         boolean noException = false;
 
         try {
-            paramSetter.accept(stmt, parameters);
+            paramsSetter.accept(stmt, parameters);
 
             noException = true;
         } finally {
@@ -1393,14 +1393,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
-    //    public <T> This setParameters(final T parameters, final Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException> paramSetter)
+    //    public <T> This setParameters(final T parameters, final Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException> paramsSetter)
     //            throws SQLException {
-    //        checkArgNotNull(paramSetter, "paramSetter");
+    //        checkArgNotNull(paramsSetter, "paramsSetter");
     //
     //        boolean noException = false;
     //
     //        try {
-    //            paramSetter.accept((This) this, stmt, parameters);
+    //            paramsSetter.accept((This) this, stmt, parameters);
     //
     //            noException = true;
     //        } finally {
@@ -1585,18 +1585,18 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     /**
      *
-     * @param paramSetter
+     * @param paramsSetter
      * @return
      * @throws SQLException the SQL exception
      */
     @Beta
-    public This settParameters(ParametersSetter<? super This> paramSetter) throws SQLException {
-        checkArgNotNull(paramSetter, "paramSetter");
+    public This settParameters(ParametersSetter<? super This> paramsSetter) throws SQLException {
+        checkArgNotNull(paramsSetter, "paramsSetter");
 
         boolean noException = false;
 
         try {
-            paramSetter.accept((This) this);
+            paramsSetter.accept((This) this);
 
             noException = true;
         } finally {
@@ -1611,19 +1611,19 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      *
      * @param <T>
-     * @param parameter
-     * @param paramSetter
+     * @param parameters
+     * @param paramsSetter
      * @return
      * @throws SQLException the SQL exception
      */
     @Beta
-    public <T> This settParameters(final T parameter, BiParametersSetter<? super This, ? super T> paramSetter) throws SQLException {
-        checkArgNotNull(paramSetter, "paramSetter");
+    public <T> This settParameters(final T parameters, BiParametersSetter<? super This, ? super T> paramsSetter) throws SQLException {
+        checkArgNotNull(paramsSetter, "paramsSetter");
 
         boolean noException = false;
 
         try {
-            paramSetter.accept((This) this, parameter);
+            paramsSetter.accept((This) this, parameters);
 
             noException = true;
         } finally {
@@ -1795,8 +1795,8 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * 
      * @param <T>
-     * @param batchParameters
-     * @param batchParameters
+     * @param batchParameters single batch parameters.
+     * @param type
      * @return
      * @throws SQLException
      */

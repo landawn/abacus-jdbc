@@ -2902,6 +2902,43 @@ final class DaoImpl {
                             final SP sp = parameterizedUpdateFunc.apply(entityClass).set(props).append(cond).pair();
                             return proxy.prepareQuery(sp.sql).settParameters(sp.parameters, collParamsSetter).update();
                         };
+                    } else if (methodName.equals("update") && paramLen == 2 && !Map.class.equals(paramTypes[0])
+                            && Condition.class.isAssignableFrom(paramTypes[1])) {
+                        call = (proxy, args) -> {
+                            final Object entity = args[0];
+                            final Condition cond = (Condition) args[1];
+                            final DirtyMarker dirtyMarkerEntity = isDirtyMarker ? (DirtyMarker) entity : null;
+                            final Collection<String> propNamesToUpdate = isDirtyMarker ? dirtyMarkerEntity.dirtyPropNames()
+                                    : SQLBuilder.getUpdatePropNames(entityClass, null);
+
+                            N.checkArgNotNullOrEmpty(propNamesToUpdate, "No field to update.");
+
+                            final SP sp = parameterizedUpdateFunc.apply(entityClass).set(propNamesToUpdate).append(cond).pair();
+
+                            final JdbcUtil.BiParametersSetter<PreparedStatement, Object> paramsSetter = (stmt, p) -> {
+                                PropInfo propInfo = null;
+                                int columnIndex = 1;
+
+                                for (String propName : propNamesToUpdate) {
+                                    propInfo = entityInfo.getPropInfo(propName);
+                                    propInfo.dbType.set(stmt, columnIndex++, propInfo.getPropValue(p));
+                                }
+
+                                if (sp.parameters.size() > 0) {
+                                    for (Object param : sp.parameters) {
+                                        stmt.setObject(columnIndex++, param);
+                                    }
+                                }
+                            };
+
+                            final int result = proxy.prepareQuery(sp.sql).setParameters(entity, paramsSetter).update();
+
+                            if (isDirtyMarker) {
+                                DirtyMarkerUtil.markDirty(dirtyMarkerEntity, false);
+                            }
+
+                            return result;
+                        };
                     } else if (methodName.equals("delete") && paramLen == 1 && Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> {
                             final SP sp = parameterizedDeleteFromFunc.apply(entityClass).append((Condition) args[0]).pair();

@@ -10391,9 +10391,7 @@ public final class JdbcUtil {
          * @see ConditionFactory
          * @see ConditionFactory.CF
          */
-        default int update(final T entity, final Condition cond) throws SQLException {
-            return update(Maps.entity2Map(entity), cond);
-        }
+        int update(final T entity, final Condition cond) throws SQLException;
 
         /**
          * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
@@ -10415,7 +10413,7 @@ public final class JdbcUtil {
                 return entity;
             } else {
                 N.merge(entity, dbEntity);
-                update(Maps.entity2Map(dbEntity), cond);
+                update(dbEntity, cond);
                 return dbEntity;
             }
         }
@@ -15082,9 +15080,7 @@ public final class JdbcUtil {
          * @throws UncheckedSQLException
          */
         @Override
-        default int update(final T entity, final Condition cond) throws UncheckedSQLException {
-            return update(Maps.entity2Map(entity), cond);
-        }
+        int update(final T entity, final Condition cond) throws UncheckedSQLException;
 
         /**
          * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
@@ -15105,7 +15101,7 @@ public final class JdbcUtil {
                 return entity;
             } else {
                 N.merge(entity, dbEntity);
-                update(Maps.entity2Map(dbEntity), cond);
+                update(dbEntity, cond);
                 return dbEntity;
             }
         }

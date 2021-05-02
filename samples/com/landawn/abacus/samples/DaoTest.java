@@ -478,6 +478,40 @@ public class DaoTest {
     }
 
     @Test
+    public void test_update() throws SQLException {
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
+
+        User userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+        assertNotNull(userFromDB);
+
+        userFromDB.setFirstName("updatedFN");
+        userDao.update(userFromDB, CF.eq("firstName", "Forrest"));
+
+        userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+        assertEquals("updatedFN", userFromDB.getFirstName());
+
+        userFromDB.setFirstName("updatedFN2");
+        userDao.update(userFromDB, CF.eq("lastName", "Gump").and(CF.eq("id", userFromDB.getId())));
+
+        userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+        assertEquals("updatedFN2", userFromDB.getFirstName());
+
+        userDao.deleteById(100L);
+
+        long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
+        userFromDB = userDao.gett(id);
+        System.out.println(userFromDB);
+        assertNotNull(userFromDB);
+        userDao.deleteById(id);
+
+        assertFalse(userDao.exists(id));
+    }
+
+    @Test
     public void test_batchGet() throws SQLException {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
