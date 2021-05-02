@@ -1642,7 +1642,8 @@ final class DaoImpl {
 
         final List<Class<?>> allInterfaces = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface)).prepend(daoInterface).toList();
 
-        final DBVersion dbVersion = JdbcUtil.getDBVersion(ds);
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(ds);
+        final DBVersion dbVersion = dbProductInfo.getVersion();
 
         final boolean addLimitForSingleQuery = StreamEx.of(allInterfaces)
                 .flatMapp(cls -> cls.getAnnotations())

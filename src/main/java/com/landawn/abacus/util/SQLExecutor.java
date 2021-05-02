@@ -382,15 +382,6 @@ public final class SQLExecutor {
     /** The sql mapper. */
     private final SQLMapper _sqlMapper;
 
-    /** The db proudct name. */
-    private final String _dbProudctName;
-
-    /** The db proudct version. */
-    private final String _dbProudctVersion;
-
-    /** The db version. */
-    private final DBVersion _dbVersion;
-
     /** The default isolation level. */
     private final IsolationLevel _defaultIsolationLevel;
 
@@ -445,9 +436,6 @@ public final class SQLExecutor {
         final Connection conn = getConnection();
 
         try {
-            _dbProudctName = conn.getMetaData().getDatabaseProductName();
-            _dbProudctVersion = conn.getMetaData().getDatabaseProductVersion();
-            _dbVersion = JdbcUtil.getDBVersion(conn);
             defaultIsolationLevel = IsolationLevel.valueOf(conn.getTransactionIsolation());
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
@@ -494,35 +482,12 @@ public final class SQLExecutor {
     /**
      *
      * @return
+     * @deprecated should not update the returned {@code JdbcSettings}
      */
+    @Deprecated
+    @Beta
     public JdbcSettings jdbcSettings() {
         return _jdbcSettings;
-    }
-
-    /**
-     * Db proudct name.
-     *
-     * @return
-     */
-    public String dbProudctName() {
-        return _dbProudctName;
-    }
-
-    /**
-     * Db proudct version.
-     *
-     * @return
-     */
-    public String dbProudctVersion() {
-        return _dbProudctVersion;
-    }
-
-    /**
-     *
-     * @return
-     */
-    public DBVersion dbVersion() {
-        return _dbVersion;
     }
 
     /**
@@ -3961,7 +3926,6 @@ public final class SQLExecutor {
         final ObjIteratorEx<T> lazyIter = ObjIteratorEx.of(new Supplier<ObjIteratorEx<T>>() {
             private ObjIteratorEx<T> internalIter = null;
 
-            @SuppressWarnings("deprecation")
             @Override
             public ObjIteratorEx<T> get() {
                 if (internalIter == null) {
@@ -4054,7 +4018,7 @@ public final class SQLExecutor {
                                     JdbcUtil.closeQuietly(rs, true, false);
                                 } finally {
                                     if (noTransactionForStream) {
-                                        JdbcUtil.closeQuietly(localConn);
+                                        SQLExecutor.this.close(localConn, ds);
                                     } else {
                                         SQLExecutor.this.close(localConn, inputConn, ds);
                                     }
@@ -4067,7 +4031,7 @@ public final class SQLExecutor {
                                 JdbcUtil.closeQuietly(resultSet, true, false);
                             } finally {
                                 if (noTransactionForStream) {
-                                    JdbcUtil.closeQuietly(localConn);
+                                    SQLExecutor.this.close(localConn, ds);
                                 } else {
                                     SQLExecutor.this.close(localConn, inputConn, ds);
                                 }

@@ -3249,7 +3249,7 @@ public final class JdbcUtils {
     private static void setFetchForBigResult(final Connection conn, PreparedStatement stmt) throws SQLException {
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
-        if (JdbcUtil.getDBVersion(conn).isMySQL()) {
+        if (JdbcUtil.getDBProductInfo(conn).getVersion().isMySQL()) {
             stmt.setFetchSize(Integer.MIN_VALUE);
         } else {
             stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);

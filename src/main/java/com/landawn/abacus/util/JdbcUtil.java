@@ -31,6 +31,7 @@ import java.sql.Blob;
 import java.sql.CallableStatement;
 import java.sql.Clob;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.NClob;
@@ -214,18 +215,20 @@ public final class JdbcUtil {
         // singleton
     }
 
-    public static DBVersion getDBVersion(final javax.sql.DataSource ds) throws UncheckedSQLException {
+    public static DBProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws UncheckedSQLException {
         try (Connection conn = ds.getConnection()) {
-            return getDBVersion(conn);
+            return getDBProductInfo(conn);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
 
-    public static DBVersion getDBVersion(final Connection conn) throws UncheckedSQLException {
+    public static DBProductInfo getDBProductInfo(final Connection conn) throws UncheckedSQLException {
         try {
-            String dbProudctName = conn.getMetaData().getDatabaseProductName();
-            String dbProudctVersion = conn.getMetaData().getDatabaseProductVersion();
+            final DatabaseMetaData metaData = conn.getMetaData();
+
+            String dbProudctName = metaData.getDatabaseProductName();
+            String dbProudctVersion = metaData.getDatabaseProductVersion();
 
             DBVersion dbVersion = DBVersion.OTHERS;
 
@@ -284,7 +287,7 @@ public final class JdbcUtil {
                 dbVersion = DBVersion.SQL_SERVER;
             }
 
-            return dbVersion;
+            return new DBProductInfo(dbProudctName, dbProudctName, dbVersion);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         }
