@@ -1768,6 +1768,11 @@ final class DaoImpl {
                 : (sbc.equals(PAC.class) ? (selectPropName, cond) -> PAC.select(selectPropName).from(entityClass).append(cond).pair()
                         : (selectPropName, cond) -> PLC.select(selectPropName).from(entityClass).append(cond).pair());
 
+        final BiFunction<String, Condition, SQLBuilder.SP> singleQueryByIdSQLBuilderFunc = sbc.equals(PSC.class)
+                ? ((selectPropName, cond) -> NSC.select(selectPropName).from(entityClass).append(cond).pair())
+                : (sbc.equals(PAC.class) ? ((selectPropName, cond) -> NAC.select(selectPropName).from(entityClass).append(cond).pair())
+                        : ((selectPropName, cond) -> NLC.select(selectPropName).from(entityClass).append(cond).pair()));
+
         final BiFunction<Collection<String>, Condition, SQLBuilder> selectSQLBuilderFunc = sbc.equals(PSC.class)
                 ? ((selectPropNames, cond) -> N.isNullOrEmpty(selectPropNames) ? PSC.selectFrom(entityClass).append(cond)
                         : PSC.select(selectPropNames).from(entityClass).append(cond))
@@ -3281,6 +3286,124 @@ final class DaoImpl {
                             }
 
                             return ids;
+                        };
+                    } else if (methodName.equals("queryForBoolean") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[0], cond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(args[1], idParamSetter).queryForBoolean();
+                        };
+                    } else if (methodName.equals("queryForChar") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[0], cond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(args[1], idParamSetter).queryForChar();
+                        };
+                    } else if (methodName.equals("queryForByte") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[0], cond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(args[1], idParamSetter).queryForByte();
+                        };
+                    } else if (methodName.equals("queryForShort") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[0], cond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(args[1], idParamSetter).queryForShort();
+                        };
+                    } else if (methodName.equals("queryForInt") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[0], cond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(args[1], idParamSetter).queryForInt();
+                        };
+                    } else if (methodName.equals("queryForLong") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[0], cond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(args[1], idParamSetter).queryForLong();
+                        };
+                    } else if (methodName.equals("queryForFloat") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[0], cond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(args[1], idParamSetter).queryForFloat();
+                        };
+                    } else if (methodName.equals("queryForDouble") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[0], cond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(args[1], idParamSetter).queryForDouble();
+                        };
+                    } else if (methodName.equals("queryForString") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[0], cond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(args[1], idParamSetter).queryForString();
+                        };
+                    } else if (methodName.equals("queryForDate") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[0], cond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(args[1], idParamSetter).queryForDate();
+                        };
+                    } else if (methodName.equals("queryForTime") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[0], cond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(args[1], idParamSetter).queryForTime();
+                        };
+                    } else if (methodName.equals("queryForTimestamp") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[0], cond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(args[1], idParamSetter).queryForTimestamp();
+                        };
+                    } else if (methodName.equals("queryForSingleResult") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[1], cond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(args[2], idParamSetter).queryForSingleResult((Class) args[0]);
+                        };
+                    } else if (methodName.equals("queryForSingleNonNull") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[1], cond);
+                            return proxy.prepareNamedQuery(sp.sql)
+                                    .setFetchSize(1)
+                                    .settParameters(args[2], idParamSetter)
+                                    .queryForSingleNonNull((Class) args[0]);
+                        };
+                    } else if (methodName.equals("queryForUniqueResult") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[1], cond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(args[2], idParamSetter).queryForUniqueResult((Class) args[0]);
+                        };
+                    } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Condition cond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply((String) args[1], cond);
+                            return proxy.prepareNamedQuery(sp.sql)
+                                    .setFetchSize(1)
+                                    .settParameters(args[2], idParamSetter)
+                                    .queryForUniqueNonNull((Class) args[0]);
                         };
                     } else if (methodName.equals("gett")) {
                         if (paramLen == 1) {

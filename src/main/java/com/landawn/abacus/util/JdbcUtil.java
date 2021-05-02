@@ -140,8 +140,14 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 /**
+ * 
+ * Performance Tips:
+ * <li>Avoid unnecessary/repeated database calls.</li> 
+ * <li>Only fetch the columns you need or update the columns you want.</li>
+ * <li>Index is the key point in a lot of database performance issues.</li>
+ * 
+ * <br />
  *
- * @author Haiyang Li
  * @see {@link com.landawn.abacus.condition.ConditionFactory}
  * @see {@link com.landawn.abacus.condition.ConditionFactory.CF}
  * @see {@link com.landawn.abacus.annotation.ReadOnly}
@@ -155,6 +161,7 @@ import lombok.ToString;
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html">http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html</a>
  * @since 0.8
+ * @author Haiyang Li
  */
 public final class JdbcUtil {
 
@@ -7883,6 +7890,13 @@ public final class JdbcUtil {
     }
 
     /**
+     * Performance Tips:
+     * <li>Avoid unnecessary/repeated database calls.</li> 
+     * <li>Only fetch the columns you need or update the columns you want.</li>
+     * <li>Index is the key point in a lot of database performance issues.</li>
+     * 
+     * <br />
+     * 
      * This interface is designed to share/manager SQL queries by Java APIs/methods with static parameter types and return type, while hiding the SQL scripts.
      * It's a gift from nature and created by thoughts.
      *
@@ -10684,6 +10698,210 @@ public final class JdbcUtil {
         List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities, final int batchSize) throws SQLException;
 
         /**
+         * Query for boolean.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        OptionalBoolean queryForBoolean(final String singleSelectPropName, final ID id) throws SQLException;
+
+        /**
+         * Query for char.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        OptionalChar queryForChar(final String singleSelectPropName, final ID id) throws SQLException;
+
+        /**
+         * Query for byte.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        OptionalByte queryForByte(final String singleSelectPropName, final ID id) throws SQLException;
+
+        /**
+         * Query for short.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        OptionalShort queryForShort(final String singleSelectPropName, final ID id) throws SQLException;
+
+        /**
+         * Query for int.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        OptionalInt queryForInt(final String singleSelectPropName, final ID id) throws SQLException;
+
+        /**
+         * Query for long.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        OptionalLong queryForLong(final String singleSelectPropName, final ID id) throws SQLException;
+
+        /**
+         * Query for float.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        OptionalFloat queryForFloat(final String singleSelectPropName, final ID id) throws SQLException;
+
+        /**
+         * Query for double.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        OptionalDouble queryForDouble(final String singleSelectPropName, final ID id) throws SQLException;
+
+        /**
+         * Query for string.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        Nullable<String> queryForString(final String singleSelectPropName, final ID id) throws SQLException;
+
+        /**
+         * Query for date.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final ID id) throws SQLException;
+
+        /**
+         * Query for time.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final ID id) throws SQLException;
+
+        /**
+         * Query for timestamp.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final ID id) throws SQLException;
+
+        /**
+         * Query for single result.
+         *
+         * @param <V> the value type
+         * @param targetValueClass
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final ID id) throws SQLException;
+
+        /**
+         * Query for single non null.
+         *
+         * @param <V> the value type
+         * @param targetValueClass
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code idition}).
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final ID id) throws SQLException;
+
+        /**
+         * Query for unique result.
+         *
+         * @param <V> the value type
+         * @param targetValueClass
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code idition}).
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final ID id)
+                throws DuplicatedResultException, SQLException;
+
+        /**
+         * Query for unique non null.
+         *
+         * @param <V> the value type
+         * @param targetValueClass
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws SQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final ID id)
+                throws DuplicatedResultException, SQLException;
+
+        /**
          *
          * @param id
          * @return
@@ -11234,6 +11452,72 @@ public final class JdbcUtil {
     @Beta
     public static interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, TD>> extends CrudDao<T, Long, SB, TD> {
 
+        default OptionalBoolean queryForBoolean(final String singleSelectPropName, final long id) throws SQLException {
+            return queryForBoolean(singleSelectPropName, Long.valueOf(id));
+        }
+
+        default OptionalChar queryForChar(final String singleSelectPropName, final long id) throws SQLException {
+            return queryForChar(singleSelectPropName, Long.valueOf(id));
+        }
+
+        default OptionalByte queryForByte(final String singleSelectPropName, final long id) throws SQLException {
+            return queryForByte(singleSelectPropName, Long.valueOf(id));
+        }
+
+        default OptionalShort queryForShort(final String singleSelectPropName, final long id) throws SQLException {
+            return queryForShort(singleSelectPropName, Long.valueOf(id));
+        }
+
+        default OptionalInt queryForInt(final String singleSelectPropName, final long id) throws SQLException {
+            return queryForInt(singleSelectPropName, Long.valueOf(id));
+        }
+
+        default OptionalLong queryForLong(final String singleSelectPropName, final long id) throws SQLException {
+            return queryForLong(singleSelectPropName, Long.valueOf(id));
+        }
+
+        default OptionalFloat queryForFloat(final String singleSelectPropName, final long id) throws SQLException {
+            return queryForFloat(singleSelectPropName, Long.valueOf(id));
+        }
+
+        default OptionalDouble queryForDouble(final String singleSelectPropName, final long id) throws SQLException {
+            return queryForDouble(singleSelectPropName, Long.valueOf(id));
+        }
+
+        default Nullable<String> queryForString(final String singleSelectPropName, final long id) throws SQLException {
+            return queryForString(singleSelectPropName, Long.valueOf(id));
+        }
+
+        default Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final long id) throws SQLException {
+            return queryForDate(singleSelectPropName, Long.valueOf(id));
+        }
+
+        default Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final long id) throws SQLException {
+            return queryForTime(singleSelectPropName, Long.valueOf(id));
+        }
+
+        default Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final long id) throws SQLException {
+            return queryForTimestamp(singleSelectPropName, Long.valueOf(id));
+        }
+
+        default <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final long id) throws SQLException {
+            return queryForSingleResult(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        }
+
+        default <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final long id) throws SQLException {
+            return queryForSingleNonNull(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        }
+
+        default <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+                throws DuplicatedResultException, SQLException {
+            return queryForUniqueResult(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        }
+
+        default <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+                throws DuplicatedResultException, SQLException {
+            return queryForUniqueNonNull(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        }
+
         default Optional<T> get(final long id) throws SQLException {
             return get(Long.valueOf(id));
         }
@@ -11250,24 +11534,10 @@ public final class JdbcUtil {
             return gett(Long.valueOf(id), selectPropNames);
         }
 
-        /**
-         * 
-         * @param id
-         * @return
-         * @throws SQLException
-         * @see AbstractPreparedQuery#exists()
-         */
         default boolean exists(final long id) throws SQLException {
             return exists(Long.valueOf(id));
         }
 
-        /**
-         * 
-         * @param id
-         * @return
-         * @throws SQLException
-         * @see AbstractPreparedQuery#notExists()
-         */
         @Beta
         default boolean notExists(final long id) throws SQLException {
             return !exists(id);
@@ -15350,6 +15620,226 @@ public final class JdbcUtil {
         List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
 
         /**
+         * Query for boolean.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        OptionalBoolean queryForBoolean(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+
+        /**
+         * Query for char.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        OptionalChar queryForChar(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+
+        /**
+         * Query for byte.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        OptionalByte queryForByte(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+
+        /**
+         * Query for short.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        OptionalShort queryForShort(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+
+        /**
+         * Query for int.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        OptionalInt queryForInt(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+
+        /**
+         * Query for long.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        OptionalLong queryForLong(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+
+        /**
+         * Query for float.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        OptionalFloat queryForFloat(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+
+        /**
+         * Query for double.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        OptionalDouble queryForDouble(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+
+        /**
+         * Query for string.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        Nullable<String> queryForString(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+
+        /**
+         * Query for date.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+
+        /**
+         * Query for time.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+
+        /**
+         * Query for timestamp.
+         *
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+
+        /**
+         * Query for single result.
+         *
+         * @param <V> the value type
+         * @param targetValueClass
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+
+        /**
+         * Query for single non null.
+         *
+         * @param <V> the value type
+         * @param targetValueClass
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code idition}).
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+
+        /**
+         * Query for unique result.
+         *
+         * @param <V> the value type
+         * @param targetValueClass
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code idition}).
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final ID id)
+                throws DuplicatedResultException, UncheckedSQLException;
+
+        /**
+         * Query for unique non null.
+         *
+         * @param <V> the value type
+         * @param targetValueClass
+         * @param singleSelectPropName
+         * @param id
+         * @return
+         * @throws UncheckedSQLException the SQL exception
+         * @see IDFactory
+         * @see IDFactory.CF
+         */
+        @Override
+        <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final ID id)
+                throws DuplicatedResultException, UncheckedSQLException;
+
+        /**
          *
          * @param id
          * @return
@@ -15930,6 +16420,90 @@ public final class JdbcUtil {
             extends UncheckedCrudDao<T, Long, SB, TD>, CrudDaoL<T, SB, TD> {
 
         @Override
+        default OptionalBoolean queryForBoolean(final String singleSelectPropName, final long id) throws UncheckedSQLException {
+            return queryForBoolean(singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
+        default OptionalChar queryForChar(final String singleSelectPropName, final long id) throws UncheckedSQLException {
+            return queryForChar(singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
+        default OptionalByte queryForByte(final String singleSelectPropName, final long id) throws UncheckedSQLException {
+            return queryForByte(singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
+        default OptionalShort queryForShort(final String singleSelectPropName, final long id) throws UncheckedSQLException {
+            return queryForShort(singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
+        default OptionalInt queryForInt(final String singleSelectPropName, final long id) throws UncheckedSQLException {
+            return queryForInt(singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
+        default OptionalLong queryForLong(final String singleSelectPropName, final long id) throws UncheckedSQLException {
+            return queryForLong(singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
+        default OptionalFloat queryForFloat(final String singleSelectPropName, final long id) throws UncheckedSQLException {
+            return queryForFloat(singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
+        default OptionalDouble queryForDouble(final String singleSelectPropName, final long id) throws UncheckedSQLException {
+            return queryForDouble(singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
+        default Nullable<String> queryForString(final String singleSelectPropName, final long id) throws UncheckedSQLException {
+            return queryForString(singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
+        default Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final long id) throws UncheckedSQLException {
+            return queryForDate(singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
+        default Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final long id) throws UncheckedSQLException {
+            return queryForTime(singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
+        default Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final long id) throws UncheckedSQLException {
+            return queryForTimestamp(singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
+        default <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+                throws UncheckedSQLException {
+            return queryForSingleResult(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
+        default <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+                throws UncheckedSQLException {
+            return queryForSingleNonNull(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
+        default <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+                throws DuplicatedResultException, UncheckedSQLException {
+            return queryForUniqueResult(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
+        default <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+                throws DuplicatedResultException, UncheckedSQLException {
+            return queryForUniqueNonNull(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        }
+
+        @Override
         default Optional<T> get(final long id) throws UncheckedSQLException {
             return get(Long.valueOf(id));
         }
@@ -15949,19 +16523,11 @@ public final class JdbcUtil {
             return gett(Long.valueOf(id), selectPropNames);
         }
 
-        /**
-         * @param id
-         * @see AbstractPreparedQuery#exists()
-         */
         @Override
         default boolean exists(final long id) throws UncheckedSQLException {
             return exists(Long.valueOf(id));
         }
 
-        /**
-         * @param id
-         * @see AbstractPreparedQuery#notExists()
-         */
         @Beta
         @Override
         default boolean notExists(final long id) throws UncheckedSQLException {

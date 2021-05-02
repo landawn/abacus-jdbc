@@ -65,6 +65,13 @@ import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.Predicate;
 
 /**
+ * Performance Tips:
+ * <li>Avoid unnecessary/repeated database calls.</li> 
+ * <li>Only fetch the columns you need or update the columns you want.</li>
+ * <li>Index is the key point in a lot of database performance issues.</li>
+ * 
+ * <br />
+ * 
  * The backed {@code PreparedStatement/CallableStatement} will be closed by default
  * after any execution methods(which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...).
  * except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.

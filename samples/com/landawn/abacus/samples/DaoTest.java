@@ -35,6 +35,7 @@ import com.landawn.abacus.samples.entity.Employee;
 import com.landawn.abacus.samples.entity.EmployeeProject;
 import com.landawn.abacus.samples.entity.Project;
 import com.landawn.abacus.samples.entity.User;
+import com.landawn.abacus.util.DateUtil;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.JdbcUtil;
@@ -499,6 +500,35 @@ public class DaoTest {
         userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
         assertEquals("updatedFN2", userFromDB.getFirstName());
+
+        userDao.deleteById(100L);
+
+        long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
+        userFromDB = userDao.gett(id);
+        System.out.println(userFromDB);
+        assertNotNull(userFromDB);
+        userDao.deleteById(id);
+
+        assertFalse(userDao.exists(id));
+    }
+
+    @Test
+    public void test_queryForSingle() throws SQLException {
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
+
+        User userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+        assertNotNull(userFromDB);
+
+        assertEquals(100, userDao.queryForLong("id", CF.eq("firstName", "Forrest")).orZero());
+        assertEquals(100, userDao.queryForLong("id", 100L).orZero());
+
+        assertEquals("Forrest", userDao.queryForString("firstName", CF.eq("firstName", "Forrest")).orNull());
+        assertEquals("Forrest", userDao.queryForString("firstName", 100L).orNull());
+
+        assertTrue(userDao.queryForTimestamp("createTime", CF.eq("firstName", "Forrest")).orNull().before(DateUtil.currentTimestamp()));
+        assertTrue(userDao.queryForTimestamp("createTime", 100L).orNull().before(DateUtil.currentTimestamp()));
 
         userDao.deleteById(100L);
 
