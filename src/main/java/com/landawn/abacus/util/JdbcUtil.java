@@ -227,12 +227,12 @@ public final class JdbcUtil {
         try {
             final DatabaseMetaData metaData = conn.getMetaData();
 
-            String dbProudctName = metaData.getDatabaseProductName();
-            String dbProudctVersion = metaData.getDatabaseProductVersion();
+            final String dbProudctName = metaData.getDatabaseProductName();
+            final String dbProudctVersion = metaData.getDatabaseProductVersion();
+            final String upperCaseProductName = dbProudctName.toUpperCase();
 
             DBVersion dbVersion = DBVersion.OTHERS;
 
-            String upperCaseProductName = dbProudctName.toUpperCase();
             if (upperCaseProductName.contains("H2")) {
                 dbVersion = DBVersion.H2;
             } else if (upperCaseProductName.contains("HSQL")) {
