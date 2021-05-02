@@ -3883,7 +3883,7 @@ final class DaoImpl {
                                                     biRowMapper = BiRowMapper.to(propJoinInfo.referencedEntityClass);
                                                 }
 
-                                                return Pair.of(rs.getObject(columnCount), biRowMapper.apply(rs, selectCls));
+                                                return Pair.of(JdbcUtil.getColumnValue(rs, columnCount), biRowMapper.apply(rs, selectCls));
                                             }
                                         };
 

@@ -7569,7 +7569,7 @@ public final class JdbcUtil {
                     }
 
                     for (int i = 0; i < columnCount; i++) {
-                        output[i] = rs.getObject(i + 1);
+                        output[i] = JdbcUtil.getColumnValue(rs, i + 1);
                     }
 
                     consumer.accept(disposable);
@@ -7616,7 +7616,7 @@ public final class JdbcUtil {
                     }
 
                     for (int i = 0; i < columnCount; i++) {
-                        output[i] = rs.getObject(i + 1);
+                        output[i] = JdbcUtil.getColumnValue(rs, i + 1);
                     }
 
                     consumer.accept(cls, disposable);

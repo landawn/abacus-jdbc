@@ -119,7 +119,7 @@ public final class Columns {
         //    @SuppressWarnings("rawtypes")
         //    public static final RowMapper<Object> GET_OBJECT = rs -> rs.getObject(1);
 
-        public static final RowMapper<Object> GET_OBJECT = rs -> rs.getObject(1);
+        public static final RowMapper<Object> GET_OBJECT = rs -> JdbcUtil.getColumnValue(rs, 1);
 
         @SuppressWarnings("rawtypes")
         public static final BiParametersSetter<AbstractPreparedQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(1, x);
@@ -274,7 +274,7 @@ public final class Columns {
 
         public static final RowMapper<Clob> GET_CLOB = rs -> rs.getClob(2);
 
-        public static final RowMapper<Object> GET_OBJECT = rs -> rs.getObject(2);
+        public static final RowMapper<Object> GET_OBJECT = rs -> JdbcUtil.getColumnValue(rs, 2);
 
         @SuppressWarnings("rawtypes")
         public static final BiParametersSetter<AbstractPreparedQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(2, x);
@@ -428,7 +428,7 @@ public final class Columns {
 
         public static final RowMapper<Clob> GET_CLOB = rs -> rs.getClob(3);
 
-        public static final RowMapper<Object> GET_OBJECT = rs -> rs.getObject(3);
+        public static final RowMapper<Object> GET_OBJECT = rs -> JdbcUtil.getColumnValue(rs, 3);
 
         @SuppressWarnings("rawtypes")
         public static final BiParametersSetter<AbstractPreparedQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(3, x);
@@ -588,7 +588,7 @@ public final class Columns {
         public static final ColumnGetter GET_OBJECT = new ColumnGetter<Object>() {
             @Override
             public Object apply(int columnIndex, ResultSet rs) throws SQLException {
-                return rs.getObject(columnIndex);
+                return JdbcUtil.getColumnValue(rs, columnIndex);
             }
         };
 
