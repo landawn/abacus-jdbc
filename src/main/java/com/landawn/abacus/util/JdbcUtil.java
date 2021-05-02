@@ -10986,7 +10986,7 @@ public final class JdbcUtil {
                             .map(it -> N.merge(it, dbIdEntityMap.get(idExtractorFunc.apply(it)), false, idPropNameSet))
                             .toList();
 
-                    batchUpdate(dbEntitiesToUpdate);
+                    batchUpdate(dbEntitiesToUpdate, batchSize);
 
                     entitiesToInsert.addAll(dbEntitiesToUpdate);
                 }
