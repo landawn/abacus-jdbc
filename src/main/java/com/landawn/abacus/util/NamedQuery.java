@@ -2675,6 +2675,62 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
 
     /**
      * Sets the parameters.
+     * @param entity
+     * @param parameterNames
+     *
+     * @return
+     * @throws SQLException the SQL exception
+     * @see {@link ClassUtil#getPropNameList(Class)}
+     * @see {@link ClassUtil#getPropNameListExclusively(Class, Set)}
+     * @see {@link ClassUtil#getPropNameListExclusively(Class, Collection)}
+     * @see {@link JdbcUtil#getNamedParameters(String)}
+     */
+    public NamedQuery setParameters(final Object entity, final List<String> parameterNames) throws SQLException {
+        checkArgNotNull(entity, "entity");
+        checkArgNotNull(parameterNames, "parameterNames");
+
+        if (paramNameIndexMap == null) {
+            initParamNameIndexMap();
+        }
+
+        final Class<?> cls = entity.getClass();
+        final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+        PropInfo propInfo = null;
+        Object propValue;
+        IntList indexes = null;
+
+        for (String parameterName : parameterNames) {
+            propInfo = entityInfo.getPropInfo(parameterName);
+            propValue = propInfo.getPropValue(entity);
+
+            indexes = paramNameIndexMap.get(parameterName);
+
+            if (indexes == null) {
+                close();
+                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+            } else {
+                if (indexes.size() == 1) {
+                    propInfo.dbType.set(stmt, indexes.get(0), propValue);
+                } else if (indexes.size() == 2) {
+                    propInfo.dbType.set(stmt, indexes.get(0), propValue);
+                    propInfo.dbType.set(stmt, indexes.get(1), propValue);
+                } else if (indexes.size() == 3) {
+                    propInfo.dbType.set(stmt, indexes.get(0), propValue);
+                    propInfo.dbType.set(stmt, indexes.get(1), propValue);
+                    propInfo.dbType.set(stmt, indexes.get(2), propValue);
+                } else {
+                    for (int i = 0, size = indexes.size(); i < size; i++) {
+                        propInfo.dbType.set(stmt, indexes.get(i), propValue);
+                    }
+                }
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * Sets the parameters.
      *
      * @param <T>
      * @param paramaters

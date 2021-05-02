@@ -772,7 +772,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public PreparedCallableQuery setObject(String parameterName, Object x, int sqlType, int scaleOrLength) throws SQLException {
+    public PreparedCallableQuery setObject(final String parameterName, final Object x, final int sqlType, final int scaleOrLength) throws SQLException {
         cstmt.setObject(parameterName, x, sqlType, scaleOrLength);
 
         return this;
@@ -785,7 +785,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return
      * @throws SQLException the SQL exception
      */
-    public PreparedCallableQuery setParameters(Map<String, ?> parameters) throws SQLException {
+    public PreparedCallableQuery setParameters(final Map<String, ?> parameters) throws SQLException {
         checkArgNotNull(parameters, "parameters");
 
         for (Map.Entry<String, ?> entry : parameters.entrySet()) {
@@ -797,9 +797,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
 
     /**
      * Sets the parameters.
-     *
-     * @param parameterNames
      * @param entity
+     * @param parameterNames
+     *
      * @return
      * @throws SQLException the SQL exception
      * @see {@link ClassUtil#getPropNameList(Class)}
@@ -807,9 +807,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @see {@link ClassUtil#getPropNameListExclusively(Class, Collection)}
      * @see {@link JdbcUtil#getNamedParameters(String)}
      */
-    public PreparedCallableQuery setParameters(List<String> parameterNames, Object entity) throws SQLException {
-        checkArgNotNull(parameterNames, "parameterNames");
+    public PreparedCallableQuery setParameters(final Object entity, final List<String> parameterNames) throws SQLException {
         checkArgNotNull(entity, "entity");
+        checkArgNotNull(parameterNames, "parameterNames");
 
         final Class<?> cls = entity.getClass();
         final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
@@ -1086,7 +1086,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         if (outParams == null) {
             outParams = new ArrayList<>();
         }
-    
+
         outParams.add(outParameter);
     }
 

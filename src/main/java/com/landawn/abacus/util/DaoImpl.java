@@ -2915,7 +2915,8 @@ final class DaoImpl {
 
                             final SP sp = parameterizedUpdateFunc.apply(entityClass).set(propNamesToUpdate).append(cond).pair();
 
-                            final JdbcUtil.BiParametersSetter<PreparedStatement, Object> paramsSetter = (stmt, p) -> {
+                            final JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object> paramsSetter = (pq, p) -> {
+                                final PreparedStatement stmt = pq.stmt;
                                 PropInfo propInfo = null;
                                 int columnIndex = 1;
 
@@ -2926,12 +2927,12 @@ final class DaoImpl {
 
                                 if (sp.parameters.size() > 0) {
                                     for (Object param : sp.parameters) {
-                                        stmt.setObject(columnIndex++, param);
+                                        pq.setObject(columnIndex++, param);
                                     }
                                 }
                             };
 
-                            final int result = proxy.prepareQuery(sp.sql).setParameters(entity, paramsSetter).update();
+                            final int result = proxy.prepareQuery(sp.sql).settParameters(entity, paramsSetter).update();
 
                             if (isDirtyMarker) {
                                 DirtyMarkerUtil.markDirty(dirtyMarkerEntity, false);
