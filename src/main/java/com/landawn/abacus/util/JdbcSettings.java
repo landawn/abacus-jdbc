@@ -33,8 +33,6 @@ public final class JdbcSettings {
 
     private boolean logSQL = false;
 
-    private boolean logSQLWithParameters = false;
-
     private int batchSize = -1;
 
     private int queryTimeout = -1;

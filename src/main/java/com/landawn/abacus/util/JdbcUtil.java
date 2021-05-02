@@ -2647,6 +2647,13 @@ public final class JdbcUtil {
         return conn.prepareStatement(sql, resultSetType, resultSetConcurrency);
     }
 
+    static PreparedStatement prepareStatement(final Connection conn, final String sql, final int resultSetType, final int resultSetConcurrency,
+            final int resultSetHoldability) throws SQLException {
+        logSql(sql);
+
+        return conn.prepareStatement(sql, resultSetType, resultSetConcurrency, resultSetHoldability);
+    }
+
     static PreparedStatement prepareStatement(final Connection conn, final String sql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
         logSql(sql);
@@ -2683,6 +2690,13 @@ public final class JdbcUtil {
         logSql(parsedSql.sql());
 
         return conn.prepareStatement(parsedSql.getParameterizedSql(), resultSetType, resultSetConcurrency);
+    }
+
+    static PreparedStatement prepareStatement(final Connection conn, final ParsedSql parsedSql, final int resultSetType, final int resultSetConcurrency,
+            final int resultSetHoldability) throws SQLException {
+        logSql(parsedSql.sql());
+
+        return conn.prepareStatement(parsedSql.getParameterizedSql(), resultSetType, resultSetConcurrency, resultSetHoldability);
     }
 
     static PreparedStatement prepareStatement(final Connection conn, final ParsedSql parsedSql,
@@ -3375,6 +3389,36 @@ public final class JdbcUtil {
                     stmt.clearBatch();
                 } catch (SQLException e) {
                     logger.error("Failed to clear batch parameters after executeBatch", e);
+                }
+            }
+        }
+    }
+
+    static long executeLargeUpdate(PreparedStatement stmt) throws SQLException {
+        final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
+
+        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled()) {
+            final long startTime = System.currentTimeMillis();
+
+            try {
+                return stmt.executeLargeUpdate();
+            } finally {
+                logSqlPerf(stmt, sqlLogConfig, startTime);
+
+                try {
+                    stmt.clearBatch();
+                } catch (SQLException e) {
+                    logger.error("Failed to clear batch parameters after executeLargeUpdate", e);
+                }
+            }
+        } else {
+            try {
+                return stmt.executeLargeUpdate();
+            } finally {
+                try {
+                    stmt.clearBatch();
+                } catch (SQLException e) {
+                    logger.error("Failed to clear batch parameters after executeLargeUpdate", e);
                 }
             }
         }

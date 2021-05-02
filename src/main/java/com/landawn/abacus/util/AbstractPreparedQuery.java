@@ -3891,7 +3891,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         assertNotClosed();
 
         try {
-            return stmt.executeLargeUpdate();
+            return JdbcUtil.executeLargeUpdate(stmt);
         } finally {
             closeAfterExecutionIfAllowed();
         }

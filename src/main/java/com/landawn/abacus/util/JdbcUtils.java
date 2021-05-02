@@ -46,8 +46,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.landawn.abacus.DataSet;
 import com.landawn.abacus.exception.UncheckedIOException;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.logging.Logger;
-import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.parser.JSONSerializationConfig;
 import com.landawn.abacus.parser.JSONSerializationConfig.JSC;
 import com.landawn.abacus.type.Type;
@@ -72,7 +70,6 @@ import com.landawn.abacus.util.function.Function;
  * @since 0.8
  */
 public final class JdbcUtils {
-    private static final Logger logger = LoggerFactory.getLogger(JdbcUtils.class);
 
     private JdbcUtils() {
         // singleton.
@@ -1390,7 +1387,7 @@ public final class JdbcUtils {
         PreparedStatement stmt = null;
 
         try {
-            stmt = conn.prepareStatement(sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+            stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
 
             setFetchForBigResult(conn, stmt);
 
@@ -1453,7 +1450,7 @@ public final class JdbcUtils {
         ResultSet rs = null;
 
         try {
-            rs = stmt.executeQuery();
+            rs = JdbcUtil.executeQuery(stmt);
             // rs.setFetchSize(DEFAULT_FETCH_SIZE);
 
             return exportCSV(out, rs, selectColumnNames, offset, count, writeTitle, quoted);
@@ -1817,7 +1814,7 @@ public final class JdbcUtils {
         PreparedStatement stmt = null;
 
         try {
-            stmt = conn.prepareStatement(insertSQL);
+            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
 
             return importCSV(file, offset, count, skipTitle, filter, stmt, batchSize, batchInterval, columnTypeList);
         } catch (SQLException e) {
@@ -2059,7 +2056,7 @@ public final class JdbcUtils {
                 result++;
 
                 if ((result % batchSize) == 0) {
-                    executeBatch(stmt);
+                    JdbcUtil.executeBatch(stmt);
 
                     if (batchInterval > 0) {
                         N.sleep(batchInterval);
@@ -2070,7 +2067,7 @@ public final class JdbcUtils {
             }
 
             if ((result % batchSize) > 0) {
-                executeBatch(stmt);
+                JdbcUtil.executeBatch(stmt);
             }
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
@@ -2081,18 +2078,6 @@ public final class JdbcUtils {
         }
 
         return result;
-    }
-
-    private static int[] executeBatch(final PreparedStatement stmt) throws SQLException {
-        try {
-            return stmt.executeBatch();
-        } finally {
-            try {
-                stmt.clearBatch();
-            } catch (SQLException e) {
-                logger.error("Failed to clear batch parameters after executeBatch", e);
-            }
-        }
     }
 
     /**
@@ -2156,7 +2141,7 @@ public final class JdbcUtils {
         PreparedStatement stmt = null;
 
         try {
-            stmt = conn.prepareStatement(insertSQL);
+            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
 
             return importCSV(file, offset, count, filter, stmt, batchSize, batchInterval, columnTypeMap);
         } catch (SQLException e) {
@@ -2412,7 +2397,7 @@ public final class JdbcUtils {
                 result++;
 
                 if ((result % batchSize) == 0) {
-                    executeBatch(stmt);
+                    JdbcUtil.executeBatch(stmt);
 
                     if (batchInterval > 0) {
                         N.sleep(batchInterval);
@@ -2423,7 +2408,7 @@ public final class JdbcUtils {
             }
 
             if ((result % batchSize) > 0) {
-                executeBatch(stmt);
+                JdbcUtil.executeBatch(stmt);
             }
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
@@ -2497,7 +2482,7 @@ public final class JdbcUtils {
         PreparedStatement stmt = null;
 
         try {
-            stmt = conn.prepareStatement(insertSQL);
+            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
 
             return importCSV(file, offset, count, filter, stmt, batchSize, batchInterval, stmtSetter);
         } catch (SQLException e) {
@@ -2720,7 +2705,7 @@ public final class JdbcUtils {
                 stmt.addBatch();
 
                 if ((++result % batchSize) == 0) {
-                    executeBatch(stmt);
+                    JdbcUtil.executeBatch(stmt);
 
                     if (batchInterval > 0) {
                         N.sleep(batchInterval);
@@ -2731,7 +2716,7 @@ public final class JdbcUtils {
             }
 
             if ((result % batchSize) > 0) {
-                executeBatch(stmt);
+                JdbcUtil.executeBatch(stmt);
             }
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
