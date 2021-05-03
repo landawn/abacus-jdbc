@@ -1,3 +1,8 @@
+### 2.8.2
+
+* Improvements and bug fix.
+
+
 ### 2.8.1
 
 * Improvements and bug fix.
