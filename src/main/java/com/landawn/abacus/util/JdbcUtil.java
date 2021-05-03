@@ -9223,6 +9223,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default PreparedQuery prepareQuery(final String query) throws SQLException {
             return JdbcUtil.prepareQuery(dataSource(), query);
@@ -9235,6 +9236,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws SQLException {
             return JdbcUtil.prepareQuery(dataSource(), query, generateKeys);
@@ -9247,6 +9249,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws SQLException {
             return JdbcUtil.prepareQuery(dataSource(), query, returnColumnIndexes);
@@ -9259,6 +9262,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws SQLException {
             return JdbcUtil.prepareQuery(dataSource(), query, returnColumnNames);
@@ -9271,6 +9275,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default PreparedQuery prepareQuery(final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
                 throws SQLException {
@@ -9283,6 +9288,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery);
@@ -9295,6 +9301,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, generateKeys);
@@ -9307,6 +9314,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
@@ -9319,6 +9327,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
@@ -9331,6 +9340,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final String namedQuery,
                 final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
@@ -9343,6 +9353,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final ParsedSql namedSql) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedSql);
@@ -9355,6 +9366,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final boolean generateKeys) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generateKeys);
@@ -9367,6 +9379,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
@@ -9379,6 +9392,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws SQLException {
             return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
@@ -9391,6 +9405,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default NamedQuery prepareNamedQuery(final ParsedSql namedSql,
                 final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
@@ -9403,6 +9418,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default PreparedCallableQuery prepareCallableQuery(final String query) throws SQLException {
             return JdbcUtil.prepareCallableQuery(dataSource(), query);
@@ -9415,6 +9431,7 @@ public final class JdbcUtil {
          * @return
          * @throws SQLException
          */
+        @Beta
         @NonDBOperation
         default PreparedCallableQuery prepareCallableQuery(final String sql,
                 final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
