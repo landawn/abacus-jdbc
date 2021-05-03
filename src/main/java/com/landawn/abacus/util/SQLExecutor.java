@@ -2076,16 +2076,30 @@ public final class SQLExecutor {
             JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
         N.checkArgNotNull(targetClass, "targetClass");
 
+        final JdbcUtil.RowMapper<T> rowMapper = toRowMapper(targetClass);
+
+        return gett(conn, sql, statementSetter, rowMapper, jdbcSettings, parameters);
+    }
+
+    private <T> JdbcUtil.RowMapper<T> toRowMapper(final Class<T> targetClass) {
+        N.checkArgNotNull(targetClass, "targetClass");
+
+        final BiRowMapper<T> biRowMapper = BiRowMapper.to(targetClass);
+
         final JdbcUtil.RowMapper<T> rowMapper = new JdbcUtil.RowMapper<T>() {
-            private final BiRowMapper<T> biRowMapper = BiRowMapper.to(targetClass);
+            private List<String> cls = null;
 
             @Override
             public T apply(ResultSet rs) throws SQLException {
-                return biRowMapper.apply(rs, JdbcUtil.getColumnLabelList(rs));
+                if (cls == null) {
+                    cls = JdbcUtil.getColumnLabelList(rs);
+                }
+
+                return biRowMapper.apply(rs, cls);
             }
         };
 
-        return gett(conn, sql, statementSetter, rowMapper, jdbcSettings, parameters);
+        return rowMapper;
     }
 
     /**
@@ -2376,14 +2390,7 @@ public final class SQLExecutor {
             final JdbcSettings jdbcSettings, final Object... parameters) {
         N.checkArgNotNull(targetClass, "targetClass");
 
-        final JdbcUtil.RowMapper<T> rowMapper = new JdbcUtil.RowMapper<T>() {
-            private final BiRowMapper<T> biRowMapper = BiRowMapper.to(targetClass);
-
-            @Override
-            public T apply(ResultSet rs) throws SQLException {
-                return biRowMapper.apply(rs, JdbcUtil.getColumnLabelList(rs));
-            }
-        };
+        final JdbcUtil.RowMapper<T> rowMapper = toRowMapper(targetClass);
 
         return findFirst(conn, sql, statementSetter, rowMapper, jdbcSettings, parameters);
     }
@@ -2765,10 +2772,10 @@ public final class SQLExecutor {
             public List<T> apply(ResultSet rs) throws SQLException {
 
                 final List<T> result = new ArrayList<>();
-                final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
+                final List<String> cls = JdbcUtil.getColumnLabelList(rs);
 
                 while (rs.next()) {
-                    result.add(rowMapper.apply(rs, columnLabels));
+                    result.add(rowMapper.apply(rs, cls));
                 }
 
                 return result;
@@ -3378,6 +3385,8 @@ public final class SQLExecutor {
      * @return
      */
     private <V> ResultExtractor<Nullable<V>> createUniqueResultExtractor(final Class<V> targetClass) {
+        N.checkArgNotNull(targetClass, "targetClass");
+
         @SuppressWarnings("rawtypes")
         ResultExtractor result = uniqueResultExtractorPool.get(targetClass);
 
@@ -3670,11 +3679,12 @@ public final class SQLExecutor {
     @SafeVarargs
     public final <T> T query(final Connection inputConn, final String sql, final StatementSetter statementSetter, final ResultExtractor<T> resultExtractor,
             final JdbcSettings jdbcSettings, final Object... parameters) {
+        N.checkArgNotNull(resultExtractor, "resultExtractor");
+
         final ParsedSql parsedSql = getParsedSql(sql);
         final StatementSetter statementSetterToUse = checkStatementSetter(parsedSql, statementSetter);
-        final ResultExtractor<T> resultExtractorToUse = resultExtractor == null ? (ResultExtractor<T>) ResultExtractor.TO_DATA_SET : resultExtractor;
         final JdbcSettings jdbcSettingsToUse = checkJdbcSettings(jdbcSettings, parsedSql, _sqlMapper.getAttrs(sql));
-        final boolean isFromStreamQuery = resultExtractorToUse == RESULT_EXTRACTOR_FOR_STREAM_ONLY;
+        final boolean isFromStreamQuery = resultExtractor == RESULT_EXTRACTOR_FOR_STREAM_ONLY;
 
         boolean noException = false;
 
@@ -3698,7 +3708,7 @@ public final class SQLExecutor {
 
             rs = JdbcUtil.executeQuery(stmt);
 
-            result = resultExtractorToUse.apply(rs);
+            result = resultExtractor.apply(rs);
 
             noException = true;
         } catch (SQLException e) {
@@ -3921,6 +3931,7 @@ public final class SQLExecutor {
     @LazyEvaluation
     public final <T> Stream<T> stream(final String sql, final StatementSetter statementSetter, final JdbcUtil.BiRowMapper<T> rowMapper,
             final JdbcSettings jdbcSettings, final Object... parameters) {
+        N.checkArgNotNull(rowMapper, "rowMapper");
 
         final ObjIteratorEx<T> lazyIter = ObjIteratorEx.of(new Supplier<ObjIteratorEx<T>>() {
             private ObjIteratorEx<T> internalIter = null;
@@ -4133,6 +4144,9 @@ public final class SQLExecutor {
     @LazyEvaluation
     public final <T> Stream<T> streamAll(final List<String> sqls, final StatementSetter statementSetter, final JdbcUtil.BiRowMapper<T> rowMapper,
             final JdbcSettings jdbcSettings, final Object... parameters) {
+        N.checkArgNotNullOrEmpty(sqls, "sqls");
+        N.checkArgNotNull(rowMapper, "rowMapper");
+
         if (sqls.size() == 1) {
             return stream(sqls.get(0), statementSetter, rowMapper, jdbcSettings, parameters);
         }
@@ -4334,6 +4348,8 @@ public final class SQLExecutor {
      * @return true, if successful
      */
     public boolean doesTableExist(final String tableName) {
+        N.checkArgNotNullOrEmpty(tableName, "tableName");
+
         Connection conn = getConnection();
 
         try {
@@ -4351,6 +4367,8 @@ public final class SQLExecutor {
      * @return true, if successful
      */
     public boolean createTableIfNotExists(final String tableName, final String schema) {
+        N.checkArgNotNullOrEmpty(tableName, "tableName");
+
         Connection conn = getConnection();
 
         try {
@@ -4367,6 +4385,8 @@ public final class SQLExecutor {
      * @return true, if successful
      */
     public boolean dropTableIfExists(final String tableName) {
+        N.checkArgNotNullOrEmpty(tableName, "tableName");
+
         Connection conn = getConnection();
 
         try {
@@ -4383,6 +4403,8 @@ public final class SQLExecutor {
      * @return
      */
     public ImmutableList<String> getColumnNameList(final String tableName) {
+        N.checkArgNotNullOrEmpty(tableName, "tableName");
+
         ImmutableList<String> columnNameList = _tableColumnNamePool.get(tableName);
 
         if (columnNameList == null) {

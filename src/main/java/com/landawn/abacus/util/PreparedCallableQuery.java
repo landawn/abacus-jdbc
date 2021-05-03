@@ -1688,7 +1688,7 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
      * @throws SQLException
      */
     public <T> Tuple2<List<T>, OutParamResult> listAndGetOutParameters(final RowFilter rowFilter, final RowMapper<T> rowMapper) throws SQLException {
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
