@@ -1953,7 +1953,7 @@ final class DaoImpl {
         final int capacity = daoClassCacheAnno == null ? 1000 : daoClassCacheAnno.capacity();
         final long evictDelay = daoClassCacheAnno == null ? 3000 : daoClassCacheAnno.evictDelay();
 
-        if (NoUpdateDao.class.isAssignableFrom(daoInterface) || UncheckedNoUpdateDao.class.isAssignableFrom(daoInterface)) {
+        if (NoUpdateDao.class.isAssignableFrom(daoInterface)) {
             // OK
         } else {
             // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
@@ -5371,6 +5371,19 @@ final class DaoImpl {
                     hasRefreshCache.setTrue();
                 }
 
+                // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
+                if ((hasRefreshCache.isTrue() || hasCacheResult.isTrue()) && !NoUpdateDao.class.isAssignableFrom(daoInterface)) {
+                    throw new UnsupportedOperationException(
+                            "Cache is only supported for the methods declared NoUpdateDao/UncheckedNoUpdateDao interface right now, not supported for method: "
+                                    + fullClassMethodName);
+                }
+
+                if (hasRefreshCache.isTrue() && hasCacheResult.isFalse()) {
+                    throw new UnsupportedOperationException("Class: " + daoInterface
+                            + " or its super interfaces or methods are annotated by @RefreshCache, but none of them is annotated with @CacheResult. "
+                            + "Please remove the unnecessary @RefreshCache annotations or Add @CacheResult annotation if it's really needed.");
+                }
+
                 final List<Tuple2<JdbcUtil.Handler, Boolean>> handlerList = StreamEx.of(m.getAnnotations())
                         .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(JdbcUtil.HandlerList.class))
                         .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
@@ -5435,12 +5448,6 @@ final class DaoImpl {
             }
 
             methodInvokerMap.put(m, call);
-        }
-
-        if (hasRefreshCache.isTrue() && hasCacheResult.isFalse()) {
-            throw new UnsupportedOperationException("Class: " + daoInterface
-                    + " or its super interfaces or methods are annotated by @RefreshCache, but none of them is annotated with @CacheResult. "
-                    + "Please remove the unnecessary @RefreshCache annotations or Add @CacheResult annotation if it's really needed.");
         }
 
         final Throwables.TriFunction<JdbcUtil.Dao, Method, Object[], ?, Throwable> proxyInvoker = (proxy, method, args) -> methodInvokerMap.get(method)
