@@ -21,6 +21,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -72,12 +73,15 @@ import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.CrudDao;
 import com.landawn.abacus.util.JdbcUtil.Dao;
+import com.landawn.abacus.util.JdbcUtil.Dao.Bind;
+import com.landawn.abacus.util.JdbcUtil.Dao.Config;
 import com.landawn.abacus.util.JdbcUtil.Dao.NonDBOperation;
 import com.landawn.abacus.util.JdbcUtil.Dao.OP;
 import com.landawn.abacus.util.JdbcUtil.Dao.OutParameter;
 import com.landawn.abacus.util.JdbcUtil.Dao.SqlField;
 import com.landawn.abacus.util.JdbcUtil.NoUpdateDao;
 import com.landawn.abacus.util.JdbcUtil.OutParamResult;
+import com.landawn.abacus.util.JdbcUtil.OutParameterList;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowConsumer;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
@@ -549,6 +553,11 @@ final class DaoImpl {
     private static Set<Class<?>> notCacheableTypes = N.asSet(void.class, Void.class, Iterator.class, java.util.stream.BaseStream.class, BaseStream.class,
             EntryStream.class, ExceptionalStream.class);
 
+    @SuppressWarnings("rawtypes")
+    private static JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Collection> collParamsSetter = AbstractPreparedQuery::setParameters;
+
+    private static JdbcUtil.BiParametersSetter<NamedQuery, Object> objParamsSetter = (NamedQuery q, Object p) -> q.setParameters(p);
+
     /**
      * Creates the method handle.
      *
@@ -579,7 +588,7 @@ final class DaoImpl {
     }
 
     private static final Set<String> singleQueryPrefix = N.asSet("get", "findFirst", "findOne", "findOnlyOne", "selectFirst", "selectOne", "selectOnlyOne",
-            "exist", "has", "is");
+            "exist", "notExist", "has", "is");
 
     /**
      * Checks if is list query.
@@ -1324,11 +1333,7 @@ final class DaoImpl {
             final Class<?> paramTypeOne = paramTypes[stmtParamIndexes[0]];
 
             if (isCall) {
-                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamIndexes[0]])
-                        .select(Dao.Bind.class)
-                        .map(b -> b.value())
-                        .first()
-                        .orNull();
+                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamIndexes[0]]).select(Dao.Bind.class).map(Bind::value).first().orNull();
 
                 if (N.notNullOrEmpty(paramName)) {
                     parametersSetter = (preparedQuery, args) -> ((PreparedCallableQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
@@ -1348,11 +1353,7 @@ final class DaoImpl {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
                 }
             } else if (isNamedQuery) {
-                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamIndexes[0]])
-                        .select(Dao.Bind.class)
-                        .map(b -> b.value())
-                        .first()
-                        .orNull();
+                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamIndexes[0]]).select(Dao.Bind.class).map(Bind::value).first().orNull();
 
                 if (N.notNullOrEmpty(paramName)) {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
@@ -1385,7 +1386,7 @@ final class DaoImpl {
                 final String[] paramNames = IntStreamEx.of(stmtParamIndexes)
                         .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).select(Dao.Bind.class).first().orElse(null))
                         .skipNull()
-                        .map(b -> b.value())
+                        .map(Bind::value)
                         .toArray(IntFunctions.ofStringArray());
 
                 if (N.notNullOrEmpty(paramNames)) {
@@ -1398,7 +1399,7 @@ final class DaoImpl {
                     };
                 } else {
                     if (stmtParamLen == paramLen) {
-                        parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters(args);
+                        parametersSetter = AbstractPreparedQuery::setParameters;
                     } else {
                         parametersSetter = (preparedQuery, args) -> {
                             for (int i = 0; i < stmtParamLen; i++) {
@@ -1415,7 +1416,7 @@ final class DaoImpl {
                                 .orElseThrow(() -> new UnsupportedOperationException("In method: " + fullClassMethodName + ", parameters[" + i + "]: "
                                         + ClassUtil.getSimpleClassName(m.getParameterTypes()[i])
                                         + " is not binded with parameter named through annotation @Bind")))
-                        .map(b -> b.value())
+                        .map(Bind::value)
                         .toArray(IntFunctions.ofStringArray());
 
                 if (namedSql != null) {
@@ -1436,7 +1437,7 @@ final class DaoImpl {
                 };
             } else {
                 if (stmtParamLen == paramLen) {
-                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters(args);
+                    parametersSetter = AbstractPreparedQuery::setParameters;
                 } else {
                     parametersSetter = (preparedQuery, args) -> {
                         for (int i = 0; i < stmtParamLen; i++) {
@@ -1637,32 +1638,33 @@ final class DaoImpl {
 
         final List<Class<?>> allInterfaces = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface)).prepend(daoInterface).toList();
 
-        final DBVersion dbVersion = JdbcUtil.getDBVersion(ds);
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(ds);
+        final DBVersion dbVersion = dbProductInfo.getVersion();
 
         final boolean addLimitForSingleQuery = StreamEx.of(allInterfaces)
-                .flatMapp(cls -> cls.getAnnotations())
+                .flatMapp(Class::getAnnotations)
                 .select(Dao.Config.class)
-                .map(it -> it.addLimitForSingleQuery())
+                .map(Config::addLimitForSingleQuery)
                 .first()
                 .orElse(false);
 
         final boolean callGenerateIdForInsert = StreamEx.of(allInterfaces)
-                .flatMapp(cls -> cls.getAnnotations())
+                .flatMapp(Class::getAnnotations)
                 .select(Dao.Config.class)
-                .map(it -> it.callGenerateIdForInsertIfIdNotSet())
+                .map(Config::callGenerateIdForInsertIfIdNotSet)
                 .first()
                 .orElse(false);
 
         final boolean callGenerateIdForInsertWithSql = StreamEx.of(allInterfaces)
-                .flatMapp(cls -> cls.getAnnotations())
+                .flatMapp(Class::getAnnotations)
                 .select(Dao.Config.class)
-                .map(it -> it.callGenerateIdForInsertWithSqlIfIdNotSet())
+                .map(Config::callGenerateIdForInsertWithSqlIfIdNotSet)
                 .first()
                 .orElse(false);
 
         final Map<String, String> sqlFieldMap = StreamEx.of(allInterfaces)
-                .flatMapp(it -> it.getDeclaredFields())
-                .append(StreamEx.of(allInterfaces).flatMapp(it -> it.getDeclaredClasses()).flatMapp(it -> it.getDeclaredFields()))
+                .flatMapp(Class::getDeclaredFields)
+                .append(StreamEx.of(allInterfaces).flatMapp(Class::getDeclaredClasses).flatMapp(Class::getDeclaredFields))
                 .filter(it -> it.isAnnotationPresent(SqlField.class))
                 .onEach(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()) && String.class.equals(it.getType()),
                         "Field annotated with @SqlField must be static&final String. but {} is not in Dao class {}.", it, daoInterface))
@@ -1715,7 +1717,7 @@ final class DaoImpl {
             }
 
             if (isCrudDao) {
-                final List<String> idFieldNames = ClassUtil.getIdFieldNames((Class) typeArguments[0]);
+                final List<String> idFieldNames = QueryUtil.getIdFieldNames((Class) typeArguments[0]);
 
                 if (idFieldNames.size() == 0) {
                     throw new IllegalArgumentException("To support CRUD operations by extending CrudDao interface, the entity class: " + typeArguments[0]
@@ -1738,7 +1740,7 @@ final class DaoImpl {
         final List<Method> sqlMethods = StreamEx.of(allInterfaces)
                 .reversed()
                 .distinct()
-                .flatMapp(clazz -> clazz.getDeclaredMethods())
+                .flatMapp(Class::getDeclaredMethods)
                 .filter(m -> !Modifier.isStatic(m.getModifiers()))
                 .toList();
 
@@ -1761,6 +1763,11 @@ final class DaoImpl {
                 ? (selectPropName, cond) -> PSC.select(selectPropName).from(entityClass).append(cond).pair()
                 : (sbc.equals(PAC.class) ? (selectPropName, cond) -> PAC.select(selectPropName).from(entityClass).append(cond).pair()
                         : (selectPropName, cond) -> PLC.select(selectPropName).from(entityClass).append(cond).pair());
+
+        final BiFunction<String, Condition, SQLBuilder.SP> singleQueryByIdSQLBuilderFunc = sbc.equals(PSC.class)
+                ? ((selectPropName, cond) -> NSC.select(selectPropName).from(entityClass).append(cond).pair())
+                : (sbc.equals(PAC.class) ? ((selectPropName, cond) -> NAC.select(selectPropName).from(entityClass).append(cond).pair())
+                        : ((selectPropName, cond) -> NLC.select(selectPropName).from(entityClass).append(cond).pair()));
 
         final BiFunction<Collection<String>, Condition, SQLBuilder> selectSQLBuilderFunc = sbc.equals(PSC.class)
                 ? ((selectPropNames, cond) -> N.isNullOrEmpty(selectPropNames) ? PSC.selectFrom(entityClass).append(cond)
@@ -1788,17 +1795,16 @@ final class DaoImpl {
                         : (propNamesToInsert -> N.isNullOrEmpty(propNamesToInsert) ? NLC.insertInto(entityClass)
                                 : NLC.insert(propNamesToInsert).into(entityClass)));
 
-        final Function<Class<?>, SQLBuilder> parameterizedUpdateFunc = sbc.equals(PSC.class) ? clazz -> PSC.update(clazz)
-                : (sbc.equals(PAC.class) ? clazz -> PAC.update(clazz) : clazz -> PLC.update(clazz));
+        final Function<Class<?>, SQLBuilder> parameterizedUpdateFunc = sbc.equals(PSC.class) ? PSC::update
+                : (sbc.equals(PAC.class) ? PAC::update : PLC::update);
 
-        final Function<Class<?>, SQLBuilder> parameterizedDeleteFromFunc = sbc.equals(PSC.class) ? clazz -> PSC.deleteFrom(clazz)
-                : (sbc.equals(PAC.class) ? clazz -> PAC.deleteFrom(clazz) : clazz -> PLC.deleteFrom(clazz));
+        final Function<Class<?>, SQLBuilder> parameterizedDeleteFromFunc = sbc.equals(PSC.class) ? PSC::deleteFrom
+                : (sbc.equals(PAC.class) ? PAC::deleteFrom : PLC::deleteFrom);
 
-        final Function<Class<?>, SQLBuilder> namedUpdateFunc = sbc.equals(PSC.class) ? clazz -> NSC.update(clazz)
-                : (sbc.equals(PAC.class) ? clazz -> NAC.update(clazz) : clazz -> NLC.update(clazz));
+        final Function<Class<?>, SQLBuilder> namedUpdateFunc = sbc.equals(PSC.class) ? NSC::update : (sbc.equals(PAC.class) ? NAC::update : NLC::update);
 
-        final List<String> idPropNameList = entityClass == null ? N.emptyList() : ClassUtil.getIdFieldNames(entityClass);
-        final boolean isNoId = entityClass == null || N.isNullOrEmpty(idPropNameList) || ClassUtil.isFakeId(idPropNameList);
+        final List<String> idPropNameList = entityClass == null ? N.emptyList() : QueryUtil.getIdFieldNames(entityClass);
+        final boolean isNoId = entityClass == null || N.isNullOrEmpty(idPropNameList) || QueryUtil.isFakeId(idPropNameList);
         final Set<String> idPropNameSet = N.newHashSet(idPropNameList);
         final String oneIdPropName = isNoId ? null : idPropNameList.get(0);
         final EntityInfo entityInfo = entityClass == null ? null : ParserUtil.getEntityInfo(entityClass);
@@ -1814,7 +1820,7 @@ final class DaoImpl {
         String sql_deleteById = null;
 
         final boolean noOtherInsertPropNameExceptIdPropNames = idPropNameSet.containsAll(ClassUtil.getPropNameList(entityClass))
-                || N.isNullOrEmpty(SQLBuilder.getInsertPropNames(entityClass, idPropNameSet));
+                || N.isNullOrEmpty(QueryUtil.getInsertPropNames(entityClass, idPropNameSet));
 
         if (sbc.equals(PSC.class)) {
             sql_getById = isNoId ? null : NSC.selectFrom(entityClass).where(idCond).sql();
@@ -1849,7 +1855,7 @@ final class DaoImpl {
         final ParsedSql namedUpdateByIdSQL = N.isNullOrEmpty(sql_updateById) ? null : ParsedSql.parse(sql_updateById);
         final ParsedSql namedDeleteByIdSQL = N.isNullOrEmpty(sql_deleteById) ? null : ParsedSql.parse(sql_deleteById);
 
-        final ImmutableMap<String, String> propColumnNameMap = ClassUtil.getProp2ColumnNameMap(entityClass, namingPolicy);
+        final ImmutableMap<String, String> propColumnNameMap = QueryUtil.getProp2ColumnNameMap(entityClass, namingPolicy);
 
         final String[] returnColumnNames = isNoId ? N.EMPTY_STRING_ARRAY
                 : (isOneId ? Array.of(propColumnNameMap.get(oneIdPropName))
@@ -1866,7 +1872,7 @@ final class DaoImpl {
         final EntityInfo idEntityInfo = idClass != null && ClassUtil.isEntity(idClass) ? ParserUtil.getEntityInfo(idClass) : null;
 
         final Predicate<Object> isDefaultIdTester = isNoId ? id -> true
-                : (isOneId ? id -> JdbcUtil.isDefaultIdPropValue(id)
+                : (isOneId ? JdbcUtil::isDefaultIdPropValue
                         : (isEntityId ? id -> Stream.of(((EntityId) id).entrySet()).allMatch(it -> JdbcUtil.isDefaultIdPropValue(it.getValue()))
                                 : id -> Stream.of(idPropNameList).allMatch(idName -> JdbcUtil.isDefaultIdPropValue(idEntityInfo.getPropValue(id, idName)))));
 
@@ -1890,16 +1896,16 @@ final class DaoImpl {
 
         final JdbcUtil.BiParametersSetter<NamedQuery, Object> idParamSetterByEntity = isOneId
                 ? (pq, entity) -> pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity), idPropInfo.dbType)
-                : (pq, entity) -> pq.setParameters(entity);
+                : (pq, entity) -> pq.settParameters(entity, objParamsSetter);
 
         final Dao.CacheResult daoClassCacheResultAnno = StreamEx.of(allInterfaces)
-                .flatMapp(cls -> cls.getAnnotations())
+                .flatMapp(Class::getAnnotations)
                 .select(Dao.CacheResult.class)
                 .first()
                 .orNull();
 
         final Dao.RefreshCache daoClassRefreshCacheAnno = StreamEx.of(allInterfaces)
-                .flatMapp(cls -> cls.getAnnotations())
+                .flatMapp(Class::getAnnotations)
                 .select(Dao.RefreshCache.class)
                 .first()
                 .orNull();
@@ -1919,30 +1925,30 @@ final class DaoImpl {
 
         final List<Dao.Handler> daoClassHandlerList = StreamEx.of(allInterfaces)
                 .reversed()
-                .flatMapp(cls -> cls.getAnnotations())
+                .flatMapp(Class::getAnnotations)
                 .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(JdbcUtil.HandlerList.class))
                 .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
                         : N.asList(((JdbcUtil.HandlerList) anno).value()))
                 .toList();
 
         final Map<String, JdbcUtil.Handler<?>> daoClassHandlerMap = StreamEx.of(allInterfaces)
-                .flatMapp(it -> it.getDeclaredFields())
-                .append(StreamEx.of(allInterfaces).flatMapp(it -> it.getDeclaredClasses()).flatMapp(it -> it.getDeclaredFields()))
+                .flatMapp(Class::getDeclaredFields)
+                .append(StreamEx.of(allInterfaces).flatMapp(Class::getDeclaredClasses).flatMapp(Class::getDeclaredFields))
                 .filter(it -> JdbcUtil.Handler.class.isAssignableFrom(it.getType()))
                 .onEach(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()),
                         "Handler Fields defined in Dao declared classes must be static&final Handler. but {} is not in Dao class {}.", it, daoInterface))
                 .onEach(it -> ClassUtil.setAccessible(it, true))
-                .distinctBy(it -> it.getName(), (a, b) -> {
+                .distinctBy(Field::getName, (a, b) -> {
                     throw new IllegalArgumentException("Two Handler fields have the same id (or name): " + a + "," + b + " in Dao class: " + daoInterface);
                 })
-                .toMap(it -> it.getName(), Fn.ff(it -> (JdbcUtil.Handler<?>) it.get(null)));
+                .toMap(Field::getName, Fn.ff(it -> (JdbcUtil.Handler<?>) it.get(null)));
 
-        final Dao.Cache daoClassCacheAnno = StreamEx.of(allInterfaces).flatMapp(cls -> cls.getAnnotations()).select(Dao.Cache.class).first().orNull();
+        final Dao.Cache daoClassCacheAnno = StreamEx.of(allInterfaces).flatMapp(Class::getAnnotations).select(Dao.Cache.class).first().orNull();
 
         final int capacity = daoClassCacheAnno == null ? 1000 : daoClassCacheAnno.capacity();
         final long evictDelay = daoClassCacheAnno == null ? 3000 : daoClassCacheAnno.evictDelay();
 
-        if (NoUpdateDao.class.isAssignableFrom(daoInterface) || UncheckedNoUpdateDao.class.isAssignableFrom(daoInterface)) {
+        if (NoUpdateDao.class.isAssignableFrom(daoInterface)) {
             // OK
         } else {
             // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
@@ -2063,22 +2069,23 @@ final class DaoImpl {
                     if (methodName.equals("save") && paramLen == 1) {
                         call = (proxy, args) -> {
                             final Object entity = args[0];
+                            N.checkArgNotNull(entity, "entity");
 
                             if (entity instanceof DirtyMarker) {
-                                final Collection<String> propNamesToSave = SQLBuilder.getInsertPropNames(entity, null);
+                                final Collection<String> propNamesToSave = QueryUtil.getInsertPropNames(entity, null);
 
                                 N.checkArgNotNullOrEmpty(propNamesToSave, "propNamesToSave");
 
                                 final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToSave).sql();
 
-                                proxy.prepareNamedQuery(namedInsertSQL).setParameters(entity).update();
+                                proxy.prepareNamedQuery(namedInsertSQL).settParameters(entity, objParamsSetter).update();
 
                                 DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
                             } else {
                                 final ParsedSql namedInsertSQL = isNoId || isDefaultIdTester.test(idGetter.apply(entity)) ? namedInsertWithoutIdSQL
                                         : namedInsertWithIdSQL;
 
-                                proxy.prepareNamedQuery(namedInsertSQL).setParameters(entity).update();
+                                proxy.prepareNamedQuery(namedInsertSQL).settParameters(entity, objParamsSetter).update();
                             }
 
                             return null;
@@ -2088,11 +2095,12 @@ final class DaoImpl {
                             final Object entity = args[0];
                             final Collection<String> propNamesToSave = (Collection<String>) args[1];
 
+                            N.checkArgNotNull(entity, "entity");
                             N.checkArgNotNullOrEmpty(propNamesToSave, "propNamesToSave");
 
                             final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToSave).sql();
 
-                            proxy.prepareNamedQuery(namedInsertSQL).setParameters(entity).update();
+                            proxy.prepareNamedQuery(namedInsertSQL).settParameters(entity, objParamsSetter).update();
 
                             if (entity instanceof DirtyMarker) {
                                 DirtyMarkerUtil.markDirty((DirtyMarker) entity, propNamesToSave, false);
@@ -2104,8 +2112,10 @@ final class DaoImpl {
                         call = (proxy, args) -> {
                             final String namedInsertSQL = (String) args[0];
                             final Object entity = args[1];
+                            N.checkArgNotNullOrEmpty(namedInsertSQL, "namedInsertSQL");
+                            N.checkArgNotNull(entity, "entity");
 
-                            proxy.prepareNamedQuery(namedInsertSQL).setParameters(entity).update();
+                            proxy.prepareNamedQuery(namedInsertSQL).settParameters(entity, objParamsSetter).update();
 
                             if (entity instanceof DirtyMarker) {
                                 DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
@@ -2203,6 +2213,7 @@ final class DaoImpl {
                             final String namedInsertSQL = (String) args[0];
                             final Collection<?> entities = (Collection<Object>) args[1];
                             final int batchSize = (Integer) args[2];
+                            N.checkArgNotNullOrEmpty(namedInsertSQL, "namedInsertSQL");
                             N.checkArgPositive(batchSize, "batchSize");
 
                             if (N.isNullOrEmpty(entities)) {
@@ -2237,628 +2248,982 @@ final class DaoImpl {
                         };
                     } else if (methodName.equals("exists") && paramLen == 1 && Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply(SQLBuilder._1, cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).exists();
+                            final Condition cond = (Condition) args[0];
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(SQLBuilder._1, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).exists();
                         };
                     } else if (methodName.equals("count") && paramLen == 1 && Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply(SQLBuilder.COUNT_ALL, cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForInt().orZero();
+                            final Condition cond = (Condition) args[0];
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(SQLBuilder.COUNT_ALL, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForInt().orZero();
                         };
                     } else if (methodName.equals("findFirst") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst(entityClass);
+                            final Condition cond = (Condition) args[0];
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).findFirst(entityClass);
                         };
                     } else if (methodName.equals("findFirst") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst((RowMapper) args[1]);
+                            final Condition cond = (Condition) args[0];
+                            final RowMapper rowMapper = (RowMapper) args[1];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).findFirst(rowMapper);
                         };
                     } else if (methodName.equals("findFirst") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst((BiRowMapper) args[1]);
+                            final Condition cond = (Condition) args[0];
+                            final BiRowMapper rowMapper = (BiRowMapper) args[1];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).findFirst(rowMapper);
                         };
                     } else if (methodName.equals("findFirst") && paramLen == 2 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst(entityClass);
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).findFirst(entityClass);
                         };
                     } else if (methodName.equals("findFirst") && paramLen == 3 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst((RowMapper) args[2]);
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final RowMapper rowMapper = (RowMapper) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).findFirst(rowMapper);
                         };
                     } else if (methodName.equals("findFirst") && paramLen == 3 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).findFirst((BiRowMapper) args[2]);
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final BiRowMapper rowMapper = (BiRowMapper) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).findFirst(rowMapper);
                         };
                     } else if (methodName.equals("findOnlyOne") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).findOnlyOne(entityClass);
+                            final Condition cond = (Condition) args[0];
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).settParameters(sp.parameters, collParamsSetter).findOnlyOne(entityClass);
                         };
                     } else if (methodName.equals("findOnlyOne") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).findOnlyOne((RowMapper) args[1]);
+                            final Condition cond = (Condition) args[0];
+                            final RowMapper rowMapper = (RowMapper) args[1];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).settParameters(sp.parameters, collParamsSetter).findOnlyOne(rowMapper);
                         };
                     } else if (methodName.equals("findOnlyOne") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).findOnlyOne((BiRowMapper) args[1]);
+                            final Condition cond = (Condition) args[0];
+                            final BiRowMapper rowMapper = (BiRowMapper) args[1];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).settParameters(sp.parameters, collParamsSetter).findOnlyOne(rowMapper);
                         };
                     } else if (methodName.equals("findOnlyOne") && paramLen == 2 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).findOnlyOne(entityClass);
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).settParameters(sp.parameters, collParamsSetter).findOnlyOne(entityClass);
                         };
                     } else if (methodName.equals("findOnlyOne") && paramLen == 3 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).findOnlyOne((RowMapper) args[2]);
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final RowMapper rowMapper = (RowMapper) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).settParameters(sp.parameters, collParamsSetter).findOnlyOne(rowMapper);
                         };
                     } else if (methodName.equals("findOnlyOne") && paramLen == 3 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).findOnlyOne((BiRowMapper) args[2]);
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final BiRowMapper rowMapper = (BiRowMapper) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).settParameters(sp.parameters, collParamsSetter).findOnlyOne(rowMapper);
                         };
                     } else if (methodName.equals("queryForBoolean") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForBoolean();
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForBoolean();
                         };
                     } else if (methodName.equals("queryForChar") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForChar();
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForChar();
                         };
                     } else if (methodName.equals("queryForByte") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForByte();
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForByte();
                         };
                     } else if (methodName.equals("queryForShort") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForShort();
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForShort();
                         };
                     } else if (methodName.equals("queryForInt") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForInt();
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForInt();
                         };
                     } else if (methodName.equals("queryForLong") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForLong();
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForLong();
                         };
                     } else if (methodName.equals("queryForFloat") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForFloat();
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForFloat();
                         };
                     } else if (methodName.equals("queryForDouble") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForDouble();
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForDouble();
                         };
                     } else if (methodName.equals("queryForString") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForString();
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForString();
                         };
                     } else if (methodName.equals("queryForDate") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForDate();
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForDate();
                         };
                     } else if (methodName.equals("queryForTime") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForTime();
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForTime();
                         };
                     } else if (methodName.equals("queryForTimestamp") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[0], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForTimestamp();
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForTimestamp();
                         };
                     } else if (methodName.equals("queryForSingleResult") && paramLen == 3 && paramTypes[0].equals(Class.class)
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[2];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForSingleResult((Class) args[0]);
+                            final Class<?> targetType = (Class) args[0];
+                            final String selectPropName = (String) args[1];
+                            final Condition cond = (Condition) args[2];
+                            N.checkArgNotNull(targetType, "targetClass");
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForSingleResult(targetType);
                         };
                     } else if (methodName.equals("queryForSingleNonNull") && paramLen == 3 && paramTypes[0].equals(Class.class)
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[2];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).setParameters(sp.parameters).queryForSingleNonNull((Class) args[0]);
+                            final Class<?> targetType = (Class) args[0];
+                            final String selectPropName = (String) args[1];
+                            final Condition cond = (Condition) args[2];
+                            N.checkArgNotNull(targetType, "targetClass");
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForSingleNonNull(targetType);
                         };
                     } else if (methodName.equals("queryForUniqueResult") && paramLen == 3 && paramTypes[0].equals(Class.class)
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[2];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).queryForUniqueResult((Class) args[0]);
+                            final Class<?> targetType = (Class) args[0];
+                            final String selectPropName = (String) args[1];
+                            final Condition cond = (Condition) args[2];
+                            N.checkArgNotNull(targetType, "targetClass");
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).settParameters(sp.parameters, collParamsSetter).queryForUniqueResult(targetType);
                         };
                     } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 3 && paramTypes[0].equals(Class.class)
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[2];
-                            final Condition cond = handleLimit(condArg, addLimitForSingleQuery ? 2 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply((String) args[1], cond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).setParameters(sp.parameters).queryForUniqueNonNull((Class) args[0]);
+                            final Class<?> targetType = (Class) args[0];
+                            final String selectPropName = (String) args[1];
+                            final Condition cond = (Condition) args[2];
+                            N.checkArgNotNull(targetType, "targetClass");
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(2).settParameters(sp.parameters, collParamsSetter).queryForUniqueNonNull(targetType);
                         };
                     } else if (methodName.equals("query") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
-                            return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).query();
+                            final Condition cond = (Condition) args[0];
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).settParameters(sp.parameters, collParamsSetter).query();
                         };
                     } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
-                            return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).query();
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], limitedCond).pair();
+                            return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).settParameters(sp.parameters, collParamsSetter).query();
                         };
                     } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.ResultExtractor.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            final Condition cond = (Condition) args[0];
+                            final JdbcUtil.ResultExtractor resultExtrator = (JdbcUtil.ResultExtractor) args[1];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(resultExtrator, "resultExtrator");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .query((JdbcUtil.ResultExtractor) args[1]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .query(resultExtrator);
                         };
                     } else if (methodName.equals("query") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(JdbcUtil.ResultExtractor.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final JdbcUtil.ResultExtractor resultExtrator = (JdbcUtil.ResultExtractor) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(resultExtrator, "resultExtrator");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .query((JdbcUtil.ResultExtractor) args[2]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .query(resultExtrator);
                         };
                     } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(BiResultExtractor.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            final Condition cond = (Condition) args[0];
+                            final JdbcUtil.BiResultExtractor resultExtrator = (JdbcUtil.BiResultExtractor) args[1];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(resultExtrator, "resultExtrator");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .query((BiResultExtractor) args[1]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .query(resultExtrator);
                         };
                     } else if (methodName.equals("query") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(BiResultExtractor.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final JdbcUtil.BiResultExtractor resultExtrator = (JdbcUtil.BiResultExtractor) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(resultExtrator, "resultExtrator");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .query((BiResultExtractor) args[2]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .query(resultExtrator);
                         };
                     } else if (methodName.equals("list") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
-                            return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).list(entityClass);
+                            final Condition cond = (Condition) args[0];
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .list(entityClass);
                         };
                     } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
-                            return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).list((RowMapper) args[1]);
+                            final Condition cond = (Condition) args[0];
+                            final RowMapper rowMapper = (RowMapper) args[1];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .list(rowMapper);
                         };
                     } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            final Condition cond = (Condition) args[0];
+                            final BiRowMapper rowMapper = (BiRowMapper) args[1];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .list((BiRowMapper) args[1]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .list(rowMapper);
                         };
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(RowFilter.class)
                             && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            final Condition cond = (Condition) args[0];
+                            final RowFilter rowFilter = (RowFilter) args[1];
+                            final RowMapper rowMapper = (RowMapper) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowFilter, "rowFilter");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .list((RowFilter) args[1], (RowMapper) args[2]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .list(rowFilter, rowMapper);
                         };
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(BiRowFilter.class)
                             && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            final Condition cond = (Condition) args[0];
+                            final BiRowFilter rowFilter = (BiRowFilter) args[1];
+                            final BiRowMapper rowMapper = (BiRowMapper) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowFilter, "rowFilter");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .list((BiRowFilter) args[1], (BiRowMapper) args[2]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .list(rowFilter, rowMapper);
                         };
                     } else if (methodName.equals("list") && paramLen == 2 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
-                            return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).list(entityClass);
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .list(entityClass);
                         };
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
-                            return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).list((RowMapper) args[2]);
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final RowMapper rowMapper = (RowMapper) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .list(rowMapper);
                         };
                     } else if (methodName.equals("list") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final BiRowMapper rowMapper = (BiRowMapper) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .list((BiRowMapper) args[2]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .list(rowMapper);
                         };
                     } else if (methodName.equals("list") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(RowFilter.class) && paramTypes[3].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final RowFilter rowFilter = (RowFilter) args[2];
+                            final RowMapper rowMapper = (RowMapper) args[3];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowFilter, "rowFilter");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .list((RowFilter) args[2], (RowMapper) args[3]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .list(rowFilter, rowMapper);
                         };
                     } else if (methodName.equals("list") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(BiRowFilter.class) && paramTypes[3].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final BiRowFilter rowFilter = (BiRowFilter) args[2];
+                            final BiRowMapper rowMapper = (BiRowMapper) args[3];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowFilter, "rowFilter");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .list((BiRowFilter) args[2], (BiRowMapper) args[3]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .list(rowFilter, rowMapper);
                         };
                     } else if (methodName.equals("stream") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            final Condition cond = (Condition) args[0];
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
+                                    .settParameters(sp.parameters, collParamsSetter)
                                     .stream(entityClass);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            final Condition cond = (Condition) args[0];
+                            final RowMapper rowMapper = (RowMapper) args[1];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .stream((RowMapper) args[1]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .stream(rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            final Condition cond = (Condition) args[0];
+                            final BiRowMapper rowMapper = (BiRowMapper) args[1];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .stream((BiRowMapper) args[1]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .stream(rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(RowFilter.class)
                             && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            final Condition cond = (Condition) args[0];
+                            final RowFilter rowFilter = (RowFilter) args[1];
+                            final RowMapper rowMapper = (RowMapper) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowFilter, "rowFilter");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .stream((RowFilter) args[1], (RowMapper) args[2]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .stream(rowFilter, rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(BiRowFilter.class)
                             && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            final Condition cond = (Condition) args[0];
+                            final BiRowFilter rowFilter = (BiRowFilter) args[1];
+                            final BiRowMapper rowMapper = (BiRowMapper) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowFilter, "rowFilter");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .stream((BiRowFilter) args[1], (BiRowMapper) args[2]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .stream(rowFilter, rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            N.checkArgNotNull(cond, "cond");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
+                                    .settParameters(sp.parameters, collParamsSetter)
                                     .stream(entityClass);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final RowMapper rowMapper = (RowMapper) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .stream((RowMapper) args[2]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .stream(rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final BiRowMapper rowMapper = (BiRowMapper) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .stream((BiRowMapper) args[2]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .stream(rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(RowFilter.class) && paramTypes[3].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final RowFilter rowFilter = (RowFilter) args[2];
+                            final RowMapper rowMapper = (RowMapper) args[3];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowFilter, "rowFilter");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .stream((RowFilter) args[2], (RowMapper) args[3]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .stream(rowFilter, rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(BiRowFilter.class) && paramTypes[3].equals(BiRowMapper.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final BiRowFilter rowFilter = (BiRowFilter) args[2];
+                            final BiRowMapper rowMapper = (BiRowMapper) args[3];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowFilter, "rowFilter");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .stream((BiRowFilter) args[2], (BiRowMapper) args[3]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .stream(rowFilter, rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("forEach") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(RowConsumer.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
-                            proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).forEach((RowConsumer) args[1]);
+                            final Condition cond = (Condition) args[0];
+                            final RowConsumer rowConsumer = (RowConsumer) args[1];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowConsumer, "rowConsumer");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
+                            proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .forEach(rowConsumer);
                             return null;
                         };
                     } else if (methodName.equals("forEach") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(BiRowConsumer.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
-                            proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).forEach((BiRowConsumer) args[1]);
+                            final Condition cond = (Condition) args[0];
+                            final BiRowConsumer rowConsumer = (BiRowConsumer) args[1];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowConsumer, "rowConsumer");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
+                            proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .forEach(rowConsumer);
                             return null;
                         };
                     } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(RowFilter.class)
                             && paramTypes[2].equals(RowConsumer.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            final Condition cond = (Condition) args[0];
+                            final RowFilter rowFilter = (RowFilter) args[1];
+                            final RowConsumer rowConsumer = (RowConsumer) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowFilter, "rowFilter");
+                            N.checkArgNotNull(rowConsumer, "rowConsumer");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .forEach((RowFilter) args[1], (RowConsumer) args[2]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .forEach(rowFilter, rowConsumer);
                             return null;
                         };
                     } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(BiRowFilter.class)
                             && paramTypes[2].equals(BiRowConsumer.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[0];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectFromSQLBuilderFunc.apply(cond);
+                            final Condition cond = (Condition) args[0];
+                            final BiRowFilter rowFilter = (BiRowFilter) args[1];
+                            final BiRowConsumer rowConsumer = (BiRowConsumer) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowFilter, "rowFilter");
+                            N.checkArgNotNull(rowConsumer, "rowConsumer");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .forEach((BiRowFilter) args[1], (BiRowConsumer) args[2]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .forEach(rowFilter, rowConsumer);
                             return null;
                         };
                     } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(RowConsumer.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
-                            proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).forEach((RowConsumer) args[2]);
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final RowConsumer rowConsumer = (RowConsumer) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowConsumer, "rowConsumer");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
+                            proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .forEach(rowConsumer);
                             return null;
                         };
                     } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(BiRowConsumer.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
-                            proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).setParameters(sp.parameters).forEach((BiRowConsumer) args[2]);
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final BiRowConsumer rowConsumer = (BiRowConsumer) args[2];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowConsumer, "rowConsumer");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
+                            proxy.prepareQuery(sp.sql)
+                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .forEach(rowConsumer);
                             return null;
                         };
                     } else if (methodName.equals("forEach") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(RowFilter.class) && paramTypes[3].equals(RowConsumer.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final RowFilter rowFilter = (RowFilter) args[2];
+                            final RowConsumer rowConsumer = (RowConsumer) args[3];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowFilter, "rowFilter");
+                            N.checkArgNotNull(rowConsumer, "rowConsumer");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .forEach((RowFilter) args[2], (RowConsumer) args[3]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .forEach(rowFilter, rowConsumer);
                             return null;
                         };
                     } else if (methodName.equals("forEach") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(BiRowFilter.class) && paramTypes[3].equals(BiRowConsumer.class)) {
                         call = (proxy, args) -> {
-                            final Condition condArg = (Condition) args[1];
-                            final Condition cond = handleLimit(condArg, -1, dbVersion);
-                            final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], cond).pair();
+                            final Collection<String> selectPropNames = (Collection<String>) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final BiRowFilter rowFilter = (BiRowFilter) args[2];
+                            final BiRowConsumer rowConsumer = (BiRowConsumer) args[3];
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowFilter, "rowFilter");
+                            N.checkArgNotNull(rowConsumer, "rowConsumer");
+
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
+
                             proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
-                                    .setParameters(sp.parameters)
-                                    .forEach((BiRowFilter) args[2], (BiRowConsumer) args[3]);
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .forEach(rowFilter, rowConsumer);
                             return null;
                         };
                     } else if (methodName.equals("update") && paramLen == 2 && Map.class.equals(paramTypes[0])
                             && Condition.class.isAssignableFrom(paramTypes[1])) {
                         call = (proxy, args) -> {
-                            final Map<String, Object> props = (Map<String, Object>) args[0];
+                            final Map<String, Object> propsToUpdate = (Map<String, Object>) args[0];
                             final Condition cond = (Condition) args[1];
-                            N.checkArgNotNullOrEmpty(props, "updateProps");
 
-                            final SP sp = parameterizedUpdateFunc.apply(entityClass).set(props).append(cond).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).update();
+                            N.checkArgNotNullOrEmpty(propsToUpdate, "propsToUpdate");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final SP sp = parameterizedUpdateFunc.apply(entityClass).set(propsToUpdate).append(cond).pair();
+                            return proxy.prepareQuery(sp.sql).settParameters(sp.parameters, collParamsSetter).update();
+                        };
+                    } else if (methodName.equals("update") && paramLen == 3 && !Map.class.equals(paramTypes[0])
+                            && Collection.class.isAssignableFrom(paramTypes[1]) && Condition.class.isAssignableFrom(paramTypes[2])) {
+                        call = (proxy, args) -> {
+                            final Object entity = args[0];
+                            final Collection<String> propNamesToUpdate = (Collection<String>) args[1];
+                            final Condition cond = (Condition) args[2];
+
+                            N.checkArgNotNull(entity, "entity");
+                            N.checkArgNotNullOrEmpty(propNamesToUpdate, "propNamesToUpdate");
+                            N.checkArgNotNull(cond, "cond");
+
+                            final SP sp = parameterizedUpdateFunc.apply(entityClass).set(propNamesToUpdate).append(cond).pair();
+
+                            final JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object> paramsSetter = (pq, p) -> {
+                                final PreparedStatement stmt = pq.stmt;
+                                PropInfo propInfo = null;
+                                int columnIndex = 1;
+
+                                for (String propName : propNamesToUpdate) {
+                                    propInfo = entityInfo.getPropInfo(propName);
+                                    propInfo.dbType.set(stmt, columnIndex++, propInfo.getPropValue(p));
+                                }
+
+                                if (sp.parameters.size() > 0) {
+                                    for (Object param : sp.parameters) {
+                                        pq.setObject(columnIndex++, param);
+                                    }
+                                }
+                            };
+
+                            final int result = proxy.prepareQuery(sp.sql).settParameters(entity, paramsSetter).update();
+
+                            if (isDirtyMarker) {
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propNamesToUpdate, false);
+                            }
+
+                            return result;
                         };
                     } else if (methodName.equals("delete") && paramLen == 1 && Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> {
-                            final SP sp = parameterizedDeleteFromFunc.apply(entityClass).append((Condition) args[0]).pair();
-                            return proxy.prepareQuery(sp.sql).setParameters(sp.parameters).update();
+                            final Condition cond = (Condition) args[0];
+                            N.checkArgNotNull(cond, "cond");
+
+                            final SP sp = parameterizedDeleteFromFunc.apply(entityClass).append(cond).pair();
+                            return proxy.prepareQuery(sp.sql).settParameters(sp.parameters, collParamsSetter).update();
                         };
                     } else {
                         call = (proxy, args) -> {
@@ -2870,11 +3235,12 @@ final class DaoImpl {
                         call = (proxy, args) -> {
                             final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final Object entity = args[0];
+                            N.checkArgNotNull(entity, "entity");
 
                             ParsedSql namedInsertSQL = null;
 
                             if (isDirtyMarker) {
-                                final Collection<String> propNamesToInsert = SQLBuilder.getInsertPropNames(entity, null);
+                                final Collection<String> propNamesToInsert = QueryUtil.getInsertPropNames(entity, null);
                                 N.checkArgNotNullOrEmpty(propNamesToInsert, "No property is assigned to entity to insert");
 
                                 if (!N.disjoint(propNamesToInsert, idPropNameSet)) {
@@ -2899,7 +3265,7 @@ final class DaoImpl {
                             }
 
                             final Object id = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
-                                    .setParameters(entity)
+                                    .settParameters(entity, objParamsSetter)
                                     .insert(keyExtractor, isDefaultIdTester)
                                     .ifPresent(ret -> idSetter.accept(ret, entity))
                                     .orElse(idGetter.apply(entity));
@@ -2915,6 +3281,7 @@ final class DaoImpl {
                             final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final Object entity = args[0];
                             final Collection<String> propNamesToInsert = (Collection<String>) args[1];
+                            N.checkArgNotNull(entity, "entity");
                             N.checkArgNotNullOrEmpty(propNamesToInsert, "propNamesToInsert");
 
                             if (callGenerateIdForInsert && !N.disjoint(propNamesToInsert, idPropNameSet)) {
@@ -2926,7 +3293,7 @@ final class DaoImpl {
                             final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToInsert).sql();
 
                             final Object id = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
-                                    .setParameters(entity)
+                                    .settParameters(entity, objParamsSetter)
                                     .insert(keyExtractor, isDefaultIdTester)
                                     .ifPresent(ret -> idSetter.accept(ret, entity))
                                     .orElse(idGetter.apply(entity));
@@ -2942,6 +3309,8 @@ final class DaoImpl {
                             final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final String namedInsertSQL = (String) args[0];
                             final Object entity = args[1];
+                            N.checkArgNotNullOrEmpty(namedInsertSQL, "namedInsertSQL");
+                            N.checkArgNotNull(entity, "entity");
 
                             if (callGenerateIdForInsertWithSql) {
                                 if (isDefaultIdTester.test(idGetter.apply(entity))) {
@@ -2950,7 +3319,7 @@ final class DaoImpl {
                             }
 
                             final Object id = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
-                                    .setParameters(entity)
+                                    .settParameters(entity, objParamsSetter)
                                     .insert(keyExtractor, isDefaultIdTester)
                                     .ifPresent(ret -> idSetter.accept(ret, entity))
                                     .orElse(idGetter.apply(entity));
@@ -3128,6 +3497,8 @@ final class DaoImpl {
                             final String namedInsertSQL = (String) args[0];
                             final Collection<?> entities = (Collection<Object>) args[1];
                             final int batchSize = (Integer) args[2];
+
+                            N.checkArgNotNullOrEmpty(namedInsertSQL, "namedInsertSQL");
                             N.checkArgPositive(batchSize, "batchSize");
 
                             if (N.isNullOrEmpty(entities)) {
@@ -3198,26 +3569,234 @@ final class DaoImpl {
 
                             return ids;
                         };
+                    } else if (methodName.equals("queryForBoolean") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForBoolean();
+                        };
+                    } else if (methodName.equals("queryForChar") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForChar();
+                        };
+                    } else if (methodName.equals("queryForByte") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForByte();
+                        };
+                    } else if (methodName.equals("queryForShort") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForShort();
+                        };
+                    } else if (methodName.equals("queryForInt") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForInt();
+                        };
+                    } else if (methodName.equals("queryForLong") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForLong();
+                        };
+                    } else if (methodName.equals("queryForFloat") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForFloat();
+                        };
+                    } else if (methodName.equals("queryForDouble") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForDouble();
+                        };
+                    } else if (methodName.equals("queryForString") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForString();
+                        };
+                    } else if (methodName.equals("queryForDate") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForDate();
+                        };
+                    } else if (methodName.equals("queryForTime") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForTime();
+                        };
+                    } else if (methodName.equals("queryForTimestamp") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForTimestamp();
+                        };
+                    } else if (methodName.equals("queryForSingleResult") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Class<?> targetType = (Class) args[0];
+                            final String selectPropName = (String) args[1];
+                            final Object id = args[2];
+                            N.checkArgNotNull(targetType, "targetClass");
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForSingleResult(targetType);
+                        };
+                    } else if (methodName.equals("queryForSingleNonNull") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Class<?> targetType = (Class) args[0];
+                            final String selectPropName = (String) args[1];
+                            final Object id = args[2];
+                            N.checkArgNotNull(targetType, "targetClass");
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForSingleNonNull(targetType);
+                        };
+                    } else if (methodName.equals("queryForUniqueResult") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Class<?> targetType = (Class) args[0];
+                            final String selectPropName = (String) args[1];
+                            final Object id = args[2];
+                            N.checkArgNotNull(targetType, "targetClass");
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForUniqueResult(targetType);
+                        };
+                    } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 2 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class)) {
+                        call = (proxy, args) -> {
+                            final Class<?> targetType = (Class) args[0];
+                            final String selectPropName = (String) args[1];
+                            final Object id = args[2];
+                            N.checkArgNotNull(targetType, "targetClass");
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForUniqueNonNull(targetType);
+                        };
                     } else if (methodName.equals("gett")) {
                         if (paramLen == 1) {
-                            call = (proxy, args) -> proxy.prepareNamedQuery(namedGetByIdSQL)
-                                    .setFetchSize(2)
-                                    .settParameters(args[0], idParamSetter)
-                                    .findOnlyOneOrNull(entityClass);
+                            call = (proxy, args) -> {
+                                final Object id = args[0];
+                                N.checkArgNotNull(id, "id");
+
+                                return proxy.prepareNamedQuery(namedGetByIdSQL)
+                                        .setFetchSize(2)
+                                        .settParameters(id, idParamSetter)
+                                        .findOnlyOneOrNull(entityClass);
+                            };
                         } else {
                             call = (proxy, args) -> {
+                                final Object id = args[0];
+                                N.checkArgNotNull(id, "id");
+
                                 final Collection<String> selectPropNames = (Collection<String>) args[1];
 
                                 if (N.isNullOrEmpty(selectPropNames)) {
                                     return proxy.prepareNamedQuery(namedGetByIdSQL)
                                             .setFetchSize(2)
-                                            .settParameters(args[0], idParamSetter)
+                                            .settParameters(id, idParamSetter)
                                             .findOnlyOneOrNull(entityClass);
 
                                 } else {
                                     return proxy.prepareNamedQuery(namedSelectSQLBuilderFunc.apply(selectPropNames, idCond).sql())
                                             .setFetchSize(2)
-                                            .settParameters(args[0], idParamSetter)
+                                            .settParameters(id, idParamSetter)
                                             .findOnlyOneOrNull(entityClass);
                                 }
                             };
@@ -3263,7 +3842,8 @@ final class DaoImpl {
                                             .setFetchSize(batchSize)
                                             .closeAfterExecution(false)) {
                                         for (int i = 0, to = ids.size() - batchSize; i <= to; i += batchSize) {
-                                            resultList.addAll(preparedQuery.setParameters(idList.subList(i, i + batchSize)).list(entityClass));
+                                            resultList
+                                                    .addAll(preparedQuery.settParameters(idList.subList(i, i + batchSize), collParamsSetter).list(entityClass));
                                         }
                                     }
                                 }
@@ -3280,7 +3860,7 @@ final class DaoImpl {
                                     resultList.addAll(proxy.prepareQuery(qery)
                                             .setFetchDirection(FetchDirection.FORWARD)
                                             .setFetchSize(batchSize)
-                                            .setParameters(idList.subList(ids.size() - remaining, ids.size()))
+                                            .settParameters(idList.subList(ids.size() - remaining, ids.size()), collParamsSetter)
                                             .list(entityClass));
                                 }
                             } else {
@@ -3317,13 +3897,20 @@ final class DaoImpl {
                             return resultList;
                         };
                     } else if (methodName.equals("exists") && paramLen == 1 && !Condition.class.isAssignableFrom(paramTypes[0])) {
-                        call = (proxy, args) -> proxy.prepareNamedQuery(namedExistsByIdSQL).setFetchSize(1).settParameters(args[0], idParamSetter).exists();
+                        call = (proxy, args) -> {
+                            final Object id = args[0];
+                            N.checkArgNotNull(id, "id");
+
+                            return proxy.prepareNamedQuery(namedExistsByIdSQL).setFetchSize(1).settParameters(id, idParamSetter).exists();
+                        };
                     } else if (methodName.equals("update") && paramLen == 1) {
                         if (isDirtyMarker) {
                             call = (proxy, args) -> {
                                 final DirtyMarker entity = (DirtyMarker) args[0];
+                                N.checkArgNotNull(entity, "entity");
+
                                 final String query = namedUpdateFunc.apply(entityClass).set(entity, idPropNameSet).where(idCond).sql();
-                                final int result = proxy.prepareNamedQuery(query).setParameters(entity).update();
+                                final int result = proxy.prepareNamedQuery(query).settParameters(entity, objParamsSetter).update();
 
                                 DirtyMarkerUtil.markDirty(entity, false);
 
@@ -3331,20 +3918,25 @@ final class DaoImpl {
                             };
                         } else {
                             call = (proxy, args) -> {
-                                return proxy.prepareNamedQuery(namedUpdateByIdSQL).setParameters(args[0]).update();
+                                final Object entity = args[0];
+                                N.checkArgNotNull(entity, "entity");
+
+                                return proxy.prepareNamedQuery(namedUpdateByIdSQL).settParameters(entity, objParamsSetter).update();
                             };
                         }
                     } else if (methodName.equals("update") && paramLen == 2 && !Map.class.equals(paramTypes[0]) && Collection.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
+                            final Object entity = args[0];
                             final Collection<String> propNamesToUpdate = (Collection<String>) args[1];
+                            N.checkArgNotNull(entity, "entity");
                             N.checkArgNotNullOrEmpty(propNamesToUpdate, "propNamesToUpdate");
 
                             final String query = namedUpdateFunc.apply(entityClass).set(propNamesToUpdate).where(idCond).sql();
 
-                            final int result = proxy.prepareNamedQuery(query).setParameters(args[0]).update();
+                            final int result = proxy.prepareNamedQuery(query).settParameters(entity, objParamsSetter).update();
 
                             if (isDirtyMarker) {
-                                DirtyMarkerUtil.markDirty((DirtyMarker) args[0], propNamesToUpdate, false);
+                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, propNamesToUpdate, false);
                             }
 
                             return result;
@@ -3353,11 +3945,15 @@ final class DaoImpl {
                         call = (proxy, args) -> {
                             final Map<String, Object> props = (Map<String, Object>) args[0];
                             final Object id = args[1];
-                            N.checkArgNotNullOrEmpty(props, "updateProps");
+                            N.checkArgNotNullOrEmpty(props, "propsToUpdate");
+                            N.checkArgNotNull(id, "id");
 
-                            final String query = namedUpdateFunc.apply(entityClass).set(props.keySet()).where(idCond).sql();
+                            // TODO not set by PropInfo.dbType of ids? it should be okay because Id should be simple type(int, long, String, UUID, Timestamp).
+                            // If want to use idParamSetter, it has to be named sql. How to prepare/set named parameters? it's a problem to resolve.
+                            final Condition cond = isEntityId ? CF.id2Cond((EntityId) id) : (id instanceof Map ? CF.eqAnd((Map<String, ?>) id) : CF.eqAnd(id));
 
-                            return proxy.prepareNamedQuery(query).setParameters(props).settParameters(id, idParamSetter).update();
+                            final SP sp = parameterizedUpdateFunc.apply(entityClass).set(props).append(cond).pair();
+                            return proxy.prepareQuery(sp.sql).settParameters(sp.parameters, collParamsSetter).update();
                         };
                     } else if (methodName.equals("batchUpdate") && paramLen == 2 && int.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
@@ -3403,9 +3999,9 @@ final class DaoImpl {
                             final Collection<Object> entities = (Collection<Object>) args[0];
                             final Collection<String> propNamesToUpdate = (Collection<String>) args[1];
                             final int batchSize = (Integer) args[2];
-                            N.checkArgPositive(batchSize, "batchSize");
 
                             N.checkArgNotNullOrEmpty(propNamesToUpdate, "propNamesToUpdate");
+                            N.checkArgPositive(batchSize, "batchSize");
 
                             if (N.isNullOrEmpty(entities)) {
                                 return 0;
@@ -3442,14 +4038,25 @@ final class DaoImpl {
                             return N.toIntExact(result);
                         };
                     } else if (methodName.equals("deleteById")) {
-                        call = (proxy, args) -> proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(args[0], idParamSetter).update();
+                        call = (proxy, args) -> {
+                            final Object id = args[0];
+                            N.checkArgNotNull(id, "id");
+
+                            return proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(id, idParamSetter).update();
+                        };
                     } else if (methodName.equals("delete") && paramLen == 1 && !Condition.class.isAssignableFrom(paramTypes[0])) {
-                        call = (proxy, args) -> proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(args[0], idParamSetterByEntity).update();
+                        call = (proxy, args) -> {
+                            final Object entity = args[0];
+                            N.checkArgNotNull(entity, "entity");
+
+                            return proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
+                        };
 
                         //} else if (methodName.equals("delete") && paramLen == 2 && !Condition.class.isAssignableFrom(paramTypes[0])
                         //        && OnDeleteAction.class.equals(paramTypes[1])) {
                         //    call = (proxy, args) -> {
                         //        final Object entity = (args[0]);
+                        //        N.checkArgNotNull(entity, "entity");
                         //        final OnDeleteAction onDeleteAction = (OnDeleteAction) args[1];
                         //
                         //        if (onDeleteAction == null || onDeleteAction == OnDeleteAction.NO_ACTION) {
@@ -3524,56 +4131,56 @@ final class DaoImpl {
                         //    } else if (methodName.equals("batchDelete") && paramLen == 3 && OnDeleteAction.class.equals(paramTypes[1])
                         //        && int.class.equals(paramTypes[2])) {
                         //    final JdbcUtil.BiParametersSetter<NamedQuery, Object> paramSetter = idParamSetterByEntity;
-                        //    
+                        //
                         //    call = (proxy, args) -> {
                         //        final Collection<Object> entities = (Collection) args[0];
                         //        final OnDeleteAction onDeleteAction = (OnDeleteAction) args[1];
                         //        final int batchSize = (Integer) args[2];
                         //        N.checkArgPositive(batchSize, "batchSize");
-                        //    
+                        //
                         //        if (N.isNullOrEmpty(entities)) {
                         //            return 0;
                         //        } else if (onDeleteAction == null || onDeleteAction == OnDeleteAction.NO_ACTION) {
                         //            return ((JdbcUtil.CrudDao) proxy).batchDelete(entities, batchSize);
                         //        }
-                        //    
+                        //
                         //        final Map<String, JoinInfo> entityJoinInfo = JoinInfo.getEntityJoinInfo(entityClass);
-                        //    
+                        //
                         //        if (N.isNullOrEmpty(entityJoinInfo)) {
                         //            return ((JdbcUtil.CrudDao) proxy).batchDelete(entities, batchSize);
                         //        }
-                        //    
+                        //
                         //        final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                         //        long result = 0;
-                        //    
+                        //
                         //        try {
                         //            try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedDeleteByIdSQL).closeAfterExecution(false)) {
                         //                result = ExceptionalStream.of(entities) //
                         //                        .splitToList(batchSize) //
                         //                        .sumLong(bp -> {
                         //                            long tmpResult = 0;
-                        //    
+                        //
                         //                            Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = null;
-                        //    
+                        //
                         //                            for (JoinInfo propJoinInfo : entityJoinInfo.values()) {
                         //                                tp = onDeleteAction == OnDeleteAction.SET_NULL ? propJoinInfo.getSetNullSqlAndParamSetter(sbc)
                         //                                        : propJoinInfo.getDeleteSqlAndParamSetter(sbc);
-                        //    
+                        //
                         //                                tmpResult += N.sum(proxy.prepareQuery(tp._1).addBatchParameters2(bp, tp._2).batchUpdate());
                         //                            }
-                        //    
+                        //
                         //                            tmpResult += N.sum(nameQuery.addBatchParameters(bp, paramSetter).batchUpdate());
-                        //    
+                        //
                         //                            return tmpResult;
                         //                        })
                         //                        .orZero();
                         //            }
-                        //    
+                        //
                         //            tran.commit();
                         //        } finally {
                         //            tran.rollbackIfNotCommitted();
                         //        }
-                        //    
+                        //
                         //        return N.toIntExact(result);
                         //    };
                     } else {
@@ -3588,6 +4195,10 @@ final class DaoImpl {
                             final Object entity = args[0];
                             final String joinEntityPropName = (String) args[1];
                             final Collection<String> selectPropNames = (Collection<String>) args[2];
+
+                            N.checkArgNotNull(entity, "entity");
+                            N.checkArgNotNullOrEmpty(joinEntityPropName, "joinEntityPropName");
+
                             final JoinInfo propJoinInfo = joinEntityInfo.get(joinEntityPropName);
                             final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getSelectSQLBuilderAndParamSetter(sbc);
@@ -3623,6 +4234,9 @@ final class DaoImpl {
                             final Collection<Object> entities = (Collection) args[0];
                             final String joinEntityPropName = (String) args[1];
                             final Collection<String> selectPropNames = (Collection<String>) args[2];
+
+                            N.checkArgNotNullOrEmpty(joinEntityPropName, "joinEntityPropName");
+
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
 
                             final JdbcUtil.Dao<?, SQLBuilder, ?> joinEntityDao = getAppliableDaoForJoinEntity(propJoinInfo.referencedEntityClass,
@@ -3674,7 +4288,7 @@ final class DaoImpl {
                                                     biRowMapper = BiRowMapper.to(propJoinInfo.referencedEntityClass);
                                                 }
 
-                                                return Pair.of(rs.getObject(columnCount), biRowMapper.apply(rs, selectCls));
+                                                return Pair.of(JdbcUtil.getColumnValue(rs, columnCount), biRowMapper.apply(rs, selectCls));
                                             }
                                         };
 
@@ -3700,6 +4314,10 @@ final class DaoImpl {
                         call = (proxy, args) -> {
                             final Object entity = args[0];
                             final String joinEntityPropName = (String) args[1];
+
+                            N.checkArgNotNull(entity, "entity");
+                            N.checkArgNotNullOrEmpty(joinEntityPropName, "joinEntityPropName");
+
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
                             final Tuple3<String, String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getDeleteSqlAndParamSetter(sbc);
@@ -3730,6 +4348,9 @@ final class DaoImpl {
                         call = (proxy, args) -> {
                             final Collection<Object> entities = (Collection) args[0];
                             final String joinEntityPropName = (String) args[1];
+
+                            N.checkArgNotNullOrEmpty(joinEntityPropName, "joinEntityPropName");
+
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
 
                             final JdbcUtil.Dao<?, SQLBuilder, ?> joinEntityDao = getAppliableDaoForJoinEntity(propJoinInfo.referencedEntityClass,
@@ -3839,7 +4460,7 @@ final class DaoImpl {
                             final List<String> tmp = IntStreamEx.range(0, paramLen)
                                     .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).select(Dao.Bind.class).first().orNull())
                                     .skipNull()
-                                    .map(it -> it.value())
+                                    .map(Bind::value)
                                     .filter(it -> query.indexOf(":" + it) < 0)
                                     .toList();
 
@@ -3967,7 +4588,7 @@ final class DaoImpl {
 
                     final List<Dao.OutParameter> outParameterList = StreamEx.of(m.getAnnotations())
                             .select(Dao.OutParameter.class)
-                            .append(StreamEx.of(m.getAnnotations()).select(JdbcUtil.OutParameterList.class).flatMapp(e -> e.value()))
+                            .append(StreamEx.of(m.getAnnotations()).select(JdbcUtil.OutParameterList.class).flatMapp(OutParameterList::value))
                             .toList();
 
                     if (N.notNullOrEmpty(outParameterList)) {
@@ -4237,8 +4858,7 @@ final class DaoImpl {
 
                         final LongFunction<?> updateResultConvertor = void.class.equals(returnType) ? updatedRecordCount -> null
                                 : (Boolean.class.equals(N.wrap(returnType)) ? updatedRecordCount -> updatedRecordCount > 0
-                                        : (Integer.class.equals(N.wrap(returnType)) ? updatedRecordCount -> N.toIntExact(updatedRecordCount)
-                                                : LongFunction.identity()));
+                                        : (Integer.class.equals(N.wrap(returnType)) ? N::toIntExact : LongFunction.identity()));
 
                         final boolean isLargeUpdate = op == OP.largeUpdate
                                 || (op == OP.DEFAULT && (returnType.equals(long.class) || returnType.equals(Long.class)));
@@ -4361,7 +4981,7 @@ final class DaoImpl {
                         call = (proxy, args) -> {
                             final Throwables.Supplier<ExceptionalStream, Exception> supplier = () -> tmp.apply(proxy, args);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else {
                         final Throwables.BiFunction<JdbcUtil.Dao, Object[], Stream, Exception> tmp = (Throwables.BiFunction) call;
@@ -4369,7 +4989,7 @@ final class DaoImpl {
                         call = (proxy, args) -> {
                             final Supplier<Stream> supplier = () -> Throwables.call(() -> tmp.apply(proxy, args));
 
-                            return Stream.of(supplier).flatMap(it -> it.get());
+                            return Stream.of(supplier).flatMap(Supplier::get);
                         };
                     }
                 } else if (throwsSQLException == false) {
@@ -4407,14 +5027,14 @@ final class DaoImpl {
                 //    }
 
                 final Dao.SqlLogEnabled daoClassSqlLogAnno = StreamEx.of(allInterfaces)
-                        .flatMapp(cls -> cls.getAnnotations())
+                        .flatMapp(Class::getAnnotations)
                         .select(Dao.SqlLogEnabled.class)
                         .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
                         .first()
                         .orNull();
 
                 final Dao.PerfLog daoClassPerfLogAnno = StreamEx.of(allInterfaces)
-                        .flatMapp(cls -> cls.getAnnotations())
+                        .flatMapp(Class::getAnnotations)
                         .select(Dao.PerfLog.class)
                         .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
                         .first()
@@ -4425,24 +5045,28 @@ final class DaoImpl {
                 final boolean hasSqlLogAnno = sqlLogAnno != null;
                 final boolean hasPerfLogAnno = perfLogAnno != null;
 
+                //    final boolean isSqlLogEnabled = hasSqlLogAnno && JdbcUtil.isSqlLogAllowed;
+                //    final boolean isPerfLogEnabled = hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed);
+                //    final boolean isSqlPerfLogEnabled = hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed;
+                //    final boolean isDaoPerfLogEnabled = hasPerfLogAnno && JdbcUtil.isDaoMethodPerfLogAllowed;
+
                 final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> tmp = call;
 
                 if (transactionalAnno == null || transactionalAnno.propagation() == Propagation.SUPPORTS) {
-                    if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
-                            || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
+                    if (hasSqlLogAnno || hasPerfLogAnno) {
                         call = (proxy, args) -> {
                             final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
-                            final boolean prevSqlLogEnabled = hasSqlLogAnno ? sqlLogConfig.isEnabled : false;
+                            final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                             final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
                             final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
-                            final long prevMinExecutionTimeForSqlPerfLog = hasPerfLogAnno ? SqlPerfLogConfig.minExecutionTimeForSqlPerfLog : -1;
+                            final long prevMinExecutionTimeForSqlPerfLog = SqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
                             final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
 
-                            if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                            if (hasSqlLogAnno) {
                                 JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                             }
 
-                            if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                            if (hasPerfLogAnno) {
                                 JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                             }
 
@@ -4451,15 +5075,15 @@ final class DaoImpl {
                             try {
                                 return tmp.apply(proxy, args);
                             } finally {
-                                if (hasPerfLogAnno && JdbcUtil.isDaoMethodPerfLogAllowed) {
+                                if (hasPerfLogAnno) {
                                     logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
                                 }
 
-                                if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                if (hasPerfLogAnno) {
                                     JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                 }
 
-                                if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                if (hasSqlLogAnno) {
                                     JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
                                 }
                             }
@@ -4468,21 +5092,20 @@ final class DaoImpl {
                         // Do not need to do anything.
                     }
                 } else if (transactionalAnno.propagation() == Propagation.REQUIRED) {
-                    if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
-                            || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
+                    if (hasSqlLogAnno || hasPerfLogAnno) {
                         call = (proxy, args) -> {
                             final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
-                            final boolean prevSqlLogEnabled = hasSqlLogAnno ? sqlLogConfig.isEnabled : false;
+                            final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                             final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
                             final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
-                            final long prevMinExecutionTimeForSqlPerfLog = hasPerfLogAnno ? SqlPerfLogConfig.minExecutionTimeForSqlPerfLog : -1;
+                            final long prevMinExecutionTimeForSqlPerfLog = SqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
                             final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
 
-                            if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                            if (hasSqlLogAnno) {
                                 JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                             }
 
-                            if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                            if (hasPerfLogAnno) {
                                 JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                             }
 
@@ -4496,20 +5119,19 @@ final class DaoImpl {
 
                                 tran.commit();
                             } finally {
-                                if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
-                                        || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
+                                if (hasSqlLogAnno || hasPerfLogAnno) {
                                     try {
                                         tran.rollbackIfNotCommitted();
                                     } finally {
-                                        if (hasPerfLogAnno && JdbcUtil.isDaoMethodPerfLogAllowed) {
+                                        if (hasPerfLogAnno) {
                                             logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
                                         }
 
-                                        if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                        if (hasPerfLogAnno) {
                                             JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                         }
 
-                                        if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                        if (hasSqlLogAnno) {
                                             JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
                                         }
                                     }
@@ -4541,20 +5163,19 @@ final class DaoImpl {
                         final javax.sql.DataSource dataSource = proxy.dataSource();
 
                         return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
-                            if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
-                                    || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
+                            if (hasSqlLogAnno || hasPerfLogAnno) {
                                 final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
-                                final boolean prevSqlLogEnabled = hasSqlLogAnno ? sqlLogConfig.isEnabled : false;
+                                final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                                 final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
                                 final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
-                                final long prevMinExecutionTimeForSqlPerfLog = hasPerfLogAnno ? SqlPerfLogConfig.minExecutionTimeForSqlPerfLog : -1;
+                                final long prevMinExecutionTimeForSqlPerfLog = SqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
                                 final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
 
-                                if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                if (hasSqlLogAnno) {
                                     JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                                 }
 
-                                if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                if (hasPerfLogAnno) {
                                     JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                                 }
 
@@ -4568,20 +5189,19 @@ final class DaoImpl {
 
                                     tran.commit();
                                 } finally {
-                                    if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
-                                            || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
+                                    if (hasSqlLogAnno || hasPerfLogAnno) {
                                         try {
                                             tran.rollbackIfNotCommitted();
                                         } finally {
-                                            if (hasPerfLogAnno && JdbcUtil.isDaoMethodPerfLogAllowed) {
+                                            if (hasPerfLogAnno) {
                                                 logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
                                             }
 
-                                            if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                            if (hasPerfLogAnno) {
                                                 JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                             }
 
-                                            if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                            if (hasSqlLogAnno) {
                                                 JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
                                             }
                                         }
@@ -4611,21 +5231,20 @@ final class DaoImpl {
                     call = (proxy, args) -> {
                         final javax.sql.DataSource dataSource = proxy.dataSource();
 
-                        if ((hasSqlLogAnno && JdbcUtil.isSqlLogAllowed)
-                                || (hasPerfLogAnno && (JdbcUtil.isSqlPerfLogAllowed || JdbcUtil.isDaoMethodPerfLogAllowed))) {
+                        if (hasSqlLogAnno || hasPerfLogAnno) {
                             return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
                                 final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
-                                final boolean prevSqlLogEnabled = hasSqlLogAnno ? sqlLogConfig.isEnabled : false;
+                                final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                                 final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
                                 final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
-                                final long prevMinExecutionTimeForSqlPerfLog = hasPerfLogAnno ? SqlPerfLogConfig.minExecutionTimeForSqlPerfLog : -1;
+                                final long prevMinExecutionTimeForSqlPerfLog = SqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
                                 final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
 
-                                if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                if (hasSqlLogAnno) {
                                     JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                                 }
 
-                                if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                if (hasPerfLogAnno) {
                                     JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                                 }
 
@@ -4634,15 +5253,15 @@ final class DaoImpl {
                                 try {
                                     return tmp.apply(proxy, args);
                                 } finally {
-                                    if (hasPerfLogAnno && JdbcUtil.isDaoMethodPerfLogAllowed) {
+                                    if (hasPerfLogAnno) {
                                         logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
                                     }
 
-                                    if (hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed) {
+                                    if (hasPerfLogAnno) {
                                         JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                     }
 
-                                    if (hasSqlLogAnno && JdbcUtil.isSqlLogAllowed) {
+                                    if (hasSqlLogAnno) {
                                         JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
                                     }
                                 }
@@ -4746,6 +5365,19 @@ final class DaoImpl {
                     hasRefreshCache.setTrue();
                 }
 
+                // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
+                if ((hasRefreshCache.isTrue() || hasCacheResult.isTrue()) && !NoUpdateDao.class.isAssignableFrom(daoInterface)) {
+                    throw new UnsupportedOperationException(
+                            "Cache is only supported for the methods declared NoUpdateDao/UncheckedNoUpdateDao interface right now, not supported for method: "
+                                    + fullClassMethodName);
+                }
+
+                if (hasRefreshCache.isTrue() && hasCacheResult.isFalse()) {
+                    throw new UnsupportedOperationException("Class: " + daoInterface
+                            + " or its super interfaces or methods are annotated by @RefreshCache, but none of them is annotated with @CacheResult. "
+                            + "Please remove the unnecessary @RefreshCache annotations or Add @CacheResult annotation if it's really needed.");
+                }
+
                 final List<Tuple2<JdbcUtil.Handler, Boolean>> handlerList = StreamEx.of(m.getAnnotations())
                         .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(JdbcUtil.HandlerList.class))
                         .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
@@ -4810,12 +5442,6 @@ final class DaoImpl {
             }
 
             methodInvokerMap.put(m, call);
-        }
-
-        if (hasRefreshCache.isTrue() && hasCacheResult.isFalse()) {
-            throw new UnsupportedOperationException("Class: " + daoInterface
-                    + " or its super interfaces or methods are annotated by @RefreshCache, but none of them is annotated with @CacheResult. "
-                    + "Please remove the unnecessary @RefreshCache annotations or Add @CacheResult annotation if it's really needed.");
         }
 
         final Throwables.TriFunction<JdbcUtil.Dao, Method, Object[], ?, Throwable> proxyInvoker = (proxy, method, args) -> methodInvokerMap.get(method)

@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.landawn.abacus.util.JdbcUtil.Handler;
 import com.landawn.abacus.util.Tuple.Tuple3;
 
-public class HandlerFactory {
+public final class HandlerFactory {
 
     @SuppressWarnings("rawtypes")
     static final Handler EMPTY = new Handler() {

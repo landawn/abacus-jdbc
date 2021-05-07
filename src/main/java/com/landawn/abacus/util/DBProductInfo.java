@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Haiyang Li.
+ * Copyright (c) 2021, Haiyang Li.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,25 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.landawn.abacus.util;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
+import lombok.Value;
 
-final class SpringApplicationContext {
+@Value
+public class DBProductInfo {
 
-    @Autowired
-    private ApplicationContext appContext;
+    private String productName;
+    private String productVersion;
+    private DBVersion version;
 
-    SpringApplicationContext() {
-    }
-
-    public Object getBean(String name) {
-        return appContext == null ? null : appContext.getBean(name);
-    }
-
-    public <T> T getBean(Class<T> requiredType) {
-        return appContext == null ? null : appContext.getBean(requiredType);
-    }
 }

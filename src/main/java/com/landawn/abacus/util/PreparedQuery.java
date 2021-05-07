@@ -47,7 +47,7 @@ import java.sql.PreparedStatement;
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html">http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html</a>
  */
-public class PreparedQuery extends AbstractPreparedQuery<PreparedStatement, PreparedQuery> {
+public final class PreparedQuery extends AbstractPreparedQuery<PreparedStatement, PreparedQuery> {
 
     PreparedQuery(PreparedStatement stmt) {
         super(stmt);

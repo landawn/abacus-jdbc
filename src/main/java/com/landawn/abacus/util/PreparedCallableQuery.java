@@ -77,7 +77,7 @@ import com.landawn.abacus.util.Tuple.Tuple4;
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html">http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html</a>
  */
-public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStatement, PreparedCallableQuery> {
+public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableStatement, PreparedCallableQuery> {
 
     final CallableStatement cstmt;
     List<OutParam> outParams;
@@ -772,7 +772,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public PreparedCallableQuery setObject(String parameterName, Object x, int sqlType, int scaleOrLength) throws SQLException {
+    public PreparedCallableQuery setObject(final String parameterName, final Object x, final int sqlType, final int scaleOrLength) throws SQLException {
         cstmt.setObject(parameterName, x, sqlType, scaleOrLength);
 
         return this;
@@ -785,7 +785,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @return
      * @throws SQLException the SQL exception
      */
-    public PreparedCallableQuery setParameters(Map<String, ?> parameters) throws SQLException {
+    public PreparedCallableQuery setParameters(final Map<String, ?> parameters) throws SQLException {
         checkArgNotNull(parameters, "parameters");
 
         for (Map.Entry<String, ?> entry : parameters.entrySet()) {
@@ -797,9 +797,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
 
     /**
      * Sets the parameters.
-     *
-     * @param parameterNames
      * @param entity
+     * @param parameterNames
+     *
      * @return
      * @throws SQLException the SQL exception
      * @see {@link ClassUtil#getPropNameList(Class)}
@@ -807,9 +807,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @see {@link ClassUtil#getPropNameListExclusively(Class, Collection)}
      * @see {@link JdbcUtil#getNamedParameters(String)}
      */
-    public PreparedCallableQuery setParameters(List<String> parameterNames, Object entity) throws SQLException {
-        checkArgNotNull(parameterNames, "parameterNames");
+    public PreparedCallableQuery setParameters(final Object entity, final List<String> parameterNames) throws SQLException {
         checkArgNotNull(entity, "entity");
+        checkArgNotNull(parameterNames, "parameterNames");
 
         final Class<?> cls = entity.getClass();
         final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
@@ -838,14 +838,6 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         addOutParameters(new OutParam(parameterIndex, null, sqlType, null, -1));
 
         return this;
-    }
-
-    private void addOutParameters(OutParam outParameter) {
-        if (outParams == null) {
-            outParams = new ArrayList<>();
-        }
-
-        outParams.add(outParameter);
     }
 
     /**
@@ -1090,6 +1082,14 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
         return this;
     }
 
+    private void addOutParameters(OutParam outParameter) {
+        if (outParams == null) {
+            outParams = new ArrayList<>();
+        }
+
+        outParams.add(outParameter);
+    }
+
     @Override
     protected ResultSet executeQuery() throws SQLException {
         if (!isFetchDirectionSet) {
@@ -1251,7 +1251,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     /**
      * 
      * @param <R>
-     * @param resultExtrator
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1281,7 +1281,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     /**
      * 
      * @param <R>
-     * @param resultExtrator
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1320,7 +1320,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     /**
      * 
      * @param <R>
-     * @param resultExtrator
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return the {@code R} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1345,7 +1345,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     /**
      * 
      * @param <R>
-     * @param resultExtrator
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return the {@code R} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1383,7 +1383,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     /**
      * 
      * @param <R>
-     * @param resultExtrator
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1415,7 +1415,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
     /**
      * 
      * @param <R>
-     * @param resultExtrator
+     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1448,8 +1448,8 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * 
      * @param <R1>
      * @param <R2>
-     * @param resultExtrator1
-     * @param resultExtrator2
+     * @param resultExtrator1 Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtrator2 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return {@code R1/R2} extracted from the first two {@code ResultSets} returned by the executed procedure.
      * @throws SQLException
      */
@@ -1492,8 +1492,8 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * 
      * @param <R1>
      * @param <R2>
-     * @param resultExtrator1
-     * @param resultExtrator2
+     * @param resultExtrator1 Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtrator2 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return {@code R1/R2} extracted from the first two {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1538,9 +1538,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param <R1>
      * @param <R2>
      * @param <R3>
-     * @param resultExtrator1
-     * @param resultExtrator2
-     * @param resultExtrator3
+     * @param resultExtrator1 Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtrator2 Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtrator3 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return {@code R1/R2/R3} extracted from the first three {@code ResultSets} returned by the executed procedure.
      * @throws SQLException
      */
@@ -1591,9 +1591,9 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @param <R1>
      * @param <R2>
      * @param <R3>
-     * @param resultExtrator1
-     * @param resultExtrator2
-     * @param resultExtrator3
+     * @param resultExtrator1 Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtrator2 Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtrator3 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return {@code R1/R2/R3} extracted from the first three {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1688,7 +1688,7 @@ public class PreparedCallableQuery extends AbstractPreparedQuery<CallableStateme
      * @throws SQLException
      */
     public <T> Tuple2<List<T>, OutParamResult> listAndGetOutParameters(final RowFilter rowFilter, final RowMapper<T> rowMapper) throws SQLException {
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 

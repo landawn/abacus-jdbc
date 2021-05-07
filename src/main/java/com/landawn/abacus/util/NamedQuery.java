@@ -64,7 +64,7 @@ import com.landawn.abacus.util.JdbcUtil.TriParametersSetter;
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html">http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html</a>
  */
-public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQuery> {
+public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQuery> {
 
     static final int MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP = 5;
 
@@ -2675,20 +2675,78 @@ public class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQu
 
     /**
      * Sets the parameters.
+     * @param entity
+     * @param parameterNames
+     *
+     * @return
+     * @throws SQLException the SQL exception
+     * @see {@link ClassUtil#getPropNameList(Class)}
+     * @see {@link ClassUtil#getPropNameListExclusively(Class, Set)}
+     * @see {@link ClassUtil#getPropNameListExclusively(Class, Collection)}
+     * @see {@link JdbcUtil#getNamedParameters(String)}
+     */
+    public NamedQuery setParameters(final Object entity, final List<String> parameterNames) throws SQLException {
+        checkArgNotNull(entity, "entity");
+        checkArgNotNull(parameterNames, "parameterNames");
+
+        if (paramNameIndexMap == null) {
+            initParamNameIndexMap();
+        }
+
+        final Class<?> cls = entity.getClass();
+        final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+        PropInfo propInfo = null;
+        Object propValue = null;
+        Type<Object> dbType = null;
+        IntList indexes = null;
+
+        for (String parameterName : parameterNames) {
+            propInfo = entityInfo.getPropInfo(parameterName);
+            propValue = propInfo.getPropValue(entity);
+            dbType = propInfo.dbType;
+
+            indexes = paramNameIndexMap.get(parameterName);
+
+            if (indexes == null) {
+                close();
+                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+            } else {
+                if (indexes.size() == 1) {
+                    dbType.set(stmt, indexes.get(0), propValue);
+                } else if (indexes.size() == 2) {
+                    dbType.set(stmt, indexes.get(0), propValue);
+                    dbType.set(stmt, indexes.get(1), propValue);
+                } else if (indexes.size() == 3) {
+                    dbType.set(stmt, indexes.get(0), propValue);
+                    dbType.set(stmt, indexes.get(1), propValue);
+                    dbType.set(stmt, indexes.get(2), propValue);
+                } else {
+                    for (int i = 0, size = indexes.size(); i < size; i++) {
+                        dbType.set(stmt, indexes.get(i), propValue);
+                    }
+                }
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * Sets the parameters.
      *
      * @param <T>
      * @param paramaters
-     * @param parametersSetter
+     * @param paramsSetter
      * @return
      * @throws SQLException the SQL exception
      */
-    public <T> NamedQuery setParameters(final T paramaters, TriParametersSetter<? super NamedQuery, ? super T> parametersSetter) throws SQLException {
-        checkArgNotNull(parametersSetter, "parametersSetter");
+    public <T> NamedQuery setParameters(final T paramaters, TriParametersSetter<? super NamedQuery, ? super T> paramsSetter) throws SQLException {
+        checkArgNotNull(paramsSetter, "paramsSetter");
 
         boolean noException = false;
 
         try {
-            parametersSetter.accept(namedSql, this, paramaters);
+            paramsSetter.accept(namedSql, this, paramaters);
 
             noException = true;
         } finally {
