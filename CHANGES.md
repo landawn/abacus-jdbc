@@ -1,3 +1,10 @@
+### 2.8.3
+
+* Create `abacus-cache`. 
+* Create `abacus-query`.
+* Improvements and bug fix.
+
+
 ### 2.8.2
 
 * Improvements and bug fix.

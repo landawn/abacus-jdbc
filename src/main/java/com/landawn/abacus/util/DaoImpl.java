@@ -21,6 +21,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -72,12 +73,15 @@ import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.CrudDao;
 import com.landawn.abacus.util.JdbcUtil.Dao;
+import com.landawn.abacus.util.JdbcUtil.Dao.Bind;
+import com.landawn.abacus.util.JdbcUtil.Dao.Config;
 import com.landawn.abacus.util.JdbcUtil.Dao.NonDBOperation;
 import com.landawn.abacus.util.JdbcUtil.Dao.OP;
 import com.landawn.abacus.util.JdbcUtil.Dao.OutParameter;
 import com.landawn.abacus.util.JdbcUtil.Dao.SqlField;
 import com.landawn.abacus.util.JdbcUtil.NoUpdateDao;
 import com.landawn.abacus.util.JdbcUtil.OutParamResult;
+import com.landawn.abacus.util.JdbcUtil.OutParameterList;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowConsumer;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
@@ -550,7 +554,7 @@ final class DaoImpl {
             EntryStream.class, ExceptionalStream.class);
 
     @SuppressWarnings("rawtypes")
-    private static JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Collection> collParamsSetter = (q, p) -> q.setParameters(p);
+    private static JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Collection> collParamsSetter = AbstractPreparedQuery::setParameters;
 
     private static JdbcUtil.BiParametersSetter<NamedQuery, Object> objParamsSetter = (NamedQuery q, Object p) -> q.setParameters(p);
 
@@ -1329,11 +1333,7 @@ final class DaoImpl {
             final Class<?> paramTypeOne = paramTypes[stmtParamIndexes[0]];
 
             if (isCall) {
-                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamIndexes[0]])
-                        .select(Dao.Bind.class)
-                        .map(b -> b.value())
-                        .first()
-                        .orNull();
+                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamIndexes[0]]).select(Dao.Bind.class).map(Bind::value).first().orNull();
 
                 if (N.notNullOrEmpty(paramName)) {
                     parametersSetter = (preparedQuery, args) -> ((PreparedCallableQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
@@ -1353,11 +1353,7 @@ final class DaoImpl {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
                 }
             } else if (isNamedQuery) {
-                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamIndexes[0]])
-                        .select(Dao.Bind.class)
-                        .map(b -> b.value())
-                        .first()
-                        .orNull();
+                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamIndexes[0]]).select(Dao.Bind.class).map(Bind::value).first().orNull();
 
                 if (N.notNullOrEmpty(paramName)) {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
@@ -1390,7 +1386,7 @@ final class DaoImpl {
                 final String[] paramNames = IntStreamEx.of(stmtParamIndexes)
                         .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).select(Dao.Bind.class).first().orElse(null))
                         .skipNull()
-                        .map(b -> b.value())
+                        .map(Bind::value)
                         .toArray(IntFunctions.ofStringArray());
 
                 if (N.notNullOrEmpty(paramNames)) {
@@ -1403,7 +1399,7 @@ final class DaoImpl {
                     };
                 } else {
                     if (stmtParamLen == paramLen) {
-                        parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters(args);
+                        parametersSetter = AbstractPreparedQuery::setParameters;
                     } else {
                         parametersSetter = (preparedQuery, args) -> {
                             for (int i = 0; i < stmtParamLen; i++) {
@@ -1420,7 +1416,7 @@ final class DaoImpl {
                                 .orElseThrow(() -> new UnsupportedOperationException("In method: " + fullClassMethodName + ", parameters[" + i + "]: "
                                         + ClassUtil.getSimpleClassName(m.getParameterTypes()[i])
                                         + " is not binded with parameter named through annotation @Bind")))
-                        .map(b -> b.value())
+                        .map(Bind::value)
                         .toArray(IntFunctions.ofStringArray());
 
                 if (namedSql != null) {
@@ -1441,7 +1437,7 @@ final class DaoImpl {
                 };
             } else {
                 if (stmtParamLen == paramLen) {
-                    parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters(args);
+                    parametersSetter = AbstractPreparedQuery::setParameters;
                 } else {
                     parametersSetter = (preparedQuery, args) -> {
                         for (int i = 0; i < stmtParamLen; i++) {
@@ -1646,29 +1642,29 @@ final class DaoImpl {
         final DBVersion dbVersion = dbProductInfo.getVersion();
 
         final boolean addLimitForSingleQuery = StreamEx.of(allInterfaces)
-                .flatMapp(cls -> cls.getAnnotations())
+                .flatMapp(Class::getAnnotations)
                 .select(Dao.Config.class)
-                .map(it -> it.addLimitForSingleQuery())
+                .map(Config::addLimitForSingleQuery)
                 .first()
                 .orElse(false);
 
         final boolean callGenerateIdForInsert = StreamEx.of(allInterfaces)
-                .flatMapp(cls -> cls.getAnnotations())
+                .flatMapp(Class::getAnnotations)
                 .select(Dao.Config.class)
-                .map(it -> it.callGenerateIdForInsertIfIdNotSet())
+                .map(Config::callGenerateIdForInsertIfIdNotSet)
                 .first()
                 .orElse(false);
 
         final boolean callGenerateIdForInsertWithSql = StreamEx.of(allInterfaces)
-                .flatMapp(cls -> cls.getAnnotations())
+                .flatMapp(Class::getAnnotations)
                 .select(Dao.Config.class)
-                .map(it -> it.callGenerateIdForInsertWithSqlIfIdNotSet())
+                .map(Config::callGenerateIdForInsertWithSqlIfIdNotSet)
                 .first()
                 .orElse(false);
 
         final Map<String, String> sqlFieldMap = StreamEx.of(allInterfaces)
-                .flatMapp(it -> it.getDeclaredFields())
-                .append(StreamEx.of(allInterfaces).flatMapp(it -> it.getDeclaredClasses()).flatMapp(it -> it.getDeclaredFields()))
+                .flatMapp(Class::getDeclaredFields)
+                .append(StreamEx.of(allInterfaces).flatMapp(Class::getDeclaredClasses).flatMapp(Class::getDeclaredFields))
                 .filter(it -> it.isAnnotationPresent(SqlField.class))
                 .onEach(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()) && String.class.equals(it.getType()),
                         "Field annotated with @SqlField must be static&final String. but {} is not in Dao class {}.", it, daoInterface))
@@ -1721,7 +1717,7 @@ final class DaoImpl {
             }
 
             if (isCrudDao) {
-                final List<String> idFieldNames = ClassUtil.getIdFieldNames((Class) typeArguments[0]);
+                final List<String> idFieldNames = QueryUtil.getIdFieldNames((Class) typeArguments[0]);
 
                 if (idFieldNames.size() == 0) {
                     throw new IllegalArgumentException("To support CRUD operations by extending CrudDao interface, the entity class: " + typeArguments[0]
@@ -1744,7 +1740,7 @@ final class DaoImpl {
         final List<Method> sqlMethods = StreamEx.of(allInterfaces)
                 .reversed()
                 .distinct()
-                .flatMapp(clazz -> clazz.getDeclaredMethods())
+                .flatMapp(Class::getDeclaredMethods)
                 .filter(m -> !Modifier.isStatic(m.getModifiers()))
                 .toList();
 
@@ -1799,17 +1795,16 @@ final class DaoImpl {
                         : (propNamesToInsert -> N.isNullOrEmpty(propNamesToInsert) ? NLC.insertInto(entityClass)
                                 : NLC.insert(propNamesToInsert).into(entityClass)));
 
-        final Function<Class<?>, SQLBuilder> parameterizedUpdateFunc = sbc.equals(PSC.class) ? clazz -> PSC.update(clazz)
-                : (sbc.equals(PAC.class) ? clazz -> PAC.update(clazz) : clazz -> PLC.update(clazz));
+        final Function<Class<?>, SQLBuilder> parameterizedUpdateFunc = sbc.equals(PSC.class) ? PSC::update
+                : (sbc.equals(PAC.class) ? PAC::update : PLC::update);
 
-        final Function<Class<?>, SQLBuilder> parameterizedDeleteFromFunc = sbc.equals(PSC.class) ? clazz -> PSC.deleteFrom(clazz)
-                : (sbc.equals(PAC.class) ? clazz -> PAC.deleteFrom(clazz) : clazz -> PLC.deleteFrom(clazz));
+        final Function<Class<?>, SQLBuilder> parameterizedDeleteFromFunc = sbc.equals(PSC.class) ? PSC::deleteFrom
+                : (sbc.equals(PAC.class) ? PAC::deleteFrom : PLC::deleteFrom);
 
-        final Function<Class<?>, SQLBuilder> namedUpdateFunc = sbc.equals(PSC.class) ? clazz -> NSC.update(clazz)
-                : (sbc.equals(PAC.class) ? clazz -> NAC.update(clazz) : clazz -> NLC.update(clazz));
+        final Function<Class<?>, SQLBuilder> namedUpdateFunc = sbc.equals(PSC.class) ? NSC::update : (sbc.equals(PAC.class) ? NAC::update : NLC::update);
 
-        final List<String> idPropNameList = entityClass == null ? N.emptyList() : ClassUtil.getIdFieldNames(entityClass);
-        final boolean isNoId = entityClass == null || N.isNullOrEmpty(idPropNameList) || ClassUtil.isFakeId(idPropNameList);
+        final List<String> idPropNameList = entityClass == null ? N.emptyList() : QueryUtil.getIdFieldNames(entityClass);
+        final boolean isNoId = entityClass == null || N.isNullOrEmpty(idPropNameList) || QueryUtil.isFakeId(idPropNameList);
         final Set<String> idPropNameSet = N.newHashSet(idPropNameList);
         final String oneIdPropName = isNoId ? null : idPropNameList.get(0);
         final EntityInfo entityInfo = entityClass == null ? null : ParserUtil.getEntityInfo(entityClass);
@@ -1825,7 +1820,7 @@ final class DaoImpl {
         String sql_deleteById = null;
 
         final boolean noOtherInsertPropNameExceptIdPropNames = idPropNameSet.containsAll(ClassUtil.getPropNameList(entityClass))
-                || N.isNullOrEmpty(SQLBuilder.getInsertPropNames(entityClass, idPropNameSet));
+                || N.isNullOrEmpty(QueryUtil.getInsertPropNames(entityClass, idPropNameSet));
 
         if (sbc.equals(PSC.class)) {
             sql_getById = isNoId ? null : NSC.selectFrom(entityClass).where(idCond).sql();
@@ -1860,7 +1855,7 @@ final class DaoImpl {
         final ParsedSql namedUpdateByIdSQL = N.isNullOrEmpty(sql_updateById) ? null : ParsedSql.parse(sql_updateById);
         final ParsedSql namedDeleteByIdSQL = N.isNullOrEmpty(sql_deleteById) ? null : ParsedSql.parse(sql_deleteById);
 
-        final ImmutableMap<String, String> propColumnNameMap = ClassUtil.getProp2ColumnNameMap(entityClass, namingPolicy);
+        final ImmutableMap<String, String> propColumnNameMap = QueryUtil.getProp2ColumnNameMap(entityClass, namingPolicy);
 
         final String[] returnColumnNames = isNoId ? N.EMPTY_STRING_ARRAY
                 : (isOneId ? Array.of(propColumnNameMap.get(oneIdPropName))
@@ -1877,7 +1872,7 @@ final class DaoImpl {
         final EntityInfo idEntityInfo = idClass != null && ClassUtil.isEntity(idClass) ? ParserUtil.getEntityInfo(idClass) : null;
 
         final Predicate<Object> isDefaultIdTester = isNoId ? id -> true
-                : (isOneId ? id -> JdbcUtil.isDefaultIdPropValue(id)
+                : (isOneId ? JdbcUtil::isDefaultIdPropValue
                         : (isEntityId ? id -> Stream.of(((EntityId) id).entrySet()).allMatch(it -> JdbcUtil.isDefaultIdPropValue(it.getValue()))
                                 : id -> Stream.of(idPropNameList).allMatch(idName -> JdbcUtil.isDefaultIdPropValue(idEntityInfo.getPropValue(id, idName)))));
 
@@ -1904,13 +1899,13 @@ final class DaoImpl {
                 : (pq, entity) -> pq.settParameters(entity, objParamsSetter);
 
         final Dao.CacheResult daoClassCacheResultAnno = StreamEx.of(allInterfaces)
-                .flatMapp(cls -> cls.getAnnotations())
+                .flatMapp(Class::getAnnotations)
                 .select(Dao.CacheResult.class)
                 .first()
                 .orNull();
 
         final Dao.RefreshCache daoClassRefreshCacheAnno = StreamEx.of(allInterfaces)
-                .flatMapp(cls -> cls.getAnnotations())
+                .flatMapp(Class::getAnnotations)
                 .select(Dao.RefreshCache.class)
                 .first()
                 .orNull();
@@ -1930,25 +1925,25 @@ final class DaoImpl {
 
         final List<Dao.Handler> daoClassHandlerList = StreamEx.of(allInterfaces)
                 .reversed()
-                .flatMapp(cls -> cls.getAnnotations())
+                .flatMapp(Class::getAnnotations)
                 .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(JdbcUtil.HandlerList.class))
                 .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
                         : N.asList(((JdbcUtil.HandlerList) anno).value()))
                 .toList();
 
         final Map<String, JdbcUtil.Handler<?>> daoClassHandlerMap = StreamEx.of(allInterfaces)
-                .flatMapp(it -> it.getDeclaredFields())
-                .append(StreamEx.of(allInterfaces).flatMapp(it -> it.getDeclaredClasses()).flatMapp(it -> it.getDeclaredFields()))
+                .flatMapp(Class::getDeclaredFields)
+                .append(StreamEx.of(allInterfaces).flatMapp(Class::getDeclaredClasses).flatMapp(Class::getDeclaredFields))
                 .filter(it -> JdbcUtil.Handler.class.isAssignableFrom(it.getType()))
                 .onEach(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()),
                         "Handler Fields defined in Dao declared classes must be static&final Handler. but {} is not in Dao class {}.", it, daoInterface))
                 .onEach(it -> ClassUtil.setAccessible(it, true))
-                .distinctBy(it -> it.getName(), (a, b) -> {
+                .distinctBy(Field::getName, (a, b) -> {
                     throw new IllegalArgumentException("Two Handler fields have the same id (or name): " + a + "," + b + " in Dao class: " + daoInterface);
                 })
-                .toMap(it -> it.getName(), Fn.ff(it -> (JdbcUtil.Handler<?>) it.get(null)));
+                .toMap(Field::getName, Fn.ff(it -> (JdbcUtil.Handler<?>) it.get(null)));
 
-        final Dao.Cache daoClassCacheAnno = StreamEx.of(allInterfaces).flatMapp(cls -> cls.getAnnotations()).select(Dao.Cache.class).first().orNull();
+        final Dao.Cache daoClassCacheAnno = StreamEx.of(allInterfaces).flatMapp(Class::getAnnotations).select(Dao.Cache.class).first().orNull();
 
         final int capacity = daoClassCacheAnno == null ? 1000 : daoClassCacheAnno.capacity();
         final long evictDelay = daoClassCacheAnno == null ? 3000 : daoClassCacheAnno.evictDelay();
@@ -2077,7 +2072,7 @@ final class DaoImpl {
                             N.checkArgNotNull(entity, "entity");
 
                             if (entity instanceof DirtyMarker) {
-                                final Collection<String> propNamesToSave = SQLBuilder.getInsertPropNames(entity, null);
+                                final Collection<String> propNamesToSave = QueryUtil.getInsertPropNames(entity, null);
 
                                 N.checkArgNotNullOrEmpty(propNamesToSave, "propNamesToSave");
 
@@ -2857,7 +2852,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(entityClass);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(RowMapper.class)) {
                         call = (proxy, args) -> {
@@ -2874,7 +2869,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(BiRowMapper.class)) {
@@ -2892,7 +2887,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(RowFilter.class)
                             && paramTypes[2].equals(RowMapper.class)) {
@@ -2912,7 +2907,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowFilter, rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class) && paramTypes[1].equals(BiRowFilter.class)
                             && paramTypes[2].equals(BiRowMapper.class)) {
@@ -2932,7 +2927,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowFilter, rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class)) {
@@ -2949,7 +2944,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(entityClass);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(RowMapper.class)) {
@@ -2968,7 +2963,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(BiRowMapper.class)) {
@@ -2987,7 +2982,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(RowFilter.class) && paramTypes[3].equals(RowMapper.class)) {
@@ -3008,7 +3003,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowFilter, rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(BiRowFilter.class) && paramTypes[3].equals(BiRowMapper.class)) {
@@ -3029,7 +3024,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowFilter, rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("forEach") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(RowConsumer.class)) {
@@ -3245,7 +3240,7 @@ final class DaoImpl {
                             ParsedSql namedInsertSQL = null;
 
                             if (isDirtyMarker) {
-                                final Collection<String> propNamesToInsert = SQLBuilder.getInsertPropNames(entity, null);
+                                final Collection<String> propNamesToInsert = QueryUtil.getInsertPropNames(entity, null);
                                 N.checkArgNotNullOrEmpty(propNamesToInsert, "No property is assigned to entity to insert");
 
                                 if (!N.disjoint(propNamesToInsert, idPropNameSet)) {
@@ -4136,56 +4131,56 @@ final class DaoImpl {
                         //    } else if (methodName.equals("batchDelete") && paramLen == 3 && OnDeleteAction.class.equals(paramTypes[1])
                         //        && int.class.equals(paramTypes[2])) {
                         //    final JdbcUtil.BiParametersSetter<NamedQuery, Object> paramSetter = idParamSetterByEntity;
-                        //    
+                        //
                         //    call = (proxy, args) -> {
                         //        final Collection<Object> entities = (Collection) args[0];
                         //        final OnDeleteAction onDeleteAction = (OnDeleteAction) args[1];
                         //        final int batchSize = (Integer) args[2];
                         //        N.checkArgPositive(batchSize, "batchSize");
-                        //    
+                        //
                         //        if (N.isNullOrEmpty(entities)) {
                         //            return 0;
                         //        } else if (onDeleteAction == null || onDeleteAction == OnDeleteAction.NO_ACTION) {
                         //            return ((JdbcUtil.CrudDao) proxy).batchDelete(entities, batchSize);
                         //        }
-                        //    
+                        //
                         //        final Map<String, JoinInfo> entityJoinInfo = JoinInfo.getEntityJoinInfo(entityClass);
-                        //    
+                        //
                         //        if (N.isNullOrEmpty(entityJoinInfo)) {
                         //            return ((JdbcUtil.CrudDao) proxy).batchDelete(entities, batchSize);
                         //        }
-                        //    
+                        //
                         //        final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                         //        long result = 0;
-                        //    
+                        //
                         //        try {
                         //            try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedDeleteByIdSQL).closeAfterExecution(false)) {
                         //                result = ExceptionalStream.of(entities) //
                         //                        .splitToList(batchSize) //
                         //                        .sumLong(bp -> {
                         //                            long tmpResult = 0;
-                        //    
+                        //
                         //                            Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = null;
-                        //    
+                        //
                         //                            for (JoinInfo propJoinInfo : entityJoinInfo.values()) {
                         //                                tp = onDeleteAction == OnDeleteAction.SET_NULL ? propJoinInfo.getSetNullSqlAndParamSetter(sbc)
                         //                                        : propJoinInfo.getDeleteSqlAndParamSetter(sbc);
-                        //    
+                        //
                         //                                tmpResult += N.sum(proxy.prepareQuery(tp._1).addBatchParameters2(bp, tp._2).batchUpdate());
                         //                            }
-                        //    
+                        //
                         //                            tmpResult += N.sum(nameQuery.addBatchParameters(bp, paramSetter).batchUpdate());
-                        //    
+                        //
                         //                            return tmpResult;
                         //                        })
                         //                        .orZero();
                         //            }
-                        //    
+                        //
                         //            tran.commit();
                         //        } finally {
                         //            tran.rollbackIfNotCommitted();
                         //        }
-                        //    
+                        //
                         //        return N.toIntExact(result);
                         //    };
                     } else {
@@ -4465,7 +4460,7 @@ final class DaoImpl {
                             final List<String> tmp = IntStreamEx.range(0, paramLen)
                                     .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).select(Dao.Bind.class).first().orNull())
                                     .skipNull()
-                                    .map(it -> it.value())
+                                    .map(Bind::value)
                                     .filter(it -> query.indexOf(":" + it) < 0)
                                     .toList();
 
@@ -4593,7 +4588,7 @@ final class DaoImpl {
 
                     final List<Dao.OutParameter> outParameterList = StreamEx.of(m.getAnnotations())
                             .select(Dao.OutParameter.class)
-                            .append(StreamEx.of(m.getAnnotations()).select(JdbcUtil.OutParameterList.class).flatMapp(e -> e.value()))
+                            .append(StreamEx.of(m.getAnnotations()).select(JdbcUtil.OutParameterList.class).flatMapp(OutParameterList::value))
                             .toList();
 
                     if (N.notNullOrEmpty(outParameterList)) {
@@ -4863,8 +4858,7 @@ final class DaoImpl {
 
                         final LongFunction<?> updateResultConvertor = void.class.equals(returnType) ? updatedRecordCount -> null
                                 : (Boolean.class.equals(N.wrap(returnType)) ? updatedRecordCount -> updatedRecordCount > 0
-                                        : (Integer.class.equals(N.wrap(returnType)) ? updatedRecordCount -> N.toIntExact(updatedRecordCount)
-                                                : LongFunction.identity()));
+                                        : (Integer.class.equals(N.wrap(returnType)) ? N::toIntExact : LongFunction.identity()));
 
                         final boolean isLargeUpdate = op == OP.largeUpdate
                                 || (op == OP.DEFAULT && (returnType.equals(long.class) || returnType.equals(Long.class)));
@@ -4987,7 +4981,7 @@ final class DaoImpl {
                         call = (proxy, args) -> {
                             final Throwables.Supplier<ExceptionalStream, Exception> supplier = () -> tmp.apply(proxy, args);
 
-                            return ExceptionalStream.of(supplier).flatMap(it -> it.get());
+                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else {
                         final Throwables.BiFunction<JdbcUtil.Dao, Object[], Stream, Exception> tmp = (Throwables.BiFunction) call;
@@ -4995,7 +4989,7 @@ final class DaoImpl {
                         call = (proxy, args) -> {
                             final Supplier<Stream> supplier = () -> Throwables.call(() -> tmp.apply(proxy, args));
 
-                            return Stream.of(supplier).flatMap(it -> it.get());
+                            return Stream.of(supplier).flatMap(Supplier::get);
                         };
                     }
                 } else if (throwsSQLException == false) {
@@ -5033,14 +5027,14 @@ final class DaoImpl {
                 //    }
 
                 final Dao.SqlLogEnabled daoClassSqlLogAnno = StreamEx.of(allInterfaces)
-                        .flatMapp(cls -> cls.getAnnotations())
+                        .flatMapp(Class::getAnnotations)
                         .select(Dao.SqlLogEnabled.class)
                         .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
                         .first()
                         .orNull();
 
                 final Dao.PerfLog daoClassPerfLogAnno = StreamEx.of(allInterfaces)
-                        .flatMapp(cls -> cls.getAnnotations())
+                        .flatMapp(Class::getAnnotations)
                         .select(Dao.PerfLog.class)
                         .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
                         .first()

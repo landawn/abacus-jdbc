@@ -140,12 +140,12 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 /**
- * 
+ *
  * Performance Tips:
- * <li>Avoid unnecessary/repeated database calls.</li> 
+ * <li>Avoid unnecessary/repeated database calls.</li>
  * <li>Only fetch the columns you need or update the columns you want.</li>
  * <li>Index is the key point in a lot of database performance issues.</li>
- * 
+ *
  * <br />
  *
  * @see {@link com.landawn.abacus.condition.ConditionFactory}
@@ -306,7 +306,7 @@ public final class JdbcUtil {
      * @param url
      * @param user
      * @param password
-     * @return 
+     * @return
      */
     public static javax.sql.DataSource createHikariDataSource(final String url, final String user, final String password) {
         try {
@@ -327,7 +327,7 @@ public final class JdbcUtil {
      * @param url
      * @param user
      * @param password
-     * @return 
+     * @return
      */
     public static javax.sql.DataSource createC3p0DataSource(final String url, final String user, final String password) {
         try {
@@ -960,7 +960,7 @@ public final class JdbcUtil {
 
     /**
      * Returns the column index starts with from 1, not 0.
-     * 
+     *
      * @param rsmd
      * @param columnName
      * @return
@@ -1142,11 +1142,11 @@ public final class JdbcUtil {
     //    }
 
     public static ImmutableMap<String, String> getColumn2FieldNameMap(Class<?> entityClass) {
-        return ClassUtil.getColumn2PropNameMap(entityClass);
+        return QueryUtil.getColumn2PropNameMap(entityClass);
     }
 
     /**
-     * 
+     *
      * @param ds
      * @return
      */
@@ -1903,9 +1903,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepare {@code select} query for big result set. Fetch direction will be set to {@code FetchDirection.FORWARD} 
+     * Prepare {@code select} query for big result set. Fetch direction will be set to {@code FetchDirection.FORWARD}
      * and fetch size will be set to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
-     * 
+     *
      * @param ds
      * @param sql
      * @return
@@ -1917,9 +1917,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepare {@code select} query for big result set. Fetch direction will be set to {@code FetchDirection.FORWARD} 
+     * Prepare {@code select} query for big result set. Fetch direction will be set to {@code FetchDirection.FORWARD}
      * and fetch size will be set to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
-     * 
+     *
      * @param conn
      * @param sql
      * @return
@@ -2553,9 +2553,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepare {@code select} query for big result set. Fetch direction will be set to {@code FetchDirection.FORWARD} 
+     * Prepare {@code select} query for big result set. Fetch direction will be set to {@code FetchDirection.FORWARD}
      * and fetch size will be set to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
-     * 
+     *
      * @param ds
      * @param sql
      * @return
@@ -2567,9 +2567,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepare {@code select} query for big result set. Fetch direction will be set to {@code FetchDirection.FORWARD} 
+     * Prepare {@code select} query for big result set. Fetch direction will be set to {@code FetchDirection.FORWARD}
      * and fetch size will be set to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
-     * 
+     *
      * @param conn
      * @param sql
      * @return
@@ -3992,7 +3992,7 @@ public final class JdbcUtil {
      * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
-     * 
+     *
      * @param <T>
      * @param resultSet
      * @param rowFilter
@@ -4133,7 +4133,7 @@ public final class JdbcUtil {
      * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
-     * 
+     *
      * @param <T>
      * @param resultSet
      * @param rowFilter
@@ -4237,7 +4237,7 @@ public final class JdbcUtil {
      * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.streamAllResultSets(stmt, rowMapper).onClose(Fn.closeQuietly(stmt))...}
-     * 
+     *
      * @param <T>
      * @param stmt
      * @param rowMapper
@@ -4259,7 +4259,7 @@ public final class JdbcUtil {
      * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).onClose(Fn.closeQuietly(stmt))...}
-     * 
+     *
      * @param <T>
      * @param stmt
      * @param rowFilter
@@ -4283,7 +4283,7 @@ public final class JdbcUtil {
      * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.streamAllResultSets(stmt, rowMapper).onClose(Fn.closeQuietly(stmt))...}
-     * 
+     *
      * @param <T>
      * @param stmt
      * @param rowMapper
@@ -4305,7 +4305,7 @@ public final class JdbcUtil {
      * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).onClose(Fn.closeQuietly(stmt))...}
-     * 
+     *
      * @param <T>
      * @param stmt
      * @param rowFilter
@@ -4378,7 +4378,7 @@ public final class JdbcUtil {
         return result;
     }
 
-    static interface OutParameterGetter {
+    interface OutParameterGetter {
 
         Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException;
 
@@ -4935,7 +4935,7 @@ public final class JdbcUtil {
 
     /**
      * Enable/Disable sql log in current thread.
-     * 
+     *
      * @param b {@code true} to enable, {@code false} to disable.
      * @param maxSqlLogLength default value is 1024
      * @deprecated replaced by {@code enableSqlLog/disableSqlLog}.
@@ -4957,7 +4957,7 @@ public final class JdbcUtil {
 
     /**
      * Enable sql log in current thread.
-     * 
+     *
      */
     public static void enableSqlLog() {
         enableSqlLog(DEFAULT_MAX_SQL_LOG_LENGTH);
@@ -4965,7 +4965,7 @@ public final class JdbcUtil {
 
     /**
      * Enable sql log in current thread.
-     *  
+     *
      * @param maxSqlLogLength default value is 1024
      */
     public static void enableSqlLog(final int maxSqlLogLength) {
@@ -4974,7 +4974,7 @@ public final class JdbcUtil {
 
     /**
      * Disable sql log in current thread.
-     * 
+     *
      */
     public static void disableSqlLog() {
         enableSqlLog(false, isSQLLogEnabled_TL.get().maxSqlLogLength);
@@ -5023,7 +5023,7 @@ public final class JdbcUtil {
 
     /**
      * Set minimum execution time to log sql performance in current thread.
-     * 
+     *
      * @param minExecutionTimeForSqlPerfLog
      */
     public static void setMinExecutionTimeForSqlPerfLog(final long minExecutionTimeForSqlPerfLog) {
@@ -5115,7 +5115,7 @@ public final class JdbcUtil {
         } else {
             logger.warn("Not in Spring or not able to retrieve Spring Transactional");
         }
-        // }        
+        // }
     }
 
     /**
@@ -5140,7 +5140,7 @@ public final class JdbcUtil {
 
     /**
      * Since enable/disable sql log flag is attached with current thread, so don't execute the specified {@code sqlAction} in another thread.
-     * 
+     *
      * @param <E>
      * @param sqlAction
      * @throws E
@@ -5161,7 +5161,7 @@ public final class JdbcUtil {
 
     /**
      * Since enable/disable sql log flag is attached with current thread, so don't execute the specified {@code sqlAction} in another thread.
-     * 
+     *
      * @param <R>
      * @param <E>
      * @param sqlAction
@@ -5184,7 +5184,7 @@ public final class JdbcUtil {
 
     /**
      * Since using or not using Spring transaction flag is attached with current thread, so don't execute the specified {@code sqlAction} in another thread.
-     * 
+     *
      * @param <E>
      * @param sqlAction
      * @throws E
@@ -5205,7 +5205,7 @@ public final class JdbcUtil {
 
     /**
      * Since using or not using Spring transaction flag is attached with current thread, so don't execute the specified {@code sqlAction} in another thread.
-     * 
+     *
      * @param <R>
      * @param <E>
      * @param sqlAction
@@ -5226,7 +5226,7 @@ public final class JdbcUtil {
         }
     }
 
-    static final Predicate<Object> defaultIdTester = id -> JdbcUtil.isDefaultIdPropValue(id);
+    static final Predicate<Object> defaultIdTester = JdbcUtil::isDefaultIdPropValue;
 
     /**
      * Checks if is default id prop value.
@@ -5244,7 +5244,7 @@ public final class JdbcUtil {
             return Stream.of(((EntityId) value).entrySet()).allMatch(it -> JdbcUtil.isDefaultIdPropValue(it.getValue()));
         } else if (ClassUtil.isEntity(value.getClass())) {
             final Class<?> entityClass = value.getClass();
-            final List<String> idPropNameList = ClassUtil.getIdFieldNames(entityClass);
+            final List<String> idPropNameList = QueryUtil.getIdFieldNames(entityClass);
 
             if (N.isNullOrEmpty(idPropNameList)) {
                 return false;
@@ -5270,7 +5270,7 @@ public final class JdbcUtil {
     }
 
     public static Collection<String> getInsertPropNames(final Object entity, final Set<String> excludedPropNames) {
-        return SQLBuilder.getInsertPropNames(entity, excludedPropNames);
+        return QueryUtil.getInsertPropNames(entity, excludedPropNames);
     }
 
     public static Collection<String> getInsertPropNames(final Class<?> entityClass) {
@@ -5278,7 +5278,7 @@ public final class JdbcUtil {
     }
 
     public static Collection<String> getInsertPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
-        return SQLBuilder.getInsertPropNames(entityClass, excludedPropNames);
+        return QueryUtil.getInsertPropNames(entityClass, excludedPropNames);
     }
 
     public static Collection<String> getSelectPropNames(final Class<?> entityClass) {
@@ -5291,7 +5291,7 @@ public final class JdbcUtil {
 
     public static Collection<String> getSelectPropNames(final Class<?> entityClass, final boolean includeSubEntityProperties,
             final Set<String> excludedPropNames) {
-        return SQLBuilder.getSelectPropNames(entityClass, includeSubEntityProperties, excludedPropNames);
+        return QueryUtil.getSelectPropNames(entityClass, includeSubEntityProperties, excludedPropNames);
     }
 
     public static Collection<String> getUpdatePropNames(final Class<?> entityClass) {
@@ -5299,7 +5299,7 @@ public final class JdbcUtil {
     }
 
     public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
-        return SQLBuilder.getUpdatePropNames(entityClass, excludedPropNames);
+        return QueryUtil.getUpdatePropNames(entityClass, excludedPropNames);
     }
 
     public static Function<Statement, String> getSqlExtractor() {
@@ -5401,7 +5401,7 @@ public final class JdbcUtil {
 
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
-     * 
+     *
      * @param sqlAction
      * @return
      */
@@ -5431,7 +5431,7 @@ public final class JdbcUtil {
 
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
-     * 
+     *
      * @param <T>
      * @param t
      * @param sqlAction
@@ -5446,7 +5446,7 @@ public final class JdbcUtil {
 
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
-     * 
+     *
      * @param <T>
      * @param <U>
      * @param t
@@ -5463,7 +5463,7 @@ public final class JdbcUtil {
 
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
-     * 
+     *
      * @param <A>
      * @param <B>
      * @param <C>
@@ -5483,7 +5483,7 @@ public final class JdbcUtil {
 
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
-     * 
+     *
      * @param <R>
      * @param sqlAction
      * @return
@@ -5515,7 +5515,7 @@ public final class JdbcUtil {
 
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
-     * 
+     *
      * @param <T>
      * @param <R>
      * @param t
@@ -5531,7 +5531,7 @@ public final class JdbcUtil {
 
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
-     * 
+     *
      * @param <T>
      * @param <U>
      * @param <R>
@@ -5550,7 +5550,7 @@ public final class JdbcUtil {
 
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
-     * 
+     *
      * @param <A>
      * @param <B>
      * @param <C>
@@ -5622,9 +5622,9 @@ public final class JdbcUtil {
      * @param <QS>
      */
     @FunctionalInterface
-    public static interface ParametersSetter<QS> extends Throwables.Consumer<QS, SQLException> {
+    public interface ParametersSetter<QS> extends Throwables.Consumer<QS, SQLException> {
         @SuppressWarnings("rawtypes")
-        public static final ParametersSetter DO_NOTHING = new ParametersSetter<Object>() {
+        ParametersSetter DO_NOTHING = new ParametersSetter<Object>() {
             @Override
             public void accept(Object preparedQuery) throws SQLException {
                 // Do nothing.
@@ -5645,9 +5645,9 @@ public final class JdbcUtil {
      * @see Columns.ColumnThree
      */
     @FunctionalInterface
-    public static interface BiParametersSetter<QS, T> extends Throwables.BiConsumer<QS, T, SQLException> {
+    public interface BiParametersSetter<QS, T> extends Throwables.BiConsumer<QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
-        public static final BiParametersSetter DO_NOTHING = new BiParametersSetter<Object, Object>() {
+        BiParametersSetter DO_NOTHING = new BiParametersSetter<Object, Object>() {
             @Override
             public void accept(Object preparedQuery, Object param) throws SQLException {
                 // Do nothing.
@@ -5665,9 +5665,9 @@ public final class JdbcUtil {
      * @param <T>
      */
     @FunctionalInterface
-    public static interface TriParametersSetter<QS, T> extends Throwables.TriConsumer<ParsedSql, QS, T, SQLException> {
+    public interface TriParametersSetter<QS, T> extends Throwables.TriConsumer<ParsedSql, QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
-        public static final TriParametersSetter DO_NOTHING = new TriParametersSetter<Object, Object>() {
+        TriParametersSetter DO_NOTHING = new TriParametersSetter<Object, Object>() {
             @Override
             public void accept(ParsedSql parsedSql, Object preparedQuery, Object param) throws SQLException {
                 // Do nothing.
@@ -5684,7 +5684,7 @@ public final class JdbcUtil {
      * @param <T>
      */
     @FunctionalInterface
-    public static interface ResultExtractor<T> extends Throwables.Function<ResultSet, T, SQLException> {
+    public interface ResultExtractor<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
         ResultExtractor<DataSet> TO_DATA_SET = new ResultExtractor<DataSet>() {
             @Override
@@ -5699,8 +5699,8 @@ public final class JdbcUtil {
 
         /**
          * In a lot of scenarios, including PreparedQuery/Dao/SQLExecutor, the input {@code ResultSet} will be closed after {@code apply(rs)} call. So don't save/return the input {@code ResultSet}.
-         * 
-         * @param rs 
+         *
+         * @param rs
          */
         @Override
         T apply(ResultSet rs) throws SQLException;
@@ -6020,7 +6020,7 @@ public final class JdbcUtil {
      * @param <T>
      */
     @FunctionalInterface
-    public static interface BiResultExtractor<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
+    public interface BiResultExtractor<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
 
         ResultExtractor<DataSet> TO_DATA_SET = new ResultExtractor<DataSet>() {
             @Override
@@ -6035,7 +6035,7 @@ public final class JdbcUtil {
 
         /**
          * In a lot of scenarios, including PreparedQuery/Dao/SQLExecutor, the input {@code ResultSet} will be closed after {@code apply(rs)} call. So don't save/return the input {@code ResultSet}.
-         * 
+         *
          * @param rs
          * @param columnLabels
          */
@@ -6377,7 +6377,7 @@ public final class JdbcUtil {
      * @see Columns.ColumnThree
      */
     @FunctionalInterface
-    public static interface RowMapper<T> extends Throwables.Function<ResultSet, T, SQLException> {
+    public interface RowMapper<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
         @Override
         T apply(ResultSet rs) throws SQLException;
@@ -6821,7 +6821,7 @@ public final class JdbcUtil {
      * @param <T>
      */
     @FunctionalInterface
-    public static interface BiRowMapper<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
+    public interface BiRowMapper<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
 
         /** The Constant TO_ARRAY. */
         BiRowMapper<Object[]> TO_ARRAY = new BiRowMapper<Object[]>() {
@@ -6960,7 +6960,7 @@ public final class JdbcUtil {
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param <T>
-         * @param targetClass 
+         * @param targetClass
          * @param columnNameFilter
          * @param columnNameConverter
          * @return
@@ -6976,7 +6976,7 @@ public final class JdbcUtil {
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param <T>
-         * @param targetClass 
+         * @param targetClass
          * @param columnNameFilter
          * @param columnNameConverter
          * @param ignoreNonMatchedColumns
@@ -7668,9 +7668,9 @@ public final class JdbcUtil {
      *
      */
     @FunctionalInterface
-    public static interface RowConsumer extends Throwables.Consumer<ResultSet, SQLException> {
+    public interface RowConsumer extends Throwables.Consumer<ResultSet, SQLException> {
 
-        static final RowConsumer DO_NOTHING = rs -> {
+        RowConsumer DO_NOTHING = rs -> {
         };
 
         @Override
@@ -7715,9 +7715,9 @@ public final class JdbcUtil {
      * The Interface BiRowConsumer.
      */
     @FunctionalInterface
-    public static interface BiRowConsumer extends Throwables.BiConsumer<ResultSet, List<String>, SQLException> {
+    public interface BiRowConsumer extends Throwables.BiConsumer<ResultSet, List<String>, SQLException> {
 
-        static final BiRowConsumer DO_NOTHING = (rs, cls) -> {
+        BiRowConsumer DO_NOTHING = (rs, cls) -> {
         };
 
         @Override
@@ -7765,7 +7765,7 @@ public final class JdbcUtil {
      *
      */
     @FunctionalInterface
-    public static interface RowFilter extends Throwables.Predicate<ResultSet, SQLException> {
+    public interface RowFilter extends Throwables.Predicate<ResultSet, SQLException> {
 
         /** The Constant ALWAYS_TRUE. */
         RowFilter ALWAYS_TRUE = new RowFilter() {
@@ -7803,7 +7803,7 @@ public final class JdbcUtil {
      *
      */
     @FunctionalInterface
-    public static interface BiRowFilter extends Throwables.BiPredicate<ResultSet, List<String>, SQLException> {
+    public interface BiRowFilter extends Throwables.BiPredicate<ResultSet, List<String>, SQLException> {
 
         /** The Constant ALWAYS_TRUE. */
         BiRowFilter ALWAYS_TRUE = new BiRowFilter() {
@@ -7861,7 +7861,7 @@ public final class JdbcUtil {
     }
 
     @FunctionalInterface
-    public static interface RowExtractor extends Throwables.BiConsumer<ResultSet, Object[], SQLException> {
+    public interface RowExtractor extends Throwables.BiConsumer<ResultSet, Object[], SQLException> {
         @Override
         void accept(final ResultSet rs, final Object[] outputRow) throws SQLException;
 
@@ -7991,7 +7991,7 @@ public final class JdbcUtil {
     }
 
     @Beta
-    public static interface Handler<P> {
+    public interface Handler<P> {
         /**
          *
          * @param proxy
@@ -8024,12 +8024,12 @@ public final class JdbcUtil {
 
     /**
      * Performance Tips:
-     * <li>Avoid unnecessary/repeated database calls.</li> 
+     * <li>Avoid unnecessary/repeated database calls.</li>
      * <li>Only fetch the columns you need or update the columns you want.</li>
      * <li>Index is the key point in a lot of database performance issues.</li>
-     * 
+     *
      * <br />
-     * 
+     *
      * This interface is designed to share/manager SQL queries by Java APIs/methods with static parameter types and return type, while hiding the SQL scripts.
      * It's a gift from nature and created by thoughts.
      *
@@ -8180,38 +8180,38 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.annotation.AccessFieldByMethod
      * @see com.landawn.abacus.condition.ConditionFactory
      * @see com.landawn.abacus.condition.ConditionFactory.CF
-     * 
+     *
      * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
      */
-    public static interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
+    public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.TYPE })
         static @interface Config {
             /**
              * Single query method includes: queryForSingleXxx/queryForUniqueResult/findFirst/findOnlyOne/exists/count...
-             * 
+             *
              * @return
              */
             boolean addLimitForSingleQuery() default false;
 
             /**
              * flag to call {@code generateId} for {@code CrudDao.insert(T entity), CrudDao.batchInsert(Collection<T> entities)} if the ids are not set or set with default value.
-             * 
+             *
              * @return
              */
             boolean callGenerateIdForInsertIfIdNotSet() default false;
 
             /**
              * flag to call {@code generateId} for {@code CrudDao.insert(String sql, T entity), CrudDao.batchInsert(String sql, Collection<T> entities)} if the ids are not set or set with default value.
-             * 
-             * 
+             *
+             *
              * @return
              */
             boolean callGenerateIdForInsertWithSqlIfIdNotSet() default false;
 
             /**
-             * 
+             *
              * @return
              */
             boolean allowJoiningByNullOrDefaultValue() default false;
@@ -8233,7 +8233,7 @@ public final class JdbcUtil {
 
         /**
          * The Interface Select.
-         * 
+         *
          * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
@@ -8275,7 +8275,7 @@ public final class JdbcUtil {
 
             /**
              * Set it to true if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
-             * 
+             *
              * @return
              */
             boolean isSingleParameter() default false;
@@ -8285,7 +8285,7 @@ public final class JdbcUtil {
 
         /**
          * The Interface Insert.
-         * 
+         *
          * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
@@ -8333,7 +8333,7 @@ public final class JdbcUtil {
 
             /**
              * Set it to true if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
-             * 
+             *
              * @return
              */
             boolean isSingleParameter() default false;
@@ -8341,7 +8341,7 @@ public final class JdbcUtil {
 
         /**
          * The Interface Update.
-         * 
+         *
          * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
@@ -8389,7 +8389,7 @@ public final class JdbcUtil {
 
             /**
              * Set it to true if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
-             * 
+             *
              * @return
              */
             boolean isSingleParameter() default false;
@@ -8399,7 +8399,7 @@ public final class JdbcUtil {
 
         /**
          * The Interface Delete.
-         * 
+         *
          * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
@@ -8447,7 +8447,7 @@ public final class JdbcUtil {
 
             /**
              * Set it to true if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
-             * 
+             *
              * @return
              */
             boolean isSingleParameter() default false;
@@ -8457,7 +8457,7 @@ public final class JdbcUtil {
 
         /**
          * The Interface NamedSelect.
-         * 
+         *
          * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
@@ -8502,7 +8502,7 @@ public final class JdbcUtil {
 
         /**
          * The Interface NamedInsert.
-         * 
+         *
          * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
@@ -8551,7 +8551,7 @@ public final class JdbcUtil {
 
         /**
          * The Interface NamedUpdate.
-         * 
+         *
          * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
@@ -8602,7 +8602,7 @@ public final class JdbcUtil {
 
         /**
          * The Interface NamedDelete.
-         * 
+         *
          * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
          */
         @Retention(RetentionPolicy.RUNTIME)
@@ -8693,15 +8693,15 @@ public final class JdbcUtil {
 
             /**
              * Set it to true if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
-             * 
+             *
              * @return
              */
             boolean isSingleParameter() default false;
 
             /**
-             * Set it to true if want to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/listAll/streamAll}. 
+             * Set it to true if want to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/listAll/streamAll}.
              * It is false by default. The reason is all the query methods extended from {@code AbstractPreparedQuery} only retrieve the first {@code ResultSet}.
-             * 
+             *
              */
             OP op() default OP.DEFAULT;
         }
@@ -8765,24 +8765,24 @@ public final class JdbcUtil {
          * For example:
          * <p>
          * <code>
-         * 
+         *
          *  @Select("SELECT first_name, last_name FROM {tableName} WHERE id = :id")
          *  <br />
          *  User selectByUserId(@Define("tableName") String realTableName, @Bind("id") int id) throws SQLException;
-         * 
+         *
          * <br />
          * <br />
          * <br />
          * OR with customized '{whatever}':
          * <br />
-         * 
+         *
          *  @Select("SELECT first_name, last_name FROM {tableName} WHERE id = :id ORDER BY {whatever -> orderBy{{P}}")
          *  <br/>
          *  User selectByUserId(@Define("tableName") String realTableName, @Bind("id") int id, @Define("{whatever -> orderBy{{P}}") String orderBy) throws SQLException;
-         * 
+         *
          * </code>
          * </p>
-         * 
+         *
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(value = { ElementType.PARAMETER })
@@ -8799,9 +8799,9 @@ public final class JdbcUtil {
             Propagation propagation() default Propagation.REQUIRED;
         }
 
-        /** 
+        /**
          * Unsupported operation.
-         * 
+         *
          * @deprecated won't be implemented. It should be defined and done in DB server side.
          */
         @Retention(RetentionPolicy.RUNTIME)
@@ -8823,7 +8823,7 @@ public final class JdbcUtil {
             /**
              * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
              * It's only applied if target of annotation {@code SqlLogEnabled} is {@code Type}, and will be ignored if target is method.
-             * 
+             *
              * @return
              */
             String[] filter() default { ".*" };
@@ -8850,7 +8850,7 @@ public final class JdbcUtil {
             /**
              * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
              * It's only applied if target of annotation {@code PerfLog} is {@code Type}, and will be ignored if target is method.
-             * 
+             *
              * @return
              */
             String[] filter() default { ".*" };
@@ -8869,21 +8869,21 @@ public final class JdbcUtil {
             /**
              * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
              * It's only applied if target of annotation {@code Handler} is {@code Type}, and will be ignored if target is method.
-             * 
+             *
              * @return
              */
             String[] filter() default { ".*" };
 
             /**
              * This {@code Handler} will be ignored for the invoke from methods of the {@code Dao} if it's set to {@code true}. By default, it's {@code false}.
-             * 
+             *
              * @return
              */
             boolean isForInvokeFromOutsideOfDaoOnly() default false;
         }
 
         // TODO: First of all, it's bad idea to implement cache in DAL layer?! and how if not?
-        /** 
+        /**
          * Mostly, it's used for static tables.
          */
         @Beta
@@ -8906,13 +8906,13 @@ public final class JdbcUtil {
             boolean disabled() default false;
 
             /**
-             * 
+             *
              * @return
              */
             long liveTime() default 30 * 60 * 1000; // unit milliseconds.
 
             /**
-             * 
+             *
              * @return
              */
             long idleTime() default 3 * 60 * 1000; // unit milliseconds.
@@ -8920,7 +8920,7 @@ public final class JdbcUtil {
             /**
              * Minimum required size to cache query result if the return type is {@code Collection} or {@code DataSet}.
              * This setting will be ignore if the return types are not {@code Collection} or {@code DataSet}.
-             * 
+             *
              * @return
              */
             int minSize() default 0; // for list/DataSet.
@@ -8928,7 +8928,7 @@ public final class JdbcUtil {
             /**
              * If the query result won't be cached if it's size is bigger than {@code maxSize} if the return type is {@code Collection} or {@code DataSet}.
              * This setting will be ignore if the return types are not {@code Collection} or {@code DataSet}.
-             *  
+             *
              * @return
              */
             int maxSize() default Integer.MAX_VALUE; // for list/DataSet.
@@ -8936,7 +8936,7 @@ public final class JdbcUtil {
             /**
              * It's used to copy/clone the result when save result to cache or fetch result from cache.
              * It can be set to {@code "none" and "kryo"}.
-             * 
+             *
              * @return
              * @see https://github.com/EsotericSoftware/kryo
              */
@@ -8944,7 +8944,7 @@ public final class JdbcUtil {
 
             //    /**
             //     * If it's set to true, the cached result won't be removed by method annotated by {@code RefershCache}.
-            //     * 
+            //     *
             //     * @return
             //     */
             //    boolean isStaticData() default false;
@@ -8952,12 +8952,12 @@ public final class JdbcUtil {
             /**
              * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
              * It's only applied if target of annotation {@code RefreshCache} is {@code Type}, and will be ignored if target is method.
-             * 
+             *
              * @return
              */
             String[] filter() default { "query", "queryFor", "list", "get", "find", "findFirst", "findOnlyOne", "exist", "notExist", "count" };
 
-            // TODO: second, what will key be like?: {methodName=[args]} -> JSON or kryo? 
+            // TODO: second, what will key be like?: {methodName=[args]} -> JSON or kryo?
             // KeyGenerator keyGenerator() default KeyGenerator.JSON; KeyGenerator.JSON/KRYO;
         }
 
@@ -8973,7 +8973,7 @@ public final class JdbcUtil {
             boolean disabled() default false;
 
             //    /**
-            //     * 
+            //     *
             //     * @return
             //     */
             //    boolean forceRefreshStaticData() default false;
@@ -8981,7 +8981,7 @@ public final class JdbcUtil {
             /**
              * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
              * It's only applied if target of annotation {@code RefreshCache} is {@code Type}, and will be ignored if target is method.
-             * 
+             *
              * @return
              */
             String[] filter() default { "save", "insert", "update", "delete", "upsert", "execute" };
@@ -8989,17 +8989,17 @@ public final class JdbcUtil {
 
         /**
          * Annotated methods in {@code Dao} for:
-         * 
+         *
          * <li> No {@code Handler} is applied to {@code non-db Operation} </li>
          * <li> No {@code sql/performance} log is applied to {@code non-db Operation} </li>
          * <li> No {@code Transaction} annotation is applied to {@code non-db Operation} </li>
-         * 
+         *
          * <br />
          * By default, {@code targetEntityClass/dataSource/sqlMapper/executor/asyncExecutor/prepareQuery/prepareNamedQuery/prepareCallableQuery} methods in {@code Dao} are annotated with {@code NonDBOperation}.
          *
          * <br />
          * <br />
-         * 
+         *
          * @author haiyangl
          *
          */
@@ -9010,11 +9010,11 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @see The operations in {@code AbstractPreparedQuery}
          *
          */
-        public static enum OP {
+        public enum OP {
             exists,
             findOnlyOne,
             findFirst,
@@ -9026,55 +9026,55 @@ public final class JdbcUtil {
             query,
 
             /**
-             * 
+             *
              * @deprecated generally it's unnecessary to specify the {@code "op = OP.stream"} in {@code Select/NamedSelect}.
              */
             stream,
 
             /**
-             * 
+             *
              */
             queryForSingle,
 
             /**
-             * 
+             *
              */
             queryForUnique,
 
             /**
-             * Mostly it's for {@code @Call} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code listAll/listAllAndGetOutParameters}.  
+             * Mostly it's for {@code @Call} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code listAll/listAllAndGetOutParameters}.
              */
             listAll,
 
             /**
-             * Mostly it's for {@code @Call} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/queryAllAndGetOutParameters}.  
+             * Mostly it's for {@code @Call} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/queryAllAndGetOutParameters}.
              */
             queryAll,
 
             /**
-             * Mostly it's for {@code @Call} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code streamAll}.  
+             * Mostly it's for {@code @Call} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code streamAll}.
              */
             streamAll,
 
             /**
-             * Mostly it's for {@code @Call} to execute the target procedure and get out parameters by {@code executeAndGetOutParameters}.  
+             * Mostly it's for {@code @Call} to execute the target procedure and get out parameters by {@code executeAndGetOutParameters}.
              */
             executeAndGetOutParameters,
 
             /**
-             * 
+             *
              */
             update,
 
             /**
-             * 
+             *
              */
             largeUpdate,
 
             /* batchUpdate,*/
 
             /**
-             * 
+             *
              */
             DEFAULT;
         }
@@ -9098,14 +9098,14 @@ public final class JdbcUtil {
         // SQLExecutor sqlExecutor();
 
         /**
-         * 
+         *
          * @return
          */
         @NonDBOperation
         SQLMapper sqlMapper();
 
         /**
-         * 
+         *
          * @deprecated for internal use only.
          */
         @Deprecated
@@ -9113,7 +9113,7 @@ public final class JdbcUtil {
         Executor executor();
 
         /**
-         * 
+         *
          * @deprecated for internal use only.
          */
         @Deprecated
@@ -9442,7 +9442,7 @@ public final class JdbcUtil {
          * Prepare a {@code select} query by specified {@code cond}.
          * <br />
          * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
-         * 
+         *
          * @param cond
          * @return
          * @throws SQLException
@@ -9457,9 +9457,9 @@ public final class JdbcUtil {
         /**
          * Prepare a {@code select} query by specified {@code selectPropNames} and {@code cond}.
          * <br />
-         * 
+         *
          * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
-         * 
+         *
          * @param selectPropNames
          * @param cond
          * @return
@@ -9474,9 +9474,9 @@ public final class JdbcUtil {
         /**
          * Prepare a big result {@code select} query by specified {@code cond}.
          * <br />
-         * 
+         *
          * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
-         * 
+         *
          * @param cond
          * @return
          * @throws SQLException
@@ -9491,9 +9491,9 @@ public final class JdbcUtil {
         /**
          * Prepare a big result {@code select} query by specified {@code selectPropNames} and {@code cond}.
          * <br />
-         * 
+         *
          * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
-         * 
+         *
          * @param selectPropNames
          * @param cond
          * @return
@@ -9509,7 +9509,7 @@ public final class JdbcUtil {
          * Prepare a {@code select} query by specified {@code cond}.
          * <br />
          * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
-         * 
+         *
          * @param cond
          * @return
          * @throws SQLException
@@ -9524,9 +9524,9 @@ public final class JdbcUtil {
         /**
          * Prepare a {@code select} query by specified {@code selectPropNames} and {@code cond}.
          * <br />
-         * 
+         *
          * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
-         * 
+         *
          * @param selectPropNames
          * @param cond
          * @return
@@ -9541,9 +9541,9 @@ public final class JdbcUtil {
         /**
          * Prepare a big result {@code select} query by specified {@code cond}.
          * <br />
-         * 
+         *
          * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
-         * 
+         *
          * @param cond
          * @return
          * @throws SQLException
@@ -9558,9 +9558,9 @@ public final class JdbcUtil {
         /**
          * Prepare a big result {@code select} query by specified {@code selectPropNames} and {@code cond}.
          * <br />
-         * 
+         *
          * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
-         * 
+         *
          * @param selectPropNames
          * @param cond
          * @return
@@ -10604,7 +10604,7 @@ public final class JdbcUtil {
 
         /**
          * Update all the records found by specified {@code cond} with the properties from specified {@code entity}.
-         * 
+         *
          * @param entity
          * @param cond
          * @return
@@ -10615,14 +10615,14 @@ public final class JdbcUtil {
         default int update(final T entity, final Condition cond) throws SQLException {
             @SuppressWarnings("deprecation")
             final Collection<String> propNamesToUpdate = ClassUtil.isDirtyMarker(targetEntityClass()) ? ((DirtyMarker) entity).dirtyPropNames()
-                    : SQLBuilder.getUpdatePropNames(targetEntityClass(), null);
+                    : QueryUtil.getUpdatePropNames(targetEntityClass(), null);
 
             return update(entity, propNamesToUpdate, cond);
         }
 
         /**
          * Update all the records found by specified {@code cond} with specified {@code propNamesToUpdate} from specified {@code entity}.
-         * 
+         *
          * @param entity
          * @param cond
          * @param propNamesToUpdate
@@ -10749,7 +10749,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.condition.ConditionFactory
      * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
-    public static interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
+    public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
 
         @NonDBOperation
         default BiRowMapper<ID> idExtractor() {
@@ -10757,7 +10757,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @return
          * @throws UnsupportedOperationException
          * @throws SQLException
@@ -11165,7 +11165,7 @@ public final class JdbcUtil {
         boolean exists(final ID id) throws SQLException;
 
         /**
-         * 
+         *
          * @param id
          * @return
          * @throws SQLException
@@ -11280,7 +11280,7 @@ public final class JdbcUtil {
             } else {
                 final Class<?> cls = entity.getClass();
                 @SuppressWarnings("deprecation")
-                final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls);
+                final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);
                 N.merge(entity, dbEntity, false, N.newHashSet(idPropNameList));
                 update(dbEntity);
                 return dbEntity;
@@ -11299,7 +11299,7 @@ public final class JdbcUtil {
 
             final Class<?> cls = entity.getClass();
             @SuppressWarnings("deprecation")
-            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
             final T dbEntity = gett(JdbcUtil.extractId(entity, idPropNameList, entityInfo));
 
@@ -11314,7 +11314,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param entities
          * @return
          * @throws SQLException
@@ -11324,7 +11324,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param entities
          * @param batchSize
          * @return
@@ -11340,7 +11340,7 @@ public final class JdbcUtil {
             final T first = N.firstOrNullIfEmpty(entities);
             final Class<?> cls = first.getClass();
             @SuppressWarnings("deprecation")
-            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
             final Function<T, ID> idExtractorFunc = createIdExtractor(idPropNameList, entityInfo);
@@ -11414,7 +11414,7 @@ public final class JdbcUtil {
             N.checkArgNotNullOrEmpty(propNamesToRefresh, "propNamesToRefresh");
 
             final Class<?> cls = entity.getClass();
-            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
             final ID id = extractId(entity, idPropNameList, entityInfo);
@@ -11446,7 +11446,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param entities
          * @param batchSize
          * @return the count of refreshed entities.
@@ -11466,7 +11466,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param entities
          * @param propNamesToRefresh
          * @return the count of refreshed entities.
@@ -11495,7 +11495,7 @@ public final class JdbcUtil {
 
             final T first = N.firstOrNullIfEmpty(entities);
             final Class<?> cls = first.getClass();
-            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
             final Function<T, ID> idExtractorFunc = createIdExtractor(idPropNameList, entityInfo);
@@ -11608,7 +11608,7 @@ public final class JdbcUtil {
     }
 
     /**
-     *  
+     *
      *
      * @param <T>
      * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
@@ -11617,7 +11617,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     @Beta
-    public static interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, TD>> extends CrudDao<T, Long, SB, TD> {
+    public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, TD>> extends CrudDao<T, Long, SB, TD> {
 
         default OptionalBoolean queryForBoolean(final String singleSelectPropName, final long id) throws SQLException {
             return queryForBoolean(singleSelectPropName, Long.valueOf(id));
@@ -11733,7 +11733,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     @Beta
-    public static interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T, SB, TD>> extends Dao<T, SB, TD> {
+    public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T, SB, TD>> extends Dao<T, SB, TD> {
         /**
          *
          * @param query
@@ -12081,7 +12081,7 @@ public final class JdbcUtil {
             throw new UnsupportedOperationException();
         }
 
-        /** 
+        /**
          *
          * @param entity
          * @param cond to verify if the record exists or not.
@@ -12098,7 +12098,7 @@ public final class JdbcUtil {
 
         /**
          * Update all the records found by specified {@code cond} with specified {@code propNamesToUpdate} from specified {@code entity}.
-         * 
+         *
          * @param entity
          * @param cond
          * @param propNamesToUpdate
@@ -12155,7 +12155,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     @Beta
-    public static interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T, SB, TD>> extends NoUpdateDao<T, SB, TD> {
+    public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T, SB, TD>> extends NoUpdateDao<T, SB, TD> {
         /**
         *
         * @param query
@@ -12507,7 +12507,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     @Beta
-    public static interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpdateCrudDao<T, ID, SB, TD>>
+    public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpdateCrudDao<T, ID, SB, TD>>
             extends NoUpdateDao<T, SB, TD>, CrudDao<T, ID, SB, TD> {
 
         /**
@@ -12663,7 +12663,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param entities
          * @return
          * @throws UnsupportedOperationException
@@ -12677,13 +12677,13 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param entities
          * @param batchSize
          * @return
          * @throws UnsupportedOperationException
          * @throws SQLException
-         * @deprecated unsupported Operation 
+         * @deprecated unsupported Operation
          */
         @Override
         @Deprecated
@@ -12838,7 +12838,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     @Beta
-    public static interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOnlyCrudDao<T, ID, SB, TD>>
+    public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOnlyCrudDao<T, ID, SB, TD>>
             extends ReadOnlyDao<T, SB, TD>, NoUpdateCrudDao<T, ID, SB, TD> {
 
         /**
@@ -12981,11 +12981,11 @@ public final class JdbcUtil {
     }
 
     @Beta
-    public static interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateCrudDaoL<T, SB, TD>>
+    public interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateCrudDaoL<T, SB, TD>>
             extends NoUpdateCrudDao<T, Long, SB, TD>, CrudDaoL<T, SB, TD> {
 
         /**
-         * 
+         *
          * @param propName
          * @param propValue
          * @param id
@@ -13000,7 +13000,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param updateProps
          * @param id
          * @throws UnsupportedOperationException
@@ -13027,12 +13027,12 @@ public final class JdbcUtil {
     }
 
     @Beta
-    public static interface ReadOnlyCrudDaoL<T, SB extends SQLBuilder, TD extends ReadOnlyCrudDaoL<T, SB, TD>>
+    public interface ReadOnlyCrudDaoL<T, SB extends SQLBuilder, TD extends ReadOnlyCrudDaoL<T, SB, TD>>
             extends ReadOnlyCrudDao<T, Long, SB, TD>, NoUpdateCrudDaoL<T, SB, TD> {
     }
 
     /**
-     * 
+     *
      * @author haiyangl
      *
      * @param <T>
@@ -13041,7 +13041,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.condition.ConditionFactory
      * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
-    public static interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
+    public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
         /**
          *
@@ -13193,7 +13193,7 @@ public final class JdbcUtil {
             return result;
         }
 
-        /** 
+        /**
          *
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
@@ -13246,7 +13246,7 @@ public final class JdbcUtil {
             return result;
         }
 
-        /** 
+        /**
          *
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
@@ -14193,7 +14193,7 @@ public final class JdbcUtil {
         }
     }
 
-    public static interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
+    public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
 
         /**
          *
@@ -14222,7 +14222,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param id
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
@@ -14237,7 +14237,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param id
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
@@ -14252,7 +14252,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param id
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
@@ -14305,7 +14305,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param id
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
@@ -14326,7 +14326,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param id
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
@@ -14349,7 +14349,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param id
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
@@ -14374,7 +14374,7 @@ public final class JdbcUtil {
          *
          * @param ids
          * @param joinEntitiesToLoad
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException
          */
@@ -14388,7 +14388,7 @@ public final class JdbcUtil {
          *
          * @param ids
          * @param includeAllJoinEntities
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException
          */
@@ -14403,7 +14403,7 @@ public final class JdbcUtil {
          * @param ids
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException
          */
@@ -14419,7 +14419,7 @@ public final class JdbcUtil {
          * @param ids
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException
          */
@@ -14435,7 +14435,7 @@ public final class JdbcUtil {
          * @param ids
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException
          */
@@ -14452,7 +14452,7 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param batchSize
          * @param joinEntitiesToLoad
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException
          */
@@ -14479,7 +14479,7 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param batchSize
          * @param joinEntitiesToLoad
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException
          */
@@ -14512,7 +14512,7 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param batchSize
          * @param includeAllJoinEntities
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws SQLException
          */
@@ -14523,7 +14523,7 @@ public final class JdbcUtil {
 
             if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
                 if (result.size() > batchSize) {
-                    StreamEx.of(result).splitToList(batchSize).forEach(it -> loadAllJoinEntities(it));
+                    StreamEx.of(result).splitToList(batchSize).forEach(this::loadAllJoinEntities);
                 } else {
                     loadAllJoinEntities(result);
                 }
@@ -14533,10 +14533,10 @@ public final class JdbcUtil {
         }
     }
 
-    public static interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
+    public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
 
         /**
-         * 
+         *
          * @param entity
          * @param joinEntityClass
          * @return the total count of updated/deleted records.
@@ -14785,13 +14785,13 @@ public final class JdbcUtil {
         }
     }
 
-    public static interface ReadOnlyCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>>
+    public interface ReadOnlyCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>>
             extends ReadOnlyJoinEntityHelper<T, SB, TD>, CrudJoinEntityHelper<T, ID, SB, TD> {
 
     }
 
     /**
-     * 
+     *
      * @author haiyangl
      *
      * @param <T>
@@ -14800,7 +14800,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.condition.ConditionFactory
      * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
-    public static interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends Dao<T, SB, TD> {
+    public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends Dao<T, SB, TD> {
         /**
          *
          * @param entityToSave
@@ -15593,7 +15593,7 @@ public final class JdbcUtil {
 
         /**
          * Update all the records found by specified {@code cond} with the properties from specified {@code entity}.
-         * 
+         *
          * @param entity
          * @param cond
          * @return
@@ -15603,14 +15603,14 @@ public final class JdbcUtil {
         default int update(final T entity, final Condition cond) throws UncheckedSQLException {
             @SuppressWarnings("deprecation")
             final Collection<String> propNamesToUpdate = ClassUtil.isDirtyMarker(targetEntityClass()) ? ((DirtyMarker) entity).dirtyPropNames()
-                    : SQLBuilder.getUpdatePropNames(targetEntityClass(), null);
+                    : QueryUtil.getUpdatePropNames(targetEntityClass(), null);
 
             return update(entity, propNamesToUpdate, cond);
         }
 
         /**
          * Update all the records found by specified {@code cond} with specified {@code propNamesToUpdate} from specified {@code entity}.
-         * 
+         *
          * @param entity
          * @param cond
          * @param propNamesToUpdate
@@ -15670,11 +15670,11 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.condition.ConditionFactory
      * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
-    public static interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
+    public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
             extends UncheckedDao<T, SB, TD>, CrudDao<T, ID, SB, TD> {
 
         /**
-         * 
+         *
          * @return
          * @throws UnsupportedOperationException
          * @throws UncheckedSQLException the unchecked SQL exception
@@ -16237,7 +16237,7 @@ public final class JdbcUtil {
             } else {
                 final Class<?> cls = entity.getClass();
                 @SuppressWarnings("deprecation")
-                final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls);
+                final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);
                 N.merge(entity, dbEntity, false, N.newHashSet(idPropNameList));
                 update(dbEntity);
                 return dbEntity;
@@ -16255,7 +16255,7 @@ public final class JdbcUtil {
         default T upsert(final T entity) throws UncheckedSQLException {
             final Class<?> cls = entity.getClass();
             @SuppressWarnings("deprecation")
-            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
             final T dbEntity = gett(JdbcUtil.extractId(entity, idPropNameList, entityInfo));
 
@@ -16270,7 +16270,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param entities
          * @return
          * @throws UncheckedSQLException the unchecked SQL exception
@@ -16281,7 +16281,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param entities
          * @param batchSize
          * @return
@@ -16298,7 +16298,7 @@ public final class JdbcUtil {
             final T first = N.firstOrNullIfEmpty(entities);
             final Class<?> cls = first.getClass();
             @SuppressWarnings("deprecation")
-            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
             final Function<T, ID> idExtractorFunc = createIdExtractor(idPropNameList, entityInfo);
@@ -16374,7 +16374,7 @@ public final class JdbcUtil {
             N.checkArgNotNullOrEmpty(propNamesToRefresh, "propNamesToRefresh");
 
             final Class<?> cls = entity.getClass();
-            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
             final ID id = extractId(entity, idPropNameList, entityInfo);
@@ -16407,7 +16407,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param entities
          * @param batchSize
          * @return the count of refreshed entities.
@@ -16428,7 +16428,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param entities
          * @param propNamesToRefresh
          * @return the count of refreshed entities.
@@ -16460,7 +16460,7 @@ public final class JdbcUtil {
 
             final T first = N.firstOrNullIfEmpty(entities);
             final Class<?> cls = first.getClass();
-            final List<String> idPropNameList = ClassUtil.getIdFieldNames(cls); // must not empty.
+            final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
             final Function<T, ID> idExtractorFunc = createIdExtractor(idPropNameList, entityInfo);
@@ -16579,14 +16579,14 @@ public final class JdbcUtil {
     }
 
     /**
-     *  
+     *
      *
      * @param <T>
      * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
      * @param <TD>
      */
     @Beta
-    public static interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends UncheckedCrudDaoL<T, SB, TD>>
+    public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends UncheckedCrudDaoL<T, SB, TD>>
             extends UncheckedCrudDao<T, Long, SB, TD>, CrudDaoL<T, SB, TD> {
 
         @Override
@@ -16730,7 +16730,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     @Beta
-    public static interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends UncheckedNoUpdateDao<T, SB, TD>>
+    public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends UncheckedNoUpdateDao<T, SB, TD>>
             extends UncheckedDao<T, SB, TD>, NoUpdateDao<T, SB, TD> {
 
         /**
@@ -16777,7 +16777,7 @@ public final class JdbcUtil {
             throw new UnsupportedOperationException();
         }
 
-        /** 
+        /**
          * @param entity
          * @param cond
          * @param propNamesToUpdate
@@ -16832,7 +16832,7 @@ public final class JdbcUtil {
      * @param <TD>
      */
     @Beta
-    public static interface UncheckedReadOnlyDao<T, SB extends SQLBuilder, TD extends UncheckedReadOnlyDao<T, SB, TD>>
+    public interface UncheckedReadOnlyDao<T, SB extends SQLBuilder, TD extends UncheckedReadOnlyDao<T, SB, TD>>
             extends UncheckedNoUpdateDao<T, SB, TD>, ReadOnlyDao<T, SB, TD> {
 
         /**
@@ -16992,7 +16992,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
     @Beta
-    public static interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends UncheckedNoUpdateCrudDao<T, ID, SB, TD>>
+    public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends UncheckedNoUpdateCrudDao<T, ID, SB, TD>>
             extends UncheckedNoUpdateDao<T, SB, TD>, NoUpdateCrudDao<T, ID, SB, TD>, UncheckedCrudDao<T, ID, SB, TD> {
 
         /**
@@ -17148,7 +17148,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param entities
          * @return
          * @throws UnsupportedOperationException
@@ -17162,13 +17162,13 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param entities
          * @param batchSize
          * @return
          * @throws UnsupportedOperationException
          * @throws UncheckedSQLException
-         * @deprecated unsupported Operation 
+         * @deprecated unsupported Operation
          */
         @Override
         @Deprecated
@@ -17313,11 +17313,11 @@ public final class JdbcUtil {
     }
 
     @Beta
-    public static interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends UncheckedNoUpdateCrudDaoL<T, SB, TD>>
+    public interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends UncheckedNoUpdateCrudDaoL<T, SB, TD>>
             extends UncheckedNoUpdateCrudDao<T, Long, SB, TD>, UncheckedCrudDaoL<T, SB, TD> {
 
         /**
-         * 
+         *
          * @param propName
          * @param propValue
          * @param id
@@ -17332,7 +17332,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param updateProps
          * @param id
          * @throws UnsupportedOperationException
@@ -17359,7 +17359,7 @@ public final class JdbcUtil {
     }
 
     @Beta
-    public static interface UncheckedReadOnlyCrudDaoL<T, SB extends SQLBuilder, TD extends UncheckedReadOnlyCrudDaoL<T, SB, TD>>
+    public interface UncheckedReadOnlyCrudDaoL<T, SB extends SQLBuilder, TD extends UncheckedReadOnlyCrudDaoL<T, SB, TD>>
             extends UncheckedReadOnlyCrudDao<T, Long, SB, TD>, UncheckedNoUpdateCrudDaoL<T, SB, TD> {
     }
 
@@ -17372,7 +17372,7 @@ public final class JdbcUtil {
      * @param <TD>
      */
     @Beta
-    public static interface UncheckedReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends UncheckedReadOnlyCrudDao<T, ID, SB, TD>>
+    public interface UncheckedReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends UncheckedReadOnlyCrudDao<T, ID, SB, TD>>
             extends UncheckedReadOnlyDao<T, SB, TD>, UncheckedNoUpdateCrudDao<T, ID, SB, TD>, ReadOnlyCrudDao<T, ID, SB, TD> {
 
         /**
@@ -17516,7 +17516,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
+     *
      * @author haiyangl
      *
      * @param <T>
@@ -17525,7 +17525,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.condition.ConditionFactory
      * @see com.landawn.abacus.condition.ConditionFactory.CF
      */
-    public static interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
+    public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
 
         /**
          *
@@ -17654,7 +17654,7 @@ public final class JdbcUtil {
             return result;
         }
 
-        /** 
+        /**
          *
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
@@ -17709,7 +17709,7 @@ public final class JdbcUtil {
             return result;
         }
 
-        /** 
+        /**
          *
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
@@ -18711,7 +18711,7 @@ public final class JdbcUtil {
         }
     }
 
-    public static interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
+    public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
             extends UncheckedJoinEntityHelper<T, SB, TD>, CrudJoinEntityHelper<T, ID, SB, TD> {
         /**
          *
@@ -18742,7 +18742,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param id
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
@@ -18758,7 +18758,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param id
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
@@ -18774,7 +18774,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param id
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
@@ -18830,7 +18830,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param id
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
@@ -18852,7 +18852,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param id
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
@@ -18876,7 +18876,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * 
+         *
          * @param id
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
@@ -18901,7 +18901,7 @@ public final class JdbcUtil {
          *
          * @param ids
          * @param joinEntitiesToLoad
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
@@ -18917,7 +18917,7 @@ public final class JdbcUtil {
          *
          * @param ids
          * @param includeAllJoinEntities
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
@@ -18934,7 +18934,7 @@ public final class JdbcUtil {
          * @param ids
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
@@ -18951,7 +18951,7 @@ public final class JdbcUtil {
          * @param ids
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param joinEntitiesToLoad
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
@@ -18968,7 +18968,7 @@ public final class JdbcUtil {
          * @param ids
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param includeAllJoinEntities
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
@@ -18986,7 +18986,7 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param batchSize
          * @param joinEntitiesToLoad
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
@@ -19014,7 +19014,7 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param batchSize
          * @param joinEntitiesToLoad
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
@@ -19047,7 +19047,7 @@ public final class JdbcUtil {
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
          * @param batchSize
          * @param includeAllJoinEntities
-         * @return 
+         * @return
          * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
          * @throws UncheckedSQLException the unchecked SQL exception
          */
@@ -19059,7 +19059,7 @@ public final class JdbcUtil {
 
             if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
                 if (result.size() > batchSize) {
-                    StreamEx.of(result).splitToList(batchSize).forEach(it -> loadAllJoinEntities(it));
+                    StreamEx.of(result).splitToList(batchSize).forEach(this::loadAllJoinEntities);
                 } else {
                     loadAllJoinEntities(result);
                 }
@@ -19069,11 +19069,11 @@ public final class JdbcUtil {
         }
     }
 
-    public static interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>>
+    public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>>
             extends UncheckedJoinEntityHelper<T, SB, TD>, ReadOnlyJoinEntityHelper<T, SB, TD> {
 
         /**
-         * 
+         *
          * @param entity
          * @param joinEntityClass
          * @return the total count of updated/deleted records.
@@ -19325,7 +19325,7 @@ public final class JdbcUtil {
         }
     }
 
-    public static interface UnckeckedReadOnlyCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
+    public interface UnckeckedReadOnlyCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
             extends UncheckedReadOnlyJoinEntityHelper<T, SB, TD>, UncheckedCrudJoinEntityHelper<T, ID, SB, TD> {
     }
 
@@ -19488,8 +19488,8 @@ public final class JdbcUtil {
         Map<NamingPolicy, Tuple3<BiRowMapper, Function, BiConsumer>> map = idGeneratorGetterSetterPool.get(key);
 
         if (map == null) {
-            final List<String> idPropNameList = ClassUtil.getIdFieldNames(entityClass);
-            final boolean isNoId = N.isNullOrEmpty(idPropNameList) || ClassUtil.isFakeId(idPropNameList);
+            final List<String> idPropNameList = QueryUtil.getIdFieldNames(entityClass);
+            final boolean isNoId = N.isNullOrEmpty(idPropNameList) || QueryUtil.isFakeId(idPropNameList);
             final String oneIdPropName = isNoId ? null : idPropNameList.get(0);
             final EntityInfo entityInfo = isNoId ? null : ParserUtil.getEntityInfo(entityClass);
             final List<PropInfo> idPropInfoList = isNoId ? null : Stream.of(idPropNameList).map(entityInfo::getPropInfo).toList();
@@ -19549,7 +19549,7 @@ public final class JdbcUtil {
             map = new EnumMap<>(NamingPolicy.class);
 
             for (NamingPolicy np : NamingPolicy.values()) {
-                final ImmutableMap<String, String> propColumnNameMap = ClassUtil.getProp2ColumnNameMap(entityClass, namingPolicy);
+                final ImmutableMap<String, String> propColumnNameMap = QueryUtil.getProp2ColumnNameMap(entityClass, namingPolicy);
 
                 final ImmutableMap<String, String> columnPropNameMap = EntryStream.of(propColumnNameMap)
                         .inversed()
@@ -19788,7 +19788,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
+     *
      * @param <T>
      * @param <SB>
      * @param <TD>
@@ -19837,7 +19837,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
+     *
      * @param <T>
      * @param <SB>
      * @param <TD>
@@ -19870,7 +19870,7 @@ public final class JdbcUtil {
     }
 
     //    /**
-    //     * 
+    //     *
     //     * @param ds
     //     * @param targetEntityOrDaoClass
     //     */
