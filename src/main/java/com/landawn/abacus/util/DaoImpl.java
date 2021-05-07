@@ -1811,10 +1811,10 @@ final class DaoImpl {
         final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
         final boolean isOneId = isNoId ? false : idPropNameList.size() == 1;
         final Condition idCond = isNoId ? null : isOneId ? CF.eq(oneIdPropName) : CF.and(StreamEx.of(idPropNameList).map(CF::eq).toList());
-        final Function<Object, Condition> id2CondFunc = isNoId ? null
+        final Function<Object, Condition> id2CondFunc = isNoId || idPropInfo == null ? null
                 : (isEntityId ? id -> CF.id2Cond((EntityId) id)
-                        : Map.class.isAssignableFrom(idClass) ? id -> CF.eqAnd((Map<String, ?>) id)
-                                : ClassUtil.isEntity(idClass) ? id -> CF.eqAnd(id) : id -> CF.eq(oneIdPropName, id));
+                        : idPropInfo.type.isMap() ? id -> CF.eqAnd((Map<String, ?>) id)
+                                : idPropInfo.type.isEntity() ? id -> CF.eqAnd(id) : id -> CF.eq(oneIdPropName, id));
 
         String sql_getById = null;
         String sql_existsById = null;
