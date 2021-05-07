@@ -1811,6 +1811,10 @@ final class DaoImpl {
         final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
         final boolean isOneId = isNoId ? false : idPropNameList.size() == 1;
         final Condition idCond = isNoId ? null : isOneId ? CF.eq(oneIdPropName) : CF.and(StreamEx.of(idPropNameList).map(CF::eq).toList());
+        final Function<Object, Condition> id2CondFunc = isNoId ? null
+                : (isEntityId ? id -> CF.id2Cond((EntityId) id)
+                        : Map.class.isAssignableFrom(idClass) ? id -> CF.eqAnd((Map<String, ?>) id)
+                                : ClassUtil.isEntity(idClass) ? id -> CF.eqAnd(id) : id -> CF.eq(oneIdPropName, id));
 
         String sql_getById = null;
         String sql_existsById = null;
@@ -3950,7 +3954,7 @@ final class DaoImpl {
 
                             // TODO not set by PropInfo.dbType of ids? it should be okay because Id should be simple type(int, long, String, UUID, Timestamp).
                             // If want to use idParamSetter, it has to be named sql. How to prepare/set named parameters? it's a problem to resolve.
-                            final Condition cond = isEntityId ? CF.id2Cond((EntityId) id) : (id instanceof Map ? CF.eqAnd((Map<String, ?>) id) : CF.eqAnd(id));
+                            final Condition cond = id2CondFunc.apply(id);
 
                             final SP sp = parameterizedUpdateFunc.apply(entityClass).set(props).append(cond).pair();
                             return proxy.prepareQuery(sp.sql).settParameters(sp.parameters, collParamsSetter).update();
