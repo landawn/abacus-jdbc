@@ -391,6 +391,10 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
+        userDao.findFirst(CF.eq("id", 100L), BiRowMapper.TO_MAP).ifPresent(Fn.println());
+
+        userDao.findFirst(CF.eq("id", 100L), BiRowMapper.toMap(Fn.toUpperCaseWithUnderscore())).ifPresent(Fn.println());
+
         userDao.deleteById(100L);
 
         long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
