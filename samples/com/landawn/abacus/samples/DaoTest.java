@@ -501,6 +501,12 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertEquals("updatedFN2", userFromDB.getFirstName());
 
+        userDao.update(N.asMap("firstName", "updatedFN3"), userFromDB.getId());
+
+        userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+        assertEquals("updatedFN3", userFromDB.getFirstName());
+
         userDao.deleteById(100L);
 
         long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
