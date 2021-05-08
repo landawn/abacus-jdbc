@@ -111,6 +111,7 @@ import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
 import com.landawn.abacus.util.ExceptionalStream.StreamE;
 import com.landawn.abacus.util.Fn.BiConsumers;
 import com.landawn.abacus.util.Fn.Fnn;
+import com.landawn.abacus.util.Fn.IntFunctions;
 import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.JdbcUtil.Dao.NonDBOperation;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
@@ -7557,6 +7558,37 @@ public final class JdbcUtil {
                         if (valueFilter.test(columnName, value)) {
                             result.put(columnName, value);
                         }
+                    }
+
+                    return result;
+                }
+            };
+        }
+
+        static BiRowMapper<Map<String, Object>> toMap(final Function<? super String, String> columnNameConverter) {
+            return toMap(columnNameConverter, IntFunctions.<String, Object> ofMap());
+        }
+
+        static BiRowMapper<Map<String, Object>> toMap(final Function<? super String, String> columnNameConverter,
+                final IntFunction<Map<String, Object>> mapSupplier) {
+            return new BiRowMapper<Map<String, Object>>() {
+                private String[] keyNames = null;
+
+                @Override
+                public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                    if (keyNames == null) {
+                        keyNames = new String[columnLabels.size()];
+
+                        for (int i = 0, size = columnLabels.size(); i < size; i++) {
+                            keyNames[i] = columnNameConverter.apply(columnLabels.get(i));
+                        }
+                    }
+
+                    final int columnCount = keyNames.length;
+                    final Map<String, Object> result = mapSupplier.apply(columnCount);
+
+                    for (int i = 1; i <= columnCount; i++) {
+                        result.put(keyNames[i - 1], JdbcUtil.getColumnValue(rs, i));
                     }
 
                     return result;
