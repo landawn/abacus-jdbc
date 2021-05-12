@@ -23,6 +23,7 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
@@ -64,6 +65,7 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
+import com.landawn.abacus.util.ClassUtil.RecordInfo;
 import com.landawn.abacus.util.Columns.ColumnOne;
 import com.landawn.abacus.util.Fn.IntFunctions;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
@@ -97,6 +99,7 @@ import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.Tuple.Tuple5;
 import com.landawn.abacus.util.u.Holder;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
@@ -1226,8 +1229,7 @@ final class DaoImpl {
                 } else if (op == OP.queryForUnique) {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueNonNull(firstReturnEleType);
                 } else {
-                    if (ClassUtil.isEntity(firstReturnEleType) || Map.class.isAssignableFrom(firstReturnEleType)
-                            || List.class.isAssignableFrom(firstReturnEleType) || Object[].class.isAssignableFrom(firstReturnEleType)) {
+                    if (isFindOrListTargetClass(firstReturnEleType)) {
                         if (isFindOnlyOne(method, op)) {
                             return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(firstReturnEleType));
                         } else {
@@ -1247,8 +1249,7 @@ final class DaoImpl {
         } else if (op == OP.queryForUnique) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueResult(returnType).orElse(N.defaultValueOf(returnType));
         } else {
-            if (ClassUtil.isEntity(returnType) || Map.class.isAssignableFrom(returnType) || List.class.isAssignableFrom(returnType)
-                    || Object[].class.isAssignableFrom(returnType)) {
+            if (isFindOrListTargetClass(returnType)) {
                 if (isFindOnlyOne(method, op)) {
                     return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(returnType)).orNull();
                 } else {
@@ -1258,6 +1259,11 @@ final class DaoImpl {
                 return createSingleQueryFunction(returnType);
             }
         }
+    }
+
+    private static boolean isFindOrListTargetClass(final Class<?> cls) {
+        return ClassUtil.isEntity(cls) || Map.class.isAssignableFrom(cls) || List.class.isAssignableFrom(cls) || Object[].class.isAssignableFrom(cls)
+                || ClassUtil.isRecord(cls);
     }
 
     private static Class<?> getFirstReturnEleType(final Method method) {
@@ -1342,7 +1348,7 @@ final class DaoImpl {
                 } else if (Map.class.isAssignableFrom(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> ((PreparedCallableQuery) preparedQuery)
                             .setParameters((Map<String, ?>) args[stmtParamIndexes[0]]);
-                } else if (ClassUtil.isEntity(paramTypeOne) || EntityId.class.isAssignableFrom(paramTypeOne)) {
+                } else if (ClassUtil.isEntity(paramTypeOne) || EntityId.class.isAssignableFrom(paramTypeOne) || ClassUtil.isRecord(paramTypeOne)) {
                     throw new UnsupportedOperationException("In method: " + fullClassMethodName
                             + ", parameters for call(procedure) have to be binded with names through annotation @Bind, or Map. Entity/EntityId type parameter are not supported");
                 } else if (Collection.class.isAssignableFrom(paramTypeOne)) {
@@ -1359,7 +1365,7 @@ final class DaoImpl {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
                 } else if (isSingleParameter) {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
-                } else if (ClassUtil.isEntity(paramTypeOne)) {
+                } else if (ClassUtil.isEntity(paramTypeOne) || ClassUtil.isRecord(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[stmtParamIndexes[0]]);
                 } else if (Map.class.isAssignableFrom(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters((Map<String, ?>) args[stmtParamIndexes[0]]);
@@ -1563,7 +1569,7 @@ final class DaoImpl {
 
                 final Type<?> type = N.typeOf(it.getClass());
 
-                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isEntity() || type.isEntityId()) {
+                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isEntity() || type.isEntityId() || type.isRecord()) {
                     return it;
                 } else {
                     return it.toString();
@@ -1729,8 +1735,10 @@ final class DaoImpl {
                                 + " is not assignable from the id property type in the entity class: "
                                 + ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType());
                     }
-                } else if (idFieldNames.size() > 1 && !(EntityId.class.equals(typeArguments[1]) || ClassUtil.isEntity((Class) typeArguments[1]))) {
-                    throw new IllegalArgumentException("To support multiple ids, the 'ID' type type must be EntityId. It can't be: " + typeArguments[1]);
+                } else if (idFieldNames.size() > 1 && !(EntityId.class.equals(typeArguments[1]) || ClassUtil.isEntity((Class) typeArguments[1])
+                        || ClassUtil.isRecord((Class) typeArguments[1]))) {
+                    throw new IllegalArgumentException(
+                            "To support multiple ids, the 'ID' type type must be EntityId/Entity/Record. It can't be: " + typeArguments[1]);
                 }
             }
         }
@@ -1748,6 +1756,10 @@ final class DaoImpl {
         final boolean isDirtyMarker = entityClass == null ? false : ClassUtil.isDirtyMarker(entityClass);
         final Class<?> idClass = isCrudDao ? (isCrudDaoL ? Long.class : (Class) typeArguments[1]) : null;
         final boolean isEntityId = idClass != null && EntityId.class.isAssignableFrom(idClass);
+        final boolean isRecordId = idClass != null && ClassUtil.isRecord(idClass);
+        final EntityInfo idEntityInfo = idClass != null && ClassUtil.isEntity(idClass) ? ParserUtil.getEntityInfo(idClass) : null;
+        final RecordInfo idRecordInfo = idClass != null && ClassUtil.isRecord(idClass) ? ClassUtil.getRecordInfo(idClass) : null;
+        final ImmutableMap<String, Tuple5<String, Field, Method, Type<Object>, Integer>> idFieldMap = idRecordInfo != null ? idRecordInfo.fieldMap() : null;
 
         final Class<? extends SQLBuilder> sbc = N.isNullOrEmpty(typeArguments) ? PSC.class
                 : (typeArguments.length >= 2 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[1]) ? (Class) typeArguments[1]
@@ -1814,7 +1826,7 @@ final class DaoImpl {
         final Function<Object, Condition> id2CondFunc = isNoId || idClass == null ? null
                 : (isEntityId ? id -> CF.id2Cond((EntityId) id)
                         : Map.class.isAssignableFrom(idClass) ? id -> CF.eqAnd((Map<String, ?>) id)
-                                : ClassUtil.isEntity(idClass) ? id -> CF.eqAnd(id) : id -> CF.eq(oneIdPropName, id));
+                                : ClassUtil.isEntity(idClass) || ClassUtil.isRecord(idClass) ? id -> CF.eqAnd(id) : id -> CF.eq(oneIdPropName, id));
 
         String sql_getById = null;
         String sql_existsById = null;
@@ -1873,12 +1885,17 @@ final class DaoImpl {
         final Function<Object, Object> idGetter = tp3._2;
         final BiConsumer<Object, Object> idSetter = tp3._3;
 
-        final EntityInfo idEntityInfo = idClass != null && ClassUtil.isEntity(idClass) ? ParserUtil.getEntityInfo(idClass) : null;
-
         final Predicate<Object> isDefaultIdTester = isNoId ? id -> true
                 : (isOneId ? JdbcUtil::isDefaultIdPropValue
                         : (isEntityId ? id -> Stream.of(((EntityId) id).entrySet()).allMatch(it -> JdbcUtil.isDefaultIdPropValue(it.getValue()))
-                                : id -> Stream.of(idPropNameList).allMatch(idName -> JdbcUtil.isDefaultIdPropValue(idEntityInfo.getPropValue(id, idName)))));
+                                : (isRecordId ? id -> {
+                                    try {
+                                        return N.allMatch(idPropNameList, idName -> JdbcUtil.isDefaultIdPropValue(idFieldMap.get(idName)._3.invoke(id)));
+                                    } catch (Exception e) {
+                                        // Should never happen.
+                                        throw N.toRuntimeException(e);
+                                    }
+                                } : id -> Stream.of(idPropNameList).allMatch(idName -> JdbcUtil.isDefaultIdPropValue(idEntityInfo.getPropValue(id, idName))))));
 
         final JdbcUtil.BiParametersSetter<NamedQuery, Object> idParamSetter = isOneId ? (pq, id) -> pq.setObject(oneIdPropName, id, idPropInfo.dbType)
                 : (isEntityId ? (pq, id) -> {
@@ -1889,6 +1906,18 @@ final class DaoImpl {
                         propInfo = entityInfo.getPropInfo(idName);
                         pq.setObject(idName, entityId.get(idName), propInfo.dbType);
                     }
+                } : (isRecordId ? (pq, id) -> {
+                    try {
+                        Tuple5<String, Field, Method, Type<Object>, Integer> tpField = null;
+
+                        for (String idName : idPropNameList) {
+                            tpField = idFieldMap.get(idName);
+                            pq.setObject(idName, tpField._3.invoke(id), tpField._4);
+                        }
+                    } catch (IllegalAccessException | InvocationTargetException e) {
+                        // Should never happen.
+                        throw N.toRuntimeException(e);
+                    }
                 } : (pq, id) -> {
                     PropInfo propInfo = null;
 
@@ -1896,7 +1925,7 @@ final class DaoImpl {
                         propInfo = idEntityInfo.getPropInfo(idName);
                         pq.setObject(idName, propInfo.getPropValue(id), propInfo.dbType);
                     }
-                });
+                }));
 
         final JdbcUtil.BiParametersSetter<NamedQuery, Object> idParamSetterByEntity = isOneId
                 ? (pq, entity) -> pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity), idPropInfo.dbType)
@@ -3822,7 +3851,7 @@ final class DaoImpl {
                             final boolean isMap = firstId instanceof Map;
                             final boolean isEntity = firstId != null && ClassUtil.isEntity(firstId.getClass());
 
-                            N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId),
+                            N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId || isRecordId),
                                     "Input 'ids' can not be EntityIds/Maps or entities for single id ");
 
                             final List idList = ids instanceof List ? (List) ids : new ArrayList(ids);
@@ -4578,8 +4607,10 @@ final class DaoImpl {
 
                     final int stmtParamLen = stmtParamIndexes.length;
 
-                    if (stmtParamLen == 1 && (ClassUtil.isEntity(paramTypes[stmtParamIndexes[0]]) || Map.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])
-                            || EntityId.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])) && isNamedQuery == false) {
+                    if (stmtParamLen == 1
+                            && (ClassUtil.isEntity(paramTypes[stmtParamIndexes[0]]) || Map.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])
+                                    || EntityId.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) || ClassUtil.isRecord(paramTypes[stmtParamIndexes[0]]))
+                            && isNamedQuery == false) {
                         throw new UnsupportedOperationException(
                                 "Using named query: @NamedSelect/NamedUpdate/NamedInsert/NamedDelete when parameter type is Entity/Map/EntityId in method: "
                                         + fullClassMethodName);
@@ -4738,7 +4769,7 @@ final class DaoImpl {
                                                 .insert(keyExtractor, isDefaultIdTester);
 
                                 if (isEntity && id.isPresent()) {
-                                    id.ifPresent(ret -> idSetter.accept(ret, entity));
+                                    idSetter.accept(id, entity);
                                 }
 
                                 if (isEntity && entity instanceof DirtyMarker) {

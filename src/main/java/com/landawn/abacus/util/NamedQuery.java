@@ -18,6 +18,9 @@ package com.landawn.abacus.util;
 
 import java.io.InputStream;
 import java.io.Reader;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.PreparedStatement;
@@ -33,7 +36,9 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
+import com.landawn.abacus.util.ClassUtil.RecordInfo;
 import com.landawn.abacus.util.JdbcUtil.TriParametersSetter;
+import com.landawn.abacus.util.Tuple.Tuple5;
 
 /**
  * The backed {@code PreparedStatement/CallableStatement} will be closed by default
@@ -2637,8 +2642,9 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
     public NamedQuery setParameters(final Object parameters) throws SQLException {
         checkArgNotNull(parameters, "parameters");
 
-        if (ClassUtil.isEntity(parameters.getClass())) {
-            final Class<?> cls = parameters.getClass();
+        final Class<?> cls = parameters.getClass();
+
+        if (ClassUtil.isEntity(cls)) {
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
             PropInfo propInfo = null;
 
@@ -2648,6 +2654,25 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
                 if (propInfo != null) {
                     propInfo.dbType.set(stmt, i + 1, propInfo.getPropValue(parameters));
                 }
+            }
+        } else if (ClassUtil.isRecord(cls)) {
+            @SuppressWarnings("deprecation")
+            final RecordInfo<?> recordInfo = ClassUtil.getRecordInfo(cls);
+            final ImmutableMap<String, Tuple5<String, Field, Method, Type<Object>, Integer>> fieldMap = recordInfo.fieldMap();
+            Tuple5<String, Field, Method, Type<Object>, Integer> tpField = null;
+
+            try {
+                for (int i = 0; i < parameterCount; i++) {
+                    tpField = fieldMap.get(parameterNames.get(i));
+
+                    if (tpField != null) {
+                        tpField._4.set(stmt, i + 1, tpField._3.invoke(parameters));
+                    }
+                }
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                // Should never happen.
+                close();
+                throw N.toRuntimeException(e);
             }
         } else if (parameters instanceof Map) {
             return setParameters((Map<String, ?>) parameters);
@@ -2694,38 +2719,99 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
         }
 
         final Class<?> cls = entity.getClass();
-        final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
-        PropInfo propInfo = null;
-        Object propValue = null;
-        Type<Object> dbType = null;
-        IntList indexes = null;
+        if (ClassUtil.isEntity(cls)) {
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+            PropInfo propInfo = null;
+            Object propValue = null;
+            Type<Object> dbType = null;
+            IntList indexes = null;
 
-        for (String parameterName : parameterNames) {
-            propInfo = entityInfo.getPropInfo(parameterName);
-            propValue = propInfo.getPropValue(entity);
-            dbType = propInfo.dbType;
+            for (String parameterName : parameterNames) {
+                propInfo = entityInfo.getPropInfo(parameterName);
 
-            indexes = paramNameIndexMap.get(parameterName);
+                if (propInfo == null) {
+                    close();
+                    throw new IllegalArgumentException("No property found with name: " + parameterName + " in class: " + ClassUtil.getCanonicalClassName(cls));
+                }
 
-            if (indexes == null) {
-                close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
-            } else {
-                if (indexes.size() == 1) {
-                    dbType.set(stmt, indexes.get(0), propValue);
-                } else if (indexes.size() == 2) {
-                    dbType.set(stmt, indexes.get(0), propValue);
-                    dbType.set(stmt, indexes.get(1), propValue);
-                } else if (indexes.size() == 3) {
-                    dbType.set(stmt, indexes.get(0), propValue);
-                    dbType.set(stmt, indexes.get(1), propValue);
-                    dbType.set(stmt, indexes.get(2), propValue);
+                propValue = propInfo.getPropValue(entity);
+                dbType = propInfo.dbType;
+
+                indexes = paramNameIndexMap.get(parameterName);
+
+                if (indexes == null) {
+                    close();
+                    throw new IllegalArgumentException("Not found named parameter: " + parameterName);
                 } else {
-                    for (int i = 0, size = indexes.size(); i < size; i++) {
-                        dbType.set(stmt, indexes.get(i), propValue);
+                    if (indexes.size() == 1) {
+                        dbType.set(stmt, indexes.get(0), propValue);
+                    } else if (indexes.size() == 2) {
+                        dbType.set(stmt, indexes.get(0), propValue);
+                        dbType.set(stmt, indexes.get(1), propValue);
+                    } else if (indexes.size() == 3) {
+                        dbType.set(stmt, indexes.get(0), propValue);
+                        dbType.set(stmt, indexes.get(1), propValue);
+                        dbType.set(stmt, indexes.get(2), propValue);
+                    } else {
+                        for (int i = 0, size = indexes.size(); i < size; i++) {
+                            dbType.set(stmt, indexes.get(i), propValue);
+                        }
                     }
                 }
             }
+        } else if (ClassUtil.isRecord(cls)) {
+            @SuppressWarnings("deprecation")
+            final RecordInfo<?> recordInfo = ClassUtil.getRecordInfo(cls);
+            final ImmutableMap<String, Tuple5<String, Field, Method, Type<Object>, Integer>> fieldMap = recordInfo.fieldMap();
+            Tuple5<String, Field, Method, Type<Object>, Integer> tpField = null;
+            Object propValue = null;
+            Type<Object> dbType = null;
+            IntList indexes = null;
+
+            try {
+                for (String parameterName : parameterNames) {
+                    tpField = fieldMap.get(parameterName);
+
+                    if (tpField == null) {
+                        close();
+                        throw new IllegalArgumentException(
+                                "No field found with name: " + parameterName + " in record class: " + ClassUtil.getCanonicalClassName(cls));
+                    }
+
+                    propValue = tpField._3.invoke(entity);
+                    dbType = tpField._4;
+
+                    indexes = paramNameIndexMap.get(parameterName);
+
+                    if (indexes == null) {
+                        close();
+                        throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                    } else {
+                        if (indexes.size() == 1) {
+                            dbType.set(stmt, indexes.get(0), propValue);
+                        } else if (indexes.size() == 2) {
+                            dbType.set(stmt, indexes.get(0), propValue);
+                            dbType.set(stmt, indexes.get(1), propValue);
+                        } else if (indexes.size() == 3) {
+                            dbType.set(stmt, indexes.get(0), propValue);
+                            dbType.set(stmt, indexes.get(1), propValue);
+                            dbType.set(stmt, indexes.get(2), propValue);
+                        } else {
+                            for (int i = 0, size = indexes.size(); i < size; i++) {
+                                dbType.set(stmt, indexes.get(i), propValue);
+                            }
+                        }
+                    }
+                }
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                // Should never happen.
+                close();
+                throw N.toRuntimeException(e);
+            }
+        } else {
+            close();
+            throw new IllegalArgumentException(
+                    "Unsupported parameter type: " + ClassUtil.getCanonicalClassName(cls) + ". Only Entity/Record types are supported here");
         }
 
         return this;
@@ -2800,6 +2886,28 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
 
                         stmt.addBatch();
                     }
+                } else if (ClassUtil.isRecord(cls)) {
+                    @SuppressWarnings("deprecation")
+                    final RecordInfo<?> recordInfo = ClassUtil.getRecordInfo(cls);
+                    final ImmutableMap<String, Tuple5<String, Field, Method, Type<Object>, Integer>> fieldMap = recordInfo.fieldMap();
+                    Tuple5<String, Field, Method, Type<Object>, Integer> tpField = null;
+
+                    try {
+                        for (Object entity : batchParameters) {
+                            for (int i = 0; i < parameterCount; i++) {
+                                tpField = fieldMap.get(parameterNames.get(i));
+
+                                if (tpField != null) {
+                                    tpField._4.set(stmt, i + 1, tpField._3.invoke(entity));
+                                }
+                            }
+
+                            stmt.addBatch();
+                        }
+                    } catch (IllegalAccessException | InvocationTargetException e) {
+                        // Should never happen.
+                        throw N.toRuntimeException(e);
+                    }
                 } else if (Map.class.isAssignableFrom(cls)) {
                     for (Object map : batchParameters) {
                         setParameters((Map<String, ?>) map);
@@ -2855,7 +2963,7 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
     }
 
     //        /**
-    //         * 
+    //         *
     //         * @param batchParameters
     //         * @return
     //         * @throws SQLException the SQL exception
