@@ -23,8 +23,6 @@ import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.math.BigDecimal;
@@ -88,7 +86,6 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
-import com.landawn.abacus.util.ClassUtil.RecordInfo;
 import com.landawn.abacus.util.Columns.ColumnGetter;
 import com.landawn.abacus.util.Columns.ColumnOne;
 import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
@@ -111,7 +108,6 @@ import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.SQLTransaction.CreatedBy;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
-import com.landawn.abacus.util.Tuple.Tuple5;
 import com.landawn.abacus.util.u.Holder;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
@@ -3619,30 +3615,6 @@ public final class JdbcUtil {
                     parameterValues[i] = propInfo.getPropValue(entity);
                     parameterTypes[i] = propInfo.dbType;
                 }
-            } else if (ClassUtil.isRecord(cls)) {
-                final Object record = parameter_0;
-                @SuppressWarnings("deprecation")
-                final RecordInfo<?> recordInfo = ClassUtil.getRecordInfo(cls);
-                final ImmutableMap<String, Tuple5<String, Field, Method, Type<Object>, Integer>> fieldMap = recordInfo.fieldMap();
-                parameterTypes = new Type[parameterCount];
-                Tuple5<String, Field, Method, Type<Object>, Integer> tpField = null;
-
-                try {
-                    for (int i = 0; i < parameterCount; i++) {
-                        tpField = fieldMap.get(namedParameters.get(i));
-
-                        if (tpField == null) {
-                            throw new IllegalArgumentException(
-                                    "No field found with name: " + namedParameters.get(i) + " in class: " + ClassUtil.getCanonicalClassName(cls));
-                        }
-
-                        parameterValues[i] = tpField._3.invoke(record);
-                        parameterTypes[i] = tpField._4;
-                    }
-                } catch (IllegalAccessException | InvocationTargetException e) {
-                    // Should never happen.
-                    throw N.toRuntimeException(e);
-                }
             } else if (parameter_0 instanceof Map) {
                 @SuppressWarnings("unchecked")
                 final Map<String, Object> m = (Map<String, Object>) parameter_0;
@@ -5279,22 +5251,6 @@ public final class JdbcUtil {
             } else {
                 final EntityInfo idEntityInfo = ParserUtil.getEntityInfo(entityClass);
                 return N.allMatch(idPropNameList, idName -> JdbcUtil.isDefaultIdPropValue(idEntityInfo.getPropValue(value, idName)));
-            }
-        } else if (ClassUtil.isRecord(value.getClass())) {
-            final Class<?> entityClass = value.getClass();
-            final RecordInfo<?> recordInfo = ClassUtil.getRecordInfo(entityClass);
-
-            if (N.isNullOrEmpty(recordInfo.fieldNames())) {
-                return true;
-            } else {
-                final ImmutableMap<String, Tuple5<String, Field, Method, Type<Object>, Integer>> fieldMap = recordInfo.fieldMap();
-
-                try {
-                    return N.allMatch(recordInfo.fieldNames(), idName -> JdbcUtil.isDefaultIdPropValue(fieldMap.get(idName)._3.invoke(value)));
-                } catch (Exception e) {
-                    // Should never happen.
-                    throw N.toRuntimeException(e);
-                }
             }
         }
 
@@ -7297,69 +7253,6 @@ public final class JdbcUtil {
                         return (T) entity;
                     }
                 };
-            } else if (ClassUtil.isRecord(targetClass)) {
-                return new BiRowMapper<T>() {
-                    @SuppressWarnings("deprecation")
-                    private final RecordInfo<?> targetRecordInfo = ClassUtil.getRecordInfo(targetClass);
-                    private volatile String[] columnLabels = null;
-                    private volatile Tuple5<String, Field, Method, Type<Object>, Integer>[] tpFields;
-                    private volatile Type<?>[] columnTypes = null;
-                    private volatile Object fieldValues[] = null;
-
-                    @SuppressWarnings("hiding")
-                    @Override
-                    public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                        final int columnCount = columnLabelList.size();
-
-                        String[] columnLabels = this.columnLabels;
-                        Tuple5<String, Field, Method, Type<Object>, Integer>[] tpFields = this.tpFields;
-                        Type<?>[] columnTypes = this.columnTypes;
-
-                        if (columnLabels == null) {
-                            columnLabels = columnLabelList.toArray(new String[columnCount]);
-                            tpFields = new Tuple5[columnCount];
-                            columnTypes = new Type[columnCount];
-
-                            for (int i = 0; i < columnCount; i++) {
-                                if (columnNameFilterToBeUsed.test(columnLabels[i])) {
-                                    columnLabels[i] = columnNameConverterToBeUsed.apply(columnLabels[i]);
-
-                                    tpFields[i] = targetRecordInfo.fieldMap().get(columnLabels[i]);
-
-                                    if (tpFields[i] == null) {
-                                        if (ignoreNonMatchedColumns) {
-                                            columnLabels[i] = null;
-                                        } else {
-                                            throw new IllegalArgumentException("No field in Record class: " + ClassUtil.getCanonicalClassName(targetClass)
-                                                    + " mapping to column: " + columnLabels[i]);
-                                        }
-                                    } else {
-                                        columnTypes[i] = tpFields[i]._4;
-                                    }
-                                } else {
-                                    columnLabels[i] = null;
-                                    tpFields[i] = null;
-                                    columnTypes[i] = null;
-                                }
-                            }
-
-                            this.columnLabels = columnLabels;
-                            this.tpFields = tpFields;
-                            this.columnTypes = columnTypes;
-                            this.fieldValues = new Object[targetRecordInfo.fieldNames().size()];
-                        }
-
-                        for (int i = 0; i < columnCount; i++) {
-                            if (columnLabels[i] == null) {
-                                continue;
-                            }
-
-                            fieldValues[tpFields[i]._5] = columnTypes[i].get(rs, i + 1);
-                        }
-
-                        return (T) targetRecordInfo.creator().apply(fieldValues);
-                    }
-                };
             } else {
                 if ((columnNameFilter == null || Objects.equals(columnNameFilter, Fn.alwaysTrue()))
                         && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()))) {
@@ -7763,65 +7656,6 @@ public final class JdbcUtil {
                             }
 
                             return (T) entity;
-                        }
-                    };
-                } else if (ClassUtil.isRecord(targetClass)) {
-                    return new BiRowMapper<T>() {
-                        @SuppressWarnings("deprecation")
-                        private final RecordInfo<?> recordInfo = ClassUtil.getRecordInfo(targetClass);
-                        private final ImmutableMap<String, Tuple5<String, Field, Method, Type<Object>, Integer>> fieldMap = recordInfo.fieldMap();
-
-                        private volatile int rsColumnCount = -1;
-                        private volatile Columns.ColumnGetter<?>[] rsColumnGetters = null;
-                        private volatile String[] columnLabels = null;
-                        private volatile Tuple5<String, Field, Method, Type<Object>, Integer>[] tpFields;
-                        private volatile Object fieldValues[] = null;
-
-                        @SuppressWarnings("hiding")
-                        @Override
-                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            Columns.ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
-
-                            if (rsColumnGetters == null) {
-                                this.rsColumnCount = columnLabelList.size();
-                                rsColumnGetters = initColumnGetter(columnLabelList);
-                                this.rsColumnGetters = rsColumnGetters;
-
-                                this.columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
-                                final Tuple5<String, Field, Method, Type<Object>, Integer>[] tpFields = new Tuple5[rsColumnCount];
-
-                                JdbcUtil.getColumn2FieldNameMap(targetClass);
-
-                                for (int i = 0; i < rsColumnCount; i++) {
-                                    tpFields[i] = fieldMap.get(columnLabels[i]);
-
-                                    if (tpFields[i] == null) {
-                                        if (ignoreNonMatchedColumns) {
-                                            columnLabels[i] = null;
-                                        } else {
-                                            throw new IllegalArgumentException("No field in class: " + ClassUtil.getCanonicalClassName(targetClass)
-                                                    + " mapping to column: " + columnLabels[i]);
-                                        }
-                                    } else {
-                                        if (rsColumnGetters[i] == Columns.ColumnGetter.GET_OBJECT) {
-                                            rsColumnGetters[i] = Columns.ColumnGetter.get(tpFields[i]._4);
-                                        }
-                                    }
-                                }
-
-                                this.tpFields = tpFields;
-                                this.fieldValues = new Object[recordInfo.fieldNames().size()];
-                            }
-
-                            for (int i = 0; i < rsColumnCount; i++) {
-                                if (columnLabels[i] == null) {
-                                    continue;
-                                }
-
-                                fieldValues[tpFields[i]._5] = rsColumnGetters[i].apply(i + 1, rs);
-                            }
-
-                            return (T) recordInfo.creator().apply(fieldValues);
                         }
                     };
                 } else {
@@ -19692,9 +19526,6 @@ public final class JdbcUtil {
             final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
             final boolean isOneId = isNoId ? false : idPropNameList.size() == 1;
             final boolean isEntityId = idType != null && EntityId.class.isAssignableFrom(idType);
-            final boolean isRecordId = idType != null && ClassUtil.isRecord(idType);
-            final RecordInfo idRecordInfo = isRecordId ? ClassUtil.getRecordInfo(idType) : null;
-            final ImmutableMap<String, Tuple5<String, Field, Method, Type<Object>, Integer>> fieldMap = isRecordId ? idRecordInfo.fieldMap() : null;
 
             final Function<Object, ID> idGetter = isNoId ? noIdGeneratorGetterSetter._2 //
                     : (isOneId ? entity -> idPropInfo.getPropValue(entity) //
@@ -19706,14 +19537,6 @@ public final class JdbcUtil {
                                 }
 
                                 return (ID) ret;
-                            } : (isRecordId ? entity -> {
-                                final Object[] fieldValues = new Object[idRecordInfo.fieldNames().size()];
-
-                                for (PropInfo propInfo : idPropInfoList) {
-                                    fieldValues[fieldMap.get(propInfo.name)._5] = propInfo.getPropValue(entity);
-                                }
-
-                                return (ID) idRecordInfo.creator().apply(fieldValues);
                             } : entity -> {
                                 final Object ret = N.newInstance(idType);
 
@@ -19722,7 +19545,7 @@ public final class JdbcUtil {
                                 }
 
                                 return (ID) ret;
-                            })));
+                            }));
 
             final BiConsumer<ID, Object> idSetter = isNoId ? noIdGeneratorGetterSetter._3 //
                     : (isOneId ? (id, entity) -> idPropInfo.setPropValue(entity, id) //
@@ -19741,19 +19564,6 @@ public final class JdbcUtil {
                                 } else {
                                     logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
                                 }
-                            } : (isRecordId ? (id, entity) -> {
-                                if (ClassUtil.isRecord(id.getClass())) {
-                                    try {
-                                        for (PropInfo propInfo : idPropInfoList) {
-                                            propInfo.setPropValue(entity, fieldMap.get(propInfo.name)._3.invoke(id));
-                                        }
-                                    } catch (IllegalAccessException | InvocationTargetException e) {
-                                        // Should never happen.
-                                        throw N.toRuntimeException(e);
-                                    }
-                                } else {
-                                    logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
-                                }
                             } : (id, entity) -> {
                                 if (id != null && ClassUtil.isEntity(id.getClass())) {
                                     final Object entityId = id;
@@ -19764,7 +19574,7 @@ public final class JdbcUtil {
                                 } else {
                                     logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
                                 }
-                            })));
+                            }));
 
             map = new EnumMap<>(NamingPolicy.class);
 
@@ -19802,23 +19612,6 @@ public final class JdbcUtil {
                                                 }
 
                                                 return id;
-                                            } else if (isRecordId) {
-                                                final Object[] fieldValues = new Object[idRecordInfo.fieldNames().size()];
-                                                final int columnCount = columnLabels.size();
-                                                String columnName = null;
-                                                Tuple5<String, Field, Method, Type<Object>, Integer> tpField = null;
-
-                                                for (int i = 0; i < columnCount; i++) {
-                                                    columnName = columnLabels.get(i);
-
-                                                    tpField = fieldMap.get(columnName);
-
-                                                    if (tpField != null) {
-                                                        fieldValues[tpField._5] = tpField._4.get(rs, i + 1);
-                                                    }
-                                                }
-
-                                                return idRecordInfo.creator().apply(fieldValues);
                                             } else {
                                                 final EntityInfo idEntityInfo = ParserUtil.getEntityInfo(idType);
                                                 final List<Tuple2<String, PropInfo>> tpList = StreamEx.of(columnLabels)
