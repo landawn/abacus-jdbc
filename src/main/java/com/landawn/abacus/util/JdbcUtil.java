@@ -7525,12 +7525,27 @@ public final class JdbcUtil {
                 return rsColumnGetters;
             }
 
+            /**
+             * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+             *
+             * @param <T>
+             * @param targetClass
+             * @return
+             */
             @SequentialOnly
             @Stateful
             public <T> BiRowMapper<T> to(final Class<? extends T> targetClass) {
                 return to(targetClass, false);
             }
 
+            /**
+             * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+             *
+             * @param <T>
+             * @param targetClass
+             * @param ignoreNonMatchedColumns
+             * @return
+             */
             @SequentialOnly
             @Stateful
             public <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final boolean ignoreNonMatchedColumns) {
