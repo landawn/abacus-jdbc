@@ -6721,6 +6721,8 @@ public final class JdbcUtil {
              *
              * @return
              */
+            @SequentialOnly
+            @Stateful
             public RowMapper<Object[]> toArray() {
                 // setDefaultColumnGetter();
 
@@ -6755,6 +6757,8 @@ public final class JdbcUtil {
              *
              * @return
              */
+            @SequentialOnly
+            @Stateful
             public RowMapper<List<Object>> toList() {
                 // setDefaultColumnGetter();
 
@@ -6784,6 +6788,8 @@ public final class JdbcUtil {
                 };
             }
 
+            @SequentialOnly
+            @Stateful
             public <R> RowMapper<R> to(final Throwables.Function<DisposableObjArray, R, SQLException> finisher) {
                 return new RowMapper<R>() {
                     private volatile int rsColumnCount = -1;
@@ -7323,10 +7329,14 @@ public final class JdbcUtil {
             };
         }
 
+        @SequentialOnly
+        @Stateful
         static BiRowMapper<Map<String, Object>> toMap(final Function<? super String, String> columnNameConverter) {
             return toMap(columnNameConverter, IntFunctions.<String, Object> ofMap());
         }
 
+        @SequentialOnly
+        @Stateful
         static BiRowMapper<Map<String, Object>> toMap(final Function<? super String, String> columnNameConverter,
                 final IntFunction<Map<String, Object>> mapSupplier) {
             return new BiRowMapper<Map<String, Object>>() {
@@ -7495,10 +7505,14 @@ public final class JdbcUtil {
                 return rsColumnGetters;
             }
 
+            @SequentialOnly
+            @Stateful
             public <T> BiRowMapper<T> to(final Class<? extends T> targetClass) {
                 return to(targetClass, false);
             }
 
+            @SequentialOnly
+            @Stateful
             public <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final boolean ignoreNonMatchedColumns) {
                 if (Object[].class.isAssignableFrom(targetClass)) {
                     return new BiRowMapper<T>() {
@@ -7995,6 +8009,8 @@ public final class JdbcUtil {
              *
              * @return
              */
+            @SequentialOnly
+            @Stateful
             public RowExtractor build() {
                 return new RowExtractor() {
                     private volatile int rsColumnCount = -1;
