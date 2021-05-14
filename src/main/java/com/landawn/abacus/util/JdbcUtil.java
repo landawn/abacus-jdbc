@@ -6788,6 +6788,13 @@ public final class JdbcUtil {
                 };
             }
 
+            /**
+             * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+             *
+             * @param <R>
+             * @param finisher
+             * @return
+             */
             @SequentialOnly
             @Stateful
             public <R> RowMapper<R> to(final Throwables.Function<DisposableObjArray, R, SQLException> finisher) {
@@ -7329,12 +7336,25 @@ public final class JdbcUtil {
             };
         }
 
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param columnNameConverter
+         * @return
+         */
         @SequentialOnly
         @Stateful
         static BiRowMapper<Map<String, Object>> toMap(final Function<? super String, String> columnNameConverter) {
             return toMap(columnNameConverter, IntFunctions.<String, Object> ofMap());
         }
 
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param columnNameConverter
+         * @param mapSupplier
+         * @return
+         */
         @SequentialOnly
         @Stateful
         static BiRowMapper<Map<String, Object>> toMap(final Function<? super String, String> columnNameConverter,
