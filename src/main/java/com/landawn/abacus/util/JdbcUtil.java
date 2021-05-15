@@ -7235,7 +7235,7 @@ public final class JdbcUtil {
                                                     + " mapping to column: " + columnLabels[i]);
                                         }
                                     } else {
-                                        columnTypes[i] = entityInfo.getPropInfo(columnLabels[i]).dbType;
+                                        columnTypes[i] = propInfos[i].dbType;
                                     }
                                 } else {
                                     columnLabels[i] = null;
@@ -7764,11 +7764,20 @@ public final class JdbcUtil {
             };
         }
 
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param consumer
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
         static RowConsumer from(final Consumer<DisposableObjArray> consumer) {
             N.checkArgNotNull(consumer, "consumer");
 
             return new RowConsumer() {
-                private DisposableObjArray disposable = null;
+                private volatile DisposableObjArray disposable = null;
                 private int columnCount = 0;
                 private Object[] output = null;
 
@@ -7782,6 +7791,75 @@ public final class JdbcUtil {
 
                     for (int i = 0; i < columnCount; i++) {
                         output[i] = JdbcUtil.getColumnValue(rs, i + 1);
+                    }
+
+                    consumer.accept(disposable);
+                }
+            };
+        }
+
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param entityClass
+         * @param consumer
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
+        static RowConsumer from(final Class<?> entityClass, final Consumer<DisposableObjArray> consumer) {
+            N.checkArgNotNull(entityClass, "entityClass");
+            N.checkArgNotNull(consumer, "consumer");
+
+            return new RowConsumer() {
+                private volatile DisposableObjArray disposable = null;
+                private int columnCount = 0;
+                private Object[] output = null;
+
+                private Type<?>[] columnTypes = null;
+
+                @Override
+                public void accept(final ResultSet rs) throws SQLException {
+                    if (disposable == null) {
+                        final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
+
+                        columnCount = columnLabels.size();
+                        columnTypes = new Type[columnCount];
+
+                        final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+                        final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
+                        PropInfo propInfo = null;
+
+                        for (int i = 0; i < columnCount; i++) {
+                            propInfo = entityInfo.getPropInfo(columnLabels.get(i));
+
+                            if (propInfo == null) {
+                                String fieldName = column2FieldNameMap.get(columnLabels.get(i));
+
+                                if (N.isNullOrEmpty(fieldName)) {
+                                    fieldName = column2FieldNameMap.get(columnLabels.get(i).toLowerCase());
+                                }
+
+                                if (N.notNullOrEmpty(fieldName)) {
+                                    propInfo = entityInfo.getPropInfo(fieldName);
+                                }
+                            }
+
+                            if (propInfo == null) {
+                                //    throw new IllegalArgumentException(
+                                //            "No property in class: " + ClassUtil.getCanonicalClassName(entityClass) + " mapping to column: " + columnLabels.get(i));
+                            } else {
+                                columnTypes[i] = propInfo.dbType;
+                            }
+                        }
+
+                        output = new Object[columnCount];
+                        disposable = DisposableObjArray.wrap(output);
+                    }
+
+                    for (int i = 0; i < columnCount; i++) {
+                        output[i] = columnTypes[i] == null ? JdbcUtil.getColumnValue(rs, i + 1) : columnTypes[i].get(rs, i + 1);
                     }
 
                     consumer.accept(disposable);
@@ -7811,18 +7889,27 @@ public final class JdbcUtil {
             };
         }
 
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param consumer
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
         static BiRowConsumer from(final BiConsumer<List<String>, DisposableObjArray> consumer) {
             N.checkArgNotNull(consumer, "consumer");
 
             return new BiRowConsumer() {
-                private DisposableObjArray disposable = null;
+                private volatile DisposableObjArray disposable = null;
                 private int columnCount = 0;
                 private Object[] output = null;
 
                 @Override
-                public void accept(final ResultSet rs, final List<String> cls) throws SQLException {
+                public void accept(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                     if (disposable == null) {
-                        columnCount = cls.size();
+                        columnCount = columnLabels.size();
                         output = new Object[columnCount];
                         disposable = DisposableObjArray.wrap(output);
                     }
@@ -7831,7 +7918,74 @@ public final class JdbcUtil {
                         output[i] = JdbcUtil.getColumnValue(rs, i + 1);
                     }
 
-                    consumer.accept(cls, disposable);
+                    consumer.accept(columnLabels, disposable);
+                }
+            };
+        }
+
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param entityClass
+         * @param consumer
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
+        static BiRowConsumer from(final Class<?> entityClass, final BiConsumer<List<String>, DisposableObjArray> consumer) {
+            N.checkArgNotNull(entityClass, "entityClass");
+            N.checkArgNotNull(consumer, "consumer");
+
+            return new BiRowConsumer() {
+                private volatile DisposableObjArray disposable = null;
+                private int columnCount = 0;
+                private Object[] output = null;
+
+                private Type<?>[] columnTypes = null;
+
+                @Override
+                public void accept(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                    if (disposable == null) {
+                        columnCount = columnLabels.size();
+                        columnTypes = new Type[columnCount];
+
+                        final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+                        final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
+                        PropInfo propInfo = null;
+
+                        for (int i = 0; i < columnCount; i++) {
+                            propInfo = entityInfo.getPropInfo(columnLabels.get(i));
+
+                            if (propInfo == null) {
+                                String fieldName = column2FieldNameMap.get(columnLabels.get(i));
+
+                                if (N.isNullOrEmpty(fieldName)) {
+                                    fieldName = column2FieldNameMap.get(columnLabels.get(i).toLowerCase());
+                                }
+
+                                if (N.notNullOrEmpty(fieldName)) {
+                                    propInfo = entityInfo.getPropInfo(fieldName);
+                                }
+                            }
+
+                            if (propInfo == null) {
+                                //    throw new IllegalArgumentException(
+                                //            "No property in class: " + ClassUtil.getCanonicalClassName(entityClass) + " mapping to column: " + columnLabels.get(i));
+                            } else {
+                                columnTypes[i] = propInfo.dbType;
+                            }
+                        }
+
+                        output = new Object[columnCount];
+                        disposable = DisposableObjArray.wrap(output);
+                    }
+
+                    for (int i = 0; i < columnCount; i++) {
+                        output[i] = columnTypes[i] == null ? JdbcUtil.getColumnValue(rs, i + 1) : columnTypes[i].get(rs, i + 1);
+                    }
+
+                    consumer.accept(columnLabels, disposable);
                 }
             };
         }

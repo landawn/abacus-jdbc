@@ -2088,15 +2088,15 @@ public final class SQLExecutor {
         final BiRowMapper<T> biRowMapper = BiRowMapper.to(targetClass);
 
         final JdbcUtil.RowMapper<T> rowMapper = new JdbcUtil.RowMapper<T>() {
-            private List<String> cls = null;
+            private List<String> columnLabels = null;
 
             @Override
             public T apply(ResultSet rs) throws SQLException {
-                if (cls == null) {
-                    cls = JdbcUtil.getColumnLabelList(rs);
+                if (columnLabels == null) {
+                    columnLabels = JdbcUtil.getColumnLabelList(rs);
                 }
 
-                return biRowMapper.apply(rs, cls);
+                return biRowMapper.apply(rs, columnLabels);
             }
         };
 
@@ -2773,10 +2773,10 @@ public final class SQLExecutor {
             public List<T> apply(ResultSet rs) throws SQLException {
 
                 final List<T> result = new ArrayList<>();
-                final List<String> cls = JdbcUtil.getColumnLabelList(rs);
+                final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
                 while (rs.next()) {
-                    result.add(rowMapper.apply(rs, cls));
+                    result.add(rowMapper.apply(rs, columnLabels));
                 }
 
                 return result;
