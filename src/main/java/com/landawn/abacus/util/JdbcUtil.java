@@ -7773,7 +7773,7 @@ public final class JdbcUtil {
         @Beta
         @SequentialOnly
         @Stateful
-        static RowConsumer from(final Consumer<DisposableObjArray> consumer) {
+        static RowConsumer oneOff(final Consumer<DisposableObjArray> consumer) {
             N.checkArgNotNull(consumer, "consumer");
 
             return new RowConsumer() {
@@ -7808,7 +7808,7 @@ public final class JdbcUtil {
         @Beta
         @SequentialOnly
         @Stateful
-        static RowConsumer from(final Class<?> entityClass, final Consumer<DisposableObjArray> consumer) {
+        static RowConsumer oneOff(final Class<?> entityClass, final Consumer<DisposableObjArray> consumer) {
             N.checkArgNotNull(entityClass, "entityClass");
             N.checkArgNotNull(consumer, "consumer");
 
@@ -7898,7 +7898,7 @@ public final class JdbcUtil {
         @Beta
         @SequentialOnly
         @Stateful
-        static BiRowConsumer from(final BiConsumer<List<String>, DisposableObjArray> consumer) {
+        static BiRowConsumer oneOff(final BiConsumer<List<String>, DisposableObjArray> consumer) {
             N.checkArgNotNull(consumer, "consumer");
 
             return new BiRowConsumer() {
@@ -7933,7 +7933,7 @@ public final class JdbcUtil {
         @Beta
         @SequentialOnly
         @Stateful
-        static BiRowConsumer from(final Class<?> entityClass, final BiConsumer<List<String>, DisposableObjArray> consumer) {
+        static BiRowConsumer oneOff(final Class<?> entityClass, final BiConsumer<List<String>, DisposableObjArray> consumer) {
             N.checkArgNotNull(entityClass, "entityClass");
             N.checkArgNotNull(consumer, "consumer");
 

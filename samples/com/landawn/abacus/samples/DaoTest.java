@@ -39,6 +39,7 @@ import com.landawn.abacus.util.DateUtil;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.JdbcUtil;
+import com.landawn.abacus.util.JdbcUtil.BiRowConsumer;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.RowConsumer;
 import com.landawn.abacus.util.N;
@@ -684,8 +685,6 @@ public class DaoTest {
 
         assertEquals(1, userDao.listToCollection(0).size());
 
-        userDao.forEach(CF.eq("firstName", "Forrest"), RowConsumer.from(it -> N.println(it.join(", "))));
-
         //    userDao.list(0, RowFilter.ALWAYS_TRUE, RowMapper.builder().toList()).forEach(Fn.println());
         //
         //    assertEquals(1, userDao.list(0, RowFilter.ALWAYS_TRUE, RowMapper.builder().toList()).size());
@@ -1008,6 +1007,20 @@ public class DaoTest {
         userDao.insertWithId(user);
 
         userDao.testInnerHandler(100).forEach(Fn.println());
+
+        userDao.deleteById(100L);
+    }
+
+    @Test
+    public void test_RowConsumer() throws SQLException {
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.insertWithId(user);
+
+        userDao.forEach(CF.eq("firstName", "Forrest"), RowConsumer.oneOff(a -> N.println(a.join(", "))));
+        userDao.forEach(CF.eq("firstName", "Forrest"), RowConsumer.oneOff(User.class, a -> N.println(a.join(", "))));
+
+        userDao.forEach(CF.eq("firstName", "Forrest"), BiRowConsumer.oneOff((cls, a) -> N.println(a.join(", "))));
+        userDao.forEach(CF.eq("firstName", "Forrest"), BiRowConsumer.oneOff(User.class, (cls, a) -> N.println(a.join(", "))));
 
         userDao.deleteById(100L);
     }
