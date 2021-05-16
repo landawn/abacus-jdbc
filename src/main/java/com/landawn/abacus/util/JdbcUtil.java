@@ -10810,6 +10810,20 @@ public final class JdbcUtil {
 
         /**
          *
+         * @param cond
+         * @param rowConsumer
+         * @return
+         * @throws SQLException
+         * @see ConditionFactory
+         * @see ConditionFactory.CF
+         */
+        @Beta
+        default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
+            forEach(cond, RowConsumer.oneOff(targetEntityClass(), rowConsumer));
+        }
+
+        /**
+         *
          * @param propName
          * @param propValue
          * @param cond
@@ -15799,6 +15813,21 @@ public final class JdbcUtil {
         @Override
         void forEach(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter, final BiRowConsumer rowConsumer)
                 throws UncheckedSQLException;
+
+        /**
+        *
+        * @param cond
+        * @param rowConsumer
+        * @return
+        * @throws SQLException
+        * @see ConditionFactory
+        * @see ConditionFactory.CF
+        */
+        @Beta
+        @Override
+        default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws UncheckedSQLException {
+            forEach(cond, RowConsumer.oneOff(targetEntityClass(), rowConsumer));
+        }
 
         /**
          *
