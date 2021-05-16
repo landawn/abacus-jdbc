@@ -42,6 +42,7 @@ import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.JdbcUtil.BiRowConsumer;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.JdbcUtil.RowConsumer;
+import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Pair;
 import com.landawn.abacus.util.Profiler;
@@ -1012,7 +1013,7 @@ public class DaoTest {
     }
 
     @Test
-    public void test_RowConsumer() throws SQLException {
+    public void test_toDisposableObjArray() throws SQLException {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
@@ -1021,6 +1022,12 @@ public class DaoTest {
 
         userDao.forEach(CF.eq("firstName", "Forrest"), BiRowConsumer.oneOff((cls, a) -> N.println(a.join(", "))));
         userDao.forEach(CF.eq("firstName", "Forrest"), BiRowConsumer.oneOff(User.class, (cls, a) -> N.println(a.join(", "))));
+
+        userDao.stream(CF.eq("firstName", "Forrest"), RowMapper.toDisposableObjArray()).forEach(Fn.println());
+        userDao.stream(CF.eq("firstName", "Forrest"), RowMapper.toDisposableObjArray(User.class)).forEach(Fn.println());
+
+        userDao.stream(CF.eq("firstName", "Forrest"), BiRowMapper.toDisposableObjArray()).forEach(Fn.println());
+        userDao.stream(CF.eq("firstName", "Forrest"), BiRowMapper.toDisposableObjArray(User.class)).forEach(Fn.println());
 
         userDao.deleteById(100L);
     }

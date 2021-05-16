@@ -6407,6 +6407,104 @@ public final class JdbcUtil {
             return BiRowMapper.from(this);
         }
 
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
+        static RowMapper<DisposableObjArray> toDisposableObjArray() {
+            return new RowMapper<DisposableObjArray>() {
+                private volatile DisposableObjArray disposable = null;
+                private int columnCount = 0;
+                private Object[] output = null;
+
+                @Override
+                public DisposableObjArray apply(final ResultSet rs) throws SQLException {
+                    if (disposable == null) {
+                        columnCount = JdbcUtil.getColumnCount(rs);
+                        output = new Object[columnCount];
+                        disposable = DisposableObjArray.wrap(output);
+                    }
+
+                    for (int i = 0; i < columnCount; i++) {
+                        output[i] = JdbcUtil.getColumnValue(rs, i + 1);
+                    }
+
+                    return disposable;
+                }
+            };
+        }
+
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param entityClass used to fetch column/row value from {@code ResultSet} by the type of fields/columns defined in this class.
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
+        static RowMapper<DisposableObjArray> toDisposableObjArray(final Class<?> entityClass) {
+            N.checkArgNotNull(entityClass, "entityClass");
+
+            return new RowMapper<DisposableObjArray>() {
+                private volatile DisposableObjArray disposable = null;
+                private int columnCount = 0;
+                private Object[] output = null;
+
+                private Type<?>[] columnTypes = null;
+
+                @Override
+                public DisposableObjArray apply(final ResultSet rs) throws SQLException {
+                    if (disposable == null) {
+                        final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
+
+                        columnCount = columnLabels.size();
+                        columnTypes = new Type[columnCount];
+
+                        final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+                        final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
+                        PropInfo propInfo = null;
+
+                        for (int i = 0; i < columnCount; i++) {
+                            propInfo = entityInfo.getPropInfo(columnLabels.get(i));
+
+                            if (propInfo == null) {
+                                String fieldName = column2FieldNameMap.get(columnLabels.get(i));
+
+                                if (N.isNullOrEmpty(fieldName)) {
+                                    fieldName = column2FieldNameMap.get(columnLabels.get(i).toLowerCase());
+                                }
+
+                                if (N.notNullOrEmpty(fieldName)) {
+                                    propInfo = entityInfo.getPropInfo(fieldName);
+                                }
+                            }
+
+                            if (propInfo == null) {
+                                //    throw new IllegalArgumentException(
+                                //            "No property in class: " + ClassUtil.getCanonicalClassName(entityClass) + " mapping to column: " + columnLabels.get(i));
+                            } else {
+                                columnTypes[i] = propInfo.dbType;
+                            }
+                        }
+
+                        output = new Object[columnCount];
+                        disposable = DisposableObjArray.wrap(output);
+                    }
+
+                    for (int i = 0; i < columnCount; i++) {
+                        output[i] = columnTypes[i] == null ? JdbcUtil.getColumnValue(rs, i + 1) : columnTypes[i].get(rs, i + 1);
+                    }
+
+                    return disposable;
+                }
+            };
+        }
+
         static RowMapperBuilder builder() {
             return builder(Columns.ColumnGetter.GET_OBJECT);
         }
@@ -7380,6 +7478,102 @@ public final class JdbcUtil {
                     }
 
                     return result;
+                }
+            };
+        }
+
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
+        static BiRowMapper<DisposableObjArray> toDisposableObjArray() {
+            return new BiRowMapper<DisposableObjArray>() {
+                private volatile DisposableObjArray disposable = null;
+                private int columnCount = 0;
+                private Object[] output = null;
+
+                @Override
+                public DisposableObjArray apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                    if (disposable == null) {
+                        columnCount = JdbcUtil.getColumnCount(rs);
+                        output = new Object[columnCount];
+                        disposable = DisposableObjArray.wrap(output);
+                    }
+
+                    for (int i = 0; i < columnCount; i++) {
+                        output[i] = JdbcUtil.getColumnValue(rs, i + 1);
+                    }
+
+                    return disposable;
+                }
+            };
+        }
+
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param entityClass used to fetch column/row value from {@code ResultSet} by the type of fields/columns defined in this class.
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
+        static BiRowMapper<DisposableObjArray> toDisposableObjArray(final Class<?> entityClass) {
+            N.checkArgNotNull(entityClass, "entityClass");
+
+            return new BiRowMapper<DisposableObjArray>() {
+                private volatile DisposableObjArray disposable = null;
+                private int columnCount = 0;
+                private Object[] output = null;
+
+                private Type<?>[] columnTypes = null;
+
+                @Override
+                public DisposableObjArray apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                    if (disposable == null) {
+                        columnCount = columnLabels.size();
+                        columnTypes = new Type[columnCount];
+
+                        final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+                        final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
+                        PropInfo propInfo = null;
+
+                        for (int i = 0; i < columnCount; i++) {
+                            propInfo = entityInfo.getPropInfo(columnLabels.get(i));
+
+                            if (propInfo == null) {
+                                String fieldName = column2FieldNameMap.get(columnLabels.get(i));
+
+                                if (N.isNullOrEmpty(fieldName)) {
+                                    fieldName = column2FieldNameMap.get(columnLabels.get(i).toLowerCase());
+                                }
+
+                                if (N.notNullOrEmpty(fieldName)) {
+                                    propInfo = entityInfo.getPropInfo(fieldName);
+                                }
+                            }
+
+                            if (propInfo == null) {
+                                //    throw new IllegalArgumentException(
+                                //            "No property in class: " + ClassUtil.getCanonicalClassName(entityClass) + " mapping to column: " + columnLabels.get(i));
+                            } else {
+                                columnTypes[i] = propInfo.dbType;
+                            }
+                        }
+
+                        output = new Object[columnCount];
+                        disposable = DisposableObjArray.wrap(output);
+                    }
+
+                    for (int i = 0; i < columnCount; i++) {
+                        output[i] = columnTypes[i] == null ? JdbcUtil.getColumnValue(rs, i + 1) : columnTypes[i].get(rs, i + 1);
+                    }
+
+                    return disposable;
                 }
             };
         }
