@@ -51,6 +51,7 @@ import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowConsumer;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
+import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.StringUtil.Strings;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
@@ -62,16 +63,17 @@ import com.landawn.abacus.util.u.OptionalFloat;
 import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
+import com.landawn.abacus.util.function.Consumer;
 import com.landawn.abacus.util.function.Predicate;
 
 /**
  * Performance Tips:
- * <li>Avoid unnecessary/repeated database calls.</li> 
+ * <li>Avoid unnecessary/repeated database calls.</li>
  * <li>Only fetch the columns you need or update the columns you want.</li>
  * <li>Index is the key point in a lot of database performance issues.</li>
- * 
+ *
  * <br />
- * 
+ *
  * The backed {@code PreparedStatement/CallableStatement} will be closed by default
  * after any execution methods(which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...).
  * except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
@@ -1350,7 +1352,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     //    /**
-    //     * 
+    //     *
     //     * @param paramsSetter
     //     * @return
     //     * @throws SQLException
@@ -1691,7 +1693,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     //    }
 
     /**
-     * 
+     *
      * @param <T>
      * @param batchParameters
      * @return
@@ -1752,7 +1754,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * 
+     *
      * @param <T>
      * @param batchParameters
      * @return
@@ -1766,7 +1768,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * 
+     *
      * @param <T>
      * @param batchParameters single batch parameters.
      * @param type
@@ -1800,7 +1802,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * 
+     *
      * @param <T>
      * @param batchParameters single batch parameters.
      * @param type
@@ -1815,7 +1817,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     //    /**
-    //     * 
+    //     *
     //     * @param batchParameters
     //     * @return
     //     * @throws SQLException
@@ -2076,7 +2078,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * 
+     *
      * @return
      * @throws SQLException
      * @see {@link #setFetchDirection(FetchDirection)}
@@ -2560,7 +2562,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
-     * @deprecated replaced by {@code findOnlyOne}. 
+     * @deprecated replaced by {@code findOnlyOne}.
      */
     @Deprecated
     public <T> Optional<T> get(BiRowMapper<T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
@@ -2575,7 +2577,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException
-     * @deprecated replaced by {@code findOnlyOneOrNull}. 
+     * @deprecated replaced by {@code findOnlyOneOrNull}.
      */
     @Deprecated
     public <T> T gett(final Class<T> targetClass) throws DuplicatedResultException, SQLException {
@@ -2591,7 +2593,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
-     * @deprecated replaced by {@code findOnlyOneOrNull}. 
+     * @deprecated replaced by {@code findOnlyOneOrNull}.
      */
     @Deprecated
     public <T> T gett(RowMapper<T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
@@ -2607,7 +2609,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
-     * @deprecated replaced by {@code findOnlyOneOrNull}. 
+     * @deprecated replaced by {@code findOnlyOneOrNull}.
      */
     @Deprecated
     public <T> T gett(BiRowMapper<T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
@@ -2979,7 +2981,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     *  
+     *
      * @return
      * @throws SQLException
      */
@@ -3152,7 +3154,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     // Will it cause confusion if it's called in transaction?
 
     /**
-     * 
+     *
      * @return
      * @throws SQLException
      * @see {@link #query(ResultExtractor)}
@@ -3695,6 +3697,33 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         }
 
         return JdbcUtil.executeQuery(stmt);
+    }
+
+    /**
+     *
+     * @param rowConsumer
+     * @throws SQLException
+     * @see {@link RowConsumer#oneOff(Consumer)}
+     */
+    @Beta
+    public void foreach(final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
+        checkArgNotNull(rowConsumer, "rowConsumer");
+
+        forEach(RowConsumer.oneOff(rowConsumer));
+    }
+
+    /**
+     *
+     * @param entityClass
+     * @param rowConsumer
+     * @throws SQLException
+     * @see {@link RowConsumer#oneOff(Class, Consumer)}
+     */
+    @Beta
+    public void foreach(final Class<?> entityClass, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
+        checkArgNotNull(rowConsumer, "rowConsumer");
+
+        forEach(RowConsumer.oneOff(entityClass, rowConsumer));
     }
 
     /**
