@@ -3714,7 +3714,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     /**
      *
-     * @param entityClass
+     * @param entityClass used to fetch column/row value from {@code ResultSet} by the type of fields/columns defined in this class.
      * @param rowConsumer
      * @throws SQLException
      * @see {@link RowConsumer#oneOff(Class, Consumer)}

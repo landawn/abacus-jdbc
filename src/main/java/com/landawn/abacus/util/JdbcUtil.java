@@ -7801,7 +7801,7 @@ public final class JdbcUtil {
         /**
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
-         * @param entityClass
+         * @param entityClass used to fetch column/row value from {@code ResultSet} by the type of fields/columns defined in this class.
          * @param consumer
          * @return
          */
@@ -7926,7 +7926,7 @@ public final class JdbcUtil {
         /**
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
-         * @param entityClass
+         * @param entityClass used to fetch column/row value from {@code ResultSet} by the type of fields/columns defined in this class.
          * @param consumer
          * @return
          */
