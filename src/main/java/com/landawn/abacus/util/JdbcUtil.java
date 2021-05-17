@@ -7285,7 +7285,6 @@ public final class JdbcUtil {
                 }
             } else if (ClassUtil.isEntity(targetClass)) {
                 return new BiRowMapper<T>() {
-                    private final boolean isDirtyMarker = DirtyMarkerUtil.isDirtyMarker(targetClass);
                     private final EntityInfo entityInfo = ParserUtil.getEntityInfo(targetClass);
                     private volatile String[] columnLabels = null;
                     private volatile PropInfo[] propInfos;
@@ -7347,21 +7346,17 @@ public final class JdbcUtil {
                             this.columnTypes = columnTypes;
                         }
 
-                        final Object entity = N.newInstance(targetClass);
+                        final Object result = entityInfo.createEntityResult();
 
                         for (int i = 0; i < columnCount; i++) {
                             if (columnLabels[i] == null) {
                                 continue;
                             }
 
-                            propInfos[i].setPropValue(entity, columnTypes[i].get(rs, i + 1));
+                            propInfos[i].setPropValue(result, columnTypes[i].get(rs, i + 1));
                         }
 
-                        if (isDirtyMarker) {
-                            DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
-                        }
-
-                        return (T) entity;
+                        return entityInfo.finishEntityResult(result);
                     }
                 };
             } else {
@@ -7829,7 +7824,6 @@ public final class JdbcUtil {
                     };
                 } else if (ClassUtil.isEntity(targetClass)) {
                     return new BiRowMapper<T>() {
-                        private final boolean isDirtyMarker = DirtyMarkerUtil.isDirtyMarker(targetClass);
                         private final EntityInfo entityInfo = ParserUtil.getEntityInfo(targetClass);
 
                         private volatile int rsColumnCount = -1;
@@ -7884,21 +7878,17 @@ public final class JdbcUtil {
                                 this.propInfos = propInfos;
                             }
 
-                            final Object entity = N.newInstance(targetClass);
+                            final Object result = entityInfo.createEntityResult();
 
                             for (int i = 0; i < rsColumnCount; i++) {
                                 if (columnLabels[i] == null) {
                                     continue;
                                 }
 
-                                propInfos[i].setPropValue(entity, rsColumnGetters[i].apply(i + 1, rs));
+                                propInfos[i].setPropValue(result, rsColumnGetters[i].apply(i + 1, rs));
                             }
 
-                            if (isDirtyMarker) {
-                                DirtyMarkerUtil.markDirty((DirtyMarker) entity, false);
-                            }
-
-                            return (T) entity;
+                            return entityInfo.finishEntityResult(result);
                         }
                     };
                 } else {
@@ -19954,6 +19944,7 @@ public final class JdbcUtil {
             final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
             final boolean isOneId = isNoId ? false : idPropNameList.size() == 1;
             final boolean isEntityId = idType != null && EntityId.class.isAssignableFrom(idType);
+            final EntityInfo idEntityInfo = idType != null && ClassUtil.isEntity(idType) ? ParserUtil.getEntityInfo(idType) : null;
 
             final Function<Object, ID> idGetter = isNoId ? noIdGeneratorGetterSetter._2 //
                     : (isOneId ? entity -> idPropInfo.getPropValue(entity) //
@@ -19966,13 +19957,13 @@ public final class JdbcUtil {
 
                                 return (ID) ret;
                             } : entity -> {
-                                final Object ret = N.newInstance(idType);
+                                final Object ret = idEntityInfo.createEntityResult();
 
                                 for (PropInfo propInfo : idPropInfoList) {
                                     ClassUtil.setPropValue(ret, propInfo.name, propInfo.getPropValue(entity));
                                 }
 
-                                return (ID) ret;
+                                return (ID) idEntityInfo.finishEntityResult(ret);
                             }));
 
             final BiConsumer<ID, Object> idSetter = isNoId ? noIdGeneratorGetterSetter._3 //
@@ -20041,18 +20032,17 @@ public final class JdbcUtil {
 
                                                 return id;
                                             } else {
-                                                final EntityInfo idEntityInfo = ParserUtil.getEntityInfo(idType);
                                                 final List<Tuple2<String, PropInfo>> tpList = StreamEx.of(columnLabels)
                                                         .filter(it -> idEntityInfo.getPropInfo(it) != null)
                                                         .map(it -> Tuple.of(it, idEntityInfo.getPropInfo(it)))
                                                         .toList();
-                                                final Object id = N.newInstance(idType);
+                                                final Object id = idEntityInfo.createEntityResult();
 
                                                 for (Tuple2<String, PropInfo> tp : tpList) {
                                                     tp._2.setPropValue(id, tp._2.dbType.get(rs, tp._1));
                                                 }
 
-                                                return id;
+                                                return idEntityInfo.finishEntityResult(id);
                                             }
                                         }));
 
