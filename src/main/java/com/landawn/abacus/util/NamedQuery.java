@@ -2637,8 +2637,9 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
     public NamedQuery setParameters(final Object parameters) throws SQLException {
         checkArgNotNull(parameters, "parameters");
 
-        if (ClassUtil.isEntity(parameters.getClass())) {
-            final Class<?> cls = parameters.getClass();
+        final Class<?> cls = parameters.getClass();
+
+        if (ClassUtil.isEntity(cls)) {
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
             PropInfo propInfo = null;
 
@@ -2694,38 +2695,50 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
         }
 
         final Class<?> cls = entity.getClass();
-        final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
-        PropInfo propInfo = null;
-        Object propValue = null;
-        Type<Object> dbType = null;
-        IntList indexes = null;
+        if (ClassUtil.isEntity(cls)) {
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+            PropInfo propInfo = null;
+            Object propValue = null;
+            Type<Object> dbType = null;
+            IntList indexes = null;
 
-        for (String parameterName : parameterNames) {
-            propInfo = entityInfo.getPropInfo(parameterName);
-            propValue = propInfo.getPropValue(entity);
-            dbType = propInfo.dbType;
+            for (String parameterName : parameterNames) {
+                propInfo = entityInfo.getPropInfo(parameterName);
 
-            indexes = paramNameIndexMap.get(parameterName);
+                if (propInfo == null) {
+                    close();
+                    throw new IllegalArgumentException("No property found with name: " + parameterName + " in class: " + ClassUtil.getCanonicalClassName(cls));
+                }
 
-            if (indexes == null) {
-                close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
-            } else {
-                if (indexes.size() == 1) {
-                    dbType.set(stmt, indexes.get(0), propValue);
-                } else if (indexes.size() == 2) {
-                    dbType.set(stmt, indexes.get(0), propValue);
-                    dbType.set(stmt, indexes.get(1), propValue);
-                } else if (indexes.size() == 3) {
-                    dbType.set(stmt, indexes.get(0), propValue);
-                    dbType.set(stmt, indexes.get(1), propValue);
-                    dbType.set(stmt, indexes.get(2), propValue);
+                propValue = propInfo.getPropValue(entity);
+                dbType = propInfo.dbType;
+
+                indexes = paramNameIndexMap.get(parameterName);
+
+                if (indexes == null) {
+                    close();
+                    throw new IllegalArgumentException("Not found named parameter: " + parameterName);
                 } else {
-                    for (int i = 0, size = indexes.size(); i < size; i++) {
-                        dbType.set(stmt, indexes.get(i), propValue);
+                    if (indexes.size() == 1) {
+                        dbType.set(stmt, indexes.get(0), propValue);
+                    } else if (indexes.size() == 2) {
+                        dbType.set(stmt, indexes.get(0), propValue);
+                        dbType.set(stmt, indexes.get(1), propValue);
+                    } else if (indexes.size() == 3) {
+                        dbType.set(stmt, indexes.get(0), propValue);
+                        dbType.set(stmt, indexes.get(1), propValue);
+                        dbType.set(stmt, indexes.get(2), propValue);
+                    } else {
+                        for (int i = 0, size = indexes.size(); i < size; i++) {
+                            dbType.set(stmt, indexes.get(i), propValue);
+                        }
                     }
                 }
             }
+        } else {
+            close();
+            throw new IllegalArgumentException(
+                    "Unsupported parameter type: " + ClassUtil.getCanonicalClassName(cls) + ". Only Entity/Record types are supported here");
         }
 
         return this;
@@ -2855,7 +2868,7 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
     }
 
     //        /**
-    //         * 
+    //         *
     //         * @param batchParameters
     //         * @return
     //         * @throws SQLException the SQL exception

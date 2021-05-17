@@ -1,3 +1,9 @@
+### 1.30.2
+
+* Support `Record`.
+* Improvements and bug fix.
+
+
 ### 1.30.1
 
 * Improvements and bug fix.
