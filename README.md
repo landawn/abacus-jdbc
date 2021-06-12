@@ -31,7 +31,7 @@ Abacus-jdbc provides the best APIs, which you won't find in other libraries, for
 
 * Work with sql statements
 ```java
-String query = "SELECT  first_name, last_name fROM account WHERE first_Name = ?";
+String query = "SELECT first_name, last_name FROM account WHERE first_Name = ?";
 
 Optional<Account> account = JdbcUtil.prepareQuery(query)
   .setString(1, "Tom") // setInt/setString/setDate/...

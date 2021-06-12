@@ -1890,13 +1890,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         checkArgNotNull(batchParameters, "batchParameters");
         checkArgNotNull(parametersSetter, "parametersSetter");
 
+        final This it = (This) this;
         boolean noException = false;
 
         try {
             final Iterator<T> iter = batchParameters;
 
             while (iter.hasNext()) {
-                parametersSetter.accept((This) this, iter.next());
+                parametersSetter.accept(it, iter.next());
                 stmt.addBatch();
                 isBatch = true;
             }
@@ -1908,7 +1909,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
             }
         }
 
-        return (This) this;
+        return it;
     }
 
     //    /**
@@ -1990,13 +1991,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         checkArgNotNull(batchParameters, "batchParameters");
         checkArgNotNull(parametersSetter, "parametersSetter");
 
+        final This it = (This) this;
         boolean noException = false;
 
         try {
             final Iterator<T> iter = batchParameters;
 
             while (iter.hasNext()) {
-                parametersSetter.accept((This) this, stmt, iter.next());
+                parametersSetter.accept(it, stmt, iter.next());
                 stmt.addBatch();
                 isBatch = true;
             }
@@ -2008,7 +2010,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
             }
         }
 
-        return (This) this;
+        return it;
     }
 
     //    /**
@@ -2154,6 +2156,20 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         defaultQueryTimeout = stmt.getQueryTimeout();
 
         stmt.setQueryTimeout(seconds);
+
+        return (This) this;
+    }
+
+    /**
+     * Configure this {@code PreparedQuery/Statement} by {@code stmtSetter}.
+     *
+     * @param stmtSetter
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public This set(final Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException> stmtSetter) throws SQLException {
+        stmtSetter.accept((This) this, stmt);
 
         return (This) this;
     }
