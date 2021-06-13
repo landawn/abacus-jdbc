@@ -87,9 +87,7 @@ userDao.deleteById(100L);
     
     // Or define it in nested class and then annotated by field name
     public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
-
         ...
-
         @Select(id = "sql_listToSet")
         Set<User> listToSet(int id) throws SQLException;
 
@@ -105,6 +103,35 @@ userDao.deleteById(100L);
     </sqlMapper>
     
     static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
+    
+    // Here I would suggest putting the sql scripts in the closest place where it will be executed.
+```
+
+* How to execute sql scripts:
+
+```java
+    String query = "select first_name, last_name from account where id = ?";
+    
+    1) By Prepared query.
+    JdbcUtil.prepareQuery(query).setLong(1, id).findOnlyOne(Account.class); // or .findFirst/list/stream...
+    
+    2) By Dao method
+    @Select(id = "select first_name, last_name from account where id = ?")
+    Optional<Account> selectNameById(int id) throws SQLException;
+    
+    accountDao.selectNameById(id);
+```
+
+* How about dynamic sql scripts:
+
+```java
+    // Dao interfaces provides tens of methods for most used daily query.
+    accountDao.get(id, N.asList("firstName", "lastName"));
+    accountDao.deleteById(id);
+    ...
+    
+    // you can also use SQLBuilder and DynamicSQLBuilder to composite sql scripts.
+    
 ```
 
 
