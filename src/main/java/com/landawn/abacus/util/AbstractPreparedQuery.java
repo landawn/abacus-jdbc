@@ -2163,12 +2163,42 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * Configure this {@code PreparedQuery/Statement} by {@code stmtSetter}.
      *
+     * <pre>
+     * <code>
+     * final Throwables.Consumer<AbstractPreparedQuery, SQLException> commonStmtConfig = q -> q.setFetchSize(100).setQueryTimeout(60000);
+     *
+     * JdbcUtil.prepareQuery(sql).configStmt(commonStmtConfig).setParameters(parameters).list...
+     * </code>
+     * </pre>
+     *
      * @param stmtSetter
      * @return
      * @throws SQLException
      */
     @Beta
-    public This set(final Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException> stmtSetter) throws SQLException {
+    public This configStmt(final Throwables.Consumer<? super This, ? extends SQLException> stmtSetter) throws SQLException {
+        stmtSetter.accept((This) this);
+
+        return (This) this;
+    }
+
+    /**
+     * Configure this {@code PreparedQuery/Statement} by {@code stmtSetter}.
+     *
+     * <pre>
+     * <code>
+     * final Throwables.Consumer<AbstractPreparedQuery, SQLException> commonStmtConfig = (q, stmt) -> q.setFetchSize(100).setQueryTimeout(60000);
+     *
+     * JdbcUtil.prepareQuery(sql).configStmt(commonStmtConfig).setParameters(parameters).list...
+     * </code>
+     * </pre>
+     *
+     * @param stmtSetter
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public This configStmt(final Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException> stmtSetter) throws SQLException {
         stmtSetter.accept((This) this, stmt);
 
         return (This) this;
