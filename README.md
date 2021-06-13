@@ -137,7 +137,7 @@ userDao.deleteById(100L);
 
 ```java
     // By default, the built-in methods in Dao interfaces already support entity/Map parameters. 
-    accountDao.updtae(account);
+    accountDao.update(account);
     accountDao.update(updatePropMap, id);
     ...
     
@@ -161,6 +161,9 @@ userDao.deleteById(100L);
     // general query by DataSet
     JdbcUtil.prepareQuery(sql).setParameters(...).query();
 ```
+
+* More samples/questions? 
+    take a look at the samples ./samples/com.landawn.abacus.samples/...
 
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
