@@ -131,9 +131,36 @@ userDao.deleteById(100L);
     ...
     
     // you can also use SQLBuilder and DynamicSQLBuilder to composite sql scripts.
-    
 ```
 
+* How to set parameters by Entity or map:
+
+```java
+    // By default, the built-in methods in Dao interfaces already support entity/Map parameters. 
+    accountDao.updtae(account);
+    accountDao.update(updatePropMap, id);
+    ...
+    
+    // Use NamedQurey
+    String sql = NSC.update(Account.class).set(N.asList("firstName, "lastName")).where(CF.eq("id")).sql();
+    JdbcUtil.prepareNamedQuery(sql).setParameters(account).update();
+```
+
+* What's the best way to extract query result:
+
+```java
+    // To extract single result(single column)
+    JdbcUtil.prepareQuery(sql).setParameters(...).queryForInt/Long/String/SingleResult/...  
+    
+    // To extract one row.
+    JdbcUtil.prepareQuery(sql).setParameters(...).findFirst/firstOnlyOne(targetEntityClass/rowMapper/biRowMapper...);
+    
+    // To list/stream
+    JdbcUtil.prepareQuery(sql).setParameters(...).list/stream(targetEntityClass/rowMapper/biRowMapper...);
+    
+    // general query by DataSet
+    JdbcUtil.prepareQuery(sql).setParameters(...).query();
+```
 
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
