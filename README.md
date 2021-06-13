@@ -62,17 +62,51 @@ userDao.deleteById(100L);
 
 ```
 
-## Samples and FQA
+## Samples & FQA
 * How to write/generate sql scripts:
 
 ```java
     String query = "select first_name, last_name from account where id = ?"; // write by yourself.
     
-    String query = PSC.select("firstName, "lastName").from(Account.class).where(CF.eq("id")).sql();
+    String query = PSC.select("firstName, "lastName").from(Account.class).where(CF.eq("id")).sql(); // use SQLBuilder
     
     // To select all fields:
     String query = PSC.selectFrom(Account.class).where(CF.eq("id")).sql();
 ```
+
+* Where to put sql scripts:
+
+```java
+    // define it as constant or local variable
+    static final String query = "select ....";
+    String query = "select ....";
+    
+    // annotated on method in Dao interface
+    @NamedUpdate("UPDATE user SET first_name = :firstName, last_name = :lastName WHERE id = :id")
+    int updateFirstAndLastName(@Bind("firstName") String newFirstName, @Bind("lastName") String newLastName, @Bind("id") long id) throws SQLException;
+    
+    // Or define it in nested class and then annotated by field name
+    public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
+
+        ...
+
+        @Select(id = "sql_listToSet")
+        Set<User> listToSet(int id) throws SQLException;
+
+        static final class SqlTable {
+            @SqlField
+            static final String sql_listToSet = PSC.selectFrom(User.class).where(CF.gt("id")).sql();
+        }
+    }
+
+    // Or define it in xml file and then annotated by id. Refer to : ./schema/SQLMapper.xsd
+    <sqlMapper>
+        <sql id="sql_listToSet", fetchSize = 10>select first_name, last_name from user where id = ?</sql>
+    </sqlMapper>
+    
+    static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
+```
+
 
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
