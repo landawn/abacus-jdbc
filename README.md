@@ -62,6 +62,18 @@ userDao.deleteById(100L);
 
 ```
 
+## Samples and FQA
+* How to write/generate sql scripts:
+
+```java
+    String query = "select first_name, last_name from account where id = ?"; // write by yourself.
+    
+    String query = PSC.select("firstName, "lastName").from(Account.class).where(CF.eq("id")).sql();
+    
+    // To select all fields:
+    String query = PSC.selectFrom(Account.class).where(CF.eq("id")).sql();
+```
+
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
 
