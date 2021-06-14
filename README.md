@@ -116,7 +116,7 @@ userDao.deleteById(100L);
     JdbcUtil.prepareQuery(query).setLong(1, id).findOnlyOne(Account.class); // or .findFirst/list/stream...
     
     2) By Dao method
-    @Select(id = "select first_name, last_name from account where id = ?")
+    @Select("select first_name, last_name from account where id = ?")
     Optional<Account> selectNameById(int id) throws SQLException;
     
     accountDao.selectNameById(id);
