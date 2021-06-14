@@ -1612,8 +1612,8 @@ final class DaoImpl {
     }
 
     @SuppressWarnings({ "rawtypes", "null", "resource" })
-    static <T, SB extends SQLBuilder, TD extends JdbcUtil.Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
-            final SQLMapper sqlMapper, final Cache<String, Object> daoCache, final Executor executor) {
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
+            final Cache<String, Object> daoCache, final Executor executor) {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(ds, "dataSource");
 
@@ -1695,12 +1695,13 @@ final class DaoImpl {
             newSQLMapper.add(entry.getKey(), ParsedSql.parse(entry.getValue()));
         }
 
-        java.lang.reflect.Type[] typeArguments = null;
+        final java.lang.reflect.Type[] typeArguments = Stream.of(allInterfaces)
+                .filter(it -> N.notNullOrEmpty(it.getGenericInterfaces()) && it.getGenericInterfaces()[0] instanceof ParameterizedType)
+                .map(it -> ((ParameterizedType) it.getGenericInterfaces()[0]).getActualTypeArguments())
+                .first()
+                .orNull();
 
-        if (N.notNullOrEmpty(daoInterface.getGenericInterfaces()) && daoInterface.getGenericInterfaces()[0] instanceof ParameterizedType) {
-            final ParameterizedType parameterizedType = (ParameterizedType) daoInterface.getGenericInterfaces()[0];
-            typeArguments = parameterizedType.getActualTypeArguments();
-
+        if (N.notNullOrEmpty(typeArguments)) {
             if (typeArguments.length >= 1 && typeArguments[0] instanceof Class) {
                 if (!ClassUtil.isEntity((Class) typeArguments[0])) {
                     throw new IllegalArgumentException(
@@ -1749,7 +1750,7 @@ final class DaoImpl {
                 .filter(m -> !Modifier.isStatic(m.getModifiers()))
                 .toList();
 
-        final Class<T> entityClass = N.isNullOrEmpty(typeArguments) ? null : (Class) typeArguments[0];
+        final Class<Object> entityClass = N.isNullOrEmpty(typeArguments) ? null : (Class) typeArguments[0];
         final boolean isDirtyMarker = entityClass == null ? false : ClassUtil.isDirtyMarker(entityClass);
         final Class<?> idClass = isCrudDao ? (isCrudDaoL ? Long.class : (Class) typeArguments[1]) : null;
         final boolean isEntityId = idClass != null && EntityId.class.isAssignableFrom(idClass);
@@ -3830,7 +3831,7 @@ final class DaoImpl {
                                     "Input 'ids' can not be EntityIds/Maps or entities for single id ");
 
                             final List idList = ids instanceof List ? (List) ids : new ArrayList(ids);
-                            final List<T> resultList = new ArrayList<>(idList.size());
+                            final List<Object> resultList = new ArrayList<>(idList.size());
 
                             if (idPropNameList.size() == 1) {
                                 String sql_selectPart = selectSQLBuilderFunc.apply(selectPropNames, idCond).sql();
@@ -4668,7 +4669,7 @@ final class DaoImpl {
                     if (sqlAnno.annotationType().equals(Dao.Select.class) || sqlAnno.annotationType().equals(Dao.NamedSelect.class)
                             || (isCall && !isUpdateReturnType)) {
 
-                        final Throwables.BiFunction<AbstractPreparedQuery, Object[], T, Exception> queryFunc = createQueryFunctionByMethod(m,
+                        final Throwables.BiFunction<AbstractPreparedQuery, Object[], Object, Exception> queryFunc = createQueryFunctionByMethod(m,
                                 hasRowMapperOrResultExtractor, hasRowFilter, op, isCall, fullClassMethodName);
 
                         // Getting ClassCastException. Not sure why query result is being casted Dao. It seems there is a bug in JDk compiler.

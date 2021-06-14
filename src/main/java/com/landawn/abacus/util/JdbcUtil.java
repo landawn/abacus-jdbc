@@ -20209,36 +20209,31 @@ public final class JdbcUtil {
 
     /**
      *
-     * @param <T>
-     * @param <SB>
      * @param <TD>
      * @param daoInterface
      * @param ds
      * @return
      */
-    public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds) {
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds) {
         return createDao(daoInterface, ds, asyncExecutor.getExecutor());
     }
 
     /**
      *
-     * @param <T>
-     * @param <SB>
      * @param <TD>
      * @param daoInterface
      * @param ds
      * @param sqlMapper
      * @return
      */
-    public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
-            final SQLMapper sqlMapper) {
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper) {
         return createDao(daoInterface, ds, sqlMapper, asyncExecutor.getExecutor());
     }
 
     /**
      *
-     * @param <T>
-     * @param <SB>
      * @param <TD>
      * @param daoInterface
      * @param ds
@@ -20248,30 +20243,27 @@ public final class JdbcUtil {
      * @deprecated
      */
     @Deprecated
-    public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
-            final SQLMapper sqlMapper, final Cache<String, Object> cache) {
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
+            final Cache<String, Object> cache) {
         return createDao(daoInterface, ds, sqlMapper, cache, asyncExecutor.getExecutor());
     }
 
     /**
      *
-     * @param <T>
-     * @param <SB>
      * @param <TD>
      * @param daoInterface
      * @param ds
      * @param executor
      * @return
      */
-    public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
-            final Executor executor) {
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Executor executor) {
         return createDao(daoInterface, ds, null, executor);
     }
 
     /**
      *
-     * @param <T>
-     * @param <SB>
      * @param <TD>
      * @param daoInterface
      * @param ds
@@ -20279,15 +20271,14 @@ public final class JdbcUtil {
      * @param executor
      * @return
      */
-    public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
-            final SQLMapper sqlMapper, final Executor executor) {
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
+            final Executor executor) {
         return createDao(daoInterface, ds, sqlMapper, null, executor);
     }
 
     /**
      *
-     * @param <T>
-     * @param <SB>
      * @param <TD>
      * @param daoInterface
      * @param ds
@@ -20298,8 +20289,9 @@ public final class JdbcUtil {
      * @deprecated
      */
     @Deprecated
-    public static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
-            final SQLMapper sqlMapper, final Cache<String, Object> cache, final Executor executor) {
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
+            final Cache<String, Object> cache, final Executor executor) {
         final TD dao = DaoImpl.createDao(daoInterface, ds, sqlMapper, cache, executor);
 
         //    synchronized (dsEntityDaoPool) {

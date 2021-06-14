@@ -21,6 +21,7 @@ import com.landawn.abacus.samples.dao.DeviceDao;
 import com.landawn.abacus.samples.dao.EmployeeDao;
 import com.landawn.abacus.samples.dao.EmployeeProjectDao;
 import com.landawn.abacus.samples.dao.EmployeeProjectDao2;
+import com.landawn.abacus.samples.dao.MyUserDaoA;
 import com.landawn.abacus.samples.dao.NoUpdateUserDao;
 import com.landawn.abacus.samples.dao.ProjectDao;
 import com.landawn.abacus.samples.dao.ReadOnlyUserDao;
@@ -61,6 +62,7 @@ public class Jdbc {
     static final DataSource dataSource2 = JdbcUtil.createC3p0DataSource("jdbc:h2:~/test", "sa", "");
     static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
     static final UserDaoL userDao2 = JdbcUtil.createDao(UserDaoL.class, dataSource);
+    static final MyUserDaoA myUserDaoA = JdbcUtil.createDao(MyUserDaoA.class, dataSource);
     static final UncheckedUserDao uncheckedUserDao = JdbcUtil.createDao(UncheckedUserDao.class, dataSource);
     static final UncheckedUserDaoL uncheckedUserDao2 = JdbcUtil.createDao(UncheckedUserDaoL.class, dataSource);
     static final NoUpdateUserDao noUpdateUserDao = JdbcUtil.createDao(NoUpdateUserDao.class, dataSource);
@@ -129,7 +131,7 @@ public class Jdbc {
 
             final String sql_project_drop_table = "DROP TABLE IF EXISTS project";
             final String sql_project_creat_table = "CREATE TABLE IF NOT EXISTS project (" //
-                    + "project_id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY, " // 
+                    + "project_id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
                     + "title varchar(50) DEFAULT NULL)";
 
             JdbcUtil.executeUpdate(dataSource, sql_project_drop_table);

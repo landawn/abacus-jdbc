@@ -6,6 +6,7 @@ import static com.landawn.abacus.samples.Jdbc.deviceDao;
 import static com.landawn.abacus.samples.Jdbc.employeeDao;
 import static com.landawn.abacus.samples.Jdbc.employeeProjectDao;
 import static com.landawn.abacus.samples.Jdbc.employeeProjectDao2;
+import static com.landawn.abacus.samples.Jdbc.myUserDaoA;
 import static com.landawn.abacus.samples.Jdbc.noUpdateUserDao;
 import static com.landawn.abacus.samples.Jdbc.projectDao;
 import static com.landawn.abacus.samples.Jdbc.readOnlyUserDao;
@@ -1031,4 +1032,29 @@ public class DaoTest {
 
         userDao.deleteById(100L);
     }
+
+    @Test
+    public void test_myUserDao() throws SQLException {
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        myUserDaoA.save(user, N.asList("id", "firstName", "lastName", "email"));
+
+        User userFromDB = myUserDaoA.gett(100L);
+        System.out.println(userFromDB);
+        assertNotNull(userFromDB);
+
+        myUserDaoA.findFirst(CF.eq("id", 100L), BiRowMapper.TO_MAP).ifPresent(Fn.println());
+
+        myUserDaoA.findFirst(CF.eq("id", 100L), BiRowMapper.toMap(Fn.toUpperCaseWithUnderscore())).ifPresent(Fn.println());
+
+        myUserDaoA.deleteById(100L);
+
+        long id = myUserDaoA.insert(user, N.asList("firstName", "lastName", "email"));
+        userFromDB = myUserDaoA.gett(id);
+        System.out.println(userFromDB);
+        assertNotNull(userFromDB);
+        myUserDaoA.deleteById(id);
+
+        assertFalse(myUserDaoA.exists(id));
+    }
+
 }
