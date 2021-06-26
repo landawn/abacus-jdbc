@@ -21,6 +21,7 @@ import com.landawn.abacus.util.Propagation;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.stream.Stream;
 
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
@@ -148,10 +149,16 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     Queue<User> listToCollection(int id) throws SQLException;
 
     @Select(value = "select first_name from user where id >= ?", fetchSize = 100)
-    public ExceptionalStream<String, SQLException> streamOne(long id);
+    ExceptionalStream<String, SQLException> streamOne(long id);
 
     @Select(value = "select first_name from user where id >= ?", fetchSize = 100)
-    public Stream<String> streamOne_2(long id);
+    Stream<String> streamOne_2(long id);
+
+    @Select(value = "select first_name from user where id >= ?", fetchSize = 100)
+    Optional<String> getOne(long id) throws SQLException;
+
+    //    @Select(value = "select first_name from user where id >= ?", fetchSize = 100)
+    //    java.util.Optional<String> getOne_2(long id);
 
     @Select("select * from user where id > ?")
     @Handler(qualifier = "innerHandler_1")

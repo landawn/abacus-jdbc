@@ -36,9 +36,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
-import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -100,11 +97,6 @@ import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.u.Holder;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
-import com.landawn.abacus.util.u.OptionalBoolean;
-import com.landawn.abacus.util.u.OptionalByte;
-import com.landawn.abacus.util.u.OptionalChar;
-import com.landawn.abacus.util.u.OptionalFloat;
-import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.function.BiConsumer;
 import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Function;
@@ -700,22 +692,26 @@ final class DaoImpl {
 
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createSingleQueryFunction(final Class<?> returnType) {
-        if (OptionalBoolean.class.isAssignableFrom(returnType)) {
+        if (u.OptionalBoolean.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForBoolean();
-        } else if (OptionalChar.class.isAssignableFrom(returnType)) {
+        } else if (u.OptionalChar.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForChar();
-        } else if (OptionalByte.class.isAssignableFrom(returnType)) {
+        } else if (u.OptionalByte.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForByte();
-        } else if (OptionalShort.class.isAssignableFrom(returnType)) {
+        } else if (u.OptionalShort.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForShort();
-        } else if (OptionalInt.class.isAssignableFrom(returnType)) {
+        } else if (u.OptionalInt.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForInt();
-        } else if (OptionalLong.class.isAssignableFrom(returnType)) {
+        } else if (u.OptionalLong.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForLong();
-        } else if (OptionalFloat.class.isAssignableFrom(returnType)) {
+        } else if (u.OptionalFloat.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForFloat();
-        } else if (OptionalDouble.class.isAssignableFrom(returnType)) {
+        } else if (u.OptionalDouble.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForDouble();
+        } else if (u.Optional.class.isAssignableFrom(returnType)) {
+            return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(returnType);
+        } else if (u.Nullable.class.isAssignableFrom(returnType)) {
+            return (preparedQuery, args) -> (R) preparedQuery.queryForSingleResult(returnType);
         } else {
             return (preparedQuery, args) -> (R) preparedQuery.queryForSingleResult(returnType).orElse(N.defaultValueOf(returnType));
         }

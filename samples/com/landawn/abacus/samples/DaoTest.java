@@ -640,6 +640,8 @@ public class DaoTest {
             userDao.findFirst(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).ifPresent(Fn.println());
         }
 
+        userDao.getOne(0).ifPresent(Fn.println());
+
         userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
         userDao.allUsers().map(e -> e.getFirstName() + " " + e.getLastName()).forEach(Fn.println());
