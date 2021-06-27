@@ -55,6 +55,8 @@ import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
+import com.landawn.abacus.parser.JSONSerializationConfig;
+import com.landawn.abacus.parser.JSONSerializationConfig.JSC;
 import com.landawn.abacus.parser.KryoParser;
 import com.landawn.abacus.parser.ParserFactory;
 import com.landawn.abacus.parser.ParserUtil;
@@ -1458,7 +1460,7 @@ final class DaoImpl {
 
         if (N.notNullOrEmpty(defines)) {
             for (int i = 0, len = defines.length; i < len; i++) {
-                query = StringUtil.replaceAll(query, defines[i], N.stringOf(args[defineParamIndexes[i]]));
+                query = StringUtil.replaceAll(query, defines[i], defineParam2String(args[defineParamIndexes[i]]));
             }
 
             if (isNamedQuery) {
@@ -1495,6 +1497,18 @@ final class DaoImpl {
         }
 
         return preparedQuery;
+    }
+
+    private static final JSONSerializationConfig jsc_no_bracket = JSC.create().setStringQuotation(N.CHAR_0).setBracketRootValue(false);
+
+    private static String defineParam2String(Object defineParam) {
+        if (defineParam == null || defineParam instanceof String) {
+            return (String) defineParam;
+        } else if (defineParam instanceof Collection || defineParam.getClass().isArray()) {
+            return N.toJSON(defineParam, jsc_no_bracket);
+        } else {
+            return N.stringOf(defineParam);
+        }
     }
 
     private static Condition handleLimit(final Condition cond, final int count, final DBVersion dbVersion) {

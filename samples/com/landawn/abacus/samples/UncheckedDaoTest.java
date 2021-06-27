@@ -68,7 +68,7 @@ public class UncheckedDaoTest {
         assertTrue(JdbcUtil.call(() -> uncheckedUserDao.isThere("user", "last_name", ids.get(0))));
 
         assertEquals(1, uncheckedUserDao.deleteByIdWithDefine("user", ids.get(0)));
-        assertEquals(ids.size() - 1, uncheckedUserDao.deleteByIdsWithDefine("user", ids));
+        assertEquals(ids.size() - 1, uncheckedUserDao.deleteByIdsWithDefine(N.asList("user"), ids));
 
         assertNull(uncheckedUserDao.selectByIdWithDefine("user", "last_name", ids.get(0)));
         assertEquals(0, uncheckedUserDao.selectByIdWithDefine_2("user", "id", ids.get(0)).size());
