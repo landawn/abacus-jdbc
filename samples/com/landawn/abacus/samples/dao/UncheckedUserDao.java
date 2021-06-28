@@ -98,7 +98,7 @@ public interface UncheckedUserDao extends JdbcUtil.UncheckedCrudDao<User, Long, 
     int deleteByIdWithDefine(@Define("tableName") String tableName, @Bind("id") long id);
 
     @NamedDelete(sql = "DELETE FROM {tableName} where id = :id", isBatch = true, batchSize = 10000)
-    int deleteByIdsWithDefine(@Define("tableName") List<String> tableName, List<Long> userIds);
+    int deleteByIdsWithDefine(@DefineList("tableName") List<String> tableName, List<Long> userIds);
 
     @NamedSelect(sql = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
     User selectByIdWithDefine(@Define("tableName") String tableName, @Define("{{orderBy}}") String orderBy, @Bind("id") long id);

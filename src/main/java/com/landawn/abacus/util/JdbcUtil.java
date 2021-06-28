@@ -9210,12 +9210,25 @@ public final class JdbcUtil {
         }
 
         /**
+         * Defines a named attribute as a comma-separated {@link String} from the elements of the annotated array or {@link Collection} argument.
+         *
+         * @see Define
+         */
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(value = { ElementType.PARAMETER })
+        static @interface DefineList {
+            String value() default "";
+        }
+
+        /**
          *
          */
         @Retention(RetentionPolicy.RUNTIME)
         @Target(ElementType.METHOD)
         public static @interface Transactional {
             Propagation propagation() default Propagation.REQUIRED;
+
+            IsolationLevel isolation() default IsolationLevel.DEFAULT;
         }
 
         /**

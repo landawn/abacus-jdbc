@@ -4557,7 +4557,8 @@ final class DaoImpl {
                     }
 
                     final int[] defineParamIndexes = IntStreamEx.of(tmp3)
-                            .filter(i -> StreamEx.of(m.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(Dao.Define.class)))
+                            .filter(i -> N.anyMatch(m.getParameterAnnotations()[i],
+                                    it -> it.annotationType().equals(Dao.Define.class) || it.annotationType().equals(Dao.DefineList.class)))
                             .toArray();
 
                     final int defineParamLen = N.len(defineParamIndexes);
@@ -4568,17 +4569,27 @@ final class DaoImpl {
                         //                "Parameters annotated with @Define must be at the head of the parameter list of method: " + fullClassMethodName);
                         //    }
 
-                        //    for (int i = 0; i < defineParamLen; i++) {
-                        //        if (!paramTypes[defineParamIndexes[i]].equals(String.class)) {
-                        //            throw new UnsupportedOperationException("The type of parameter[" + i + "] annotated with @Define can't be: " + paramTypes[i]
-                        //                    + " in method: " + fullClassMethodName + ". It must be String");
-                        //        }
-                        //    }
+                        for (int i = 0; i < defineParamLen; i++) {
+                            if (paramTypes[defineParamIndexes[i]].isArray() || Collection.class.isAssignableFrom(paramTypes[defineParamIndexes[i]])) {
+                                if (N.noneMatch(m.getParameterAnnotations()[defineParamIndexes[i]], it -> it.annotationType().equals(Dao.DefineList.class))) {
+                                    throw new UnsupportedOperationException("Array/Collection type of parameter[" + i
+                                            + "] must be annotated with @DefineList, not @Define, in method: " + fullClassMethodName);
+                                }
+                            }
+                        }
                     }
 
                     final String[] defines = defineParamLen == 0 ? N.EMPTY_STRING_ARRAY
                             : IntStreamEx.of(defineParamIndexes)
-                                    .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).select(Dao.Define.class).first().get().value())
+                                    .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i])
+                                            .select(Dao.Define.class)
+                                            .map(it -> it.value())
+                                            .first()
+                                            .orElseGet(() -> StreamEx.of(m.getParameterAnnotations()[i])
+                                                    .select(Dao.DefineList.class)
+                                                    .map(it -> it.value())
+                                                    .first()
+                                                    .get()))
                                     .map(it -> it.charAt(0) == '{' && it.charAt(it.length() - 1) == '}' ? it : "{" + it + "}")
                                     .toArray(IntFunctions.ofStringArray());
 
@@ -4588,7 +4599,8 @@ final class DaoImpl {
                     }
 
                     final int[] stmtParamIndexes = IntStreamEx.of(tmp3)
-                            .filter(i -> StreamEx.of(m.getParameterAnnotations()[i]).noneMatch(it -> it.annotationType().equals(Dao.Define.class)))
+                            .filter(i -> StreamEx.of(m.getParameterAnnotations()[i])
+                                    .noneMatch(it -> it.annotationType().equals(Dao.Define.class) || it.annotationType().equals(Dao.DefineList.class)))
                             .toArray();
 
                     final int stmtParamLen = stmtParamIndexes.length;
@@ -5132,7 +5144,7 @@ final class DaoImpl {
 
                             final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
 
-                            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                             Object result = null;
 
                             try {
@@ -5165,7 +5177,7 @@ final class DaoImpl {
                         };
                     } else {
                         call = (proxy, args) -> {
-                            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                             Object result = null;
 
                             try {
@@ -5202,7 +5214,7 @@ final class DaoImpl {
 
                                 final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
 
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                                 Object result = null;
 
                                 try {
@@ -5233,7 +5245,7 @@ final class DaoImpl {
 
                                 return result;
                             } else {
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                                 Object result = null;
 
                                 try {
