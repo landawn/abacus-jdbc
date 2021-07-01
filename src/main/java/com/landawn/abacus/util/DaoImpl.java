@@ -4636,7 +4636,8 @@ final class DaoImpl {
                         if ((isNamedQuery || isCall) && IntStreamEx.of(defineParamIndexes)
                                 .flatMapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]))
                                 .anyMatch(it -> Dao.BindList.class.isAssignableFrom(it.annotationType()))) {
-                            throw new UnsupportedOperationException("@BindList on method: " + fullClassMethodName + " is not supported for named query");
+                            throw new UnsupportedOperationException(
+                                    "@BindList on method: " + fullClassMethodName + " is not supported for named or callable query");
                         }
                     }
 
