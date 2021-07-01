@@ -2,6 +2,7 @@ package com.landawn.abacus.samples.dao;
 
 import java.lang.reflect.Method;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
@@ -166,6 +167,18 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 
     //    @Select("select * from user where id > ?")
     //    Queue<List<Object>> list(int id, RowFilter rowFilter, RowMapper<List<Object>> rowMapper) throws SQLException;
+
+    @Select("select * from user where id in ({ids})")
+    Queue<User> listByIds(@BindList("ids") int[] ids) throws SQLException;
+
+    @Select("select * from user where first_name != ? and id in ({ids}) and last_name != ?")
+    Queue<User> listByIds_01(String firstNameToExclude, @BindList("ids") long[] ids, String LastNameToExclude) throws SQLException;
+
+    @Select("select * from user where id in ({ids}) and last_name != ?")
+    Queue<User> listByIds_02(@BindList("ids") Object[] ids, String LastNameToExclude) throws SQLException;
+
+    @Select("select * from user where id in ({ids}) and last_name not in ({lastNames})")
+    Queue<User> listByIds_03(@BindList("ids") Collection<Long> ids, @BindList("lastNames") Collection<String> lastNamesToExclude) throws SQLException;
 
     static final class SqlTable {
 

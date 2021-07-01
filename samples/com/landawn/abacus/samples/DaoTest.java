@@ -36,6 +36,7 @@ import com.landawn.abacus.samples.entity.Employee;
 import com.landawn.abacus.samples.entity.EmployeeProject;
 import com.landawn.abacus.samples.entity.Project;
 import com.landawn.abacus.samples.entity.User;
+import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.DateUtil;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
@@ -194,6 +195,32 @@ public class DaoTest {
 
         assertFalse(userDao.exists("user", "last_name", ids.get(0)));
         assertFalse(userDao.isThere("user", "last_name", ids.get(0)));
+    }
+
+    @Test
+    public void test_BindList() throws Exception {
+
+        List<User> users = IntStream.range(1, 1000)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                .toList();
+
+        List<Long> ids = userDao.batchInsertWithId(users);
+        assertEquals(users.size(), ids.size());
+
+        int[] intIds = Stream.of(ids).mapToInt(it -> it.intValue()).toArray();
+        long[] longIds = N.toLongArray(ids);
+        assertEquals(ids.size(), userDao.listByIds(intIds).size());
+
+        assertEquals(ids.size(), userDao.listByIds_01("xxx", longIds, "xxx").size());
+
+        assertEquals(ids.size(), userDao.listByIds_02(Array.box(longIds), "xxx").size());
+
+        assertEquals(ids.size(), userDao.listByIds_03(ids, N.asList("xxx")).size());
+
+        assertEquals(1, userDao.deleteByIdWithDefine("user", ids.get(0)));
+        assertEquals(ids.size() - 1, userDao.deleteByIdsWithDefine("user", ids));
+
+        userDao.delete(CB.where(CF.ge("id", 0)).limit(10000));
     }
 
     //    @Test

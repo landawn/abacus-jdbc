@@ -9172,10 +9172,16 @@ public final class JdbcUtil {
         @Target(ElementType.PARAMETER)
         public static @interface Bind {
 
-            /**
-             *
-             * @return
-             */
+            String value() default "";
+        }
+
+        /**
+         * The Interface BindList.
+         */
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(ElementType.PARAMETER)
+        public static @interface BindList {
+
             String value() default "";
         }
 

@@ -124,6 +124,8 @@ final class DaoImpl {
 
     private static final KryoParser kryoParser = ParserFactory.isKryoAvailable() ? ParserFactory.createKryoParser() : null;
 
+    private static final JSONSerializationConfig jsc_no_bracket = JSC.create().setStringQuotation(N.CHAR_0).setBracketRootValue(false);
+
     @SuppressWarnings("rawtypes")
     private static final Map<String, JdbcUtil.Dao> daoPool = new ConcurrentHashMap<>();
 
@@ -1304,7 +1306,8 @@ final class DaoImpl {
     @SuppressWarnings("rawtypes")
     private static JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object[]> createParametersSetter(Method m, final String fullClassMethodName,
             final Class<?>[] paramTypes, final int paramLen, final boolean isBatch, final boolean isSingleParameter, final boolean isCall,
-            final boolean isNamedQuery, final ParsedSql namedSql, final int defineParamLen, final int[] stmtParamIndexes, final int stmtParamLen) {
+            final boolean isNamedQuery, final ParsedSql namedSql, final int defineParamLen, final int[] stmtParamIndexes, final boolean[] bindListParamFlags,
+            final int stmtParamLen) {
 
         JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter = null;
 
@@ -1372,7 +1375,38 @@ final class DaoImpl {
                             + ClassUtil.getSimpleClassName(paramTypeOne));
                 }
             } else {
-                if (isSingleParameter) {
+                if (bindListParamFlags[0]) {
+                    parametersSetter = (preparedQuery, args) -> {
+                        final Object paramOne = args[stmtParamIndexes[0]];
+                        int idx = 1;
+
+                        if (paramOne instanceof Collection) {
+                            for (Object e : (Collection) paramOne) {
+                                preparedQuery.setObject(idx++, e);
+                            }
+                        } else if (paramOne instanceof int[]) {
+                            for (int e : (int[]) paramOne) {
+                                preparedQuery.setInt(idx++, e);
+                            }
+                        } else if (paramOne instanceof long[]) {
+                            for (long e : (long[]) paramOne) {
+                                preparedQuery.setLong(idx++, e);
+                            }
+                        } else if (paramOne instanceof String[]) {
+                            for (String e : (String[]) paramOne) {
+                                preparedQuery.setString(idx++, e);
+                            }
+                        } else if (paramOne instanceof Object[]) {
+                            for (Object e : (Object[]) paramOne) {
+                                preparedQuery.setObject(idx++, e);
+                            }
+                        } else if (paramOne != null) {
+                            for (int j = 0, len = Array.getLength(paramOne); j < len; j++) {
+                                preparedQuery.setObject(idx++, Array.get(paramOne, j));
+                            }
+                        }
+                    };
+                } else if (isSingleParameter) {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
                 } else if (Collection.class.isAssignableFrom(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setParameters((Collection) args[stmtParamIndexes[0]]);
@@ -1437,12 +1471,42 @@ final class DaoImpl {
                     }
                 };
             } else {
-                if (stmtParamLen == paramLen) {
+                if (stmtParamLen == paramLen && StreamEx.of(bindListParamFlags).allMatch(it -> it == false)) {
                     parametersSetter = AbstractPreparedQuery::setParameters;
                 } else {
                     parametersSetter = (preparedQuery, args) -> {
-                        for (int i = 0; i < stmtParamLen; i++) {
-                            preparedQuery.setObject(i + 1, args[stmtParamIndexes[i]]);
+                        for (int idx = 1, i = 0; i < stmtParamLen; i++) {
+                            if (bindListParamFlags[i]) {
+                                final Object paramOne = args[stmtParamIndexes[i]];
+
+                                if (paramOne instanceof Collection) {
+                                    for (Object e : (Collection) paramOne) {
+                                        preparedQuery.setObject(idx++, e);
+                                    }
+                                } else if (paramOne instanceof int[]) {
+                                    for (int e : (int[]) paramOne) {
+                                        preparedQuery.setInt(idx++, e);
+                                    }
+                                } else if (paramOne instanceof long[]) {
+                                    for (long e : (long[]) paramOne) {
+                                        preparedQuery.setLong(idx++, e);
+                                    }
+                                } else if (paramOne instanceof String[]) {
+                                    for (String e : (String[]) paramOne) {
+                                        preparedQuery.setString(idx++, e);
+                                    }
+                                } else if (paramOne instanceof Object[]) {
+                                    for (Object e : (Object[]) paramOne) {
+                                        preparedQuery.setObject(idx++, e);
+                                    }
+                                } else if (paramOne != null) {
+                                    for (int j = 0, len = Array.getLength(paramOne); j < len; j++) {
+                                        preparedQuery.setObject(idx++, Array.get(paramOne, j));
+                                    }
+                                }
+                            } else {
+                                preparedQuery.setObject(idx++, args[stmtParamIndexes[i]]);
+                            }
                         }
                     };
                 }
@@ -1454,13 +1518,14 @@ final class DaoImpl {
 
     @SuppressWarnings({ "rawtypes", "unused" })
     private static AbstractPreparedQuery prepareQuery(final Dao proxy, final Method method, final Object[] args, final int[] defineParamIndexes,
-            final String[] defines, final boolean isNamedQuery, String query, ParsedSql namedSql, final boolean isBatch, final int batchSize,
-            final int fetchSize, final FetchDirection fetchDirection, final int queryTimeout, final boolean returnGeneratedKeys,
-            final String[] returnColumnNames, final boolean isCall, final List<OutParameter> outParameterList) throws SQLException, Exception {
+            final String[] defines, final Function<Object, String>[] defineMappers, final boolean isNamedQuery, String query, ParsedSql namedSql,
+            final boolean isBatch, final int batchSize, final int fetchSize, final FetchDirection fetchDirection, final int queryTimeout,
+            final boolean returnGeneratedKeys, final String[] returnColumnNames, final boolean isCall, final List<OutParameter> outParameterList)
+            throws SQLException, Exception {
 
         if (N.notNullOrEmpty(defines)) {
             for (int i = 0, len = defines.length; i < len; i++) {
-                query = StringUtil.replaceAll(query, defines[i], defineParam2String(args[defineParamIndexes[i]]));
+                query = StringUtil.replaceAll(query, defines[i], defineMappers[i].apply(args[defineParamIndexes[i]]));
             }
 
             if (isNamedQuery) {
@@ -1497,18 +1562,6 @@ final class DaoImpl {
         }
 
         return preparedQuery;
-    }
-
-    private static final JSONSerializationConfig jsc_no_bracket = JSC.create().setStringQuotation(N.CHAR_0).setBracketRootValue(false);
-
-    private static String defineParam2String(Object defineParam) {
-        if (defineParam == null || defineParam instanceof String) {
-            return (String) defineParam;
-        } else if (defineParam instanceof Collection || defineParam.getClass().isArray()) {
-            return N.toJSON(defineParam, jsc_no_bracket);
-        } else {
-            return N.stringOf(defineParam);
-        }
     }
 
     private static Condition handleLimit(final Condition cond, final int count, final DBVersion dbVersion) {
@@ -4558,7 +4611,8 @@ final class DaoImpl {
 
                     final int[] defineParamIndexes = IntStreamEx.of(tmp3)
                             .filter(i -> N.anyMatch(m.getParameterAnnotations()[i],
-                                    it -> it.annotationType().equals(Dao.Define.class) || it.annotationType().equals(Dao.DefineList.class)))
+                                    it -> it.annotationType().equals(Dao.Define.class) || it.annotationType().equals(Dao.DefineList.class)
+                                            || it.annotationType().equals(Dao.BindList.class)))
                             .toArray();
 
                     final int defineParamLen = N.len(defineParamIndexes);
@@ -4571,27 +4625,60 @@ final class DaoImpl {
 
                         for (int i = 0; i < defineParamLen; i++) {
                             if (paramTypes[defineParamIndexes[i]].isArray() || Collection.class.isAssignableFrom(paramTypes[defineParamIndexes[i]])) {
-                                if (N.noneMatch(m.getParameterAnnotations()[defineParamIndexes[i]], it -> it.annotationType().equals(Dao.DefineList.class))) {
+                                if (N.noneMatch(m.getParameterAnnotations()[defineParamIndexes[i]],
+                                        it -> it.annotationType().equals(Dao.DefineList.class) || it.annotationType().equals(Dao.BindList.class))) {
                                     throw new UnsupportedOperationException("Array/Collection type of parameter[" + i
-                                            + "] must be annotated with @DefineList, not @Define, in method: " + fullClassMethodName);
+                                            + "] must be annotated with @DefineList or @BindList, not @Define, in method: " + fullClassMethodName);
                                 }
                             }
                         }
+
+                        if ((isNamedQuery || isCall) && IntStreamEx.of(defineParamIndexes)
+                                .flatMapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]))
+                                .anyMatch(it -> Dao.BindList.class.isAssignableFrom(it.annotationType()))) {
+                            throw new UnsupportedOperationException("@BindList on method: " + fullClassMethodName + " is not supported for named query");
+                        }
                     }
 
-                    final String[] defines = defineParamLen == 0 ? N.EMPTY_STRING_ARRAY
-                            : IntStreamEx.of(defineParamIndexes)
-                                    .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i])
-                                            .select(Dao.Define.class)
+                    final Function<Object, String> defineParamMapper = param -> N.stringOf(param);
+                    final Function<Object, String> defineListParamMapper = param -> N.toJSON(param, jsc_no_bracket);
+                    final Function<Object, String> arrayBindListParamMapper = param -> param == null ? ""
+                            : StringUtil.repeat(WD.QUESTION_MARK, Array.getLength(param), WD.COMMA_SPACE);
+                    final Function<Object, String> collBindListParamMapper = param -> param == null ? ""
+                            : StringUtil.repeat(WD.QUESTION_MARK, N.size((Collection) param), WD.COMMA_SPACE);
+
+                    final String[] defines = IntStreamEx.of(defineParamIndexes)
+                            .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i])
+                                    .select(Dao.Define.class)
+                                    .map(it -> it.value())
+                                    .first()
+                                    .orElseGet(() -> StreamEx.of(m.getParameterAnnotations()[i])
+                                            .select(Dao.DefineList.class)
                                             .map(it -> it.value())
                                             .first()
                                             .orElseGet(() -> StreamEx.of(m.getParameterAnnotations()[i])
-                                                    .select(Dao.DefineList.class)
+                                                    .select(Dao.BindList.class)
                                                     .map(it -> it.value())
                                                     .first()
-                                                    .get()))
-                                    .map(it -> it.charAt(0) == '{' && it.charAt(it.length() - 1) == '}' ? it : "{" + it + "}")
-                                    .toArray(IntFunctions.ofStringArray());
+                                                    .get())))
+                            .map(it -> it.charAt(0) == '{' && it.charAt(it.length() - 1) == '}' ? it : "{" + it + "}")
+                            .toArray(IntFunctions.ofStringArray());
+
+                    final Function<Object, String>[] defineMappers = IntStreamEx.of(defineParamIndexes)
+                            .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).map(it -> it.annotationType()).map(it -> {
+                                if (Dao.Define.class.isAssignableFrom(it)) {
+                                    return defineParamMapper;
+                                } else if (Dao.DefineList.class.isAssignableFrom(it)) {
+                                    return defineListParamMapper;
+                                } else if (Dao.BindList.class.isAssignableFrom(it)) {
+                                    return Collection.class.isAssignableFrom(paramTypes[i]) ? collBindListParamMapper : arrayBindListParamMapper;
+                                } else {
+                                    return null;
+                                }
+                            }).skipNull().first())
+                            .filter(it -> it.isPresent())
+                            .map(it -> it.get())
+                            .toArray(it -> new Function[it]);
 
                     if (N.notNullOrEmpty(defines) && N.anyMatch(defines, it -> query.indexOf(it) < 0)) {
                         throw new IllegalArgumentException("Defines: " + N.filter(defines, it -> query.indexOf(it) < 0)
@@ -4602,6 +4689,10 @@ final class DaoImpl {
                             .filter(i -> StreamEx.of(m.getParameterAnnotations()[i])
                                     .noneMatch(it -> it.annotationType().equals(Dao.Define.class) || it.annotationType().equals(Dao.DefineList.class)))
                             .toArray();
+
+                    final boolean[] bindListParamFlags = IntStreamEx.of(stmtParamIndexes)
+                            .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(Dao.BindList.class)))
+                            .toListAndThen(it -> N.toBooleanArray(it));
 
                     final int stmtParamLen = stmtParamIndexes.length;
 
@@ -4677,7 +4768,8 @@ final class DaoImpl {
                     final ParsedSql namedSql = isNamedQuery && defineParamLen == 0 ? ParsedSql.parse(query) : null;
 
                     final JdbcUtil.BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter = createParametersSetter(m, fullClassMethodName,
-                            paramTypes, paramLen, isBatch, isSingleParameter, isCall, isNamedQuery, namedSql, stmtParamLen, stmtParamIndexes, stmtParamLen);
+                            paramTypes, paramLen, isBatch, isSingleParameter, isCall, isNamedQuery, namedSql, stmtParamLen, stmtParamIndexes,
+                            bindListParamFlags, stmtParamLen);
 
                     //    final boolean isUpdateReturnType = returnType.equals(int.class) || returnType.equals(Integer.class) || returnType.equals(long.class)
                     //            || returnType.equals(Long.class) || returnType.equals(boolean.class) || returnType.equals(Boolean.class)
@@ -4724,10 +4816,9 @@ final class DaoImpl {
                         final int finalFetchSize = tmpFetchSize;
 
                         call = (proxy, args) -> {
-                            Object result = queryFunc.apply(prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, isBatch,
-                                    -1, finalFetchSize, FetchDirection.FORWARD, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
-                                            .settParameters(args, parametersSetter),
-                                    args);
+                            Object result = queryFunc.apply(prepareQuery(proxy, m, args, defineParamIndexes, defines, defineMappers, isNamedQuery, query,
+                                    namedSql, isBatch, -1, finalFetchSize, FetchDirection.FORWARD, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall,
+                                    outParameterList).settParameters(args, parametersSetter), args);
 
                             if (idDirtyMarkerReturnType) {
                                 ((DirtyMarker) result).markDirty(false);
@@ -4761,8 +4852,8 @@ final class DaoImpl {
                                         && ClassUtil.isEntity(args[stmtParamIndexes[0]].getClass());
                                 final Object entity = isEntity ? args[stmtParamIndexes[0]] : null;
 
-                                final Optional<Object> id = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, isBatch,
-                                        -1, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
+                                final Optional<Object> id = prepareQuery(proxy, m, args, defineParamIndexes, defines, defineMappers, isNamedQuery, query,
+                                        namedSql, isBatch, -1, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
                                                 .settParameters(args, parametersSetter)
                                                 .insert(keyExtractor, isDefaultIdTester);
 
@@ -4805,13 +4896,13 @@ final class DaoImpl {
                                     AbstractPreparedQuery preparedQuery = null;
 
                                     if (isSingleParameter) {
-                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, isBatch,
-                                                batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
-                                                        .addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
+                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, defineMappers, isNamedQuery, query, namedSql,
+                                                isBatch, batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall,
+                                                outParameterList).addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
                                     } else {
-                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, isBatch,
-                                                batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
-                                                        .addBatchParameters(batchParameters);
+                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, defineMappers, isNamedQuery, query, namedSql,
+                                                isBatch, batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall,
+                                                outParameterList).addBatchParameters(batchParameters);
                                     }
 
                                     ids = preparedQuery.batchInsert(keyExtractor, isDefaultIdTester);
@@ -4819,9 +4910,9 @@ final class DaoImpl {
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
-                                        try (AbstractPreparedQuery preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery,
-                                                query, namedSql, isBatch, batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames,
-                                                isCall, outParameterList).closeAfterExecution(false)) {
+                                        try (AbstractPreparedQuery preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, defineMappers,
+                                                isNamedQuery, query, namedSql, isBatch, batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys,
+                                                returnColumnNames, isCall, outParameterList).closeAfterExecution(false)) {
 
                                             if (isSingleParameter) {
                                                 ids = ExceptionalStream.of(batchParameters)
@@ -4901,9 +4992,9 @@ final class DaoImpl {
                                     && DirtyMarker.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]);
 
                             call = (proxy, args) -> {
-                                final AbstractPreparedQuery preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query,
-                                        namedSql, isBatch, -1, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
-                                                .settParameters(args, parametersSetter);
+                                final AbstractPreparedQuery preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, defineMappers,
+                                        isNamedQuery, query, namedSql, isBatch, -1, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames,
+                                        isCall, outParameterList).settParameters(args, parametersSetter);
 
                                 final long updatedRecordCount = isLargeUpdate ? preparedQuery.largeUpdate() : preparedQuery.update();
 
@@ -4941,13 +5032,13 @@ final class DaoImpl {
                                     AbstractPreparedQuery preparedQuery = null;
 
                                     if (isSingleParameter) {
-                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, isBatch,
-                                                batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
-                                                        .addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
+                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, defineMappers, isNamedQuery, query, namedSql,
+                                                isBatch, batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall,
+                                                outParameterList).addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
                                     } else {
-                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery, query, namedSql, isBatch,
-                                                batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall, outParameterList)
-                                                        .addBatchParameters(batchParameters);
+                                        preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, defineMappers, isNamedQuery, query, namedSql,
+                                                isBatch, batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames, isCall,
+                                                outParameterList).addBatchParameters(batchParameters);
                                     }
 
                                     if (isLargeUpdate) {
@@ -4959,9 +5050,9 @@ final class DaoImpl {
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
-                                        try (AbstractPreparedQuery preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, isNamedQuery,
-                                                query, namedSql, isBatch, batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys, returnColumnNames,
-                                                isCall, outParameterList).closeAfterExecution(false)) {
+                                        try (AbstractPreparedQuery preparedQuery = prepareQuery(proxy, m, args, defineParamIndexes, defines, defineMappers,
+                                                isNamedQuery, query, namedSql, isBatch, batchSize, fetchSize, null, queryTimeout, returnGeneratedKeys,
+                                                returnColumnNames, isCall, outParameterList).closeAfterExecution(false)) {
 
                                             if (isSingleParameter) {
                                                 updatedRecordCount = ExceptionalStream.of(batchParameters)
