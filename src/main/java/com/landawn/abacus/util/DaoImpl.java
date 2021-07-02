@@ -4639,6 +4639,13 @@ final class DaoImpl {
                             throw new UnsupportedOperationException(
                                     "@BindList on method: " + fullClassMethodName + " is not supported for named or callable query");
                         }
+
+                        if (IntStreamEx.of(defineParamIndexes)
+                                .filter(i -> N.anyMatch(m.getParameterAnnotations()[i], it -> it.annotationType().equals(Dao.BindList.class)))
+                                .anyMatch(i -> !(Collection.class.isAssignableFrom(paramTypes[i]) || paramTypes[i].isArray()))) {
+                            throw new UnsupportedOperationException(
+                                    "Type of parameter annotated with @BindList(method: " + fullClassMethodName + ") must be Collection/Array.");
+                        }
                     }
 
                     final Function<Object, String> defineParamMapper = param -> N.stringOf(param);
