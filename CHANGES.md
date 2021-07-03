@@ -1,3 +1,9 @@
+### 2.8.8
+
+* Support `BindList`.
+* Improvements and bug fix.
+
+
 ### 2.8.7
 
 * Support `Record`.
