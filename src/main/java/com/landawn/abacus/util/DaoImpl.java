@@ -4633,11 +4633,11 @@ final class DaoImpl {
                             }
                         }
 
-                        if ((isNamedQuery || isCall) && IntStreamEx.of(defineParamIndexes)
-                                .flatMapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]))
-                                .anyMatch(it -> Dao.BindList.class.isAssignableFrom(it.annotationType()))) {
+                        if (IntStreamEx.of(defineParamIndexes)
+                                .filter(i -> N.anyMatch(m.getParameterAnnotations()[i], it -> it.annotationType().equals(Dao.DefineList.class)))
+                                .anyMatch(i -> !Collection.class.isAssignableFrom(paramTypes[i]))) {
                             throw new UnsupportedOperationException(
-                                    "@BindList on method: " + fullClassMethodName + " is not supported for named or callable query");
+                                    "Type of parameter annotated with @DefineList(method: " + fullClassMethodName + ") must be Collection.");
                         }
 
                         if (IntStreamEx.of(defineParamIndexes)
@@ -4645,6 +4645,13 @@ final class DaoImpl {
                                 .anyMatch(i -> !(Collection.class.isAssignableFrom(paramTypes[i]) || paramTypes[i].isArray()))) {
                             throw new UnsupportedOperationException(
                                     "Type of parameter annotated with @BindList(method: " + fullClassMethodName + ") must be Collection/Array.");
+                        }
+
+                        if ((isNamedQuery || isCall) && IntStreamEx.of(defineParamIndexes)
+                                .flatMapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]))
+                                .anyMatch(it -> Dao.BindList.class.isAssignableFrom(it.annotationType()))) {
+                            throw new UnsupportedOperationException(
+                                    "@BindList on method: " + fullClassMethodName + " is not supported for named or callable query.");
                         }
                     }
 
