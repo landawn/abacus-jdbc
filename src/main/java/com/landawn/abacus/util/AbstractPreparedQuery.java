@@ -1711,7 +1711,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         boolean noException = false;
 
         try {
-            final T first = N.firstNonNull(batchParameters).orNull();
+            final T first = N.firstNonNull(batchParameters).orElseNull();
 
             if (first == null) {
                 for (int i = 0, size = batchParameters.size(); i < size; i++) {

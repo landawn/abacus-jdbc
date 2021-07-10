@@ -2783,7 +2783,7 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
         boolean noException = false;
 
         try {
-            final T first = N.firstNonNull(batchParameters).orNull();
+            final T first = N.firstNonNull(batchParameters).orElseNull();
 
             if (first == null) {
                 if (parameterCount == 1) {
