@@ -3200,6 +3200,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     // Will it cause confusion if it's called in transaction?
 
     /**
+     * lazy-execution, lazy-fetch.
      *
      * @return
      * @throws SQLException

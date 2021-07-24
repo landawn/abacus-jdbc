@@ -10728,7 +10728,7 @@ public final class JdbcUtil {
 
         // Will it cause confusion if it's called in transaction?
         /**
-         * lazy-execution, lazy-fetch.
+         * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
          *
          * @param cond
          * @return
@@ -10753,7 +10753,7 @@ public final class JdbcUtil {
 
         // Will it cause confusion if it's called in transaction?
         /**
-         * lazy-execution, lazy-fetch.
+         * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
          *
          * @param cond
          * @param rowMapper
@@ -10765,7 +10765,7 @@ public final class JdbcUtil {
         <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final BiRowMapper<R> rowMapper);
 
         /**
-         * lazy-execution, lazy-fetch.
+         * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
          *
          * @param cond
          * @param rowFilter
@@ -10778,7 +10778,7 @@ public final class JdbcUtil {
         <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final RowFilter rowFilter, final RowMapper<R> rowMapper);
 
         /**
-         * lazy-execution, lazy-fetch.
+         * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
          *
          * @param cond
          * @param rowFilter
@@ -10792,7 +10792,7 @@ public final class JdbcUtil {
 
         // Will it cause confusion if it's called in transaction?
         /**
-         * lazy-execution, lazy-fetch.
+         * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
          *
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
@@ -10805,7 +10805,7 @@ public final class JdbcUtil {
 
         // Will it cause confusion if it's called in transaction?
         /**
-         * lazy-execution, lazy-fetch.
+         * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
          *
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
@@ -10819,7 +10819,7 @@ public final class JdbcUtil {
 
         // Will it cause confusion if it's called in transaction?
         /**
-         * lazy-execution, lazy-fetch.
+         * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
          *
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
@@ -10833,7 +10833,7 @@ public final class JdbcUtil {
 
         // Will it cause confusion if it's called in transaction?
         /**
-         * lazy-execution, lazy-fetch.
+         * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
          *
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
@@ -10849,7 +10849,8 @@ public final class JdbcUtil {
 
         // Will it cause confusion if it's called in transaction?
         /**
-         * lazy-execution, lazy-fetch.
+         * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+         *
          *
          * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
          * @param cond
@@ -10865,7 +10866,8 @@ public final class JdbcUtil {
 
         // Will it cause confusion if it's called in transaction?
         /**
-         * lazy-execution, lazy-fetch.
+         * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+         *
          * @param singleSelectPropName
          * @param cond
          * @return
@@ -10882,7 +10884,7 @@ public final class JdbcUtil {
 
         // Will it cause confusion if it's called in transaction?
         /**
-         * lazy-execution, lazy-fetch.
+         * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
          *
          * @param singleSelectPropName
          * @param cond
@@ -10898,7 +10900,7 @@ public final class JdbcUtil {
 
         // Will it cause confusion if it's called in transaction?
         /**
-         * lazy-execution, lazy-fetch.
+         * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
          *
          * @param singleSelectPropName
          * @param cond

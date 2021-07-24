@@ -3794,7 +3794,7 @@ public final class SQLExecutor {
 
     /**
      *
-     * Lazy execution, lazy fetch. The query execution and record fetching only happen when a terminal operation of the stream is called.
+     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param targetClass
@@ -3810,7 +3810,7 @@ public final class SQLExecutor {
     }
 
     /**
-     * Lazy execution, lazy fetch. The query execution and record fetching only happen when a terminal operation of the stream is called.
+     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param targetClass
@@ -3827,7 +3827,7 @@ public final class SQLExecutor {
     }
 
     /**
-     * Lazy execution, lazy fetch. The query execution and record fetching only happen when a terminal operation of the stream is called.
+     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param targetClass
@@ -3843,7 +3843,7 @@ public final class SQLExecutor {
     }
 
     /**
-     * Lazy execution, lazy fetch. The query execution and record fetching only happen when a terminal operation of the stream is called.
+     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param targetClass
@@ -3862,7 +3862,7 @@ public final class SQLExecutor {
     }
 
     /**
-     * Lazy execution, lazy fetch. The query execution and record fetching only happen when a terminal operation of the stream is called.
+     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param sql
@@ -3878,7 +3878,7 @@ public final class SQLExecutor {
     }
 
     /**
-     * Lazy execution, lazy fetch. The query execution and record fetching only happen when a terminal operation of the stream is called.
+     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param sql
@@ -3896,7 +3896,7 @@ public final class SQLExecutor {
     }
 
     /**
-     * Lazy execution, lazy fetch. The query execution and record fetching only happen when a terminal operation of the stream is called.
+     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param sql
@@ -3916,8 +3916,7 @@ public final class SQLExecutor {
     private static final ResultExtractor<ResultSet> RESULT_EXTRACTOR_FOR_STREAM_ONLY = rs -> rs;
 
     /**
-     *
-     * Lazy execution, lazy fetch. The query execution and record fetching only happen when a terminal operation of the stream is called.
+     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param sql
@@ -4072,6 +4071,10 @@ public final class SQLExecutor {
     }
 
     /**
+     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     *
+     * <br />
+     *
      * Execute one or more queries in one or more data sources specified by {@code jdbcSettings} and merge the results.
      * It's designed for partition.
      *
@@ -4090,6 +4093,10 @@ public final class SQLExecutor {
     }
 
     /**
+     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     *
+     * <br />
+     *
      * Execute one or more queries in one or more data sources specified by {@code jdbcSettings} and merge the results.
      * It's designed for partition.
      *
@@ -4110,6 +4117,10 @@ public final class SQLExecutor {
     }
 
     /**
+     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     *
+     * <br />
+     *
      * Execute one or more queries in one or more data sources specified by {@code jdbcSettings} and merge the results.
      * It's designed for partition.
      *
@@ -4129,6 +4140,10 @@ public final class SQLExecutor {
     }
 
     /**
+     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     *
+     * <br />
+     *
      * Execute one or more queries in one or more data sources specified by {@code jdbcSettings} and merge the results.
      * It's designed for partition.
      *
