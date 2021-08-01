@@ -1285,123 +1285,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
-    /**
-     * Sets the parameters.
-     *
-     * @param parameters
-     * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
-     * @throws SQLException
-     */
-    public This setParameters(final Object[] parameters) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(parameters, "parameters");
-
-        int idx = 1;
-
-        for (Object param : parameters) {
-            setObject(idx++, param);
-        }
-
-        return (This) this;
-    }
-
-    /**
-     * Sets the parameters.
-     *
-     * @param startParameterIndex
-     * @param parameters
-     * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
-     * @throws SQLException
-     */
-    public This setParameters(final Collection<?> parameters) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(parameters, "parameters");
-
-        int idx = 1;
-
-        for (Object param : parameters) {
-            setObject(idx++, param);
-        }
-
-        return (This) this;
-    }
-
-    /**
-     * Sets the parameters.
-     *
-     * @param paramsSetter
-     * @return
-     * @throws SQLException
-     */
-    public This setParameters(final ParametersSetter<? super Stmt> paramsSetter) throws SQLException {
-        checkArgNotNull(paramsSetter, "paramsSetter");
-
-        boolean noException = false;
-
-        try {
-            paramsSetter.accept(stmt);
-
-            noException = true;
-        } finally {
-            if (noException == false) {
-                close();
-            }
-        }
-
-        return (This) this;
-    }
-
-    //    /**
-    //     *
-    //     * @param paramsSetter
-    //     * @return
-    //     * @throws SQLException
-    //     */
-    //    public This setParameters(final BiParametersSetter<? super This, ? super Stmt> paramsSetter) throws SQLException {
-    //        checkArgNotNull(paramsSetter, "paramsSetter");
-    //
-    //        boolean noException = false;
-    //
-    //        try {
-    //            paramsSetter.accept((This) this, stmt);
-    //
-    //            noException = true;
-    //        } finally {
-    //            if (noException == false) {
-    //                close();
-    //            }
-    //        }
-    //
-    //        return (This) this;
-    //    }
-
-    /**
-     * Sets the parameters.
-     *
-     * @param <T>
-     * @param parameters
-     * @param paramsSetter
-     * @return
-     * @throws SQLException
-     */
-    public <T> This setParameters(final T parameters, final BiParametersSetter<? super Stmt, ? super T> paramsSetter) throws SQLException {
-        checkArgNotNull(paramsSetter, "paramsSetter");
-
-        boolean noException = false;
-
-        try {
-            paramsSetter.accept(stmt, parameters);
-
-            noException = true;
-        } finally {
-            if (noException == false) {
-                close();
-            }
-        }
-
-        return (This) this;
-    }
-
     //    public <T> This setParameters(final T parameters, final Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException> paramsSetter)
     //            throws SQLException {
     //        checkArgNotNull(paramsSetter, "paramsSetter");
@@ -1517,15 +1400,13 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * Sets the parameters.
      *
-     * @param <T>
      * @param parameters
-     * @param type
      * @return
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException
      */
-    public <T> This settParameters(final T[] parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
-        return settParameters(1, parameters, type);
+    public <T> This setParameters(final T[] parameters) throws IllegalArgumentException, SQLException {
+        return settParameters(1, parameters);
     }
 
     /**
@@ -1539,14 +1420,34 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException
      */
-    public <T> This settParameters(int startParameterIndex, final T[] parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
+    public <T> This settParameters(int startParameterIndex, final T[] parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
-        checkArgNotNull(type, "type");
 
-        final Type<T> setter = N.typeOf(type);
+        final Type<T> setter = N.typeOf(parameters.getClass().getComponentType());
 
         for (T param : parameters) {
             setter.set(stmt, startParameterIndex++, param);
+        }
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the parameters.
+     *
+     * @param startParameterIndex
+     * @param parameters
+     * @return
+     * @throws IllegalArgumentException if specified {@code parameters}.
+     * @throws SQLException
+     */
+    public This setParameters(final Collection<?> parameters) throws IllegalArgumentException, SQLException {
+        checkArgNotNull(parameters, "parameters");
+
+        int idx = 1;
+
+        for (Object param : parameters) {
+            setObject(idx++, param);
         }
 
         return (This) this;
@@ -1591,6 +1492,101 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
         return (This) this;
     }
+
+    /**
+     * Sets the parameters.
+     *
+     * @param paramsSetter
+     * @return
+     * @throws SQLException
+     */
+    public This setParameters(final ParametersSetter<? super Stmt> paramsSetter) throws SQLException {
+        checkArgNotNull(paramsSetter, "paramsSetter");
+
+        boolean noException = false;
+
+        try {
+            paramsSetter.accept(stmt);
+
+            noException = true;
+        } finally {
+            if (noException == false) {
+                close();
+            }
+        }
+
+        return (This) this;
+    }
+
+    //    /**
+    //     *
+    //     * @param paramsSetter
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    public This setParameters(final BiParametersSetter<? super This, ? super Stmt> paramsSetter) throws SQLException {
+    //        checkArgNotNull(paramsSetter, "paramsSetter");
+    //
+    //        boolean noException = false;
+    //
+    //        try {
+    //            paramsSetter.accept((This) this, stmt);
+    //
+    //            noException = true;
+    //        } finally {
+    //            if (noException == false) {
+    //                close();
+    //            }
+    //        }
+    //
+    //        return (This) this;
+    //    }
+
+    /**
+     * Sets the parameters.
+     *
+     * @param <T>
+     * @param parameters
+     * @param paramsSetter
+     * @return
+     * @throws SQLException
+     */
+    public <T> This setParameters(final T parameters, final BiParametersSetter<? super Stmt, ? super T> paramsSetter) throws SQLException {
+        checkArgNotNull(paramsSetter, "paramsSetter");
+
+        boolean noException = false;
+
+        try {
+            paramsSetter.accept(stmt, parameters);
+
+            noException = true;
+        } finally {
+            if (noException == false) {
+                close();
+            }
+        }
+
+        return (This) this;
+    }
+
+    //    public <T> This setParameters(final T parameters, final Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException> paramsSetter)
+    //            throws SQLException {
+    //        checkArgNotNull(paramsSetter, "paramsSetter");
+    //
+    //        boolean noException = false;
+    //
+    //        try {
+    //            paramsSetter.accept((This) this, stmt, parameters);
+    //
+    //            noException = true;
+    //        } finally {
+    //            if (noException == false) {
+    //                close();
+    //            }
+    //        }
+    //
+    //        return (This) this;
+    //    }
 
     /**
      *
