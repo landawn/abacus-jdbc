@@ -3198,6 +3198,10 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * lazy-execution, lazy-fetch.
      *
+     * <br />
+     *
+     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     *
      * @return
      * @throws SQLException
      * @see {@link #query(ResultExtractor)}
@@ -3212,6 +3216,10 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     /**
      * lazy-execution, lazy-fetch.
+     *
+     * <br />
+     *
+     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param targetClass
@@ -3230,6 +3238,10 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     // Will it cause confusion if it's called in transaction?
     /**
      * lazy-execution, lazy-fetch.
+     *
+     * <br />
+     *
+     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param rowMapper
@@ -3257,6 +3269,10 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * lazy-execution, lazy-fetch.
      *
+     * <br />
+     *
+     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     *
      * @param <T>
      * @param rowMapper
      * @return
@@ -3282,6 +3298,10 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     // Will it cause confusion if it's called in transaction?
     /**
      * lazy-execution, lazy-fetch.
+     *
+     * <br />
+     *
+     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param rowFilter
@@ -3310,6 +3330,10 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     // Will it cause confusion if it's called in transaction?
     /**
      * lazy-execution, lazy-fetch.
+     *
+     * <br />
+     *
+     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param rowFilter
