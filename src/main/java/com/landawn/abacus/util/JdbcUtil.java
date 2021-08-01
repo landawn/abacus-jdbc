@@ -5412,6 +5412,14 @@ public final class JdbcUtil {
         return asyncExecutor.execute(sqlAction);
     }
 
+    /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     *
+     * @param sqlAction1
+     * @param sqlAction2
+     * @return
+     */
+    @Beta
     public static Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> asyncRun(final Throwables.Runnable<Exception> sqlAction1,
             final Throwables.Runnable<Exception> sqlAction2) {
         N.checkArgNotNull(sqlAction1, "sqlAction1");
@@ -5420,6 +5428,15 @@ public final class JdbcUtil {
         return Tuple.of(asyncExecutor.execute(sqlAction1), asyncExecutor.execute(sqlAction2));
     }
 
+    /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     *
+     * @param sqlAction1
+     * @param sqlAction2
+     * @param sqlAction3
+     * @return
+     */
+    @Beta
     public static Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> asyncRun(final Throwables.Runnable<Exception> sqlAction1,
             final Throwables.Runnable<Exception> sqlAction2, final Throwables.Runnable<Exception> sqlAction3) {
         N.checkArgNotNull(sqlAction1, "sqlAction1");
@@ -5495,6 +5512,15 @@ public final class JdbcUtil {
         return asyncExecutor.execute(sqlAction);
     }
 
+    /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     *
+     * @param <R1>
+     * @param <R2>
+     * @param sqlAction1
+     * @param sqlAction2
+     * @return
+     */
     @Beta
     public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> asyncCall(final Callable<R1> sqlAction1, final Callable<R2> sqlAction2) {
         N.checkArgNotNull(sqlAction1, "sqlAction1");
@@ -5503,6 +5529,17 @@ public final class JdbcUtil {
         return Tuple.of(asyncExecutor.execute(sqlAction1), asyncExecutor.execute(sqlAction2));
     }
 
+    /**
+     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     *
+     * @param <R1>
+     * @param <R2>
+     * @param <R3>
+     * @param sqlAction1
+     * @param sqlAction2
+     * @param sqlAction3
+     * @return
+     */
     @Beta
     public static <R1, R2, R3> Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>> asyncCall(final Callable<R1> sqlAction1,
             final Callable<R2> sqlAction2, final Callable<R3> sqlAction3) {

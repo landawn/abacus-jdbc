@@ -4117,7 +4117,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code sqlAction} is completed by another thread.
      *
      * @param <R>
      * @param sqlAction
@@ -4134,7 +4134,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code sqlAction} is completed by another thread.
      *
      * @param <R>
      * @param sqlAction
@@ -4153,7 +4153,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code sqlAction} is completed by another thread.
      *
      * @param sqlAction
      * @return
@@ -4169,7 +4169,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code sqlAction} is completed by another thread.
      *
      * @param sqlAction
      * @param executor
