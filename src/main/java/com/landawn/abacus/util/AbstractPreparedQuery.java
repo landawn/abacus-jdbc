@@ -1312,7 +1312,56 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException
      */
-    public This settParameters(final int[] parameters) throws IllegalArgumentException, SQLException {
+    public This setParameters(final int[] parameters) throws IllegalArgumentException, SQLException {
+        return settParameters(1, parameters);
+    }
+
+    /**
+     * Sets the parameters.
+     *
+     * @param parameters
+     * @return
+     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+     * @throws SQLException
+     */
+    public This setParameters(final long[] parameters) throws IllegalArgumentException, SQLException {
+        return settParameters(1, parameters);
+    }
+
+    /**
+     * Sets the parameters.
+     *
+     * @param parameters
+     * @return
+     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+     * @throws SQLException
+     */
+    public This setParameters(final String[] parameters) throws IllegalArgumentException, SQLException {
+        return settParameters(1, parameters);
+    }
+
+    /**
+     * Sets the parameters.
+     *
+     * @param parameters
+     * @return
+     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+     * @throws SQLException
+     */
+    public <T> This setParameters(final T[] parameters) throws IllegalArgumentException, SQLException {
+        return settParameters(1, parameters);
+    }
+
+    /**
+     * Sets the parameters.
+     *
+     * @param startParameterIndex
+     * @param parameters
+     * @return
+     * @throws IllegalArgumentException if specified {@code parameters}.
+     * @throws SQLException
+     */
+    public This setParameters(final Collection<?> parameters) throws IllegalArgumentException, SQLException {
         return settParameters(1, parameters);
     }
 
@@ -1338,18 +1387,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * Sets the parameters.
      *
-     * @param parameters
-     * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
-     * @throws SQLException
-     */
-    public This settParameters(final long[] parameters) throws IllegalArgumentException, SQLException {
-        return settParameters(1, parameters);
-    }
-
-    /**
-     * Sets the parameters.
-     *
      * @param startParameterIndex
      * @param parameters
      * @return
@@ -1369,18 +1406,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * Sets the parameters.
      *
-     * @param parameters
-     * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
-     * @throws SQLException
-     */
-    public This settParameters(final String[] parameters) throws IllegalArgumentException, SQLException {
-        return settParameters(1, parameters);
-    }
-
-    /**
-     * Sets the parameters.
-     *
      * @param startParameterIndex
      * @param parameters
      * @return
@@ -1395,18 +1420,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         }
 
         return (This) this;
-    }
-
-    /**
-     * Sets the parameters.
-     *
-     * @param parameters
-     * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
-     * @throws SQLException
-     */
-    public <T> This setParameters(final T[] parameters) throws IllegalArgumentException, SQLException {
-        return settParameters(1, parameters);
     }
 
     /**
@@ -1437,17 +1450,16 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      *
      * @param startParameterIndex
      * @param parameters
+     * @param type
      * @return
-     * @throws IllegalArgumentException if specified {@code parameters}.
+     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException
      */
-    public This setParameters(final Collection<?> parameters) throws IllegalArgumentException, SQLException {
+    public This settParameters(int startParameterIndex, final Collection<?> parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
 
-        int idx = 1;
-
         for (Object param : parameters) {
-            setObject(idx++, param);
+            setObject(startParameterIndex++, param);
         }
 
         return (This) this;
