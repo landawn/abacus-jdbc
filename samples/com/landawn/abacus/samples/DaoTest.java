@@ -561,14 +561,14 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        assertEquals(100, userDao.queryForLong("id", CF.eq("firstName", "Forrest")).orZero());
-        assertEquals(100, userDao.queryForLong("id", 100L).orZero());
+        assertEquals(100, userDao.queryForLong("id", CF.eq("firstName", "Forrest")).orElseZero());
+        assertEquals(100, userDao.queryForLong("id", 100L).orElseZero());
 
-        assertEquals("Forrest", userDao.queryForString("firstName", CF.eq("firstName", "Forrest")).orNull());
-        assertEquals("Forrest", userDao.queryForString("firstName", 100L).orNull());
+        assertEquals("Forrest", userDao.queryForString("firstName", CF.eq("firstName", "Forrest")).orElseNull());
+        assertEquals("Forrest", userDao.queryForString("firstName", 100L).orElseNull());
 
-        assertTrue(userDao.queryForTimestamp("createTime", CF.eq("firstName", "Forrest")).orNull().before(DateUtil.currentTimestamp()));
-        assertTrue(userDao.queryForTimestamp("createTime", 100L).orNull().before(DateUtil.currentTimestamp()));
+        assertTrue(userDao.queryForTimestamp("createTime", CF.eq("firstName", "Forrest")).orElseNull().before(DateUtil.currentTimestamp()));
+        assertTrue(userDao.queryForTimestamp("createTime", 100L).orElseNull().before(DateUtil.currentTimestamp()));
 
         userDao.deleteById(100L);
 
