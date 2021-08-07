@@ -3,18 +3,19 @@ package com.landawn.abacus.samples.dao;
 import java.sql.SQLException;
 import java.util.List;
 
+import com.landawn.abacus.dao.UncheckedCrudDao;
+import com.landawn.abacus.dao.UncheckedJoinEntityHelper;
+import com.landawn.abacus.dao.Dao.PerfLog;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.samples.entity.User;
-import com.landawn.abacus.util.JdbcUtil;
-import com.landawn.abacus.util.JdbcUtil.Dao.PerfLog;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Propagation;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.stream.Stream;
 
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
-public interface UncheckedUserDao extends JdbcUtil.UncheckedCrudDao<User, Long, SQLBuilder.PSC, UncheckedUserDao>,
-        JdbcUtil.UncheckedJoinEntityHelper<User, SQLBuilder.PSC, UncheckedUserDao> {
+public interface UncheckedUserDao
+        extends UncheckedCrudDao<User, Long, SQLBuilder.PSC, UncheckedUserDao>, UncheckedJoinEntityHelper<User, SQLBuilder.PSC, UncheckedUserDao> {
     @NamedInsert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
     void insertWithId(User user);
 

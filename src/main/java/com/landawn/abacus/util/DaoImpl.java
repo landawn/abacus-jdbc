@@ -51,6 +51,25 @@ import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.condition.Criteria;
 import com.landawn.abacus.condition.Limit;
 import com.landawn.abacus.core.DirtyMarkerUtil;
+import com.landawn.abacus.dao.CrudDao;
+import com.landawn.abacus.dao.CrudDaoL;
+import com.landawn.abacus.dao.Dao;
+import com.landawn.abacus.dao.Dao.Bind;
+import com.landawn.abacus.dao.Dao.Config;
+import com.landawn.abacus.dao.Dao.NonDBOperation;
+import com.landawn.abacus.dao.Dao.OP;
+import com.landawn.abacus.dao.Dao.OutParameter;
+import com.landawn.abacus.dao.Dao.SqlField;
+import com.landawn.abacus.dao.DaoUtil;
+import com.landawn.abacus.dao.HandlerList;
+import com.landawn.abacus.dao.JoinEntityHelper;
+import com.landawn.abacus.dao.NoUpdateDao;
+import com.landawn.abacus.dao.OutParameterList;
+import com.landawn.abacus.dao.UncheckedCrudDao;
+import com.landawn.abacus.dao.UncheckedCrudDaoL;
+import com.landawn.abacus.dao.UncheckedDao;
+import com.landawn.abacus.dao.UncheckedJoinEntityHelper;
+import com.landawn.abacus.dao.UncheckedNoUpdateDao;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
@@ -70,23 +89,11 @@ import com.landawn.abacus.util.JdbcUtil.BiResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.BiRowConsumer;
 import com.landawn.abacus.util.JdbcUtil.BiRowFilter;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
-import com.landawn.abacus.util.JdbcUtil.CrudDao;
-import com.landawn.abacus.util.JdbcUtil.Dao;
-import com.landawn.abacus.util.JdbcUtil.Dao.Bind;
-import com.landawn.abacus.util.JdbcUtil.Dao.Config;
-import com.landawn.abacus.util.JdbcUtil.Dao.NonDBOperation;
-import com.landawn.abacus.util.JdbcUtil.Dao.OP;
-import com.landawn.abacus.util.JdbcUtil.Dao.OutParameter;
-import com.landawn.abacus.util.JdbcUtil.Dao.SqlField;
-import com.landawn.abacus.util.JdbcUtil.NoUpdateDao;
 import com.landawn.abacus.util.JdbcUtil.OutParamResult;
-import com.landawn.abacus.util.JdbcUtil.OutParameterList;
 import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowConsumer;
 import com.landawn.abacus.util.JdbcUtil.RowFilter;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
-import com.landawn.abacus.util.JdbcUtil.SqlLogConfig;
-import com.landawn.abacus.util.JdbcUtil.UncheckedNoUpdateDao;
 import com.landawn.abacus.util.SQLBuilder.NAC;
 import com.landawn.abacus.util.SQLBuilder.NLC;
 import com.landawn.abacus.util.SQLBuilder.NSC;
@@ -127,7 +134,7 @@ final class DaoImpl {
     private static final JSONSerializationConfig jsc_no_bracket = JSC.create().setStringQuotation(N.CHAR_0).setBracketRootValue(false);
 
     @SuppressWarnings("rawtypes")
-    private static final Map<String, JdbcUtil.Dao> daoPool = new ConcurrentHashMap<>();
+    private static final Map<String, Dao> daoPool = new ConcurrentHashMap<>();
 
     private static final Map<Class<? extends Annotation>, BiFunction<Annotation, SQLMapper, QueryInfo>> sqlAnnoMap = new HashMap<>();
 
@@ -1652,8 +1659,8 @@ final class DaoImpl {
         BiRowMapper<Object> keyExtractor = idExtractorHolder.value();
 
         if (keyExtractor == null) {
-            if (dao instanceof JdbcUtil.CrudDao) {
-                keyExtractor = N.defaultIfNull(((JdbcUtil.CrudDao) dao).idExtractor(), defaultIdExtractor);
+            if (dao instanceof CrudDao) {
+                keyExtractor = N.defaultIfNull(((CrudDao) dao).idExtractor(), defaultIdExtractor);
             } else {
                 keyExtractor = defaultIdExtractor;
             }
@@ -1698,9 +1705,9 @@ final class DaoImpl {
 
         final Executor nonNullExecutor = executor == null ? JdbcUtil.asyncExecutor.getExecutor() : executor;
         final AsyncExecutor asyncExecutor = new AsyncExecutor(nonNullExecutor);
-        final boolean isUnchecked = JdbcUtil.UncheckedDao.class.isAssignableFrom(daoInterface);
-        final boolean isCrudDao = JdbcUtil.CrudDao.class.isAssignableFrom(daoInterface) || JdbcUtil.UncheckedCrudDao.class.isAssignableFrom(daoInterface);
-        final boolean isCrudDaoL = JdbcUtil.CrudDaoL.class.isAssignableFrom(daoInterface) || JdbcUtil.UncheckedCrudDaoL.class.isAssignableFrom(daoInterface);
+        final boolean isUnchecked = UncheckedDao.class.isAssignableFrom(daoInterface);
+        final boolean isCrudDao = CrudDao.class.isAssignableFrom(daoInterface) || UncheckedCrudDao.class.isAssignableFrom(daoInterface);
+        final boolean isCrudDaoL = CrudDaoL.class.isAssignableFrom(daoInterface) || UncheckedCrudDaoL.class.isAssignableFrom(daoInterface);
 
         final List<Class<?>> allInterfaces = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface)).prepend(daoInterface).toList();
 
@@ -1804,7 +1811,7 @@ final class DaoImpl {
             }
         }
 
-        final Map<Method, Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable>> methodInvokerMap = new HashMap<>();
+        final Map<Method, Throwables.BiFunction<Dao, Object[], ?, Throwable>> methodInvokerMap = new HashMap<>();
 
         final List<Method> sqlMethods = StreamEx.of(allInterfaces)
                 .reversed()
@@ -1998,9 +2005,8 @@ final class DaoImpl {
         final List<Dao.Handler> daoClassHandlerList = StreamEx.of(allInterfaces)
                 .reversed()
                 .flatMapp(Class::getAnnotations)
-                .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(JdbcUtil.HandlerList.class))
-                .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
-                        : N.asList(((JdbcUtil.HandlerList) anno).value()))
+                .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(HandlerList.class))
+                .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno) : N.asList(((HandlerList) anno).value()))
                 .toList();
 
         final Map<String, JdbcUtil.Handler<?>> daoClassHandlerMap = StreamEx.of(allInterfaces)
@@ -2036,8 +2042,8 @@ final class DaoImpl {
         //    final Map<String, String> sqlCache = new ConcurrentHashMap<>(0);
         //    final Map<String, ImmutableList<String>> sqlsCache = new ConcurrentHashMap<>(0);
 
-        final Map<String, JoinInfo> joinEntityInfo = (JdbcUtil.JoinEntityHelper.class.isAssignableFrom(daoInterface)
-                || JdbcUtil.UncheckedJoinEntityHelper.class.isAssignableFrom(daoInterface)) ? JdbcUtil.getEntityJoinInfo(daoInterface, entityClass) : null;
+        final Map<String, JoinInfo> joinEntityInfo = (JoinEntityHelper.class.isAssignableFrom(daoInterface)
+                || UncheckedJoinEntityHelper.class.isAssignableFrom(daoInterface)) ? DaoUtil.getEntityJoinInfo(daoInterface, entityClass) : null;
 
         for (Method m : sqlMethods) {
             if (!Modifier.isPublic(m.getModifiers())) {
@@ -2083,7 +2089,7 @@ final class DaoImpl {
 
             final String[] sqls = sqlList == null ? N.EMPTY_STRING_ARRAY : sqlList.toArray(new String[sqlList.size()]);
 
-            Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> call = null;
+            Throwables.BiFunction<Dao, Object[], ?, Throwable> call = null;
 
             if (!Modifier.isAbstract(m.getModifiers())) {
                 final MethodHandle methodHandle = createMethodHandle(m);
@@ -2137,7 +2143,7 @@ final class DaoImpl {
                 final boolean throwsSQLException = StreamEx.of(m.getExceptionTypes()).anyMatch(e -> SQLException.class.equals(e));
                 final Annotation sqlAnno = StreamEx.of(m.getAnnotations()).filter(anno -> sqlAnnoMap.containsKey(anno.annotationType())).first().orNull();
 
-                if (declaringClass.equals(JdbcUtil.Dao.class) || declaringClass.equals(JdbcUtil.UncheckedDao.class)) {
+                if (declaringClass.equals(Dao.class) || declaringClass.equals(UncheckedDao.class)) {
                     if (methodName.equals("save") && paramLen == 1) {
                         call = (proxy, args) -> {
                             final Object entity = args[0];
@@ -3302,7 +3308,7 @@ final class DaoImpl {
                             throw new UnsupportedOperationException("Unsupported operation: " + m);
                         };
                     }
-                } else if (declaringClass.equals(JdbcUtil.CrudDao.class) || declaringClass.equals(JdbcUtil.UncheckedCrudDao.class)) {
+                } else if (declaringClass.equals(CrudDao.class) || declaringClass.equals(UncheckedCrudDao.class)) {
                     if (methodName.equals("insert") && paramLen == 1) {
                         call = (proxy, args) -> {
                             final BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
@@ -3317,7 +3323,7 @@ final class DaoImpl {
 
                                 if (!N.disjoint(propNamesToInsert, idPropNameSet)) {
                                     if (isDefaultIdTester.test(idGetter.apply(entity))) {
-                                        idSetter.accept(((JdbcUtil.CrudDao) proxy).generateId(), entity);
+                                        idSetter.accept(((CrudDao) proxy).generateId(), entity);
                                     }
                                 }
 
@@ -3325,7 +3331,7 @@ final class DaoImpl {
                             } else {
                                 if (isDefaultIdTester.test(idGetter.apply(entity))) {
                                     if (callGenerateIdForInsert) {
-                                        idSetter.accept(((JdbcUtil.CrudDao) proxy).generateId(), entity);
+                                        idSetter.accept(((CrudDao) proxy).generateId(), entity);
 
                                         namedInsertSQL = namedInsertWithIdSQL;
                                     } else {
@@ -3358,7 +3364,7 @@ final class DaoImpl {
 
                             if (callGenerateIdForInsert && !N.disjoint(propNamesToInsert, idPropNameSet)) {
                                 if (isDefaultIdTester.test(idGetter.apply(entity))) {
-                                    idSetter.accept(((JdbcUtil.CrudDao) proxy).generateId(), entity);
+                                    idSetter.accept(((CrudDao) proxy).generateId(), entity);
                                 }
                             }
 
@@ -3386,7 +3392,7 @@ final class DaoImpl {
 
                             if (callGenerateIdForInsertWithSql) {
                                 if (isDefaultIdTester.test(idGetter.apply(entity))) {
-                                    idSetter.accept(((JdbcUtil.CrudDao) proxy).generateId(), entity);
+                                    idSetter.accept(((CrudDao) proxy).generateId(), entity);
                                 }
                             }
 
@@ -3417,7 +3423,7 @@ final class DaoImpl {
                             final boolean allDefaultIdValue = N.allMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)));
 
                             if (allDefaultIdValue == false && callGenerateIdForInsert) {
-                                final CrudDao crudDao = (JdbcUtil.CrudDao) proxy;
+                                final CrudDao crudDao = (CrudDao) proxy;
 
                                 for (Object entity : entities) {
                                     if (isDefaultIdTester.test(idGetter.apply(entity))) {
@@ -3498,7 +3504,7 @@ final class DaoImpl {
                             }
 
                             if (callGenerateIdForInsert && !N.disjoint(propNamesToInsert, idPropNameSet)) {
-                                final CrudDao crudDao = (JdbcUtil.CrudDao) proxy;
+                                final CrudDao crudDao = (CrudDao) proxy;
 
                                 for (Object entity : entities) {
                                     if (isDefaultIdTester.test(idGetter.apply(entity))) {
@@ -3578,7 +3584,7 @@ final class DaoImpl {
                             }
 
                             if (callGenerateIdForInsertWithSql) {
-                                final CrudDao crudDao = (JdbcUtil.CrudDao) proxy;
+                                final CrudDao crudDao = (CrudDao) proxy;
 
                                 for (Object entity : entities) {
                                     if (isDefaultIdTester.test(idGetter.apply(entity))) {
@@ -4260,7 +4266,7 @@ final class DaoImpl {
                             throw new UnsupportedOperationException("Unsupported operation: " + m);
                         };
                     }
-                } else if (declaringClass.equals(JdbcUtil.JoinEntityHelper.class) || declaringClass.equals(JdbcUtil.UncheckedJoinEntityHelper.class)) {
+                } else if (declaringClass.equals(JoinEntityHelper.class) || declaringClass.equals(UncheckedJoinEntityHelper.class)) {
                     if (methodName.equals("loadJoinEntities") && paramLen == 3 && !Collection.class.isAssignableFrom(paramTypes[0])
                             && String.class.isAssignableFrom(paramTypes[1]) && Collection.class.isAssignableFrom(paramTypes[2])) {
                         call = (proxy, args) -> {
@@ -4275,8 +4281,8 @@ final class DaoImpl {
                             final Tuple2<Function<Collection<String>, String>, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getSelectSQLBuilderAndParamSetter(sbc);
 
-                            final JdbcUtil.Dao<?, SQLBuilder, ?> joinEntityDao = getAppliableDaoForJoinEntity(propJoinInfo.referencedEntityClass,
-                                    primaryDataSource, proxy);
+                            final Dao<?, SQLBuilder, ?> joinEntityDao = getAppliableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource,
+                                    proxy);
 
                             final PreparedQuery preparedQuery = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
 
@@ -4311,8 +4317,8 @@ final class DaoImpl {
 
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
 
-                            final JdbcUtil.Dao<?, SQLBuilder, ?> joinEntityDao = getAppliableDaoForJoinEntity(propJoinInfo.referencedEntityClass,
-                                    primaryDataSource, proxy);
+                            final Dao<?, SQLBuilder, ?> joinEntityDao = getAppliableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource,
+                                    proxy);
 
                             if (N.isNullOrEmpty(entities)) {
                                 // Do nothing.
@@ -4394,8 +4400,8 @@ final class DaoImpl {
                             final Tuple3<String, String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getDeleteSqlAndParamSetter(sbc);
 
-                            final JdbcUtil.Dao<?, SQLBuilder, ?> joinEntityDao = getAppliableDaoForJoinEntity(propJoinInfo.referencedEntityClass,
-                                    primaryDataSource, proxy);
+                            final Dao<?, SQLBuilder, ?> joinEntityDao = getAppliableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource,
+                                    proxy);
 
                             if (N.isNullOrEmpty(tp._2)) {
                                 return joinEntityDao.prepareQuery(tp._1).setParameters(entity, tp._3).update();
@@ -4425,8 +4431,8 @@ final class DaoImpl {
 
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, joinEntityPropName);
 
-                            final JdbcUtil.Dao<?, SQLBuilder, ?> joinEntityDao = getAppliableDaoForJoinEntity(propJoinInfo.referencedEntityClass,
-                                    primaryDataSource, proxy);
+                            final Dao<?, SQLBuilder, ?> joinEntityDao = getAppliableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource,
+                                    proxy);
 
                             if (N.isNullOrEmpty(entities)) {
                                 return 0;
@@ -4727,7 +4733,7 @@ final class DaoImpl {
 
                     final List<Dao.OutParameter> outParameterList = StreamEx.of(m.getAnnotations())
                             .select(Dao.OutParameter.class)
-                            .append(StreamEx.of(m.getAnnotations()).select(JdbcUtil.OutParameterList.class).flatMapp(OutParameterList::value))
+                            .append(StreamEx.of(m.getAnnotations()).select(OutParameterList.class).flatMapp(OutParameterList::value))
                             .toList();
 
                     if (N.notNullOrEmpty(outParameterList)) {
@@ -5115,7 +5121,7 @@ final class DaoImpl {
 
                 if (isStreamReturn) {
                     if (ExceptionalStream.class.isAssignableFrom(returnType)) {
-                        final Throwables.BiFunction<JdbcUtil.Dao, Object[], ExceptionalStream, Exception> tmp = (Throwables.BiFunction) call;
+                        final Throwables.BiFunction<Dao, Object[], ExceptionalStream, Exception> tmp = (Throwables.BiFunction) call;
 
                         call = (proxy, args) -> {
                             final Throwables.Supplier<ExceptionalStream, Exception> supplier = () -> tmp.apply(proxy, args);
@@ -5123,7 +5129,7 @@ final class DaoImpl {
                             return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
                     } else {
-                        final Throwables.BiFunction<JdbcUtil.Dao, Object[], Stream, Exception> tmp = (Throwables.BiFunction) call;
+                        final Throwables.BiFunction<Dao, Object[], Stream, Exception> tmp = (Throwables.BiFunction) call;
 
                         call = (proxy, args) -> {
                             final Supplier<Stream> supplier = () -> Throwables.call(() -> tmp.apply(proxy, args));
@@ -5132,7 +5138,7 @@ final class DaoImpl {
                         };
                     }
                 } else if (throwsSQLException == false) {
-                    final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> tmp = call;
+                    final Throwables.BiFunction<Dao, Object[], ?, Throwable> tmp = call;
 
                     call = (proxy, args) -> {
                         try {
@@ -5189,7 +5195,7 @@ final class DaoImpl {
                 //    final boolean isSqlPerfLogEnabled = hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed;
                 //    final boolean isDaoPerfLogEnabled = hasPerfLogAnno && JdbcUtil.isDaoMethodPerfLogAllowed;
 
-                final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> tmp = call;
+                final Throwables.BiFunction<Dao, Object[], ?, Throwable> tmp = call;
 
                 if (transactionalAnno == null || transactionalAnno.propagation() == Propagation.SUPPORTS) {
                     if (hasSqlLogAnno || hasPerfLogAnno) {
@@ -5451,7 +5457,7 @@ final class DaoImpl {
                         }
                     };
 
-                    final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
+                    final Throwables.BiFunction<Dao, Object[], ?, Throwable> temp = call;
 
                     call = (proxy, args) -> {
                         final String cachekey = createCacheKey(m, fullClassMethodName, args, daoLogger);
@@ -5493,7 +5499,7 @@ final class DaoImpl {
                         daoLogger.debug("Add RefreshCache method: " + m);
                     }
 
-                    final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
+                    final Throwables.BiFunction<Dao, Object[], ?, Throwable> temp = call;
 
                     call = (proxy, args) -> {
                         cache.clear();
@@ -5518,9 +5524,9 @@ final class DaoImpl {
                 }
 
                 final List<Tuple2<JdbcUtil.Handler, Boolean>> handlerList = StreamEx.of(m.getAnnotations())
-                        .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(JdbcUtil.HandlerList.class))
-                        .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno)
-                                : N.asList(((JdbcUtil.HandlerList) anno).value()))
+                        .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(HandlerList.class))
+                        .flattMap(
+                                anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno) : N.asList(((HandlerList) anno).value()))
                         .prepend(StreamEx.of(daoClassHandlerList).filter(h -> StreamEx.of(h.filter()).anyMatch(filterByMethodName)))
                         .map(handlerAnno -> Tuple.of((JdbcUtil.Handler) (N.notNullOrEmpty(handlerAnno.qualifier())
                                 ? daoClassHandlerMap.getOrDefault(handlerAnno.qualifier(), HandlerFactory.get(handlerAnno.qualifier()))
@@ -5530,7 +5536,7 @@ final class DaoImpl {
                         .toList();
 
                 if (N.notNullOrEmpty(handlerList)) {
-                    final Throwables.BiFunction<JdbcUtil.Dao, Object[], ?, Throwable> temp = call;
+                    final Throwables.BiFunction<Dao, Object[], ?, Throwable> temp = call;
                     final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(m, ImmutableList.of(m.getParameterTypes()),
                             m.getReturnType());
 
@@ -5583,7 +5589,7 @@ final class DaoImpl {
             methodInvokerMap.put(m, call);
         }
 
-        final Throwables.TriFunction<JdbcUtil.Dao, Method, Object[], ?, Throwable> proxyInvoker = (proxy, method, args) -> methodInvokerMap.get(method)
+        final Throwables.TriFunction<Dao, Method, Object[], ?, Throwable> proxyInvoker = (proxy, method, args) -> methodInvokerMap.get(method)
                 .apply(proxy, args);
         final Class<TD>[] interfaceClasses = N.asArray(daoInterface);
 
@@ -5592,7 +5598,7 @@ final class DaoImpl {
                 daoLogger.debug("Invoking Dao method: {} with args: {}", method.getName(), args);
             }
 
-            return proxyInvoker.apply((JdbcUtil.Dao) proxy, method, args);
+            return proxyInvoker.apply((Dao) proxy, method, args);
         };
 
         daoInstance = N.newProxyInstance(interfaceClasses, h);
@@ -5603,17 +5609,17 @@ final class DaoImpl {
     }
 
     @SuppressWarnings("rawtypes")
-    private static final Map<String, JdbcUtil.Dao> joinEntityDaoPool = new ConcurrentHashMap<>();
+    private static final Map<String, Dao> joinEntityDaoPool = new ConcurrentHashMap<>();
 
     @SuppressWarnings("rawtypes")
-    static JdbcUtil.Dao getAppliableDaoForJoinEntity(final Class<?> referencedEntityClass, final javax.sql.DataSource ds, final JdbcUtil.Dao defaultDao) {
+    static Dao getAppliableDaoForJoinEntity(final Class<?> referencedEntityClass, final javax.sql.DataSource ds, final Dao defaultDao) {
         final String key = ClassUtil.getCanonicalClassName(referencedEntityClass) + "_" + System.identityHashCode(ds);
-        final JdbcUtil.Dao joinEntityDao = joinEntityDaoPool.get(key);
+        final Dao joinEntityDao = joinEntityDaoPool.get(key);
 
         if (joinEntityDao != null) {
             return joinEntityDao;
         } else {
-            for (JdbcUtil.Dao dao : daoPool.values()) {
+            for (Dao dao : daoPool.values()) {
                 if (dao.targetEntityClass().equals(referencedEntityClass) && dao.dataSource().equals(ds)) {
                     joinEntityDaoPool.put(key, dao);
                     return dao;

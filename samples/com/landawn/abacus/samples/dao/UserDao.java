@@ -8,15 +8,17 @@ import java.util.Queue;
 import java.util.Set;
 
 import com.landawn.abacus.condition.ConditionFactory.CF;
+import com.landawn.abacus.dao.CrudDao;
+import com.landawn.abacus.dao.Dao;
+import com.landawn.abacus.dao.JoinEntityHelper;
+import com.landawn.abacus.dao.Dao.Handler;
+import com.landawn.abacus.dao.Dao.PerfLog;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.samples.dao.handler.UserDaoHandlerA;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.ExceptionalStream;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.JdbcUtil;
-import com.landawn.abacus.util.JdbcUtil.Dao;
-import com.landawn.abacus.util.JdbcUtil.Dao.Handler;
-import com.landawn.abacus.util.JdbcUtil.Dao.PerfLog;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Propagation;
 import com.landawn.abacus.util.SQLBuilder;
@@ -30,7 +32,7 @@ import com.landawn.abacus.util.stream.Stream;
 @Handler(qualifier = "handler1", filter = ".*")
 @Handler(qualifier = "handler2", filter = ".*", isForInvokeFromOutsideOfDaoOnly = true)
 @Dao.Config(addLimitForSingleQuery = true, callGenerateIdForInsertIfIdNotSet = false)
-public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
+public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
 
     @NonDBOperation
     @Override

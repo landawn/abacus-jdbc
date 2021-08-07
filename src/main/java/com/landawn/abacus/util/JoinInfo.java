@@ -14,12 +14,13 @@ import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.core.DirtyMarkerUtil;
+import com.landawn.abacus.dao.Dao;
+import com.landawn.abacus.dao.DaoUtil;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.JdbcUtil.BiParametersSetter;
-import com.landawn.abacus.util.JdbcUtil.Dao;
 import com.landawn.abacus.util.SQLBuilder.PAC;
 import com.landawn.abacus.util.SQLBuilder.PLC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
@@ -32,7 +33,7 @@ import com.landawn.abacus.util.function.IntFunction;
 import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
-final class JoinInfo {
+public final class JoinInfo {
 
     static final Map<Class<? extends SQLBuilder>, Tuple4<Function<Collection<String>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>>> sqlBuilderFuncMap = new HashMap<>();
 
@@ -166,7 +167,7 @@ final class JoinInfo {
             final Class<?> middleEntityClass = tmpMiddleEntityClass;
 
             final List<Integer> dummyList = N.asList(1, 2, 3);
-            final Condition cond = CF.in(right[1], dummyList); // 
+            final Condition cond = CF.in(right[1], dummyList); //
             final String inCondToReplace = StringUtil.repeat("?", dummyList.size(), ", ");
 
             final List<String> middleSelectPropNames = N.asList(right[0].substring(right[0].indexOf('.') + 1));
@@ -574,7 +575,7 @@ final class JoinInfo {
 
     /**
      * For one-to-one or one-to-many join
-     * 
+     *
      * @param entities
      * @param joinPropEntities
      */
@@ -691,7 +692,7 @@ final class JoinInfo {
     private Object getJoinPropValue(PropInfo propInfo, Object entity) {
         final Object value = propInfo.getPropValue(entity);
 
-        if (allowJoiningByNullOrDefaultValue == false && JdbcUtil.isNullOrDefault(value)) {
+        if (allowJoiningByNullOrDefaultValue == false && DaoUtil.isNullOrDefault(value)) {
             throw new IllegalArgumentException("The join property value can't be null or default for property: " + propInfo.name
                     + ". Annotated the Dao class of " + entityClass + " with @Config{allowJoiningByNullOrDefaultValue = true} to avoid this exception");
         }

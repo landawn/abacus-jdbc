@@ -12,7 +12,7 @@
  * the License.
  */
 
-package com.landawn.abacus.util;
+package com.landawn.abacus.dao;
 
 import com.landawn.abacus.annotation.Beta;
 
