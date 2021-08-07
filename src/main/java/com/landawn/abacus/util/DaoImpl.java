@@ -54,22 +54,40 @@ import com.landawn.abacus.core.DirtyMarkerUtil;
 import com.landawn.abacus.dao.CrudDao;
 import com.landawn.abacus.dao.CrudDaoL;
 import com.landawn.abacus.dao.Dao;
-import com.landawn.abacus.dao.Dao.Bind;
-import com.landawn.abacus.dao.Dao.Config;
-import com.landawn.abacus.dao.Dao.NonDBOperation;
-import com.landawn.abacus.dao.Dao.OP;
-import com.landawn.abacus.dao.Dao.OutParameter;
-import com.landawn.abacus.dao.Dao.SqlField;
-import com.landawn.abacus.dao.DaoUtil;
-import com.landawn.abacus.dao.HandlerList;
 import com.landawn.abacus.dao.JoinEntityHelper;
 import com.landawn.abacus.dao.NoUpdateDao;
-import com.landawn.abacus.dao.OutParameterList;
+import com.landawn.abacus.dao.OP;
 import com.landawn.abacus.dao.UncheckedCrudDao;
 import com.landawn.abacus.dao.UncheckedCrudDaoL;
 import com.landawn.abacus.dao.UncheckedDao;
 import com.landawn.abacus.dao.UncheckedJoinEntityHelper;
 import com.landawn.abacus.dao.UncheckedNoUpdateDao;
+import com.landawn.abacus.dao.annotation.Bind;
+import com.landawn.abacus.dao.annotation.BindList;
+import com.landawn.abacus.dao.annotation.CacheResult;
+import com.landawn.abacus.dao.annotation.Call;
+import com.landawn.abacus.dao.annotation.Config;
+import com.landawn.abacus.dao.annotation.Define;
+import com.landawn.abacus.dao.annotation.DefineList;
+import com.landawn.abacus.dao.annotation.Delete;
+import com.landawn.abacus.dao.annotation.Handler;
+import com.landawn.abacus.dao.annotation.HandlerList;
+import com.landawn.abacus.dao.annotation.Insert;
+import com.landawn.abacus.dao.annotation.NamedDelete;
+import com.landawn.abacus.dao.annotation.NamedInsert;
+import com.landawn.abacus.dao.annotation.NamedSelect;
+import com.landawn.abacus.dao.annotation.NamedUpdate;
+import com.landawn.abacus.dao.annotation.NonDBOperation;
+import com.landawn.abacus.dao.annotation.OutParameter;
+import com.landawn.abacus.dao.annotation.OutParameterList;
+import com.landawn.abacus.dao.annotation.PerfLog;
+import com.landawn.abacus.dao.annotation.RefreshCache;
+import com.landawn.abacus.dao.annotation.Select;
+import com.landawn.abacus.dao.annotation.SqlField;
+import com.landawn.abacus.dao.annotation.SqlLogEnabled;
+import com.landawn.abacus.dao.annotation.Sqls;
+import com.landawn.abacus.dao.annotation.Transactional;
+import com.landawn.abacus.dao.annotation.Update;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
@@ -139,8 +157,8 @@ final class DaoImpl {
     private static final Map<Class<? extends Annotation>, BiFunction<Annotation, SQLMapper, QueryInfo>> sqlAnnoMap = new HashMap<>();
 
     static {
-        sqlAnnoMap.put(Dao.Select.class, (Annotation anno, SQLMapper sqlMapper) -> {
-            final Dao.Select tmp = (Dao.Select) anno;
+        sqlAnnoMap.put(Select.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final Select tmp = (Select) anno;
             int queryTimeout = tmp.queryTimeout();
             int fetchSize = tmp.fetchSize();
             final boolean isBatch = false;
@@ -179,8 +197,8 @@ final class DaoImpl {
             return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
-        sqlAnnoMap.put(Dao.Insert.class, (Annotation anno, SQLMapper sqlMapper) -> {
-            final Dao.Insert tmp = (Dao.Insert) anno;
+        sqlAnnoMap.put(Insert.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final Insert tmp = (Insert) anno;
             int queryTimeout = tmp.queryTimeout();
             final int fetchSize = -1;
             final boolean isBatch = tmp.isBatch();
@@ -223,8 +241,8 @@ final class DaoImpl {
             return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
-        sqlAnnoMap.put(Dao.Update.class, (Annotation anno, SQLMapper sqlMapper) -> {
-            final Dao.Update tmp = (Dao.Update) anno;
+        sqlAnnoMap.put(Update.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final Update tmp = (Update) anno;
             int queryTimeout = tmp.queryTimeout();
             final int fetchSize = -1;
             final boolean isBatch = tmp.isBatch();
@@ -267,8 +285,8 @@ final class DaoImpl {
             return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
-        sqlAnnoMap.put(Dao.Delete.class, (Annotation anno, SQLMapper sqlMapper) -> {
-            final Dao.Delete tmp = (Dao.Delete) anno;
+        sqlAnnoMap.put(Delete.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final Delete tmp = (Delete) anno;
             int queryTimeout = tmp.queryTimeout();
             final int fetchSize = -1;
             final boolean isBatch = tmp.isBatch();
@@ -311,8 +329,8 @@ final class DaoImpl {
             return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
-        sqlAnnoMap.put(Dao.NamedSelect.class, (Annotation anno, SQLMapper sqlMapper) -> {
-            final Dao.NamedSelect tmp = (Dao.NamedSelect) anno;
+        sqlAnnoMap.put(NamedSelect.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final NamedSelect tmp = (NamedSelect) anno;
             int queryTimeout = tmp.queryTimeout();
             int fetchSize = tmp.fetchSize();
             final boolean isBatch = false;
@@ -355,8 +373,8 @@ final class DaoImpl {
             return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
-        sqlAnnoMap.put(Dao.NamedInsert.class, (Annotation anno, SQLMapper sqlMapper) -> {
-            final Dao.NamedInsert tmp = (Dao.NamedInsert) anno;
+        sqlAnnoMap.put(NamedInsert.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final NamedInsert tmp = (NamedInsert) anno;
             int queryTimeout = tmp.queryTimeout();
             final int fetchSize = -1;
             final boolean isBatch = tmp.isBatch();
@@ -399,8 +417,8 @@ final class DaoImpl {
             return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
-        sqlAnnoMap.put(Dao.NamedUpdate.class, (Annotation anno, SQLMapper sqlMapper) -> {
-            final Dao.NamedUpdate tmp = (Dao.NamedUpdate) anno;
+        sqlAnnoMap.put(NamedUpdate.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final NamedUpdate tmp = (NamedUpdate) anno;
             int queryTimeout = tmp.queryTimeout();
             final int fetchSize = -1;
             final boolean isBatch = tmp.isBatch();
@@ -443,8 +461,8 @@ final class DaoImpl {
             return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
-        sqlAnnoMap.put(Dao.NamedDelete.class, (Annotation anno, SQLMapper sqlMapper) -> {
-            final Dao.NamedDelete tmp = (Dao.NamedDelete) anno;
+        sqlAnnoMap.put(NamedDelete.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final NamedDelete tmp = (NamedDelete) anno;
             int queryTimeout = tmp.queryTimeout();
             final int fetchSize = -1;
             final boolean isBatch = tmp.isBatch();
@@ -487,8 +505,8 @@ final class DaoImpl {
             return new QueryInfo(sql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter);
         });
 
-        sqlAnnoMap.put(Dao.Call.class, (Annotation anno, SQLMapper sqlMapper) -> {
-            final Dao.Call tmp = (Dao.Call) anno;
+        sqlAnnoMap.put(Call.class, (Annotation anno, SQLMapper sqlMapper) -> {
+            final Call tmp = (Call) anno;
             int queryTimeout = tmp.queryTimeout();
             final int fetchSize = -1;
             final boolean isBatch = false;
@@ -1344,7 +1362,7 @@ final class DaoImpl {
             final Class<?> paramTypeOne = paramTypes[stmtParamIndexes[0]];
 
             if (isCall) {
-                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamIndexes[0]]).select(Dao.Bind.class).map(Bind::value).first().orNull();
+                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamIndexes[0]]).select(Bind.class).map(Bind::value).first().orNull();
 
                 if (N.notNullOrEmpty(paramName)) {
                     parametersSetter = (preparedQuery, args) -> ((PreparedCallableQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
@@ -1364,7 +1382,7 @@ final class DaoImpl {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
                 }
             } else if (isNamedQuery) {
-                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamIndexes[0]]).select(Dao.Bind.class).map(Bind::value).first().orNull();
+                final String paramName = StreamEx.of(m.getParameterAnnotations()[stmtParamIndexes[0]]).select(Bind.class).map(Bind::value).first().orNull();
 
                 if (N.notNullOrEmpty(paramName)) {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
@@ -1426,7 +1444,7 @@ final class DaoImpl {
         } else {
             if (isCall) {
                 final String[] paramNames = IntStreamEx.of(stmtParamIndexes)
-                        .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).select(Dao.Bind.class).first().orElse(null))
+                        .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).select(Bind.class).first().orElse(null))
                         .skipNull()
                         .map(Bind::value)
                         .toArray(IntFunctions.ofStringArray());
@@ -1453,7 +1471,7 @@ final class DaoImpl {
             } else if (isNamedQuery) {
                 final String[] paramNames = IntStreamEx.of(stmtParamIndexes)
                         .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i])
-                                .select(Dao.Bind.class)
+                                .select(Bind.class)
                                 .first()
                                 .orElseThrow(() -> new UnsupportedOperationException("In method: " + fullClassMethodName + ", parameters[" + i + "]: "
                                         + ClassUtil.getSimpleClassName(m.getParameterTypes()[i])
@@ -1671,7 +1689,7 @@ final class DaoImpl {
         return keyExtractor;
     }
 
-    private static void logDaoMethodPerf(final Logger daoLogger, final String simpleClassMethodName, final Dao.PerfLog perfLogAnno, final long startTime) {
+    private static void logDaoMethodPerf(final Logger daoLogger, final String simpleClassMethodName, final PerfLog perfLogAnno, final long startTime) {
         if (JdbcUtil.isDaoMethodPerfLogAllowed && perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
             final long elapsedTime = System.currentTimeMillis() - startTime;
 
@@ -1716,21 +1734,21 @@ final class DaoImpl {
 
         final boolean addLimitForSingleQuery = StreamEx.of(allInterfaces)
                 .flatMapp(Class::getAnnotations)
-                .select(Dao.Config.class)
+                .select(Config.class)
                 .map(Config::addLimitForSingleQuery)
                 .first()
                 .orElse(false);
 
         final boolean callGenerateIdForInsert = StreamEx.of(allInterfaces)
                 .flatMapp(Class::getAnnotations)
-                .select(Dao.Config.class)
+                .select(Config.class)
                 .map(Config::callGenerateIdForInsertIfIdNotSet)
                 .first()
                 .orElse(false);
 
         final boolean callGenerateIdForInsertWithSql = StreamEx.of(allInterfaces)
                 .flatMapp(Class::getAnnotations)
-                .select(Dao.Config.class)
+                .select(Config.class)
                 .map(Config::callGenerateIdForInsertWithSqlIfIdNotSet)
                 .first()
                 .orElse(false);
@@ -1977,17 +1995,9 @@ final class DaoImpl {
                 ? (pq, entity) -> pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity), idPropInfo.dbType)
                 : (pq, entity) -> pq.settParameters(entity, objParamsSetter);
 
-        final Dao.CacheResult daoClassCacheResultAnno = StreamEx.of(allInterfaces)
-                .flatMapp(Class::getAnnotations)
-                .select(Dao.CacheResult.class)
-                .first()
-                .orNull();
+        final CacheResult daoClassCacheResultAnno = StreamEx.of(allInterfaces).flatMapp(Class::getAnnotations).select(CacheResult.class).first().orNull();
 
-        final Dao.RefreshCache daoClassRefreshCacheAnno = StreamEx.of(allInterfaces)
-                .flatMapp(Class::getAnnotations)
-                .select(Dao.RefreshCache.class)
-                .first()
-                .orNull();
+        final RefreshCache daoClassRefreshCacheAnno = StreamEx.of(allInterfaces).flatMapp(Class::getAnnotations).select(RefreshCache.class).first().orNull();
 
         if (NoUpdateDao.class.isAssignableFrom(daoInterface) || UncheckedNoUpdateDao.class.isAssignableFrom(daoInterface)) {
             // OK
@@ -2002,11 +2012,11 @@ final class DaoImpl {
         final MutableBoolean hasCacheResult = MutableBoolean.of(false);
         final MutableBoolean hasRefreshCache = MutableBoolean.of(false);
 
-        final List<Dao.Handler> daoClassHandlerList = StreamEx.of(allInterfaces)
+        final List<Handler> daoClassHandlerList = StreamEx.of(allInterfaces)
                 .reversed()
                 .flatMapp(Class::getAnnotations)
-                .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(HandlerList.class))
-                .flattMap(anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno) : N.asList(((HandlerList) anno).value()))
+                .filter(anno -> anno.annotationType().equals(Handler.class) || anno.annotationType().equals(HandlerList.class))
+                .flattMap(anno -> anno.annotationType().equals(Handler.class) ? N.asList((Handler) anno) : N.asList(((HandlerList) anno).value()))
                 .toList();
 
         final Map<String, JdbcUtil.Handler<?>> daoClassHandlerMap = StreamEx.of(allInterfaces)
@@ -2021,7 +2031,11 @@ final class DaoImpl {
                 })
                 .toMap(Field::getName, Fn.ff(it -> (JdbcUtil.Handler<?>) it.get(null)));
 
-        final Dao.Cache daoClassCacheAnno = StreamEx.of(allInterfaces).flatMapp(Class::getAnnotations).select(Dao.Cache.class).first().orNull();
+        final com.landawn.abacus.dao.annotation.Cache daoClassCacheAnno = StreamEx.of(allInterfaces)
+                .flatMapp(Class::getAnnotations)
+                .select(com.landawn.abacus.dao.annotation.Cache.class)
+                .first()
+                .orNull();
 
         final int capacity = daoClassCacheAnno == null ? 1000 : daoClassCacheAnno.capacity();
         final long evictDelay = daoClassCacheAnno == null ? 3000 : daoClassCacheAnno.evictDelay();
@@ -2043,7 +2057,7 @@ final class DaoImpl {
         //    final Map<String, ImmutableList<String>> sqlsCache = new ConcurrentHashMap<>(0);
 
         final Map<String, JoinInfo> joinEntityInfo = (JoinEntityHelper.class.isAssignableFrom(daoInterface)
-                || UncheckedJoinEntityHelper.class.isAssignableFrom(daoInterface)) ? DaoUtil.getEntityJoinInfo(daoInterface, entityClass) : null;
+                || UncheckedJoinEntityHelper.class.isAssignableFrom(daoInterface)) ? JoinInfo.getEntityJoinInfo(daoInterface, entityClass) : null;
 
         for (Method m : sqlMethods) {
             if (!Modifier.isPublic(m.getModifiers())) {
@@ -2061,7 +2075,7 @@ final class DaoImpl {
             final Class<?> returnType = m.getReturnType();
             final int paramLen = paramTypes.length;
 
-            final Dao.Sqls sqlsAnno = StreamEx.of(m.getAnnotations()).select(Dao.Sqls.class).onlyOne().orNull();
+            final Sqls sqlsAnno = StreamEx.of(m.getAnnotations()).select(Sqls.class).onlyOne().orNull();
             List<String> sqlList = null;
 
             if (sqlsAnno != null) {
@@ -4518,7 +4532,7 @@ final class DaoImpl {
                     final boolean isSingleParameter = queryInfo.isSingleParameter;
 
                     final boolean returnGeneratedKeys = isNoId == false
-                            && (sqlAnno.annotationType().equals(Dao.Insert.class) || sqlAnno.annotationType().equals(Dao.NamedInsert.class));
+                            && (sqlAnno.annotationType().equals(Insert.class) || sqlAnno.annotationType().equals(NamedInsert.class));
 
                     final boolean isCall = sqlAnno.annotationType().getSimpleName().endsWith("Call");
                     final boolean isNamedQuery = sqlAnno.annotationType().getSimpleName().startsWith("Named");
@@ -4536,7 +4550,7 @@ final class DaoImpl {
 
                         if (isNamedQuery) {
                             final List<String> tmp = IntStreamEx.range(0, paramLen)
-                                    .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).select(Dao.Bind.class).first().orNull())
+                                    .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).select(Bind.class).first().orNull())
                                     .skipNull()
                                     .map(Bind::value)
                                     .filter(it -> query.indexOf(":" + it) < 0)
@@ -4549,7 +4563,7 @@ final class DaoImpl {
                         }
                     } else {
                         if (IntStreamEx.range(0, paramLen)
-                                .anyMatch(i -> StreamEx.of(m.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(Dao.Bind.class)))) {
+                                .anyMatch(i -> StreamEx.of(m.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(Bind.class)))) {
                             throw new UnsupportedOperationException("@Bind parameters are defined for non-named query in method: " + fullClassMethodName);
                         }
                     }
@@ -4617,8 +4631,8 @@ final class DaoImpl {
 
                     final int[] defineParamIndexes = IntStreamEx.of(tmp3)
                             .filter(i -> N.anyMatch(m.getParameterAnnotations()[i],
-                                    it -> it.annotationType().equals(Dao.Define.class) || it.annotationType().equals(Dao.DefineList.class)
-                                            || it.annotationType().equals(Dao.BindList.class)))
+                                    it -> it.annotationType().equals(Define.class) || it.annotationType().equals(DefineList.class)
+                                            || it.annotationType().equals(BindList.class)))
                             .toArray();
 
                     final int defineParamLen = N.len(defineParamIndexes);
@@ -4632,7 +4646,7 @@ final class DaoImpl {
                         for (int i = 0; i < defineParamLen; i++) {
                             if (paramTypes[defineParamIndexes[i]].isArray() || Collection.class.isAssignableFrom(paramTypes[defineParamIndexes[i]])) {
                                 if (N.noneMatch(m.getParameterAnnotations()[defineParamIndexes[i]],
-                                        it -> it.annotationType().equals(Dao.DefineList.class) || it.annotationType().equals(Dao.BindList.class))) {
+                                        it -> it.annotationType().equals(DefineList.class) || it.annotationType().equals(BindList.class))) {
                                     throw new UnsupportedOperationException("Array/Collection type of parameter[" + i
                                             + "] must be annotated with @DefineList or @BindList, not @Define, in method: " + fullClassMethodName);
                                 }
@@ -4640,14 +4654,14 @@ final class DaoImpl {
                         }
 
                         if (IntStreamEx.of(defineParamIndexes)
-                                .filter(i -> N.anyMatch(m.getParameterAnnotations()[i], it -> it.annotationType().equals(Dao.DefineList.class)))
+                                .filter(i -> N.anyMatch(m.getParameterAnnotations()[i], it -> it.annotationType().equals(DefineList.class)))
                                 .anyMatch(i -> !Collection.class.isAssignableFrom(paramTypes[i]))) {
                             throw new UnsupportedOperationException(
                                     "Type of parameter annotated with @DefineList(method: " + fullClassMethodName + ") must be Collection.");
                         }
 
                         if (IntStreamEx.of(defineParamIndexes)
-                                .filter(i -> N.anyMatch(m.getParameterAnnotations()[i], it -> it.annotationType().equals(Dao.BindList.class)))
+                                .filter(i -> N.anyMatch(m.getParameterAnnotations()[i], it -> it.annotationType().equals(BindList.class)))
                                 .anyMatch(i -> !(Collection.class.isAssignableFrom(paramTypes[i]) || paramTypes[i].isArray()))) {
                             throw new UnsupportedOperationException(
                                     "Type of parameter annotated with @BindList(method: " + fullClassMethodName + ") must be Collection/Array.");
@@ -4655,7 +4669,7 @@ final class DaoImpl {
 
                         if ((isNamedQuery || isCall) && IntStreamEx.of(defineParamIndexes)
                                 .flatMapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]))
-                                .anyMatch(it -> Dao.BindList.class.isAssignableFrom(it.annotationType()))) {
+                                .anyMatch(it -> BindList.class.isAssignableFrom(it.annotationType()))) {
                             throw new UnsupportedOperationException(
                                     "@BindList on method: " + fullClassMethodName + " is not supported for named or callable query.");
                         }
@@ -4670,15 +4684,15 @@ final class DaoImpl {
 
                     final String[] defines = IntStreamEx.of(defineParamIndexes)
                             .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i])
-                                    .select(Dao.Define.class)
+                                    .select(Define.class)
                                     .map(it -> it.value())
                                     .first()
                                     .orElseGet(() -> StreamEx.of(m.getParameterAnnotations()[i])
-                                            .select(Dao.DefineList.class)
+                                            .select(DefineList.class)
                                             .map(it -> it.value())
                                             .first()
                                             .orElseGet(() -> StreamEx.of(m.getParameterAnnotations()[i])
-                                                    .select(Dao.BindList.class)
+                                                    .select(BindList.class)
                                                     .map(it -> it.value())
                                                     .first()
                                                     .get())))
@@ -4687,11 +4701,11 @@ final class DaoImpl {
 
                     final Function<Object, String>[] defineMappers = IntStreamEx.of(defineParamIndexes)
                             .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).map(it -> it.annotationType()).map(it -> {
-                                if (Dao.Define.class.isAssignableFrom(it)) {
+                                if (Define.class.isAssignableFrom(it)) {
                                     return defineParamMapper;
-                                } else if (Dao.DefineList.class.isAssignableFrom(it)) {
+                                } else if (DefineList.class.isAssignableFrom(it)) {
                                     return defineListParamMapper;
-                                } else if (Dao.BindList.class.isAssignableFrom(it)) {
+                                } else if (BindList.class.isAssignableFrom(it)) {
                                     return Collection.class.isAssignableFrom(paramTypes[i]) ? collBindListParamMapper : arrayBindListParamMapper;
                                 } else {
                                     return null;
@@ -4708,11 +4722,11 @@ final class DaoImpl {
 
                     final int[] stmtParamIndexes = IntStreamEx.of(tmp3)
                             .filter(i -> StreamEx.of(m.getParameterAnnotations()[i])
-                                    .noneMatch(it -> it.annotationType().equals(Dao.Define.class) || it.annotationType().equals(Dao.DefineList.class)))
+                                    .noneMatch(it -> it.annotationType().equals(Define.class) || it.annotationType().equals(DefineList.class)))
                             .toArray();
 
                     final boolean[] bindListParamFlags = IntStreamEx.of(stmtParamIndexes)
-                            .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(Dao.BindList.class)))
+                            .mapToObj(i -> StreamEx.of(m.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(BindList.class)))
                             .toListAndThen(it -> N.toBooleanArray(it));
 
                     final int stmtParamLen = stmtParamIndexes.length;
@@ -4731,8 +4745,8 @@ final class DaoImpl {
                                 "Don't set 'isSingleParameter' to true if the count of statement/query parameter is not one in method: " + fullClassMethodName);
                     }
 
-                    final List<Dao.OutParameter> outParameterList = StreamEx.of(m.getAnnotations())
-                            .select(Dao.OutParameter.class)
+                    final List<OutParameter> outParameterList = StreamEx.of(m.getAnnotations())
+                            .select(OutParameter.class)
                             .append(StreamEx.of(m.getAnnotations()).select(OutParameterList.class).flatMapp(OutParameterList::value))
                             .toList();
 
@@ -4801,7 +4815,7 @@ final class DaoImpl {
 
                     final boolean idDirtyMarkerReturnType = ClassUtil.isEntity(returnType) && DirtyMarker.class.isAssignableFrom(returnType);
 
-                    if (sqlAnno.annotationType().equals(Dao.Select.class) || sqlAnno.annotationType().equals(Dao.NamedSelect.class)
+                    if (sqlAnno.annotationType().equals(Select.class) || sqlAnno.annotationType().equals(NamedSelect.class)
                             || (isCall && !isUpdateReturnType)) {
 
                         final Throwables.BiFunction<AbstractPreparedQuery, Object[], Object, Exception> queryFunc = createQueryFunctionByMethod(m,
@@ -4847,7 +4861,7 @@ final class DaoImpl {
 
                             return result;
                         };
-                    } else if (sqlAnno.annotationType().equals(Dao.Insert.class) || sqlAnno.annotationType().equals(Dao.NamedInsert.class)) {
+                    } else if (sqlAnno.annotationType().equals(Insert.class) || sqlAnno.annotationType().equals(NamedInsert.class)) {
                         if (isNoId) {
                             if (!returnType.isAssignableFrom(void.class)) {
                                 throw new UnsupportedOperationException("The return type of insert operations(" + fullClassMethodName
@@ -4993,9 +5007,9 @@ final class DaoImpl {
                                 return void.class.equals(returnType) ? null : ids;
                             };
                         }
-                    } else if (sqlAnno.annotationType().equals(Dao.Update.class) || sqlAnno.annotationType().equals(Dao.Delete.class)
-                            || sqlAnno.annotationType().equals(Dao.NamedUpdate.class) || sqlAnno.annotationType().equals(Dao.NamedDelete.class)
-                            || (sqlAnno.annotationType().equals(Dao.Call.class) && isUpdateReturnType)) {
+                    } else if (sqlAnno.annotationType().equals(Update.class) || sqlAnno.annotationType().equals(Delete.class)
+                            || sqlAnno.annotationType().equals(NamedUpdate.class) || sqlAnno.annotationType().equals(NamedDelete.class)
+                            || (sqlAnno.annotationType().equals(Call.class) && isUpdateReturnType)) {
                         if (!isUpdateReturnType) {
                             throw new UnsupportedOperationException("The return type of update/delete operations(" + fullClassMethodName
                                     + ") only can be: int/Integer/long/Long/boolean/Boolean/void. It can't be: " + returnType);
@@ -5020,7 +5034,7 @@ final class DaoImpl {
                                 final long updatedRecordCount = isLargeUpdate ? preparedQuery.largeUpdate() : preparedQuery.update();
 
                                 if (idDirtyMarker) {
-                                    if (sqlAnno.annotationType().equals(Dao.NamedUpdate.class)) {
+                                    if (sqlAnno.annotationType().equals(NamedUpdate.class)) {
                                         ((DirtyMarker) args[stmtParamIndexes[0]]).markDirty(namedSql.getNamedParameters(), false);
                                     } else {
                                         ((DirtyMarker) args[stmtParamIndexes[0]]).markDirty(false);
@@ -5099,7 +5113,7 @@ final class DaoImpl {
                                 }
 
                                 if (N.firstOrNullIfEmpty(batchParameters) instanceof DirtyMarker) {
-                                    if (sqlAnno.annotationType().equals(Dao.NamedUpdate.class)) {
+                                    if (sqlAnno.annotationType().equals(NamedUpdate.class)) {
                                         for (Object e : batchParameters) {
                                             ((DirtyMarker) e).markDirty(namedSql.getNamedParameters(), false);
                                         }
@@ -5163,7 +5177,7 @@ final class DaoImpl {
 
                 // ignore
             } else {
-                final Dao.Transactional transactionalAnno = StreamEx.of(m.getAnnotations()).select(Dao.Transactional.class).last().orNull();
+                final Transactional transactionalAnno = StreamEx.of(m.getAnnotations()).select(Transactional.class).last().orNull();
 
                 //    if (transactionalAnno != null && Modifier.isAbstract(m.getModifiers())) {
                 //        throw new UnsupportedOperationException(
@@ -5171,22 +5185,22 @@ final class DaoImpl {
                 //                       + fullClassMethodName);
                 //    }
 
-                final Dao.SqlLogEnabled daoClassSqlLogAnno = StreamEx.of(allInterfaces)
+                final SqlLogEnabled daoClassSqlLogAnno = StreamEx.of(allInterfaces)
                         .flatMapp(Class::getAnnotations)
-                        .select(Dao.SqlLogEnabled.class)
+                        .select(SqlLogEnabled.class)
                         .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
                         .first()
                         .orNull();
 
-                final Dao.PerfLog daoClassPerfLogAnno = StreamEx.of(allInterfaces)
+                final PerfLog daoClassPerfLogAnno = StreamEx.of(allInterfaces)
                         .flatMapp(Class::getAnnotations)
-                        .select(Dao.PerfLog.class)
+                        .select(PerfLog.class)
                         .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
                         .first()
                         .orNull();
 
-                final Dao.SqlLogEnabled sqlLogAnno = StreamEx.of(m.getAnnotations()).select(Dao.SqlLogEnabled.class).last().orElse(daoClassSqlLogAnno);
-                final Dao.PerfLog perfLogAnno = StreamEx.of(m.getAnnotations()).select(Dao.PerfLog.class).last().orElse(daoClassPerfLogAnno);
+                final SqlLogEnabled sqlLogAnno = StreamEx.of(m.getAnnotations()).select(SqlLogEnabled.class).last().orElse(daoClassSqlLogAnno);
+                final PerfLog perfLogAnno = StreamEx.of(m.getAnnotations()).select(PerfLog.class).last().orElse(daoClassPerfLogAnno);
                 final boolean hasSqlLogAnno = sqlLogAnno != null;
                 final boolean hasPerfLogAnno = perfLogAnno != null;
 
@@ -5417,14 +5431,14 @@ final class DaoImpl {
                     };
                 }
 
-                final Dao.CacheResult cacheResultAnno = StreamEx.of(m.getAnnotations())
-                        .select(Dao.CacheResult.class)
+                final CacheResult cacheResultAnno = StreamEx.of(m.getAnnotations())
+                        .select(CacheResult.class)
                         .last()
                         .orElse((daoClassCacheResultAnno != null && N.anyMatch(daoClassCacheResultAnno.filter(), filterByMethodName)) ? daoClassCacheResultAnno
                                 : null);
 
-                final Dao.RefreshCache refreshResultAnno = StreamEx.of(m.getAnnotations())
-                        .select(Dao.RefreshCache.class)
+                final RefreshCache refreshResultAnno = StreamEx.of(m.getAnnotations())
+                        .select(RefreshCache.class)
                         .last()
                         .orElse((daoClassRefreshCacheAnno != null && N.anyMatch(daoClassRefreshCacheAnno.filter(), filterByMethodName))
                                 ? daoClassRefreshCacheAnno
@@ -5524,9 +5538,8 @@ final class DaoImpl {
                 }
 
                 final List<Tuple2<JdbcUtil.Handler, Boolean>> handlerList = StreamEx.of(m.getAnnotations())
-                        .filter(anno -> anno.annotationType().equals(Dao.Handler.class) || anno.annotationType().equals(HandlerList.class))
-                        .flattMap(
-                                anno -> anno.annotationType().equals(Dao.Handler.class) ? N.asList((Dao.Handler) anno) : N.asList(((HandlerList) anno).value()))
+                        .filter(anno -> anno.annotationType().equals(Handler.class) || anno.annotationType().equals(HandlerList.class))
+                        .flattMap(anno -> anno.annotationType().equals(Handler.class) ? N.asList((Handler) anno) : N.asList(((HandlerList) anno).value()))
                         .prepend(StreamEx.of(daoClassHandlerList).filter(h -> StreamEx.of(h.filter()).anyMatch(filterByMethodName)))
                         .map(handlerAnno -> Tuple.of((JdbcUtil.Handler) (N.notNullOrEmpty(handlerAnno.qualifier())
                                 ? daoClassHandlerMap.getOrDefault(handlerAnno.qualifier(), HandlerFactory.get(handlerAnno.qualifier()))

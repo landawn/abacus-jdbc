@@ -14,6 +14,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory;
 import com.landawn.abacus.core.DirtyMarkerUtil;
+import com.landawn.abacus.dao.annotation.NonDBOperation;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;

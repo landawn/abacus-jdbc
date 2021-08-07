@@ -1,0 +1,35 @@
+package com.landawn.abacus.dao.annotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+import com.landawn.abacus.util.JdbcUtil;
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target(value = { ElementType.METHOD, ElementType.TYPE })
+public @interface PerfLog {
+    /**
+     * start to log performance for sql if the execution time >= the specified(or default) execution time in milliseconds.
+     *
+     * @return
+     */
+    long minExecutionTimeForSql() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG; // 1000
+
+    int maxSqlLogLength() default JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH; // 1024
+
+    /**
+     * start to log performance for Dao operation/method if the execution time >= the specified(or default) execution time in milliseconds.
+     * @return
+     */
+    long minExecutionTimeForOperation() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG; // 3000
+
+    /**
+     * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
+     * It's only applied if target of annotation {@code PerfLog} is {@code Type}, and will be ignored if target is method.
+     *
+     * @return
+     */
+    String[] filter() default { ".*" };
+}

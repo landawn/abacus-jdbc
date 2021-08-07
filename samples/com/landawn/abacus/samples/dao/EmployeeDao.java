@@ -2,7 +2,7 @@ package com.landawn.abacus.samples.dao;
 
 import com.landawn.abacus.dao.CrudDao;
 import com.landawn.abacus.dao.JoinEntityHelper;
-import com.landawn.abacus.dao.Dao.SqlLogEnabled;
+import com.landawn.abacus.dao.annotation.SqlLogEnabled;
 import com.landawn.abacus.samples.entity.Employee;
 import com.landawn.abacus.util.SQLBuilder;
 

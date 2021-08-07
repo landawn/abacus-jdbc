@@ -14,8 +14,7 @@ import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.core.DirtyMarkerUtil;
-import com.landawn.abacus.dao.Dao;
-import com.landawn.abacus.dao.DaoUtil;
+import com.landawn.abacus.dao.annotation.Config;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -614,6 +613,21 @@ public final class JoinInfo {
         }
     }
 
+    public boolean isManyToManyJoin() {
+        return isManyToManyJoin;
+    }
+
+    private Object getJoinPropValue(PropInfo propInfo, Object entity) {
+        final Object value = propInfo.getPropValue(entity);
+
+        if (allowJoiningByNullOrDefaultValue == false && JdbcUtil.isNullOrDefault(value)) {
+            throw new IllegalArgumentException("The join property value can't be null or default for property: " + propInfo.name
+                    + ". Annotated the Dao class of " + entityClass + " with @Config{allowJoiningByNullOrDefaultValue = true} to avoid this exception");
+        }
+
+        return value;
+    }
+
     private final static Map<Class<?>, Map<Class<?>, Map<String, JoinInfo>>> daoEntityJoinInfoPool = new ConcurrentHashMap<>();
 
     public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass) {
@@ -627,7 +641,7 @@ public final class JoinInfo {
         Map<String, JoinInfo> joinInfoMap = entityJoinInfoMap.get(entityClass);
 
         if (joinInfoMap == null) {
-            final Dao.Config anno = daoClass.getAnnotation(Dao.Config.class);
+            final Config anno = daoClass.getAnnotation(Config.class);
             final boolean allowJoiningByNullOrDefaultValue = anno == null || anno.allowJoiningByNullOrDefaultValue() == false ? false : true;
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
 
@@ -683,20 +697,5 @@ public final class JoinInfo {
         }
 
         return joinEntityPropNamesByTypeMap.getOrDefault(joinPropEntityClass, N.<String> emptyList());
-    }
-
-    public boolean isManyToManyJoin() {
-        return isManyToManyJoin;
-    }
-
-    private Object getJoinPropValue(PropInfo propInfo, Object entity) {
-        final Object value = propInfo.getPropValue(entity);
-
-        if (allowJoiningByNullOrDefaultValue == false && DaoUtil.isNullOrDefault(value)) {
-            throw new IllegalArgumentException("The join property value can't be null or default for property: " + propInfo.name
-                    + ". Annotated the Dao class of " + entityClass + " with @Config{allowJoiningByNullOrDefaultValue = true} to avoid this exception");
-        }
-
-        return value;
     }
 }

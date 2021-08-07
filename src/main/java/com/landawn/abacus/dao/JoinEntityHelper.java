@@ -10,7 +10,7 @@ import javax.sql.DataSource;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.condition.Condition;
-import com.landawn.abacus.dao.Dao.NonDBOperation;
+import com.landawn.abacus.dao.annotation.NonDBOperation;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;

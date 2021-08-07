@@ -64,7 +64,6 @@ import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.cache.Cache;
-import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.core.RowDataSet;
 import com.landawn.abacus.core.Seid;
 import com.landawn.abacus.dao.CrudDao;
@@ -8563,9 +8562,6 @@ public final class JdbcUtil {
     }
 
     @SuppressWarnings("rawtypes")
-    public static final Map<Class<? extends Dao>, Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>>> daoPrepareQueryFuncPool = new ConcurrentHashMap<>();
-
-    @SuppressWarnings("rawtypes")
     private static final Map<Class<? extends Dao>, BiRowMapper<?>> idExtractorPool = new ConcurrentHashMap<>();
 
     public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
@@ -9071,5 +9067,9 @@ public final class JdbcUtil {
         } else {
             return className;
         }
+    }
+
+    public static boolean isNullOrDefault(final Object value) {
+        return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
     }
 }

@@ -9,6 +9,7 @@ import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.condition.Condition;
+import com.landawn.abacus.dao.annotation.NonDBOperation;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.NamedQuery;
 import com.landawn.abacus.util.ParsedSql;

@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.condition.Condition;
@@ -15,7 +16,6 @@ import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
-import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.JoinInfo;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamedQuery;
@@ -37,7 +37,7 @@ import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.function.Function;
 
 @Internal
-public final class DaoUtil {
+final class DaoUtil {
     private DaoUtil() {
         // singleton.
     }
@@ -187,11 +187,14 @@ public final class DaoUtil {
     }
 
     @SuppressWarnings("rawtypes")
+    static final Map<Class<? extends Dao>, Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>>> daoPrepareQueryFuncPool = new ConcurrentHashMap<>();
+
+    @SuppressWarnings("rawtypes")
     static Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>> getDaoPreparedQueryFunc(
             final Dao dao) {
         final Class<? extends Dao> daoInterface = dao.getClass();
 
-        Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>> tp = JdbcUtil.daoPrepareQueryFuncPool
+        Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>> tp = daoPrepareQueryFuncPool
                 .get(daoInterface);
 
         if (tp == null) {
@@ -246,7 +249,7 @@ public final class DaoUtil {
                 throw new IllegalArgumentException("SQLBuilder Type parameter must be: SQLBuilder.PSC/PAC/PLC/PSB. Can't be: " + sbc);
             }
 
-            JdbcUtil.daoPrepareQueryFuncPool.put(daoInterface, tp);
+            daoPrepareQueryFuncPool.put(daoInterface, tp);
         }
 
         return tp;
@@ -260,20 +263,11 @@ public final class DaoUtil {
         return sql.startsWith("insert ") || sql.startsWith("INSERT ") || StringUtil.startsWithIgnoreCase(StringUtil.trim(sql), "insert ");
     }
 
-    public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass) {
+    static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass) {
         return JoinInfo.getEntityJoinInfo(targetDaoInterface, targetEntityClass);
     }
 
     static List<String> getJoinEntityPropNamesByType(final Class<?> targetDaoInterface, final Class<?> targetEntityClass, final Class<?> joinEntityClass) {
         return JoinInfo.getJoinEntityPropNamesByType(targetDaoInterface, targetEntityClass, joinEntityClass);
-    }
-
-    public static boolean isNullOrDefault(final Object value) {
-        return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
-    }
-
-    @SuppressWarnings("rawtypes")
-    static final class EmptyHandler implements JdbcUtil.Handler<Dao> {
-
     }
 }

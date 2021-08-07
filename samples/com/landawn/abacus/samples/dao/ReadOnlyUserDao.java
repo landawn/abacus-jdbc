@@ -1,9 +1,9 @@
 package com.landawn.abacus.samples.dao;
 
 import com.landawn.abacus.dao.ReadOnlyCrudDao;
-import com.landawn.abacus.dao.Dao.Cache;
-import com.landawn.abacus.dao.Dao.CacheResult;
-import com.landawn.abacus.dao.Dao.RefreshCache;
+import com.landawn.abacus.dao.annotation.Cache;
+import com.landawn.abacus.dao.annotation.CacheResult;
+import com.landawn.abacus.dao.annotation.RefreshCache;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.SQLBuilder;
 

@@ -9,10 +9,25 @@ import java.util.Set;
 
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.dao.CrudDao;
-import com.landawn.abacus.dao.Dao;
 import com.landawn.abacus.dao.JoinEntityHelper;
-import com.landawn.abacus.dao.Dao.Handler;
-import com.landawn.abacus.dao.Dao.PerfLog;
+import com.landawn.abacus.dao.OP;
+import com.landawn.abacus.dao.annotation.Bind;
+import com.landawn.abacus.dao.annotation.BindList;
+import com.landawn.abacus.dao.annotation.Config;
+import com.landawn.abacus.dao.annotation.Define;
+import com.landawn.abacus.dao.annotation.Delete;
+import com.landawn.abacus.dao.annotation.Handler;
+import com.landawn.abacus.dao.annotation.NamedDelete;
+import com.landawn.abacus.dao.annotation.NamedInsert;
+import com.landawn.abacus.dao.annotation.NamedSelect;
+import com.landawn.abacus.dao.annotation.NamedUpdate;
+import com.landawn.abacus.dao.annotation.NonDBOperation;
+import com.landawn.abacus.dao.annotation.PerfLog;
+import com.landawn.abacus.dao.annotation.Select;
+import com.landawn.abacus.dao.annotation.SqlField;
+import com.landawn.abacus.dao.annotation.SqlLogEnabled;
+import com.landawn.abacus.dao.annotation.Sqls;
+import com.landawn.abacus.dao.annotation.Transactional;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.samples.dao.handler.UserDaoHandlerA;
 import com.landawn.abacus.samples.entity.User;
@@ -31,7 +46,7 @@ import com.landawn.abacus.util.stream.Stream;
 @Handler(type = UserDaoHandlerA.class)
 @Handler(qualifier = "handler1", filter = ".*")
 @Handler(qualifier = "handler2", filter = ".*", isForInvokeFromOutsideOfDaoOnly = true)
-@Dao.Config(addLimitForSingleQuery = true, callGenerateIdForInsertIfIdNotSet = false)
+@Config(addLimitForSingleQuery = true, callGenerateIdForInsertIfIdNotSet = false)
 public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
 
     @NonDBOperation
