@@ -234,6 +234,11 @@
 					<show>public</show>
 					<doclint>none</doclint>
 					<source>8</source>
+                    <sourceFileExcludes> 
+                        <exclude>/com/landawn/abacus/util/JoinInfo.java</exclude>
+                        <exclude>/com/landawn/abacus/util/DaoImpl.java</exclude>
+                        <exclude>/com/landawn/abacus/util/dao/DaoUtil.java</exclude>
+                    </sourceFileExcludes>
 				</configuration>
 
 				<executions>

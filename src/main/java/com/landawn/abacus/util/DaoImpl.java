@@ -44,6 +44,7 @@ import java.util.regex.Pattern;
 import com.landawn.abacus.DataSet;
 import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.EntityId;
+import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.cache.Cache;
 import com.landawn.abacus.cache.CacheFactory;
 import com.landawn.abacus.condition.Condition;
@@ -138,6 +139,7 @@ import com.landawn.abacus.util.stream.IntStream.IntStreamEx;
 import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
+@Internal
 @SuppressWarnings("deprecation")
 final class DaoImpl {
 

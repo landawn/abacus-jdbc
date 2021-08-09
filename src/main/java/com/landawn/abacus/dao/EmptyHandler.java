@@ -15,8 +15,10 @@
  */
 package com.landawn.abacus.dao;
 
+import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.util.JdbcUtil;
 
+@Internal
 @SuppressWarnings("rawtypes")
 public final class EmptyHandler implements JdbcUtil.Handler<Dao> {
 
