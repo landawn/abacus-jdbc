@@ -5556,45 +5556,6 @@ public final class JdbcUtil {
         return N.newLinkedHashMap(columnCount);
     }
 
-    @EqualsAndHashCode
-    @ToString
-    public static class OutParamResult {
-        private final List<OutParam> outParams;
-        private final Map<Object, Object> outParamValues;
-
-        OutParamResult(final List<OutParam> outParams, final Map<Object, Object> outParamValues) {
-            this.outParams = outParams;
-            this.outParamValues = outParamValues;
-        }
-
-        public <T> T getOutParamValue(final int parameterIndex) {
-            return (T) outParamValues.get(parameterIndex);
-        }
-
-        public <T> T getOutParamValue(final String parameterName) {
-            return (T) outParamValues.get(parameterName);
-        }
-
-        public Map<Object, Object> getOutParamValues() {
-            return outParamValues;
-        }
-
-        public List<OutParam> getOutParams() {
-            return outParams;
-        }
-    }
-
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Data
-    public static class OutParam {
-        private int parameterIndex;
-        private String parameterName;
-        private int sqlType;
-        private String typeName;
-        private int scale;
-    }
-
     /**
      * The Interface ParametersSetter.
      *
@@ -8412,6 +8373,45 @@ public final class JdbcUtil {
         @SuppressWarnings("unused")
         default void afterInvoke(final Object result, final P proxy, final Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             // empty action.
+        }
+    }
+
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Data
+    public static class OutParam {
+        private int parameterIndex;
+        private String parameterName;
+        private int sqlType;
+        private String typeName;
+        private int scale;
+    }
+
+    @EqualsAndHashCode
+    @ToString
+    public static class OutParamResult {
+        private final List<OutParam> outParams;
+        private final Map<Object, Object> outParamValues;
+
+        OutParamResult(final List<OutParam> outParams, final Map<Object, Object> outParamValues) {
+            this.outParams = outParams;
+            this.outParamValues = outParamValues;
+        }
+
+        public <T> T getOutParamValue(final int parameterIndex) {
+            return (T) outParamValues.get(parameterIndex);
+        }
+
+        public <T> T getOutParamValue(final String parameterName) {
+            return (T) outParamValues.get(parameterName);
+        }
+
+        public Map<Object, Object> getOutParamValues() {
+            return outParamValues;
+        }
+
+        public List<OutParam> getOutParams() {
+            return outParams;
         }
     }
 
