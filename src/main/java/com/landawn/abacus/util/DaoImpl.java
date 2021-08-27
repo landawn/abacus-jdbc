@@ -86,6 +86,7 @@ import com.landawn.abacus.dao.annotation.RefreshCache;
 import com.landawn.abacus.dao.annotation.Select;
 import com.landawn.abacus.dao.annotation.SqlField;
 import com.landawn.abacus.dao.annotation.SqlLogEnabled;
+import com.landawn.abacus.dao.annotation.SqlMapper;
 import com.landawn.abacus.dao.annotation.Sqls;
 import com.landawn.abacus.dao.annotation.Transactional;
 import com.landawn.abacus.dao.annotation.Update;
@@ -1709,10 +1710,10 @@ final class DaoImpl {
 
         N.checkArgument(daoInterface.isInterface(), "'daoInterface' must be an interface. It can't be {}", daoInterface);
 
-        final String key = ClassUtil.getCanonicalClassName(daoInterface) + "_" + System.identityHashCode(ds) + "_"
+        final String daoCacheKey = ClassUtil.getCanonicalClassName(daoInterface) + "_" + System.identityHashCode(ds) + "_"
                 + (sqlMapper == null ? "null" : System.identityHashCode(sqlMapper)) + "_" + (executor == null ? "null" : System.identityHashCode(executor));
 
-        TD daoInstance = (TD) daoPool.get(key);
+        TD daoInstance = (TD) daoPool.get(daoCacheKey);
 
         if (daoInstance != null) {
             return daoInstance;
@@ -1721,7 +1722,8 @@ final class DaoImpl {
         final Logger daoLogger = LoggerFactory.getLogger(daoInterface);
 
         final javax.sql.DataSource primaryDataSource = ds;
-        final SQLMapper newSQLMapper = sqlMapper == null ? new SQLMapper() : sqlMapper.copy();
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(ds);
+        final DBVersion dbVersion = dbProductInfo.getVersion();
 
         final Executor nonNullExecutor = executor == null ? JdbcUtil.asyncExecutor.getExecutor() : executor;
         final AsyncExecutor asyncExecutor = new AsyncExecutor(nonNullExecutor);
@@ -1731,8 +1733,22 @@ final class DaoImpl {
 
         final List<Class<?>> allInterfaces = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface)).prepend(daoInterface).toList();
 
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(ds);
-        final DBVersion dbVersion = dbProductInfo.getVersion();
+        final SQLMapper newSQLMapper = sqlMapper == null ? new SQLMapper() : sqlMapper.copy();
+
+        StreamEx.of(allInterfaces) //
+                .flatMapp(Class::getAnnotations)
+                .select(SqlMapper.class)
+                .map(SqlMapper::value)
+                .map(SQLMapper::fromFile)
+                .forEach(it -> {
+                    for (String key : it.keySet()) {
+                        if (newSQLMapper.get(key) != null) {
+                            throw new IllegalArgumentException("Duplicated sql keys: " + key + " defined in SQLMapper for Dao class: " + daoInterface);
+                        }
+
+                        newSQLMapper.add(key, it.get(key));
+                    }
+                });
 
         final boolean addLimitForSingleQuery = StreamEx.of(allInterfaces)
                 .flatMapp(Class::getAnnotations)
@@ -5618,7 +5634,7 @@ final class DaoImpl {
 
         daoInstance = N.newProxyInstance(interfaceClasses, h);
 
-        daoPool.put(key, daoInstance);
+        daoPool.put(daoCacheKey, daoInstance);
 
         return daoInstance;
     }
