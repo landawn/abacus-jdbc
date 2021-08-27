@@ -29,7 +29,7 @@ import java.lang.annotation.Target;
  *  <br />
  *  @MappedByKey("id")
  *  <br />
- *  Map&lt;String, User&gt; listUser(@BindList("ids") List<Integer> ids) throws SQLException;
+ *  Map&lt;Integer, User&gt; listUser(@BindList("ids") List<Integer> ids) throws SQLException;
  *
  * </code>
  * </p>
