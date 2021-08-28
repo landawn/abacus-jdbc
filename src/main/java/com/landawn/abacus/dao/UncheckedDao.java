@@ -834,14 +834,32 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
             throws UncheckedSQLException;
 
     /**
-    *
-    * @param cond
-    * @param rowConsumer
-    * @return
-    * @throws SQLException
-    * @see ConditionFactory
-    * @see ConditionFactory.CF
-    */
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowConsumer
+     * @return
+     * @throws SQLException
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     */
+    @SuppressWarnings("deprecation")
+    @Beta
+    @Override
+    default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer)
+            throws UncheckedSQLException {
+        forEach(selectPropNames, cond, RowConsumer.oneOff(targetEntityClass(), rowConsumer));
+    }
+
+    /**
+     *
+     * @param cond
+     * @param rowConsumer
+     * @return
+     * @throws SQLException
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     */
     @SuppressWarnings("deprecation")
     @Beta
     @Override

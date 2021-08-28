@@ -670,7 +670,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         final PropInfo propInfo = ParserUtil.getEntityInfo(cls).getPropInfo(joinEntityPropName);
         final List<T> newEntities = N.filter(entities, entity -> propInfo.getPropValue(entity) == null);
 
-        loadJoinEntities(newEntities, joinEntityPropName, selectPropNames);
+        if (N.notNullOrEmpty(newEntities)) {
+            loadJoinEntities(newEntities, joinEntityPropName, selectPropNames);
+        }
     }
 
     /**

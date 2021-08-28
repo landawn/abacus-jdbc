@@ -443,6 +443,18 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      *
+     * @param query
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    @NonDBOperation
+    default PreparedQuery prepareQueryForBigResult(final String query) throws SQLException {
+        return JdbcUtil.prepareQueryForBigResult(dataSource(), query);
+    }
+
+    /**
+     *
      * @param namedQuery
      * @return
      * @throws SQLException
@@ -569,6 +581,18 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
             throws SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, stmtCreator);
+    }
+
+    /**
+     *
+     * @param namedQuery
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQueryForBigResult(final String namedQuery) throws SQLException {
+        return JdbcUtil.prepareNamedQueryForBigResult(dataSource(), namedQuery);
     }
 
     /**
@@ -1732,6 +1756,21 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final BiRowFilter rowFilter, final BiRowConsumer rowConsumer)
             throws SQLException;
+
+    /**
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowConsumer
+     * @return
+     * @throws SQLException
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     */
+    @Beta
+    default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
+        forEach(selectPropNames, cond, RowConsumer.oneOff(targetEntityClass(), rowConsumer));
+    }
 
     /**
      *
