@@ -19,27 +19,38 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * For example:
  * <p>
  * <code>
  *
- *  @Select("SELECT first_name, last_name FROM user WHERE id in ({ids}")
+ *  @Select("SELECT id, first_name, last_name FROM user WHERE id in ({ids}")
  *  <br />
  *  @MappedByKey("id")
  *  <br />
- *  Map&lt;Integer, User&gt; listUser(@BindList("ids") List<Integer> ids) throws SQLException;
+ *  Map&lt;Long, User&gt; listUser(@BindList("ids") List<Integer> ids) throws SQLException;
  *
  * </code>
  * </p>
  *
- * @Deprecated not supported yet
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })
-@Deprecated
-// TODO
 public @interface MappedByKey {
+
+    /**
+     *
+     * @return
+     * @deprecated using keyName="id" for explicit call.
+     */
+    @Deprecated
     String value() default "";
+
+    String keyName() default "";
+
+    @SuppressWarnings("rawtypes")
+    Class<? extends Map> mapClass() default HashMap.class;
 }

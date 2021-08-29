@@ -4,6 +4,7 @@ import java.lang.reflect.Method;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 
@@ -17,6 +18,7 @@ import com.landawn.abacus.dao.annotation.Config;
 import com.landawn.abacus.dao.annotation.Define;
 import com.landawn.abacus.dao.annotation.Delete;
 import com.landawn.abacus.dao.annotation.Handler;
+import com.landawn.abacus.dao.annotation.MappedByKey;
 import com.landawn.abacus.dao.annotation.NamedDelete;
 import com.landawn.abacus.dao.annotation.NamedInsert;
 import com.landawn.abacus.dao.annotation.NamedSelect;
@@ -168,6 +170,10 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     @Select("select * from user where id > ?")
     Queue<User> listToCollection(int id) throws SQLException;
 
+    @Select(sql = "select * from user where id > ?")
+    @MappedByKey("id")
+    Map<Long, User> mappedById(int id) throws SQLException;
+
     @Select(value = "select first_name from user where id >= ?", fetchSize = 100)
     ExceptionalStream<String, SQLException> streamOne(long id);
 
@@ -203,9 +209,6 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
 
         @SqlField
         static final String sql_listToSet = PSC.selectFrom(User.class).where(CF.gt("id")).sql();
-
-        @SqlField
-        static final String selectUserById = PSC.selectFrom(User.class).where(CF.gt("id")).sql();
     }
 
     static final class Handlers {

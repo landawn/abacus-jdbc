@@ -74,6 +74,7 @@ import com.landawn.abacus.dao.annotation.Delete;
 import com.landawn.abacus.dao.annotation.Handler;
 import com.landawn.abacus.dao.annotation.HandlerList;
 import com.landawn.abacus.dao.annotation.Insert;
+import com.landawn.abacus.dao.annotation.MappedByKey;
 import com.landawn.abacus.dao.annotation.NamedDelete;
 import com.landawn.abacus.dao.annotation.NamedInsert;
 import com.landawn.abacus.dao.annotation.NamedSelect;
@@ -633,6 +634,8 @@ final class DaoImpl {
             }
 
             return true;
+        } else if (method.getAnnotation(MappedByKey.class) != null) {
+            return true;
         } else if (op != OP.DEFAULT) {
             return false;
         }
@@ -751,7 +754,8 @@ final class DaoImpl {
 
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Method method,
-            final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final OP op, final boolean isCall, final String fullClassMethodName) {
+            final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final OP op, final boolean isCall, final String fullClassMethodName,
+            final Class<?> targetEntityClass) {
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
         final Class<?> firstReturnEleType = getFirstReturnEleType(method);
@@ -1050,7 +1054,17 @@ final class DaoImpl {
             }
         }
 
+        final MappedByKey mappedBykeyAnno = method.getAnnotation(MappedByKey.class);
+        final String mappedByKey = mappedBykeyAnno == null ? null
+                : N.isNullOrEmpty(mappedBykeyAnno.value()) ? mappedBykeyAnno.keyName() : mappedBykeyAnno.value();
+        final Class<? extends Map> targetMapClass = N.isNullOrEmpty(mappedByKey) ? null : mappedBykeyAnno.mapClass();
+
         if (hasRowMapperOrExtractor) {
+            if (N.notNullOrEmpty(mappedByKey)) {
+                throw new UnsupportedOperationException(
+                        "RowMapper/ResultExtractor is not supported by method annotated with @MappedBykey: " + fullClassMethodName);
+            }
+
             if (!(op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll || op == OP.stream
                     || op == OP.streamAll || op == OP.DEFAULT)) {
                 throw new UnsupportedOperationException("RowMapper/ResultExtractor is not supported by OP: " + op + " in method: " + fullClassMethodName);
@@ -1224,7 +1238,13 @@ final class DaoImpl {
         } else if (isExists) {
             return (preparedQuery, args) -> (R) (Boolean) preparedQuery.exists();
         } else if (isListQuery) {
-            if (returnType.equals(List.class)) {
+            if (N.notNullOrEmpty(mappedByKey)) {
+                final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass).getPropInfo(mappedByKey);
+                final Function<Object, Object> keyMapper = t -> propInfo.getPropValue(t);
+
+                return (preparedQuery,
+                        args) -> (R) preparedQuery.stream(targetEntityClass).toMap(keyMapper, Fn.identity(), () -> N.newInstance(targetMapClass));
+            } else if (returnType.equals(List.class)) {
                 return (preparedQuery, args) -> (R) preparedQuery.list(firstReturnEleType);
             } else {
                 return (preparedQuery, args) -> (R) preparedQuery.stream(firstReturnEleType).toCollection(() -> N.newInstance(returnType));
@@ -1305,6 +1325,23 @@ final class DaoImpl {
                                 ? (Class<?>) ((ParameterizedType) firstActualTypeArgument).getRawType()
                                 : null));
         return firstReturnEleType;
+    }
+
+    private static Class<?> getSecondReturnEleType(final Method method) {
+        final java.lang.reflect.Type genericReturnType = method.getGenericReturnType();
+
+        final ParameterizedType parameterizedReturnType = genericReturnType instanceof ParameterizedType ? (ParameterizedType) genericReturnType : null;
+
+        final java.lang.reflect.Type secondActualTypeArgument = parameterizedReturnType == null || N.len(parameterizedReturnType.getActualTypeArguments()) < 2
+                ? null
+                : parameterizedReturnType.getActualTypeArguments()[1];
+
+        final Class<?> secondReturnEleType = secondActualTypeArgument == null ? null
+                : (secondActualTypeArgument instanceof Class ? (Class<?>) secondActualTypeArgument
+                        : (secondActualTypeArgument instanceof ParameterizedType && ((ParameterizedType) secondActualTypeArgument).getRawType() instanceof Class
+                                ? (Class<?>) ((ParameterizedType) secondActualTypeArgument).getRawType()
+                                : null));
+        return secondReturnEleType;
     }
 
     private static Class<?> getFirstReturnEleEleType(final Method method) {
@@ -4834,11 +4871,45 @@ final class DaoImpl {
 
                     final boolean idDirtyMarkerReturnType = ClassUtil.isEntity(returnType) && DirtyMarker.class.isAssignableFrom(returnType);
 
+                    final MappedByKey mappedBykeyAnno = m.getAnnotation(MappedByKey.class);
+                    final String mappedByKey = mappedBykeyAnno == null ? null
+                            : N.isNullOrEmpty(mappedBykeyAnno.value()) ? mappedBykeyAnno.keyName() : mappedBykeyAnno.value();
+
+                    if (mappedBykeyAnno != null && N.isNullOrEmpty(mappedByKey)) {
+                        throw new IllegalArgumentException("Mapped Key name can't be null or empty in method: " + fullClassMethodName);
+                    }
+
+                    if (N.notNullOrEmpty(mappedByKey)) {
+                        final Method mappedByKeyMethod = ClassUtil.getPropGetMethod(entityClass, mappedByKey);
+
+                        if (mappedByKeyMethod == null) {
+                            throw new IllegalArgumentException(
+                                    "No method found by mapped key: " + mappedByKey + " in entity class: " + ClassUtil.getCanonicalClassName(entityClass));
+                        }
+
+                        if (!(op == OP.DEFAULT || op == OP.list)) {
+                            throw new IllegalArgumentException("OP for method annotated by MappedByKey can't be: " + op + " in method: " + fullClassMethodName
+                                    + ". It must be OP.DEFAULT or OP.list");
+                        }
+
+                        final Class<?> firstReturnEleType = getFirstReturnEleType(m);
+                        final Class<?> secondReturnEleType = getSecondReturnEleType(m);
+
+                        if (!(Map.class.isAssignableFrom(returnType)
+                                && (firstReturnEleType != null && firstReturnEleType.isAssignableFrom(N.wrap(mappedByKeyMethod.getReturnType())))
+                                && (secondReturnEleType != null) && secondReturnEleType.isAssignableFrom(entityClass))) {
+                            throw new IllegalArgumentException(
+                                    "The return type of method(" + fullClassMethodName + ") annotated by MappedByKey must be: Map<? super "
+                                            + ClassUtil.getSimpleClassName(N.wrap(mappedByKeyMethod.getReturnType())) + ", ? super "
+                                            + ClassUtil.getSimpleClassName(entityClass) + ">. It can't be: " + m.getGenericReturnType());
+                        }
+                    }
+
                     if (sqlAnno.annotationType().equals(Select.class) || sqlAnno.annotationType().equals(NamedSelect.class)
                             || (isCall && !isUpdateReturnType)) {
 
                         final Throwables.BiFunction<AbstractPreparedQuery, Object[], Object, Exception> queryFunc = createQueryFunctionByMethod(m,
-                                hasRowMapperOrResultExtractor, hasRowFilter, op, isCall, fullClassMethodName);
+                                hasRowMapperOrResultExtractor, hasRowFilter, op, isCall, fullClassMethodName, entityClass);
 
                         // Getting ClassCastException. Not sure why query result is being casted Dao. It seems there is a bug in JDk compiler.
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);

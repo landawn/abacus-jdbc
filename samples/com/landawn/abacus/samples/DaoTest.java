@@ -23,6 +23,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
@@ -701,6 +702,10 @@ public class DaoTest {
 
             userDao.stream("firstName", CF.alwaysTrue()).forEach(Fn.println());
         }
+
+        Map<?, ?> map = userDao.mappedById(0);
+        N.println(map);
+        assertEquals(1, map.size());
 
         userDao.listUserByAnnoSql(0).forEach(Fn.println());
 
