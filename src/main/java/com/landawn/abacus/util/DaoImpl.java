@@ -4124,8 +4124,7 @@ final class DaoImpl {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedUpdateByIdSQL).closeAfterExecution(false)) {
                                         result = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize) //
-                                                .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp).batchUpdate()))
-                                                .orZero();
+                                                .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp).batchUpdate()));
                                     }
 
                                     tran.commit();
@@ -4167,8 +4166,7 @@ final class DaoImpl {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(query).closeAfterExecution(false)) {
                                         result = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize) //
-                                                .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp).batchUpdate()))
-                                                .orZero();
+                                                .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp).batchUpdate()));
                                     }
 
                                     tran.commit();
@@ -4264,8 +4262,7 @@ final class DaoImpl {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedDeleteByIdSQL).closeAfterExecution(false)) {
                                         result = ExceptionalStream.of(idsOrEntities)
                                                 .splitToList(batchSize)
-                                                .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp, paramSetter).batchUpdate()))
-                                                .orZero();
+                                                .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp, paramSetter).batchUpdate()));
                                     }
 
                                     tran.commit();
@@ -4544,7 +4541,7 @@ final class DaoImpl {
                                             return joinEntityDao.prepareQuery(tp._1.apply(bp.size())).setParameters(bp, tp._3).update()
                                                     + joinEntityDao.prepareQuery(tp._2.apply(bp.size())).setParameters(bp, tp._3).update();
                                         }
-                                    }).orZero();
+                                    });
 
                                     tran.commit();
                                 } finally {
@@ -5184,15 +5181,13 @@ final class DaoImpl {
                                                         .splitToList(batchSize) //
                                                         .sumLong(bp -> isLargeUpdate
                                                                 ? N.sum(preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).largeBatchUpdate())
-                                                                : N.sum(preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).batchUpdate()))
-                                                        .orZero();
+                                                                : N.sum(preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).batchUpdate()));
                                             } else {
                                                 updatedRecordCount = ExceptionalStream.of((Collection<List<?>>) (Collection) batchParameters)
                                                         .splitToList(batchSize) //
                                                         .sumLong(bp -> isLargeUpdate //
                                                                 ? N.sum(preparedQuery.addBatchParameters(bp).largeBatchUpdate())
-                                                                : N.sum(preparedQuery.addBatchParameters(bp).batchUpdate()))
-                                                        .orZero();
+                                                                : N.sum(preparedQuery.addBatchParameters(bp).batchUpdate()));
                                             }
                                         }
 
