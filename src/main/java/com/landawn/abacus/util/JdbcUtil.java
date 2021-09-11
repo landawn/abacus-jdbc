@@ -8747,7 +8747,7 @@ public final class JdbcUtil {
      *          <li>Or else if the return type of the method is {@code ExceptionalStream/Stream}, {@code PreparedQuery#stream(Class)} will be called.</li>
      *      </ul>
      *      <ul>
-     *          <li>Or else if the return type of the method is {@code Map} or {@code Entity} class with {@code getter/setter} methods, {@code PreparedQuery#findFirst(Class).orNull()} will be called.</li>
+     *          <li>Or else if the return type of the method is {@code Map} or {@code Entity} class with {@code getter/setter} methods, {@code PreparedQuery#findFirst(Class).orElseNull()} will be called.</li>
      *      </ul>
      *      <ul>
      *          <li>Or else if the return type of the method is {@code Optional}:</li>
@@ -11321,7 +11321,7 @@ public final class JdbcUtil {
             N.checkArgNotNull(entity, "entity");
             N.checkArgNotNull(cond, "cond");
 
-            final T dbEntity = findOnlyOne(cond).orNull();
+            final T dbEntity = findOnlyOne(cond).orElseNull();
 
             if (dbEntity == null) {
                 save(entity);
@@ -11946,7 +11946,7 @@ public final class JdbcUtil {
             N.checkArgNotNull(entity, "entity");
             N.checkArgNotNull(cond, "cond");
 
-            final T dbEntity = findOnlyOne(cond).orNull();
+            final T dbEntity = findOnlyOne(cond).orElseNull();
 
             if (dbEntity == null) {
                 insert(entity);
@@ -16323,7 +16323,7 @@ public final class JdbcUtil {
         default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {
             N.checkArgNotNull(cond, "cond");
 
-            final T dbEntity = findOnlyOne(cond).orNull();
+            final T dbEntity = findOnlyOne(cond).orElseNull();
 
             if (dbEntity == null) {
                 save(entity);
@@ -16918,7 +16918,7 @@ public final class JdbcUtil {
         default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {
             N.checkArgNotNull(cond, "cond");
 
-            final T dbEntity = findOnlyOne(cond).orNull();
+            final T dbEntity = findOnlyOne(cond).orElseNull();
 
             if (dbEntity == null) {
                 insert(entity);

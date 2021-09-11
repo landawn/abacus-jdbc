@@ -1555,7 +1555,7 @@ public class SQLExecutor {
 
             return result;
         } catch (SQLException e) {
-            String msg = ExceptionUtil.getMessage(e) + ". [SQL] " + parsedSql.sql();
+            String msg = ExceptionUtil.getErrorMessage(e) + ". [SQL] " + parsedSql.sql();
             throw new UncheckedSQLException(msg, e);
         } finally {
             close(stmt);
@@ -1774,7 +1774,7 @@ public class SQLExecutor {
                 }
             }
 
-            String msg = ExceptionUtil.getMessage(e) + ". [SQL] " + parsedSql.sql();
+            String msg = ExceptionUtil.getErrorMessage(e) + ". [SQL] " + parsedSql.sql();
             throw new UncheckedSQLException(msg, e);
         } finally {
             if ((conn == null) && (len > batchSize)) {
@@ -4150,7 +4150,7 @@ public class SQLExecutor {
 
             noException = true;
         } catch (SQLException e) {
-            String msg = ExceptionUtil.getMessage(e) + ". [SQL] " + parsedSql.sql();
+            String msg = ExceptionUtil.getErrorMessage(e) + ". [SQL] " + parsedSql.sql();
             throw new UncheckedSQLException(msg, e);
         } finally {
             if (noException && result instanceof ResultSet) {
@@ -4837,7 +4837,7 @@ public class SQLExecutor {
 
             return JdbcUtil.execute(stmt);
         } catch (SQLException e) {
-            String msg = ExceptionUtil.getMessage(e) + ". [SQL] " + parsedSql.sql();
+            String msg = ExceptionUtil.getErrorMessage(e) + ". [SQL] " + parsedSql.sql();
             throw new UncheckedSQLException(msg, e);
         } finally {
             close(stmt);
@@ -7757,7 +7757,7 @@ public class SQLExecutor {
         public T upsert(final T entity, final Condition whereCause) {
             N.checkArgNotNull(whereCause, "whereCause");
 
-            final T dbEntity = findFirst(whereCause).orNull();
+            final T dbEntity = findFirst(whereCause).orElseNull();
 
             if (dbEntity == null) {
                 insert(entity);

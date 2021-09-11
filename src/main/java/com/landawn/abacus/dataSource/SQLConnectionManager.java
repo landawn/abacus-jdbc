@@ -220,7 +220,7 @@ public final class SQLConnectionManager extends AbstractConnectionManager {
                 // ignore;
 
                 if (logger.isWarnEnabled()) {
-                    logger.warn(ExceptionUtil.getMessage(e));
+                    logger.warn(ExceptionUtil.getErrorMessage(e));
                 }
             } finally {
                 if (conn == null) {
@@ -270,7 +270,7 @@ public final class SQLConnectionManager extends AbstractConnectionManager {
             detroyConnection(poolableConn);
 
             if (logger.isWarnEnabled()) {
-                logger.warn(ExceptionUtil.getMessage(e));
+                logger.warn(ExceptionUtil.getErrorMessage(e));
             }
         }
     }
@@ -299,7 +299,7 @@ public final class SQLConnectionManager extends AbstractConnectionManager {
                 // ignore;
 
                 if (logger.isWarnEnabled()) {
-                    logger.warn(ExceptionUtil.getMessage(e));
+                    logger.warn(ExceptionUtil.getErrorMessage(e));
                 }
             }
         }
@@ -344,7 +344,7 @@ public final class SQLConnectionManager extends AbstractConnectionManager {
                     // ignore
 
                     if (logger.isWarnEnabled()) {
-                        logger.warn(ExceptionUtil.getMessage(e));
+                        logger.warn(ExceptionUtil.getErrorMessage(e));
                     }
                 }
 
@@ -373,7 +373,7 @@ public final class SQLConnectionManager extends AbstractConnectionManager {
                             // ignore
 
                             if (logger.isWarnEnabled()) {
-                                logger.warn(ExceptionUtil.getMessage(e));
+                                logger.warn(ExceptionUtil.getErrorMessage(e));
                             }
                         }
                     }
@@ -433,7 +433,7 @@ public final class SQLConnectionManager extends AbstractConnectionManager {
                 return conn;
             } catch (SQLException e) {
                 String msg = "Faied to create new connection for data source '" + url + "'." + " [Active connection number]: " + (xpool.size() + 1) + ". "
-                        + ExceptionUtil.getMessage(e);
+                        + ExceptionUtil.getErrorMessage(e);
                 throw new UncheckedSQLException(msg, e);
             }
         }
@@ -507,7 +507,7 @@ public final class SQLConnectionManager extends AbstractConnectionManager {
             // ignore;
 
             if (logger.isWarnEnabled()) {
-                logger.warn(ExceptionUtil.getMessage(e));
+                logger.warn(ExceptionUtil.getErrorMessage(e));
             }
 
             return false;

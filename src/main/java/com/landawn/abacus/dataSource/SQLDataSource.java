@@ -193,7 +193,7 @@ public class SQLDataSource extends AbstractDataSource implements com.landawn.aba
             } catch (SQLException e) {
 
                 if (logger.isWarnEnabled()) {
-                    logger.warn(ExceptionUtil.getMessage(e));
+                    logger.warn(ExceptionUtil.getErrorMessage(e));
                 }
             }
         }
@@ -327,7 +327,7 @@ public class SQLDataSource extends AbstractDataSource implements com.landawn.aba
                 // ignore;
 
                 if (logger.isWarnEnabled()) {
-                    logger.warn(ExceptionUtil.getMessage(e));
+                    logger.warn(ExceptionUtil.getErrorMessage(e));
                 }
 
                 try {
@@ -336,7 +336,7 @@ public class SQLDataSource extends AbstractDataSource implements com.landawn.aba
                     // ignore;
 
                     if (logger.isWarnEnabled()) {
-                        logger.warn(ExceptionUtil.getMessage(e1));
+                        logger.warn(ExceptionUtil.getErrorMessage(e1));
                     }
                 } finally {
                     persistentConnection = getReadOnlyConnection();

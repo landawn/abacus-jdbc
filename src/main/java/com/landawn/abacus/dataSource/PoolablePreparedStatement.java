@@ -115,7 +115,7 @@ class PoolablePreparedStatement extends AbstractPoolable implements PreparedStat
                 destroy();
 
                 if (logger.isWarnEnabled()) {
-                    logger.warn(ExceptionUtil.getMessage(e));
+                    logger.warn(ExceptionUtil.getErrorMessage(e));
                 }
             }
         }
@@ -160,7 +160,7 @@ class PoolablePreparedStatement extends AbstractPoolable implements PreparedStat
             // ignore;
 
             if (logger.isWarnEnabled()) {
-                logger.warn(ExceptionUtil.getMessage(e));
+                logger.warn(ExceptionUtil.getErrorMessage(e));
             }
         }
     }

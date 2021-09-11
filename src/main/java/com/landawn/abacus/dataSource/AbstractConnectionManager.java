@@ -285,7 +285,7 @@ abstract class AbstractConnectionManager implements ConnectionManager {
 
             return (DataSource) ctx.lookup(jndiName);
         } catch (NamingException e) {
-            throw new UncheckedException("Failed to bind to JNDI: " + jndiName + ". " + ExceptionUtil.getMessage(e), e);
+            throw new UncheckedException("Failed to bind to JNDI: " + jndiName + ". " + ExceptionUtil.getErrorMessage(e), e);
         }
     }
 

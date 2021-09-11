@@ -117,7 +117,7 @@ class PoolableConnection extends AbstractPoolable implements Connection {
                 stmt.destroy();
 
                 if (logger.isWarnEnabled()) {
-                    logger.warn(ExceptionUtil.getMessage(e));
+                    logger.warn(ExceptionUtil.getErrorMessage(e));
                 }
             }
         }
@@ -250,7 +250,7 @@ class PoolableConnection extends AbstractPoolable implements Connection {
                 // ignore;
 
                 if (logger.isWarnEnabled()) {
-                    logger.warn(ExceptionUtil.getMessage(e));
+                    logger.warn(ExceptionUtil.getErrorMessage(e));
                 }
             } finally {
                 if (connManager != null) {
@@ -421,7 +421,7 @@ class PoolableConnection extends AbstractPoolable implements Connection {
                 destroy();
 
                 if (logger.isWarnEnabled()) {
-                    logger.warn(ExceptionUtil.getMessage(e));
+                    logger.warn(ExceptionUtil.getErrorMessage(e));
                 }
             }
         }

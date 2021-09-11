@@ -134,7 +134,7 @@ class DBCP2ConnectionManager extends AbstractConnectionManager {
         try {
             return ds.getConnection();
         } catch (SQLException e) {
-            throw new UncheckedSQLException(ExceptionUtil.getMessage(e), e);
+            throw new UncheckedSQLException(ExceptionUtil.getErrorMessage(e), e);
         }
     }
 
@@ -148,7 +148,7 @@ class DBCP2ConnectionManager extends AbstractConnectionManager {
             try {
                 conn.close();
             } catch (SQLException e) {
-                throw new UncheckedSQLException(ExceptionUtil.getMessage(e), e);
+                throw new UncheckedSQLException(ExceptionUtil.getErrorMessage(e), e);
             }
         }
     }
@@ -171,7 +171,7 @@ class DBCP2ConnectionManager extends AbstractConnectionManager {
             try {
                 bds.close();
             } catch (SQLException e) {
-                throw new UncheckedSQLException(ExceptionUtil.getMessage(e), e);
+                throw new UncheckedSQLException(ExceptionUtil.getErrorMessage(e), e);
             }
         }
     }
