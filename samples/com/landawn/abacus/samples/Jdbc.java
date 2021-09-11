@@ -111,7 +111,7 @@ public class Jdbc {
 
         final String sql_project_drop_table = "DROP TABLE IF EXISTS project";
         final String sql_project_creat_table = "CREATE TABLE IF NOT EXISTS project (" //
-                + "project_id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY, " // 
+                + "project_id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
                 + "title varchar(50) DEFAULT NULL)";
 
         sqlExecutor.execute(sql_project_drop_table);
@@ -251,7 +251,7 @@ public class Jdbc {
         sqlExecutor.insert(sql, user);
 
         sql = NSC.selectFrom(User.class).where("id = :id").sql();
-        User userFromDB = sqlExecutor.get(User.class, sql, 100).orNull();
+        User userFromDB = sqlExecutor.get(User.class, sql, 100).orElseNull();
         System.out.println(userFromDB);
 
         sql = NSC.update(User.class).set("firstName", "lastName").where("id = :id").sql();
