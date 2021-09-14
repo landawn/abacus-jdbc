@@ -613,7 +613,7 @@ final class DaoImpl {
     }
 
     private static final Set<String> singleQueryPrefix = N.asSet("get", "findFirst", "findOne", "findOnlyOne", "selectFirst", "selectOne", "selectOnlyOne",
-            "exist", "notExist", "has", "is");
+            "exist", "notExist", "is");
 
     /**
      * Checks if is list query.
@@ -705,8 +705,7 @@ final class DaoImpl {
                 && ((methodName.startsWith("exists") && (methodName.length() == 6 || Character.isUpperCase(methodName.charAt(6))))
                         || (methodName.startsWith("exist") && (methodName.length() == 5 || Character.isUpperCase(methodName.charAt(5))))
                         || (methodName.startsWith("notExists") && (methodName.length() == 9 || Character.isUpperCase(methodName.charAt(9))))
-                        || (methodName.startsWith("notExist") && (methodName.length() == 8 || Character.isUpperCase(methodName.charAt(8))))
-                        || (methodName.startsWith("has") && (methodName.length() == 3 || Character.isUpperCase(methodName.charAt(3)))));
+                        || (methodName.startsWith("notExist") && (methodName.length() == 8 || Character.isUpperCase(methodName.charAt(8)))));
     }
 
     private static boolean isFindOnlyOne(final Method method, final OP op) {

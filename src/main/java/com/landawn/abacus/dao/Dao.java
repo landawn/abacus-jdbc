@@ -167,7 +167,7 @@ import com.landawn.abacus.util.function.Consumer;
  *          <li>Or else if the return type of the method is {@code List}, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"/"findOnlyOne"}, {@code PreparedQuery#list(Class)} will be called.</li>
  *      </ul>
  *      <ul>
- *          <li>Or else if the return type of the method is {@code boolean/Boolean}, and the method name starts with {@code "exist"/"exists"/"notExists"/"has"}, {@code PreparedQuery#exist()} will be called.</li>
+ *          <li>Or else if the return type of the method is {@code boolean/Boolean}, and the method name starts with {@code "exist"/"exists"/"notExist"/"notExists"}, {@code PreparedQuery#exists()} or {@code PreparedQuery#notExists()} will be called.</li>
  *      </ul>
  *      <ul>
  *          <li>Or else, {@code PreparedQuery#queryForSingleResult(Class).orElse(N.defaultValueOf(returnType)} will be called.</li>
