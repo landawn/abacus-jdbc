@@ -1236,7 +1236,11 @@ final class DaoImpl {
                 }
             }
         } else if (isExists) {
-            return (preparedQuery, args) -> (R) (Boolean) preparedQuery.exists();
+            if (method.getName().startsWith("not")) {
+                return (preparedQuery, args) -> (R) (Boolean) preparedQuery.notExists();
+            } else {
+                return (preparedQuery, args) -> (R) (Boolean) preparedQuery.exists();
+            }
         } else if (isListQuery) {
             if (N.notNullOrEmpty(mappedByKey)) {
                 final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass).getPropInfo(mappedByKey);

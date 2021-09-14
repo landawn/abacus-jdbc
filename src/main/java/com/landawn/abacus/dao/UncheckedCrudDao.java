@@ -428,7 +428,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
-     * Gets the t.
      *
      * @param id
      * @return
@@ -439,7 +438,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     T gett(final ID id) throws DuplicatedResultException, UncheckedSQLException;
 
     /**
-     * Gets the t.
+     *
      * @param id
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
      *

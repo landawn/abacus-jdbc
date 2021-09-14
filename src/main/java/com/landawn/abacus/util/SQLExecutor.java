@@ -1932,7 +1932,6 @@ public final class SQLExecutor {
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param targetClass
@@ -1948,7 +1947,6 @@ public final class SQLExecutor {
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param targetClass
@@ -1966,7 +1964,6 @@ public final class SQLExecutor {
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param targetClass
@@ -1984,7 +1981,6 @@ public final class SQLExecutor {
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param targetClass
@@ -2003,7 +1999,6 @@ public final class SQLExecutor {
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param targetClass
@@ -2020,7 +2015,6 @@ public final class SQLExecutor {
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param targetClass
@@ -2039,7 +2033,6 @@ public final class SQLExecutor {
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param targetClass
@@ -2058,7 +2051,6 @@ public final class SQLExecutor {
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param targetClass
@@ -2104,7 +2096,6 @@ public final class SQLExecutor {
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param sql
@@ -2120,7 +2111,6 @@ public final class SQLExecutor {
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param sql
@@ -2138,7 +2128,6 @@ public final class SQLExecutor {
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param sql
@@ -2156,7 +2145,6 @@ public final class SQLExecutor {
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param sql
@@ -2175,7 +2163,6 @@ public final class SQLExecutor {
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param conn
@@ -2193,7 +2180,6 @@ public final class SQLExecutor {
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param conn
@@ -2211,7 +2197,6 @@ public final class SQLExecutor {
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param conn

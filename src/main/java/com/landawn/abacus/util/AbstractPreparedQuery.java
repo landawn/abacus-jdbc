@@ -2624,7 +2624,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param targetClass
@@ -2639,7 +2638,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param rowMapper
@@ -2655,7 +2653,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param rowMapper
@@ -2730,7 +2727,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param targetClass
@@ -2760,7 +2756,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param rowMapper
@@ -2792,7 +2787,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Gets the t.
      *
      * @param <T>
      * @param rowMapper

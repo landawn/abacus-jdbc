@@ -406,7 +406,6 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Gets the t.
      *
      * @param id
      * @return
@@ -416,7 +415,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     T gett(final ID id) throws DuplicatedResultException, SQLException;
 
     /**
-     * Gets the t.
+     *
      * @param id
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
      *
