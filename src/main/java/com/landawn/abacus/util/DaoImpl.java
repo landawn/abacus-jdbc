@@ -613,7 +613,7 @@ final class DaoImpl {
     }
 
     private static final Set<String> singleQueryPrefix = N.asSet("get", "findFirst", "findOne", "findOnlyOne", "selectFirst", "selectOne", "selectOnlyOne",
-            "exist", "notExist", "is");
+            "exist", "notExist", "has", "is");
 
     /**
      * Checks if is list query.
