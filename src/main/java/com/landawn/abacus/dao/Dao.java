@@ -29,6 +29,7 @@ import com.landawn.abacus.DataSet;
 import com.landawn.abacus.DirtyMarker;
 import com.landawn.abacus.IsolationLevel;
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.LazyEvaluation;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory;
@@ -241,15 +242,6 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      *
      * @return
-     * @deprecated for internal use only.
-     */
-    @Deprecated
-    @NonDBOperation
-    Class<T> targetEntityClass();
-
-    /**
-     *
-     * @return
      */
     @NonDBOperation
     javax.sql.DataSource dataSource();
@@ -265,10 +257,21 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      *
+     * @return
      * @deprecated for internal use only.
      */
     @Deprecated
     @NonDBOperation
+    @Internal
+    Class<T> targetEntityClass();
+
+    /**
+     *
+     * @deprecated for internal use only.
+     */
+    @Deprecated
+    @NonDBOperation
+    @Internal
     Executor executor();
 
     /**
@@ -277,6 +280,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @Deprecated
     @NonDBOperation
+    @Internal
     AsyncExecutor asyncExecutor();
 
     //    @NonDBOperation

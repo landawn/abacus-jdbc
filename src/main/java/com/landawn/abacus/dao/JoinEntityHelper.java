@@ -56,8 +56,8 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @deprecated internal only
      */
     @Deprecated
-    @Internal
     @NonDBOperation
+    @Internal
     Class<T> targetEntityClass();
 
     /**
@@ -66,8 +66,8 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @deprecated internal only
      */
     @Deprecated
-    @Internal
     @NonDBOperation
+    @Internal
     Class<TD> targetDaoInterface();
 
     /**
@@ -76,8 +76,8 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @deprecated internal only
      */
     @Deprecated
-    @Internal
     @NonDBOperation
+    @Internal
     Executor executor();
 
     /**
