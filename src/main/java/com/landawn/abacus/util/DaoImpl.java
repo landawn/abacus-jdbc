@@ -670,7 +670,9 @@ final class DaoImpl {
                 return false;
             }
 
-            return singleQueryPrefix.stream().noneMatch(it -> methodName.startsWith(it));
+            return singleQueryPrefix.stream()
+                    .noneMatch(
+                            it -> methodName.startsWith(it) && (methodName.length() == it.length() || Character.isUpperCase(methodName.charAt(it.length()))));
         } else {
             return false;
         }
@@ -721,7 +723,7 @@ final class DaoImpl {
             java.util.Optional.class, java.util.OptionalInt.class, java.util.OptionalLong.class, java.util.OptionalDouble.class);
 
     private static boolean isSingleReturnType(final Class<?> returnType) {
-        return singleReturnTypeSet.contains(returnType);
+        return singleReturnTypeSet.contains(returnType) || N.isPrimitiveType(N.unwrap(returnType));
     }
 
     @SuppressWarnings("rawtypes")
@@ -4922,8 +4924,8 @@ final class DaoImpl {
                             } else if (op == OP.exists || isExistsQuery(m, op, fullClassMethodName) || op == OP.findFirst || op == OP.queryForSingle
                                     || isSingleReturnType(returnType)) {
                                 tmpFetchSize = 1;
-                            } else if (op == OP.list || op == OP.listAll || isListQuery(m, op, fullClassMethodName) || op == OP.query || op == OP.queryAll
-                                    || op == OP.stream || op == OP.streamAll) {
+                            } else if (op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll || op == OP.stream || op == OP.streamAll
+                                    || isListQuery(m, op, fullClassMethodName)) {
                                 // skip.
                             } else if (lastParamType != null
                                     && (ResultExtractor.class.isAssignableFrom(lastParamType) || BiResultExtractor.class.isAssignableFrom(lastParamType))) {
