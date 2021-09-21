@@ -1654,7 +1654,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     @Beta
     public This setIntForMultiPositions(final int parameterValue, final int... parameterIndices) throws SQLException {
-        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+        checkParameterIndices(parameterIndices);
 
         for (int parameterIndex : parameterIndices) {
             setInt(parameterIndex, parameterValue);
@@ -1663,20 +1663,21 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
-    @Beta
-    public This setIntForMultiPositions(final Integer parameterValue, final int... parameterIndices) throws SQLException {
-        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
-
-        for (int parameterIndex : parameterIndices) {
-            setInt(parameterIndex, parameterValue);
-        }
-
-        return (This) this;
-    }
+    // The method setIntForMultiPositions(int, int[]) is ambiguous for the type
+    //    @Beta
+    //    public This setIntForMultiPositions(final Integer parameterValue, final int... parameterIndices) throws SQLException {
+    //        checkParameterIndices(parameterIndices);
+    //
+    //        for (int parameterIndex : parameterIndices) {
+    //            setInt(parameterIndex, parameterValue);
+    //        }
+    //
+    //        return (This) this;
+    //    }
 
     @Beta
     public This setLongForMultiPositions(final long parameterValue, final int... parameterIndices) throws SQLException {
-        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+        checkParameterIndices(parameterIndices);
 
         for (int parameterIndex : parameterIndices) {
             setLong(parameterIndex, parameterValue);
@@ -1685,20 +1686,21 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
-    @Beta
-    public This setLongForMultiPositions(final Long parameterValue, final int... parameterIndices) throws SQLException {
-        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
-
-        for (int parameterIndex : parameterIndices) {
-            setLong(parameterIndex, parameterValue);
-        }
-
-        return (This) this;
-    }
+    // commented because of: The method setIntForMultiPositions(int, int[]) is ambiguous for the type
+    //    @Beta
+    //    public This setLongForMultiPositions(final Long parameterValue, final int... parameterIndices) throws SQLException {
+    //        checkParameterIndices(parameterIndices);
+    //
+    //        for (int parameterIndex : parameterIndices) {
+    //            setLong(parameterIndex, parameterValue);
+    //        }
+    //
+    //        return (This) this;
+    //    }
 
     @Beta
     public This setStringForMultiPositions(final String parameterValue, final int... parameterIndices) throws SQLException {
-        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+        checkParameterIndices(parameterIndices);
 
         for (int parameterIndex : parameterIndices) {
             setString(parameterIndex, parameterValue);
@@ -1709,7 +1711,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     @Beta
     public This setDateForMultiPositions(final java.sql.Date parameterValue, final int... parameterIndices) throws SQLException {
-        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+        checkParameterIndices(parameterIndices);
 
         for (int parameterIndex : parameterIndices) {
             setDate(parameterIndex, parameterValue);
@@ -1720,7 +1722,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     @Beta
     public This setDateForMultiPositions(final java.util.Date parameterValue, final int... parameterIndices) throws SQLException {
-        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+        checkParameterIndices(parameterIndices);
 
         for (int parameterIndex : parameterIndices) {
             setDate(parameterIndex, parameterValue);
@@ -1731,7 +1733,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     @Beta
     public This setTimeForMultiPositions(final java.sql.Time parameterValue, final int... parameterIndices) throws SQLException {
-        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+        checkParameterIndices(parameterIndices);
 
         for (int parameterIndex : parameterIndices) {
             setTime(parameterIndex, parameterValue);
@@ -1742,7 +1744,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     @Beta
     public This setTimeForMultiPositions(final java.util.Date parameterValue, final int... parameterIndices) throws SQLException {
-        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+        checkParameterIndices(parameterIndices);
 
         for (int parameterIndex : parameterIndices) {
             setTime(parameterIndex, parameterValue);
@@ -1753,7 +1755,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     @Beta
     public This setTimestampForMultiPositions(final java.sql.Timestamp parameterValue, final int... parameterIndices) throws SQLException {
-        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+        checkParameterIndices(parameterIndices);
 
         for (int parameterIndex : parameterIndices) {
             setTimestamp(parameterIndex, parameterValue);
@@ -1764,7 +1766,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     @Beta
     public This setTimestampForMultiPositions(final java.util.Date parameterValue, final int... parameterIndices) throws SQLException {
-        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+        checkParameterIndices(parameterIndices);
 
         for (int parameterIndex : parameterIndices) {
             setTimestamp(parameterIndex, parameterValue);
@@ -1775,13 +1777,23 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     @Beta
     public This setObjectForMultiPositions(final Object parameterValue, final int... parameterIndices) throws SQLException {
-        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+        checkParameterIndices(parameterIndices);
 
         for (int parameterIndex : parameterIndices) {
             setObject(parameterIndex, parameterValue);
         }
 
         return (This) this;
+    }
+
+    private void checkParameterIndices(final int... parameterIndices) {
+        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+
+        for (int parameterIndex : parameterIndices) {
+            if (parameterIndex <= 0) {
+                checkArg(parameterIndex > 0, "'parameterIndices' must all be positive. It can't be: " + N.toString(parameterIndices));
+            }
+        }
     }
 
     //    /**

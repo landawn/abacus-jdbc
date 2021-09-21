@@ -61,6 +61,11 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 public class DaoTest {
 
     @Test
+    public void test_setStringForMultiPositions() throws Exception {
+
+    }
+
+    @Test
     public void test_preparedQuery() throws Exception {
 
         List<User> users = IntStream.range(1, 1000)
@@ -89,6 +94,7 @@ public class DaoTest {
 
         PSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toPreparedQuery(userDao.dataSource()).update();
         NSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toNamedQuery(userDao.dataSource()).update();
+        NSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toNamedQuery(userDao.dataSource()).setIntForMultiPositions(0, 1).update();
 
         NSC.deleteFrom(User.class)
                 .where(CF.ge("id", users.get(0).getId()))
