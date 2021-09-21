@@ -1663,17 +1663,23 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
-    // The method setIntForMultiPositions(int, int[]) is ambiguous for the type
-    //    @Beta
-    //    public This setIntForMultiPositions(final Integer parameterValue, final int... parameterIndices) throws SQLException {
-    //        checkParameterIndices(parameterIndices);
-    //
-    //        for (int parameterIndex : parameterIndices) {
-    //            setInt(parameterIndex, parameterValue);
-    //        }
-    //
-    //        return (This) this;
-    //    }
+    /**
+     * Note: The reason for giving name: {@code setInttForMultiPositions}, not {@code setIntForMultiPositions} is because of error: <i>The method setIntForMultiPositions(int, int[]) is ambiguous for the type</i>
+     * @param parameterValue
+     * @param parameterIndices
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public This setInttForMultiPositions(final Integer parameterValue, final int... parameterIndices) throws SQLException {
+        checkParameterIndices(parameterIndices);
+
+        for (int parameterIndex : parameterIndices) {
+            setInt(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
 
     @Beta
     public This setLongForMultiPositions(final long parameterValue, final int... parameterIndices) throws SQLException {
@@ -1686,17 +1692,16 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
-    // commented because of: The method setIntForMultiPositions(int, int[]) is ambiguous for the type
-    //    @Beta
-    //    public This setLongForMultiPositions(final Long parameterValue, final int... parameterIndices) throws SQLException {
-    //        checkParameterIndices(parameterIndices);
-    //
-    //        for (int parameterIndex : parameterIndices) {
-    //            setLong(parameterIndex, parameterValue);
-    //        }
-    //
-    //        return (This) this;
-    //    }
+    @Beta
+    public This setLongForMultiPositions(final Long parameterValue, final int... parameterIndices) throws SQLException {
+        checkParameterIndices(parameterIndices);
+
+        for (int parameterIndex : parameterIndices) {
+            setLong(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
 
     @Beta
     public This setStringForMultiPositions(final String parameterValue, final int... parameterIndices) throws SQLException {
