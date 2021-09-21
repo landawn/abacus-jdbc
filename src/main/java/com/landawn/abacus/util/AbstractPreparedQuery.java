@@ -1652,6 +1652,138 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    @Beta
+    public This setIntForMultiPositions(final int parameterValue, int... parameterIndices) throws SQLException {
+        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+
+        for (int parameterIndex : parameterIndices) {
+            setInt(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
+
+    @Beta
+    public This setIntForMultiPositions(final Integer parameterValue, int... parameterIndices) throws SQLException {
+        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+
+        for (int parameterIndex : parameterIndices) {
+            setInt(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
+
+    @Beta
+    public This setLongForMultiPositions(final long parameterValue, int... parameterIndices) throws SQLException {
+        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+
+        for (int parameterIndex : parameterIndices) {
+            setLong(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
+
+    @Beta
+    public This setLongForMultiPositions(final Long parameterValue, int... parameterIndices) throws SQLException {
+        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+
+        for (int parameterIndex : parameterIndices) {
+            setLong(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
+
+    @Beta
+    public This setStringForMultiPositions(final String parameterValue, int... parameterIndices) throws SQLException {
+        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+
+        for (int parameterIndex : parameterIndices) {
+            setString(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
+
+    @Beta
+    public This setDateForMultiPositions(final java.sql.Date parameterValue, int... parameterIndices) throws SQLException {
+        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+
+        for (int parameterIndex : parameterIndices) {
+            setDate(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
+
+    @Beta
+    public This setDateForMultiPositions(final java.util.Date parameterValue, int... parameterIndices) throws SQLException {
+        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+
+        for (int parameterIndex : parameterIndices) {
+            setDate(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
+
+    @Beta
+    public This setTimeForMultiPositions(final java.sql.Time parameterValue, int... parameterIndices) throws SQLException {
+        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+
+        for (int parameterIndex : parameterIndices) {
+            setTime(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
+
+    @Beta
+    public This setTimeForMultiPositions(final java.util.Date parameterValue, int... parameterIndices) throws SQLException {
+        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+
+        for (int parameterIndex : parameterIndices) {
+            setTime(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
+
+    @Beta
+    public This setTimestampForMultiPositions(final java.sql.Timestamp parameterValue, int... parameterIndices) throws SQLException {
+        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+
+        for (int parameterIndex : parameterIndices) {
+            setTimestamp(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
+
+    @Beta
+    public This setTimestampForMultiPositions(final java.util.Date parameterValue, int... parameterIndices) throws SQLException {
+        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+
+        for (int parameterIndex : parameterIndices) {
+            setTimestamp(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
+
+    @Beta
+    public This setObjectForMultiPositions(final Object parameterValue, int... parameterIndices) throws SQLException {
+        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+
+        for (int parameterIndex : parameterIndices) {
+            setObject(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
+
     //    /**
     //     * @param <T>
     //     * @param batchParameters
