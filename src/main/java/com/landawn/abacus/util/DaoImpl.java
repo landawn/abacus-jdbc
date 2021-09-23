@@ -1745,7 +1745,7 @@ final class DaoImpl {
     }
 
     @SuppressWarnings({ "rawtypes", "null", "resource" })
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
+    static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
             final Cache<String, Object> daoCache, final Executor executor) {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(ds, "dataSource");
