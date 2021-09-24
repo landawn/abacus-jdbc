@@ -5736,7 +5736,10 @@ public final class JdbcUtil {
          * @param valueExtractor
          * @param downstream
          * @return
+         * @deprecated replaced by {@code groupTo(RowMapper, RowMapper, Collector)}
+         * @see #groupTo(RowMapper, RowMapper, Collector)
          */
+        @Deprecated
         static <K, V, A, D> ResultExtractor<Map<K, D>> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
                 final Collector<? super V, A, D> downstream) {
             return toMap(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
@@ -5754,46 +5757,13 @@ public final class JdbcUtil {
          * @param downstream
          * @param supplier
          * @return
+         * @deprecated replaced by {@code groupTo(RowMapper, RowMapper, Collector, Supplier)}
+         * @see #groupTo(RowMapper, RowMapper, Collector, Supplier)
          */
+        @Deprecated
         static <K, V, A, D, M extends Map<K, D>> ResultExtractor<M> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
                 final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
-            N.checkArgNotNull(keyExtractor, "keyExtractor");
-            N.checkArgNotNull(valueExtractor, "valueExtractor");
-            N.checkArgNotNull(downstream, "downstream");
-            N.checkArgNotNull(supplier, "supplier");
-
-            return new ResultExtractor<M>() {
-                @Override
-                public M apply(final ResultSet rs) throws SQLException {
-
-                    final Supplier<A> downstreamSupplier = downstream.supplier();
-                    final BiConsumer<A, ? super V> downstreamAccumulator = downstream.accumulator();
-                    final Function<A, D> downstreamFinisher = downstream.finisher();
-
-                    final M result = supplier.get();
-                    final Map<K, A> tmp = (Map<K, A>) result;
-                    K key = null;
-                    A container = null;
-
-                    while (rs.next()) {
-                        key = keyExtractor.apply(rs);
-                        container = tmp.get(key);
-
-                        if (container == null) {
-                            container = downstreamSupplier.get();
-                            tmp.put(key, container);
-                        }
-
-                        downstreamAccumulator.accept(container, valueExtractor.apply(rs));
-                    }
-
-                    for (Map.Entry<K, D> entry : result.entrySet()) {
-                        entry.setValue(downstreamFinisher.apply((A) entry.getValue()));
-                    }
-
-                    return result;
-                }
-            };
+            return groupTo(keyExtractor, valueExtractor, downstream, supplier);
         }
 
         /**
@@ -5886,6 +5856,76 @@ public final class JdbcUtil {
                         }
 
                         value.add(valueExtractor.apply(rs));
+                    }
+
+                    return result;
+                }
+            };
+        }
+
+        /**
+         *
+         * @param <K> the key type
+         * @param <V> the value type
+         * @param <A>
+         * @param <D>
+         * @param keyExtractor
+         * @param valueExtractor
+         * @param downstream
+         * @return
+         */
+        static <K, V, A, D> ResultExtractor<Map<K, D>> groupTo(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+                final Collector<? super V, A, D> downstream) {
+            return groupTo(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
+        }
+
+        /**
+         *
+         * @param <K> the key type
+         * @param <V> the value type
+         * @param <A>
+         * @param <D>
+         * @param <M>
+         * @param keyExtractor
+         * @param valueExtractor
+         * @param downstream
+         * @param supplier
+         * @return
+         */
+        static <K, V, A, D, M extends Map<K, D>> ResultExtractor<M> groupTo(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+                final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
+            N.checkArgNotNull(keyExtractor, "keyExtractor");
+            N.checkArgNotNull(valueExtractor, "valueExtractor");
+            N.checkArgNotNull(downstream, "downstream");
+            N.checkArgNotNull(supplier, "supplier");
+
+            return new ResultExtractor<M>() {
+                @Override
+                public M apply(final ResultSet rs) throws SQLException {
+
+                    final Supplier<A> downstreamSupplier = downstream.supplier();
+                    final BiConsumer<A, ? super V> downstreamAccumulator = downstream.accumulator();
+                    final Function<A, D> downstreamFinisher = downstream.finisher();
+
+                    final M result = supplier.get();
+                    final Map<K, A> tmp = (Map<K, A>) result;
+                    K key = null;
+                    A container = null;
+
+                    while (rs.next()) {
+                        key = keyExtractor.apply(rs);
+                        container = tmp.get(key);
+
+                        if (container == null) {
+                            container = downstreamSupplier.get();
+                            tmp.put(key, container);
+                        }
+
+                        downstreamAccumulator.accept(container, valueExtractor.apply(rs));
+                    }
+
+                    for (Map.Entry<K, D> entry : result.entrySet()) {
+                        entry.setValue(downstreamFinisher.apply((A) entry.getValue()));
                     }
 
                     return result;
@@ -6075,7 +6115,10 @@ public final class JdbcUtil {
          * @param valueExtractor
          * @param downstream
          * @return
+         * @deprecated replaced by {@code groupTo(BiRowMapper, BiRowMapper, Collector)}
+         * @see #groupTo(BiRowMapper, BiRowMapper, Collector)
          */
+        @Deprecated
         static <K, V, A, D> BiResultExtractor<Map<K, D>> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
                 final Collector<? super V, A, D> downstream) {
             return toMap(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
@@ -6093,46 +6136,13 @@ public final class JdbcUtil {
          * @param downstream
          * @param supplier
          * @return
+         * @deprecated replaced by {@code groupTo(BiRowMapper, BiRowMapper, Collector, Supplier)}
+         * @see #groupTo(BiRowMapper, BiRowMapper, Collector, Supplier)
          */
+        @Deprecated
         static <K, V, A, D, M extends Map<K, D>> BiResultExtractor<M> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
                 final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
-            N.checkArgNotNull(keyExtractor, "keyExtractor");
-            N.checkArgNotNull(valueExtractor, "valueExtractor");
-            N.checkArgNotNull(downstream, "downstream");
-            N.checkArgNotNull(supplier, "supplier");
-
-            return new BiResultExtractor<M>() {
-                @Override
-                public M apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-
-                    final Supplier<A> downstreamSupplier = downstream.supplier();
-                    final BiConsumer<A, ? super V> downstreamAccumulator = downstream.accumulator();
-                    final Function<A, D> downstreamFinisher = downstream.finisher();
-
-                    final M result = supplier.get();
-                    final Map<K, A> tmp = (Map<K, A>) result;
-                    K key = null;
-                    A container = null;
-
-                    while (rs.next()) {
-                        key = keyExtractor.apply(rs, columnLabels);
-                        container = tmp.get(key);
-
-                        if (container == null) {
-                            container = downstreamSupplier.get();
-                            tmp.put(key, container);
-                        }
-
-                        downstreamAccumulator.accept(container, valueExtractor.apply(rs, columnLabels));
-                    }
-
-                    for (Map.Entry<K, D> entry : result.entrySet()) {
-                        entry.setValue(downstreamFinisher.apply((A) entry.getValue()));
-                    }
-
-                    return result;
-                }
-            };
+            return groupTo(keyExtractor, valueExtractor, downstream, supplier);
         }
 
         /**
@@ -6224,6 +6234,76 @@ public final class JdbcUtil {
                         }
 
                         value.add(valueExtractor.apply(rs, columnLabels));
+                    }
+
+                    return result;
+                }
+            };
+        }
+
+        /**
+         *
+         * @param <K> the key type
+         * @param <V> the value type
+         * @param <A>
+         * @param <D>
+         * @param keyExtractor
+         * @param valueExtractor
+         * @param downstream
+         * @return
+         */
+        static <K, V, A, D> BiResultExtractor<Map<K, D>> groupTo(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
+                final Collector<? super V, A, D> downstream) {
+            return groupTo(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
+        }
+
+        /**
+         *
+         * @param <K> the key type
+         * @param <V> the value type
+         * @param <A>
+         * @param <D>
+         * @param <M>
+         * @param keyExtractor
+         * @param valueExtractor
+         * @param downstream
+         * @param supplier
+         * @return
+         */
+        static <K, V, A, D, M extends Map<K, D>> BiResultExtractor<M> groupTo(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
+                final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
+            N.checkArgNotNull(keyExtractor, "keyExtractor");
+            N.checkArgNotNull(valueExtractor, "valueExtractor");
+            N.checkArgNotNull(downstream, "downstream");
+            N.checkArgNotNull(supplier, "supplier");
+
+            return new BiResultExtractor<M>() {
+                @Override
+                public M apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+
+                    final Supplier<A> downstreamSupplier = downstream.supplier();
+                    final BiConsumer<A, ? super V> downstreamAccumulator = downstream.accumulator();
+                    final Function<A, D> downstreamFinisher = downstream.finisher();
+
+                    final M result = supplier.get();
+                    final Map<K, A> tmp = (Map<K, A>) result;
+                    K key = null;
+                    A container = null;
+
+                    while (rs.next()) {
+                        key = keyExtractor.apply(rs, columnLabels);
+                        container = tmp.get(key);
+
+                        if (container == null) {
+                            container = downstreamSupplier.get();
+                            tmp.put(key, container);
+                        }
+
+                        downstreamAccumulator.accept(container, valueExtractor.apply(rs, columnLabels));
+                    }
+
+                    for (Map.Entry<K, D> entry : result.entrySet()) {
+                        entry.setValue(downstreamFinisher.apply((A) entry.getValue()));
                     }
 
                     return result;
