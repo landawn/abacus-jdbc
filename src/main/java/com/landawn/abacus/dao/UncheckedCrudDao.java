@@ -525,6 +525,16 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
 
     /**
      *
+     * @param ids
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    @Beta
+    @Override
+    int count(final Collection<ID> ids) throws UncheckedSQLException;
+
+    /**
+     *
      * @param entityToUpdate
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception

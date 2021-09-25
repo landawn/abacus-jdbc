@@ -66,6 +66,25 @@ public class DaoTest {
     }
 
     @Test
+    public void test_count() throws SQLException {
+        final List<User> users = new ArrayList<>();
+
+        for (int i = 0; i < 789; i++) {
+            users.add(User.builder().id(100 + i).firstName("Forrest").lastName("Gump").email("123@email.com").build());
+        }
+
+        List<Long> ids = userDao.batchInsert(users);
+
+        assertEquals(users.size(), userDao.count(ids));
+
+        assertEquals(users.size(), userDao.batchDelete(users));
+
+        assertEquals(0, userDao.batchDeleteByIds(ids));
+
+        assertEquals(0, userDao.count(ids));
+    }
+
+    @Test
     public void test_preparedQuery() throws Exception {
 
         List<User> users = IntStream.range(1, 1000)

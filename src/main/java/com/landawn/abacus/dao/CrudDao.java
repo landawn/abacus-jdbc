@@ -496,6 +496,15 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
+     * Count the records in db by input {@code ids}.
+     * @param ids
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    int count(final Collection<ID> ids) throws SQLException;
+
+    /**
      *
      * @param entityToUpdate
      * @return

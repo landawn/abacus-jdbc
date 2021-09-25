@@ -3981,7 +3981,7 @@ final class DaoImpl {
                                 String sql_selectPart = selectSQLBuilderFunc.apply(selectPropNames, idCond).sql();
                                 sql_selectPart = sql_selectPart.substring(0, sql_selectPart.lastIndexOf('=')) + "IN ";
 
-                                if (ids.size() >= batchSize) {
+                                if (idList.size() >= batchSize) {
                                     final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer(true);
 
                                     for (int i = 0; i < batchSize; i++) {
@@ -3994,15 +3994,15 @@ final class DaoImpl {
                                             .setFetchDirection(FetchDirection.FORWARD)
                                             .setFetchSize(batchSize)
                                             .closeAfterExecution(false)) {
-                                        for (int i = 0, to = ids.size() - batchSize; i <= to; i += batchSize) {
+                                        for (int i = 0, to = idList.size() - batchSize; i <= to; i += batchSize) {
                                             resultList
                                                     .addAll(preparedQuery.settParameters(idList.subList(i, i + batchSize), collParamsSetter).list(entityClass));
                                         }
                                     }
                                 }
 
-                                if (ids.size() % batchSize != 0) {
-                                    final int remaining = ids.size() % batchSize;
+                                if (idList.size() % batchSize != 0) {
+                                    final int remaining = idList.size() % batchSize;
                                     final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer(true);
 
                                     for (int i = 0; i < remaining; i++) {
@@ -4013,12 +4013,12 @@ final class DaoImpl {
                                     resultList.addAll(proxy.prepareQuery(qery)
                                             .setFetchDirection(FetchDirection.FORWARD)
                                             .setFetchSize(batchSize)
-                                            .settParameters(idList.subList(ids.size() - remaining, ids.size()), collParamsSetter)
+                                            .settParameters(idList.subList(idList.size() - remaining, idList.size()), collParamsSetter)
                                             .list(entityClass));
                                 }
                             } else {
-                                if (ids.size() >= batchSize) {
-                                    for (int i = 0, to = ids.size() - batchSize; i <= to; i += batchSize) {
+                                if (idList.size() >= batchSize) {
+                                    for (int i = 0, to = idList.size() - batchSize; i <= to; i += batchSize) {
                                         if (isEntityId) {
                                             resultList.addAll(proxy.list(CF.id2Cond(idList.subList(i, i + batchSize))));
                                         } else if (isMap) {
@@ -4029,22 +4029,22 @@ final class DaoImpl {
                                     }
                                 }
 
-                                if (ids.size() % batchSize != 0) {
-                                    final int remaining = ids.size() % batchSize;
+                                if (idList.size() % batchSize != 0) {
+                                    final int remaining = idList.size() % batchSize;
 
                                     if (isEntityId) {
-                                        resultList.addAll(proxy.list(CF.id2Cond(idList.subList(idList.size() - remaining, ids.size()))));
+                                        resultList.addAll(proxy.list(CF.id2Cond(idList.subList(idList.size() - remaining, idList.size()))));
                                     } else if (isMap) {
-                                        resultList.addAll(proxy.list(CF.eqAndOr(idList.subList(ids.size() - remaining, ids.size()))));
+                                        resultList.addAll(proxy.list(CF.eqAndOr(idList.subList(idList.size() - remaining, idList.size()))));
                                     } else {
-                                        resultList.addAll(proxy.list(CF.eqAndOr(idList.subList(ids.size() - remaining, ids.size()), idPropNameList)));
+                                        resultList.addAll(proxy.list(CF.eqAndOr(idList.subList(idList.size() - remaining, idList.size()), idPropNameList)));
                                     }
                                 }
                             }
 
-                            if (resultList.size() > ids.size()) {
+                            if (resultList.size() > idList.size()) {
                                 throw new DuplicatedResultException(
-                                        "The size of result: " + resultList.size() + " is bigger than the size of input ids: " + ids.size());
+                                        "The size of result: " + resultList.size() + " is bigger than the size of input ids: " + idList.size());
                             }
 
                             return resultList;
@@ -4055,6 +4055,97 @@ final class DaoImpl {
                             N.checkArgNotNull(id, "id");
 
                             return proxy.prepareNamedQuery(namedExistsByIdSQL).setFetchSize(1).settParameters(id, idParamSetter).exists();
+                        };
+                    } else if (methodName.equals("count") && paramLen == 1 && Collection.class.equals(paramTypes[0])) {
+                        call = (proxy, args) -> {
+                            final Collection<Object> ids = (Collection<Object>) args[0];
+                            final Collection<String> selectPropNames = N.asList(SQLBuilder.COUNT_ALL);
+                            final int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+
+                            N.checkArgPositive(batchSize, "batchSize");
+
+                            if (N.isNullOrEmpty(ids)) {
+                                return 0;
+                            }
+
+                            final Object firstId = N.first(ids).get();
+                            final boolean isMap = firstId instanceof Map;
+                            final boolean isEntity = firstId != null && ClassUtil.isEntity(firstId.getClass());
+
+                            N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId),
+                                    "Input 'ids' can not be EntityIds/Maps or entities for single id ");
+
+                            final List idList = ids instanceof Set ? new ArrayList(ids) : N.distinct(ids);
+                            int result = 0;
+
+                            if (idPropNameList.size() == 1) {
+                                String sql_selectPart = selectSQLBuilderFunc.apply(selectPropNames, idCond).sql();
+                                sql_selectPart = sql_selectPart.substring(0, sql_selectPart.lastIndexOf('=')) + "IN ";
+
+                                if (idList.size() >= batchSize) {
+                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer(true);
+
+                                    for (int i = 0; i < batchSize; i++) {
+                                        joiner.append('?');
+                                    }
+
+                                    final String qery = sql_selectPart + joiner.toString();
+
+                                    try (PreparedQuery preparedQuery = proxy.prepareQuery(qery)
+                                            .setFetchDirection(FetchDirection.FORWARD)
+                                            .setFetchSize(batchSize)
+                                            .closeAfterExecution(false)) {
+                                        for (int i = 0, to = idList.size() - batchSize; i <= to; i += batchSize) {
+                                            result += preparedQuery.settParameters(idList.subList(i, i + batchSize), collParamsSetter)
+                                                    .queryForInt()
+                                                    .orElseZero();
+                                        }
+                                    }
+                                }
+
+                                if (idList.size() % batchSize != 0) {
+                                    final int remaining = idList.size() % batchSize;
+                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer(true);
+
+                                    for (int i = 0; i < remaining; i++) {
+                                        joiner.append('?');
+                                    }
+
+                                    final String qery = sql_selectPart + joiner.toString();
+                                    result += proxy.prepareQuery(qery)
+                                            .setFetchDirection(FetchDirection.FORWARD)
+                                            .setFetchSize(batchSize)
+                                            .settParameters(idList.subList(idList.size() - remaining, idList.size()), collParamsSetter)
+                                            .queryForInt()
+                                            .orElseZero();
+                                }
+                            } else {
+                                if (idList.size() >= batchSize) {
+                                    for (int i = 0, to = idList.size() - batchSize; i <= to; i += batchSize) {
+                                        if (isEntityId) {
+                                            result += proxy.count(CF.id2Cond(idList.subList(i, i + batchSize)));
+                                        } else if (isMap) {
+                                            result += proxy.count(CF.eqAndOr(idList.subList(i, i + batchSize)));
+                                        } else {
+                                            result += proxy.count(CF.eqAndOr(idList.subList(i, i + batchSize), idPropNameList));
+                                        }
+                                    }
+                                }
+
+                                if (idList.size() % batchSize != 0) {
+                                    final int remaining = idList.size() % batchSize;
+
+                                    if (isEntityId) {
+                                        result += proxy.count(CF.id2Cond(idList.subList(idList.size() - remaining, idList.size())));
+                                    } else if (isMap) {
+                                        result += proxy.count(CF.eqAndOr(idList.subList(idList.size() - remaining, idList.size())));
+                                    } else {
+                                        result += proxy.count(CF.eqAndOr(idList.subList(ids.size() - remaining, idList.size()), idPropNameList));
+                                    }
+                                }
+                            }
+
+                            return result;
                         };
                     } else if (methodName.equals("update") && paramLen == 1) {
                         if (isDirtyMarker) {
