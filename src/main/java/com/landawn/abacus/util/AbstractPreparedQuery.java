@@ -1343,7 +1343,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * Sets the parameters.
      *
-     * @param parameters
+     * @param parameters it should be an array of concrete types. For example: {@code String[]}, {@code Date[]}.
      * @return
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException
@@ -1427,8 +1427,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      *
      * @param <T>
      * @param startParameterIndex
-     * @param parameters
-     * @param type
+     * @param parameters it should be an array of concrete types. For example: {@code String[]}, {@code Date[]}.
      * @return
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
      * @throws SQLException
@@ -1436,10 +1435,18 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     public <T> This settParameters(int startParameterIndex, final T[] parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
 
-        final Type<T> setter = N.typeOf(parameters.getClass().getComponentType());
+        final Class<?> componentType = parameters.getClass().getComponentType();
 
-        for (T param : parameters) {
-            setter.set(stmt, startParameterIndex++, param);
+        if (Object.class.equals(componentType) || componentType.isInterface()) {
+            for (Object param : parameters) {
+                setObject(startParameterIndex++, param);
+            }
+        } else {
+            final Type<T> eleType = N.typeOf(componentType);
+
+            for (T param : parameters) {
+                eleType.set(stmt, startParameterIndex++, param);
+            }
         }
 
         return (This) this;
@@ -1496,10 +1503,10 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         checkArgNotNull(parameters, "parameters");
         checkArgNotNull(type, "type");
 
-        final Type<T> setter = N.typeOf(type);
+        final Type<T> eleType = N.typeOf(type);
 
         for (T param : parameters) {
-            setter.set(stmt, startParameterIndex++, param);
+            eleType.set(stmt, startParameterIndex++, param);
         }
 
         return (This) this;
