@@ -19,6 +19,8 @@ package com.landawn.abacus.util;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.Reader;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.PreparedStatement;
@@ -27,10 +29,12 @@ import java.sql.SQLException;
 import java.sql.SQLType;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.Executor;
 
 import com.landawn.abacus.DataSet;
@@ -92,6 +96,24 @@ import com.landawn.abacus.util.function.Predicate;
 public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extends AbstractPreparedQuery<Stmt, This>> implements Closeable {
 
     static final Logger logger = LoggerFactory.getLogger(AbstractPreparedQuery.class);
+
+    static final Set<Class<?>> stmtParameterClasses = new HashSet<>();
+
+    static {
+        final Method[] methods = PreparedStatement.class.getDeclaredMethods();
+
+        for (Method m : methods) {
+            if (Modifier.isPublic(m.getModifiers()) && m.getName().startsWith("set") && m.getParameterCount() == 2
+                    && m.getParameterTypes()[0].equals(int.class)) {
+                stmtParameterClasses.add(m.getParameterTypes()[1]);
+            }
+        }
+
+        stmtParameterClasses.addAll(N.PRIMITIVE_2_WRAPPER.keySet());
+        stmtParameterClasses.addAll(N.PRIMITIVE_2_WRAPPER.values());
+
+        stmtParameterClasses.remove(Object.class);
+    }
 
     final Stmt stmt;
 
@@ -1437,15 +1459,15 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
         final Class<?> componentType = parameters.getClass().getComponentType();
 
-        if (Object.class.equals(componentType) || componentType.isInterface()) {
-            for (Object param : parameters) {
-                setObject(startParameterIndex++, param);
-            }
-        } else {
+        if (stmtParameterClasses.contains(componentType)) {
             final Type<T> eleType = N.typeOf(componentType);
 
             for (T param : parameters) {
                 eleType.set(stmt, startParameterIndex++, param);
+            }
+        } else {
+            for (Object param : parameters) {
+                setObject(startParameterIndex++, param);
             }
         }
 
