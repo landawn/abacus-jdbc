@@ -19,6 +19,7 @@ import com.landawn.abacus.dao.annotation.Define;
 import com.landawn.abacus.dao.annotation.Delete;
 import com.landawn.abacus.dao.annotation.Handler;
 import com.landawn.abacus.dao.annotation.MappedByKey;
+import com.landawn.abacus.dao.annotation.MergedById;
 import com.landawn.abacus.dao.annotation.NamedDelete;
 import com.landawn.abacus.dao.annotation.NamedInsert;
 import com.landawn.abacus.dao.annotation.NamedSelect;
@@ -173,6 +174,14 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     @Select(sql = "select * from user where id > ?")
     @MappedByKey("id")
     Map<Long, User> mappedById(int id) throws SQLException;
+
+    @Select(sql = "select user.id as \"id\", first_name, last_name, device.id as \"devices.id\", device.manufacture as \"devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.id as \"address.id\", address.street as \"address.street\", address.city as \"address.city\" from user left join device on user.id = device.user_id left join address on user.id = address.user_id")
+    @MergedById("id")
+    Collection<User> listTomergedEntities() throws SQLException;
+
+    @Select(sql = "select user.id as \"id\", first_name, last_name, device.id as \"devices.id\", device.manufacture as \"devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.id as \"address.id\", address.street as \"address.street\", address.city as \"address.city\" from user left join device on user.id = device.user_id left join address on user.id = address.user_id")
+    @MergedById("id")
+    Optional<User> findOneTomergedEntities() throws SQLException;
 
     @Select(value = "select first_name from user where id >= ?", fetchSize = 100)
     ExceptionalStream<String, SQLException> streamOne(long id);

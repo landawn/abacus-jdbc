@@ -44,6 +44,7 @@ import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.JdbcUtil.BiRowConsumer;
 import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
+import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
 import com.landawn.abacus.util.JdbcUtil.RowConsumer;
 import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.N;
@@ -810,6 +811,75 @@ public class DaoTest {
         userDao.deleteById(100L);
 
         assertEquals(1, JdbcUtil.executeUpdate(dataSource, "delete from user where id = ? ", 101));
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void test_query_with_sub_entity_property() throws SQLException {
+        N.println(userDao.targetEntityClass());
+        N.println(userDao.targetDaoInterface());
+        N.println(userDao.executor());
+
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.insertWithId(user);
+
+        User userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+
+        Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
+        deviceDao.insert(device);
+
+        Device device2 = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 12").build();
+        deviceDao.insert(device2);
+
+        Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
+        addressDao.insert(address);
+
+        N.copy(userFromDB);
+        userDao.loadAllJoinEntities(userFromDB);
+        System.out.println(userFromDB);
+
+        final String query = "select first_name, last_name, device.manufacture as \" devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.street as \"address.street\", address.city as \"address.city\" from user left join device on user.id = device.user_id left join address on user.id = address.user_id";
+
+        userDao.prepareQuery(query).list(User.class).forEach(Fn.println());
+        userDao.prepareQuery(query).query(ResultExtractor.toDataSet(User.class)).println();
+
+        userDao.deleteAllJoinEntities(user);
+        userDao.delete(user);
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void test_mergedBy() throws SQLException {
+        N.println(userDao.targetEntityClass());
+        N.println(userDao.targetDaoInterface());
+        N.println(userDao.executor());
+
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao.insertWithId(user);
+
+        User userFromDB = userDao.gett(100L);
+        System.out.println(userFromDB);
+
+        Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
+        deviceDao.insert(device);
+
+        Device device2 = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 12").build();
+        deviceDao.insert(device2);
+
+        Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
+        addressDao.insert(address);
+
+        N.copy(userFromDB);
+        userDao.loadAllJoinEntities(userFromDB);
+        System.out.println(userFromDB);
+
+        userDao.listTomergedEntities().forEach(Fn.println());
+
+        userDao.findOneTomergedEntities().ifPresent(Fn.println());
+
+        userDao.deleteAllJoinEntities(user);
+        userDao.delete(user);
     }
 
     @Test

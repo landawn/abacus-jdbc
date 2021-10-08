@@ -79,6 +79,7 @@ import com.landawn.abacus.util.SQLTransaction.CreatedBy;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.u.Holder;
+import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.function.BiConsumer;
 import com.landawn.abacus.util.function.BiPredicate;
 import com.landawn.abacus.util.function.BinaryOperator;
@@ -107,7 +108,7 @@ import lombok.ToString;
  *
  * <br />
  *
- * @see {@link com.landawn.abacus.condition.ConditionFactory}
+ * @see {@link com.landawn.abacus.condition .ConditionFactory}
  * @see {@link com.landawn.abacus.condition.ConditionFactory.CF}
  * @see {@link com.landawn.abacus.annotation.ReadOnly}
  * @see {@link com.landawn.abacus.annotation.ReadOnlyId}
@@ -5954,6 +5955,18 @@ public final class JdbcUtil {
             };
         }
 
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param entityClass
+         * @return
+         */
+        @SequentialOnly
+        @Stateful
+        static ResultExtractor<DataSet> toDataSet(final Class<?> entityClass) {
+            return toDataSet(RowExtractor.createBy(entityClass));
+        }
+
         static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter) {
             return new ResultExtractor<DataSet>() {
                 @Override
@@ -7347,8 +7360,9 @@ public final class JdbcUtil {
                     };
                 }
             } else if (ClassUtil.isEntity(targetClass)) {
+                final EntityInfo entityInfo = ParserUtil.getEntityInfo(targetClass);
+
                 return new BiRowMapper<T>() {
-                    private final EntityInfo entityInfo = ParserUtil.getEntityInfo(targetClass);
                     private volatile String[] columnLabels = null;
                     private volatile PropInfo[] propInfos;
                     private volatile Type<?>[] columnTypes = null;
@@ -7388,11 +7402,34 @@ public final class JdbcUtil {
                                     }
 
                                     if (propInfos[i] == null) {
-                                        if (ignoreNonMatchedColumns) {
-                                            columnLabels[i] = null;
+                                        propInfos[i] = JdbcUtil.getSubPropInfo(targetClass, columnLabels[i]);
+
+                                        if (propInfos[i] == null) {
+                                            String fieldName = column2FieldNameMap.get(columnLabels[i]);
+
+                                            if (N.isNullOrEmpty(fieldName)) {
+                                                fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
+                                            }
+
+                                            if (N.notNullOrEmpty(fieldName)) {
+                                                propInfos[i] = JdbcUtil.getSubPropInfo(targetClass, fieldName);
+
+                                                if (propInfos[i] != null) {
+                                                    columnLabels[i] = fieldName;
+                                                }
+                                            }
+                                        }
+
+                                        if (propInfos[i] == null) {
+                                            if (ignoreNonMatchedColumns) {
+                                                columnLabels[i] = null;
+                                            } else {
+                                                throw new IllegalArgumentException("No property in class: " + ClassUtil.getCanonicalClassName(targetClass)
+                                                        + " mapping to column: " + columnLabels[i]);
+                                            }
                                         } else {
-                                            throw new IllegalArgumentException("No property in class: " + ClassUtil.getCanonicalClassName(targetClass)
-                                                    + " mapping to column: " + columnLabels[i]);
+                                            columnTypes[i] = propInfos[i].dbType;
+                                            propInfos[i] = null;
                                         }
                                     } else {
                                         columnTypes[i] = propInfos[i].dbType;
@@ -7416,7 +7453,11 @@ public final class JdbcUtil {
                                 continue;
                             }
 
-                            propInfos[i].setPropValue(result, columnTypes[i].get(rs, i + 1));
+                            if (propInfos[i] == null) {
+                                entityInfo.setPropValue(result, columnLabels[i], columnTypes[i].get(rs, i + 1));
+                            } else {
+                                propInfos[i].setPropValue(result, columnTypes[i].get(rs, i + 1));
+                            }
                         }
 
                         return entityInfo.finishEntityResult(result);
@@ -8367,6 +8408,86 @@ public final class JdbcUtil {
         @Override
         void accept(final ResultSet rs, final Object[] outputRow) throws SQLException;
 
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param entityClass
+         * @return
+         */
+        @SequentialOnly
+        @Stateful
+        static RowExtractor createBy(final Class<?> entityClass) {
+            N.checkArgument(ClassUtil.isEntity(entityClass), "entityClass");
+
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+
+            return new RowExtractor() {
+                private volatile Type<?>[] columnTypes = null;
+                private volatile int columnCount = 0;
+
+                @Override
+                public void accept(ResultSet rs, Object[] outputRow) throws SQLException {
+                    Type<?>[] columnTypes = this.columnTypes;
+
+                    if (columnTypes == null) {
+                        final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
+                        final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+                        columnCount = columnLabelList.size();
+                        final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
+
+                        columnTypes = new Type[columnCount];
+                        PropInfo propInfo = null;
+
+                        for (int i = 0; i < columnCount; i++) {
+                            propInfo = entityInfo.getPropInfo(columnLabels[i]);
+
+                            if (propInfo == null) {
+                                String fieldName = column2FieldNameMap.get(columnLabels[i]);
+
+                                if (N.isNullOrEmpty(fieldName)) {
+                                    fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
+                                }
+
+                                if (N.notNullOrEmpty(fieldName)) {
+                                    propInfo = entityInfo.getPropInfo(fieldName);
+                                }
+                            }
+
+                            if (propInfo == null) {
+                                propInfo = JdbcUtil.getSubPropInfo(entityClass, columnLabels[i]);
+
+                                if (propInfo == null) {
+                                    String fieldName = column2FieldNameMap.get(columnLabels[i]);
+
+                                    if (N.isNullOrEmpty(fieldName)) {
+                                        fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
+                                    }
+
+                                    if (N.notNullOrEmpty(fieldName)) {
+                                        propInfo = JdbcUtil.getSubPropInfo(entityClass, fieldName);
+                                    }
+                                }
+
+                                if (propInfo == null) {
+                                    columnTypes[i] = null;
+                                } else {
+                                    columnTypes[i] = propInfo.dbType;
+                                }
+                            } else {
+                                columnTypes[i] = propInfo.dbType;
+                            }
+                        }
+
+                        this.columnTypes = columnTypes;
+                    }
+
+                    for (int i = 0; i < columnCount; i++) {
+                        outputRow[i] = columnTypes[i] == null ? JdbcUtil.getColumnValue(rs, i + 1) : columnTypes[i].get(rs, i + 1);
+                    }
+                }
+            };
+        }
+
         static RowExtractorBuilder builder() {
             return builder(Columns.ColumnGetter.GET_OBJECT);
         }
@@ -8560,6 +8681,61 @@ public final class JdbcUtil {
         public List<OutParam> getOutParams() {
             return outParams;
         }
+    }
+
+    private static final Map<Class<?>, Map<String, Optional<PropInfo>>> entityPropInfoQueueMap = new ConcurrentHashMap<>();
+
+    static PropInfo getSubPropInfo(final Class<?> entityClass, String propName) {
+        final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+        Map<String, Optional<PropInfo>> propInfoQueueMap = entityPropInfoQueueMap.get(entityClass);
+        Optional<PropInfo> propInfoHolder = null;
+        PropInfo propInfo = null;
+
+        if (propInfoQueueMap == null) {
+            propInfoQueueMap = new ObjectPool<>((entityInfo.propInfoList.size() + 1) * 2);
+            entityPropInfoQueueMap.put(entityClass, propInfoQueueMap);
+        } else {
+            propInfoHolder = propInfoQueueMap.get(propName);
+        }
+
+        if (propInfoHolder == null) {
+            final String[] strs = Splitter.with('.').splitToArray(propName);
+
+            if (strs.length > 1) {
+                Class<?> propClass = entityClass;
+                EntityInfo propEntityInfo = null;
+
+                for (int i = 0, len = strs.length; i < len; i++) {
+                    propEntityInfo = ClassUtil.isEntity(propClass) ? ParserUtil.getEntityInfo(propClass) : null;
+                    propInfo = propEntityInfo == null ? null : propEntityInfo.getPropInfo(strs[i]);
+
+                    if (propInfo == null) {
+                        if (i == 0) {
+                            return null; // return directly because the first part is not valid property/field name of the target entity class.
+                        }
+
+                        break;
+                    }
+
+                    if (i == len - 1) {
+                        propInfoHolder = Optional.of(propInfo);
+                        break;
+                    }
+
+                    if (propInfo.type.isCollection()) {
+                        propClass = propInfo.type.getElementType().clazz();
+                    } else {
+                        propClass = propInfo.clazz;
+                    }
+                }
+            }
+
+            propInfoQueueMap.put(propName, propInfoHolder == null ? Optional.empty() : propInfoHolder);
+        } else if (propInfoHolder.isPresent()) {
+            propInfo = propInfoHolder.get();
+        }
+
+        return propInfo;
     }
 
     static Object[] getParameterArray(final SP sp) {

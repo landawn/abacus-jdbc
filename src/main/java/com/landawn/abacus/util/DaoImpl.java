@@ -75,6 +75,7 @@ import com.landawn.abacus.dao.annotation.Handler;
 import com.landawn.abacus.dao.annotation.HandlerList;
 import com.landawn.abacus.dao.annotation.Insert;
 import com.landawn.abacus.dao.annotation.MappedByKey;
+import com.landawn.abacus.dao.annotation.MergedById;
 import com.landawn.abacus.dao.annotation.NamedDelete;
 import com.landawn.abacus.dao.annotation.NamedInsert;
 import com.landawn.abacus.dao.annotation.NamedSelect;
@@ -641,6 +642,10 @@ final class DaoImpl {
         }
 
         if (Collection.class.isAssignableFrom(returnType)) {
+            if (method.getAnnotation(MergedById.class) != null) {
+                return true;
+            }
+
             // Check if return type is generic List type.
             if (method.getGenericReturnType() instanceof ParameterizedType) {
                 final ParameterizedType parameterizedReturnType = (ParameterizedType) method.getGenericReturnType();
@@ -754,9 +759,9 @@ final class DaoImpl {
     }
 
     @SuppressWarnings("rawtypes")
-    private static <R> Throwables.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Method method,
-            final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final OP op, final boolean isCall, final String fullClassMethodName,
-            final Class<?> targetEntityClass) {
+    private static <R> Throwables.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Class<?> entityClass,
+            final Method method, final String mappedByKey, final List<String> mergedByIds, final boolean hasRowMapperOrExtractor, final boolean hasRowFilter,
+            final OP op, final boolean isCall, final String fullClassMethodName, final Class<?> targetEntityClass) {
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
         final Class<?> firstReturnEleType = getFirstReturnEleType(method);
@@ -1056,14 +1061,17 @@ final class DaoImpl {
         }
 
         final MappedByKey mappedBykeyAnno = method.getAnnotation(MappedByKey.class);
-        final String mappedByKey = mappedBykeyAnno == null ? null
-                : N.isNullOrEmpty(mappedBykeyAnno.value()) ? mappedBykeyAnno.keyName() : mappedBykeyAnno.value();
         final Class<? extends Map> targetMapClass = N.isNullOrEmpty(mappedByKey) ? null : mappedBykeyAnno.mapClass();
 
         if (hasRowMapperOrExtractor) {
             if (N.notNullOrEmpty(mappedByKey)) {
                 throw new UnsupportedOperationException(
                         "RowMapper/ResultExtractor is not supported by method annotated with @MappedBykey: " + fullClassMethodName);
+            }
+
+            if (N.notNullOrEmpty(mergedByIds)) {
+                throw new UnsupportedOperationException(
+                        "RowMapper/ResultExtractor is not supported by method annotated with @MergedById: " + fullClassMethodName);
             }
 
             if (!(op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll || op == OP.stream
@@ -1235,6 +1243,38 @@ final class DaoImpl {
                 } else {
                     return (preparedQuery, args) -> (R) preparedQuery.query((BiResultExtractor) args[paramLen - 1]);
                 }
+            }
+        } else if (N.notNullOrEmpty(mergedByIds)) {
+            if (returnType.isAssignableFrom(List.class)) {
+                return (preparedQuery, args) -> {
+                    final DataSet dataSet = (DataSet) preparedQuery.query(ResultExtractor.toDataSet(entityClass));
+                    return (R) dataSet.toMergedEntities(entityClass, mergedByIds, null);
+                };
+            } else if (returnType.isAssignableFrom(u.Optional.class)) {
+                return (preparedQuery, args) -> {
+                    final DataSet dataSet = (DataSet) preparedQuery.query(ResultExtractor.toDataSet(entityClass));
+                    final List<?> mergedEntities = dataSet.toMergedEntities(entityClass, mergedByIds, null);
+
+                    if (op == OP.findOnlyOne && N.size(mergedEntities) > 1) {
+                        throw new DuplicatedResultException("More than one record found by the query defined or generated in method: " + method.getName());
+                    }
+
+                    return (R) N.firstNonNull(mergedEntities);
+                };
+            } else if (returnType.isAssignableFrom(java.util.Optional.class)) {
+                return (preparedQuery, args) -> {
+                    final DataSet dataSet = (DataSet) preparedQuery.query(ResultExtractor.toDataSet(entityClass));
+                    final List<?> mergedEntities = dataSet.toMergedEntities(entityClass, mergedByIds, null);
+
+                    if (op == OP.findOnlyOne && N.size(mergedEntities) > 1) {
+                        throw new DuplicatedResultException("More than one record found by the query defined or generated in method: " + method.getName());
+                    }
+
+                    return (R) java.util.Optional.ofNullable(N.firstOrNullIfEmpty(mergedEntities));
+                };
+            } else {
+                throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + method.getName()
+                        + " is not supported by method annotated with @MergedById. Only Optional/List/Collection are supported at present");
             }
         } else if (isExists) {
             if (method.getName().startsWith("not")) {
@@ -4966,7 +5006,8 @@ final class DaoImpl {
 
                     final MappedByKey mappedBykeyAnno = m.getAnnotation(MappedByKey.class);
                     final String mappedByKey = mappedBykeyAnno == null ? null
-                            : N.isNullOrEmpty(mappedBykeyAnno.value()) ? mappedBykeyAnno.keyName() : mappedBykeyAnno.value();
+                            : N.notNullOrEmpty(mappedBykeyAnno.value()) ? mappedBykeyAnno.value()
+                                    : (N.notNullOrEmpty(mappedBykeyAnno.keyName()) ? mappedBykeyAnno.keyName() : oneIdPropName);
 
                     if (mappedBykeyAnno != null && N.isNullOrEmpty(mappedByKey)) {
                         throw new IllegalArgumentException("Mapped Key name can't be null or empty in method: " + fullClassMethodName);
@@ -4998,11 +5039,49 @@ final class DaoImpl {
                         }
                     }
 
+                    final MergedById mergedByIdAnno = m.getAnnotation(MergedById.class);
+                    final List<String> mergedByIds = mergedByIdAnno == null ? null
+                            : Splitter.with(',')
+                                    .trimResults()
+                                    .split(N.notNullOrEmpty(mergedByIdAnno.value()) ? mergedByIdAnno.value()
+                                            : (N.notNullOrEmpty(mergedByIdAnno.ids()) ? mergedByIdAnno.ids() : StringUtil.join(idPropNameList, ",")));
+
+                    if (mergedByIdAnno != null && N.isNullOrEmpty(mergedByIds)) {
+                        throw new IllegalArgumentException("Merged id name(s) can't be null or empty in method: " + fullClassMethodName);
+                    }
+
+                    if (N.notNullOrEmpty(mergedByIds)) {
+                        for (String mergedById : mergedByIds) {
+                            final Method mergedByIdMethod = ClassUtil.getPropGetMethod(entityClass, mergedById);
+
+                            if (mergedByIdMethod == null) {
+                                throw new IllegalArgumentException(
+                                        "No method found by merged id: " + mergedById + " in entity class: " + ClassUtil.getCanonicalClassName(entityClass));
+                            }
+                        }
+
+                        if (!(op == OP.DEFAULT || op == OP.findFirst || op == OP.findOnlyOne || op == OP.list)) {
+                            throw new IllegalArgumentException("OP for method annotated by MergedById can't be: " + op + " in method: " + fullClassMethodName
+                                    + ". It must be OP.DEFAULT, OP.findFirst, OP.findOnlyOne or OP.list");
+                        }
+
+                        final Class<?> firstReturnEleType = getFirstReturnEleType(m);
+
+                        if (!(((returnType.isAssignableFrom(List.class) && (op == OP.list || op == OP.DEFAULT))
+                                || ((returnType.isAssignableFrom(u.Optional.class) || returnType.isAssignableFrom(java.util.Optional.class))
+                                        && (op == OP.findFirst || op == OP.findOnlyOne || op == OP.DEFAULT)))
+                                && (firstReturnEleType != null && firstReturnEleType.isAssignableFrom(entityClass)))) {
+                            throw new IllegalArgumentException(
+                                    "The return type of method(" + fullClassMethodName + ") annotated by MergedById must be: Optional/List/Collection<? super "
+                                            + ClassUtil.getSimpleClassName(entityClass) + ">. It can't be: " + m.getGenericReturnType());
+                        }
+                    }
+
                     if (sqlAnno.annotationType().equals(Select.class) || sqlAnno.annotationType().equals(NamedSelect.class)
                             || (isCall && !isUpdateReturnType)) {
 
-                        final Throwables.BiFunction<AbstractPreparedQuery, Object[], Object, Exception> queryFunc = createQueryFunctionByMethod(m,
-                                hasRowMapperOrResultExtractor, hasRowFilter, op, isCall, fullClassMethodName, entityClass);
+                        final Throwables.BiFunction<AbstractPreparedQuery, Object[], Object, Exception> queryFunc = createQueryFunctionByMethod(entityClass, m,
+                                mappedByKey, mergedByIds, hasRowMapperOrResultExtractor, hasRowFilter, op, isCall, fullClassMethodName, entityClass);
 
                         // Getting ClassCastException. Not sure why query result is being casted Dao. It seems there is a bug in JDk compiler.
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
@@ -5010,7 +5089,9 @@ final class DaoImpl {
                         int tmpFetchSize = fetchSize;
 
                         if (fetchSize <= 0) {
-                            if (op == OP.findOnlyOne || op == OP.queryForUnique) {
+                            if (mergedByIdAnno != null) {
+                                // skip
+                            } else if (op == OP.findOnlyOne || op == OP.queryForUnique) {
                                 tmpFetchSize = 2;
                             } else if (op == OP.exists || isExistsQuery(m, op, fullClassMethodName) || op == OP.findFirst || op == OP.queryForSingle
                                     || isSingleReturnType(returnType)) {

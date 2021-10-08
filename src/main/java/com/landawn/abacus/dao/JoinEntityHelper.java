@@ -30,7 +30,9 @@ import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.util.ContinuableFuture;
+import com.landawn.abacus.util.ExceptionalStream;
 import com.landawn.abacus.util.ExceptionalStream.StreamE;
+import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.JdbcUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder;
@@ -273,6 +275,64 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         }
 
         return result;
+    }
+
+    /**
+     *
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param joinEntitiesToLoad
+     * @param cond
+     * @return
+     */
+    @Beta
+    default ExceptionalStream<T, SQLException> stream(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) {
+        return DaoUtil.getDao(this)
+                .stream(selectPropNames, cond)
+                .splitToList(JdbcUtil.DEFAULT_BATCH_SIZE)
+                .onEach(it -> loadJoinEntities(it, joinEntitiesToLoad))
+                .flattMap(Fnn.identity());
+    }
+
+    /**
+     *
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param joinEntitiesToLoad
+     * @param cond
+     * @return
+     */
+    @Beta
+    default ExceptionalStream<T, SQLException> stream(final Collection<String> selectPropNames, final Collection<? extends Class<?>> joinEntitiesToLoad,
+            final Condition cond) {
+        return DaoUtil.getDao(this)
+                .stream(selectPropNames, cond)
+                .splitToList(JdbcUtil.DEFAULT_BATCH_SIZE) //
+                .onEach(it -> {
+                    for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                        loadJoinEntities(it, joinEntityClass);
+                    }
+                })
+                .flattMap(Fnn.identity());
+    }
+
+    /**
+     *
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param includeAllJoinEntities
+     * @param cond
+     * @return
+     */
+    @Beta
+    default ExceptionalStream<T, SQLException> stream(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) {
+        if (includeAllJoinEntities) {
+            return DaoUtil.getDao(this)
+                    .stream(selectPropNames, cond)
+                    .splitToList(JdbcUtil.DEFAULT_BATCH_SIZE) //
+                    .onEach(it -> loadAllJoinEntities(it))
+                    .flattMap(Fnn.identity());
+
+        } else {
+            return DaoUtil.getDao(this).stream(selectPropNames, cond);
+        }
     }
 
     /**

@@ -336,9 +336,6 @@ public class UncheckedDaoTest {
             fail("Should throw UnsupportedOperationException");
         } catch (UnsupportedOperationException e) {
             //
-        } catch (Exception e) {
-            //
-            e.printStackTrace();
         }
 
         noUpdateUserDao.save(user);
