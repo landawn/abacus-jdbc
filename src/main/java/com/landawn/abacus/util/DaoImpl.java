@@ -71,6 +71,7 @@ import com.landawn.abacus.dao.annotation.Config;
 import com.landawn.abacus.dao.annotation.Define;
 import com.landawn.abacus.dao.annotation.DefineList;
 import com.landawn.abacus.dao.annotation.Delete;
+import com.landawn.abacus.dao.annotation.FetchColumnByEntityClass;
 import com.landawn.abacus.dao.annotation.Handler;
 import com.landawn.abacus.dao.annotation.HandlerList;
 import com.landawn.abacus.dao.annotation.Insert;
@@ -760,8 +761,9 @@ final class DaoImpl {
 
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Class<?> entityClass,
-            final Method method, final String mappedByKey, final List<String> mergedByIds, final boolean hasRowMapperOrExtractor, final boolean hasRowFilter,
-            final OP op, final boolean isCall, final String fullClassMethodName, final Class<?> targetEntityClass) {
+            final Method method, final String mappedByKey, final List<String> mergedByIds, final boolean fetchColumnByEntityClass,
+            final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final OP op, final boolean isCall, final String fullClassMethodName,
+            final Class<?> targetEntityClass) {
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
         final Class<?> firstReturnEleType = getFirstReturnEleType(method);
@@ -1295,7 +1297,11 @@ final class DaoImpl {
                 return (preparedQuery, args) -> (R) preparedQuery.stream(firstReturnEleType).toCollection(() -> N.newInstance(returnType));
             }
         } else if (DataSet.class.isAssignableFrom(returnType)) {
-            return (preparedQuery, args) -> (R) preparedQuery.query();
+            if (fetchColumnByEntityClass) {
+                return (preparedQuery, args) -> (R) preparedQuery.query(ResultExtractor.toDataSet(entityClass));
+            } else {
+                return (preparedQuery, args) -> (R) preparedQuery.query();
+            }
         } else if (ExceptionalStream.class.isAssignableFrom(returnType) || Stream.class.isAssignableFrom(returnType)) {
             if (ExceptionalStream.class.isAssignableFrom(returnType)) {
                 return (preparedQuery, args) -> (R) preparedQuery.stream(firstReturnEleType);
@@ -1854,6 +1860,13 @@ final class DaoImpl {
                 .first()
                 .orElse(false);
 
+        final boolean fetchColumnByEntityClassForDataSetQuery = StreamEx.of(allInterfaces)
+                .flatMapp(Class::getAnnotations)
+                .select(Config.class)
+                .map(Config::fetchColumnByEntityClassForDataSetQuery)
+                .first()
+                .orElse(true);
+
         final Map<String, String> sqlFieldMap = StreamEx.of(allInterfaces)
                 .flatMapp(Class::getDeclaredFields)
                 .append(StreamEx.of(allInterfaces).flatMapp(Class::getDeclaredClasses).flatMapp(Class::getDeclaredFields))
@@ -2175,6 +2188,12 @@ final class DaoImpl {
             final Class<?>[] paramTypes = m.getParameterTypes();
             final Class<?> returnType = m.getReturnType();
             final int paramLen = paramTypes.length;
+
+            final boolean fetchColumnByEntityClass = StreamEx.of(m.getAnnotations())
+                    .select(FetchColumnByEntityClass.class)
+                    .map(it -> it.value())
+                    .first()
+                    .orElse(fetchColumnByEntityClassForDataSetQuery);
 
             final Sqls sqlsAnno = StreamEx.of(m.getAnnotations()).select(Sqls.class).onlyOne().orNull();
             List<String> sqlList = null;
@@ -2804,7 +2823,18 @@ final class DaoImpl {
 
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
-                            return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).settParameters(sp.parameters, collParamsSetter).query();
+
+                            if (fetchColumnByEntityClass) {
+                                return proxy.prepareQuery(sp.sql)
+                                        .setFetchDirection(FetchDirection.FORWARD)
+                                        .settParameters(sp.parameters, collParamsSetter)
+                                        .query(ResultExtractor.toDataSet(entityClass));
+                            } else {
+                                return proxy.prepareQuery(sp.sql)
+                                        .setFetchDirection(FetchDirection.FORWARD)
+                                        .settParameters(sp.parameters, collParamsSetter)
+                                        .query();
+                            }
                         };
                     } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)) {
                         call = (proxy, args) -> {
@@ -2813,7 +2843,18 @@ final class DaoImpl {
 
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply((Collection<String>) args[0], limitedCond).pair();
-                            return proxy.prepareQuery(sp.sql).setFetchDirection(FetchDirection.FORWARD).settParameters(sp.parameters, collParamsSetter).query();
+
+                            if (fetchColumnByEntityClass) {
+                                return proxy.prepareQuery(sp.sql)
+                                        .setFetchDirection(FetchDirection.FORWARD)
+                                        .settParameters(sp.parameters, collParamsSetter)
+                                        .query(ResultExtractor.toDataSet(entityClass));
+                            } else {
+                                return proxy.prepareQuery(sp.sql)
+                                        .setFetchDirection(FetchDirection.FORWARD)
+                                        .settParameters(sp.parameters, collParamsSetter)
+                                        .query();
+                            }
                         };
                     } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(JdbcUtil.ResultExtractor.class)) {
@@ -5081,7 +5122,8 @@ final class DaoImpl {
                             || (isCall && !isUpdateReturnType)) {
 
                         final Throwables.BiFunction<AbstractPreparedQuery, Object[], Object, Exception> queryFunc = createQueryFunctionByMethod(entityClass, m,
-                                mappedByKey, mergedByIds, hasRowMapperOrResultExtractor, hasRowFilter, op, isCall, fullClassMethodName, entityClass);
+                                mappedByKey, mergedByIds, fetchColumnByEntityClass, hasRowMapperOrResultExtractor, hasRowFilter, op, isCall,
+                                fullClassMethodName, entityClass);
 
                         // Getting ClassCastException. Not sure why query result is being casted Dao. It seems there is a bug in JDk compiler.
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);

@@ -5964,7 +5964,7 @@ public final class JdbcUtil {
         @SequentialOnly
         @Stateful
         static ResultExtractor<DataSet> toDataSet(final Class<?> entityClass) {
-            return toDataSet(RowExtractor.createBy(entityClass));
+            return toDataSet(RowExtractor.fetchColumnBy(entityClass));
         }
 
         static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter) {
@@ -7534,6 +7534,47 @@ public final class JdbcUtil {
         }
 
         /**
+         *
+         * @param rowExtractor
+         * @param valueFilter
+         * @param mapSupplier
+         * @return
+         */
+        @SequentialOnly
+        @Stateful
+        static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor, final BiPredicate<String, Object> valueFilter,
+                final IntFunction<Map<String, Object>> mapSupplier) {
+            return new BiRowMapper<Map<String, Object>>() {
+                private Object[] outputValuesForRowExtractor = null;
+
+                @Override
+                public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                    final int columnCount = columnLabels.size();
+
+                    if (outputValuesForRowExtractor == null) {
+                        outputValuesForRowExtractor = new Object[columnCount];
+                    }
+
+                    rowExtractor.accept(rs, outputValuesForRowExtractor);
+
+                    final Map<String, Object> result = mapSupplier.apply(columnCount);
+
+                    String columnName = null;
+
+                    for (int i = 0; i < columnCount; i++) {
+                        columnName = columnLabels.get(i);
+
+                        if (valueFilter.test(columnName, outputValuesForRowExtractor[i])) {
+                            result.put(columnName, outputValuesForRowExtractor[i]);
+                        }
+                    }
+
+                    return result;
+                }
+            };
+        }
+
+        /**
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param columnNameConverter
@@ -7546,7 +7587,6 @@ public final class JdbcUtil {
         }
 
         /**
-         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param columnNameConverter
          * @param mapSupplier
@@ -7574,6 +7614,76 @@ public final class JdbcUtil {
 
                     for (int i = 1; i <= columnCount; i++) {
                         result.put(keyNames[i - 1], JdbcUtil.getColumnValue(rs, i));
+                    }
+
+                    return result;
+                }
+            };
+
+        }
+
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param rowExtractor
+         * @param columnNameConverter
+         * @param mapSupplier
+         * @return
+         */
+        @SequentialOnly
+        @Stateful
+        static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor, final Function<? super String, String> columnNameConverter,
+                final IntFunction<Map<String, Object>> mapSupplier) {
+            return new BiRowMapper<Map<String, Object>>() {
+                private Object[] outputValuesForRowExtractor = null;
+                private String[] keyNames = null;
+
+                @Override
+                public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                    final int columnCount = columnLabels.size();
+
+                    if (outputValuesForRowExtractor == null) {
+                        outputValuesForRowExtractor = new Object[columnCount];
+                        keyNames = new String[columnCount];
+
+                        for (int i = 0; i < columnCount; i++) {
+                            keyNames[i] = columnNameConverter.apply(columnLabels.get(i));
+                        }
+                    }
+
+                    rowExtractor.accept(rs, outputValuesForRowExtractor);
+
+                    final Map<String, Object> result = mapSupplier.apply(columnCount);
+
+                    for (int i = 0; i < columnCount; i++) {
+                        result.put(keyNames[i], outputValuesForRowExtractor[i]);
+                    }
+
+                    return result;
+                }
+            };
+        }
+
+        @SequentialOnly
+        @Stateful
+        static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor) {
+            return new BiRowMapper<Map<String, Object>>() {
+                private Object[] outputValuesForRowExtractor = null;
+
+                @Override
+                public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                    final int columnCount = columnLabels.size();
+
+                    if (outputValuesForRowExtractor == null) {
+                        outputValuesForRowExtractor = new Object[columnCount];
+                    }
+
+                    rowExtractor.accept(rs, outputValuesForRowExtractor);
+
+                    final Map<String, Object> result = JdbcUtil.newRowHashMap(columnCount);
+
+                    for (int i = 0; i < columnCount; i++) {
+                        result.put(columnLabels.get(i), outputValuesForRowExtractor[i]);
                     }
 
                     return result;
@@ -8411,15 +8521,15 @@ public final class JdbcUtil {
         /**
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
-         * @param entityClass
+         * @param entityClassForFetch
          * @return
          */
         @SequentialOnly
         @Stateful
-        static RowExtractor createBy(final Class<?> entityClass) {
-            N.checkArgument(ClassUtil.isEntity(entityClass), "entityClass");
+        static RowExtractor fetchColumnBy(final Class<?> entityClassForFetch) {
+            N.checkArgument(ClassUtil.isEntity(entityClassForFetch), "entityClassForFetch");
 
-            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClassForFetch);
 
             return new RowExtractor() {
                 private volatile Type<?>[] columnTypes = null;
@@ -8430,7 +8540,7 @@ public final class JdbcUtil {
                     Type<?>[] columnTypes = this.columnTypes;
 
                     if (columnTypes == null) {
-                        final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
+                        final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClassForFetch);
                         final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
                         columnCount = columnLabelList.size();
                         final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
@@ -8454,7 +8564,7 @@ public final class JdbcUtil {
                             }
 
                             if (propInfo == null) {
-                                propInfo = JdbcUtil.getSubPropInfo(entityClass, columnLabels[i]);
+                                propInfo = JdbcUtil.getSubPropInfo(entityClassForFetch, columnLabels[i]);
 
                                 if (propInfo == null) {
                                     String fieldName = column2FieldNameMap.get(columnLabels[i]);
@@ -8464,7 +8574,7 @@ public final class JdbcUtil {
                                     }
 
                                     if (N.notNullOrEmpty(fieldName)) {
-                                        propInfo = JdbcUtil.getSubPropInfo(entityClass, fieldName);
+                                        propInfo = JdbcUtil.getSubPropInfo(entityClassForFetch, fieldName);
                                     }
                                 }
 

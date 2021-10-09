@@ -53,4 +53,10 @@ public @interface Config {
 
     //    // why do we need this?
     //    boolean excludePrepareQueryMethodsFromNonDBOpereation() default false;
+
+    /**
+     *
+     * @return
+     */
+    boolean fetchColumnByEntityClassForDataSetQuery() default true;
 }
