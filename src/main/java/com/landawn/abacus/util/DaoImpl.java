@@ -2192,6 +2192,8 @@ final class DaoImpl {
             final boolean fetchColumnByEntityClass = StreamEx.of(m.getAnnotations())
                     .select(FetchColumnByEntityClass.class)
                     .map(it -> it.value())
+                    .onEach(it -> N.checkArgument(DataSet.class.isAssignableFrom(returnType),
+                            "@FetchColumnByEntityClass is not supported for method: {} because its return type is not DataSet", fullClassMethodName))
                     .first()
                     .orElse(fetchColumnByEntityClassForDataSetQuery);
 

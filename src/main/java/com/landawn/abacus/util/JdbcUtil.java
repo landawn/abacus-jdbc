@@ -5964,7 +5964,7 @@ public final class JdbcUtil {
         @SequentialOnly
         @Stateful
         static ResultExtractor<DataSet> toDataSet(final Class<?> entityClass) {
-            return toDataSet(RowExtractor.fetchColumnBy(entityClass));
+            return toDataSet(RowExtractor.createBy(entityClass));
         }
 
         static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter) {
@@ -8526,7 +8526,7 @@ public final class JdbcUtil {
          */
         @SequentialOnly
         @Stateful
-        static RowExtractor fetchColumnBy(final Class<?> entityClassForFetch) {
+        static RowExtractor createBy(final Class<?> entityClassForFetch) {
             N.checkArgument(ClassUtil.isEntity(entityClassForFetch), "entityClassForFetch");
 
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClassForFetch);
