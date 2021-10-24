@@ -1859,7 +1859,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     private void checkParameterIndices(final int... parameterIndices) {
-        checkArg(N.notNullOrEmpty(parameterIndices), "parameterIndices can't be null or empty");
+        checkArg(N.notNullOrEmpty(parameterIndices), "'parameterIndices' can't be null or empty");
 
         for (int parameterIndex : parameterIndices) {
             if (parameterIndex <= 0) {
