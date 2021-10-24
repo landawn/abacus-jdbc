@@ -1426,6 +1426,21 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * Sets the parameters.
      *
+     * @param <T>
+     * @param startParameterIndex
+     * @param parameters
+     * @param type
+     * @return
+     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+     * @throws SQLException
+     */
+    public <T> This setParameters(final Collection<? extends T> parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
+        return settParameters(1, parameters, type);
+    }
+
+    /**
+     * Sets the parameters.
+     *
      * @param startParameterIndex
      * @param parameters
      * @return
@@ -1528,21 +1543,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         }
 
         return (This) this;
-    }
-
-    /**
-     * Sets the parameters.
-     *
-     * @param <T>
-     * @param startParameterIndex
-     * @param parameters
-     * @param type
-     * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
-     * @throws SQLException
-     */
-    public <T> This settParameters(final Collection<? extends T> parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
-        return settParameters(1, parameters, type);
     }
 
     /**
@@ -1978,20 +1978,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      *
      * @param <T>
-     * @param batchParameters
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    public <T> This addBatchParameters(final Iterator<T> batchParameters) throws SQLException {
-        checkArgNotNull(batchParameters, "batchParameters");
-
-        return addBatchParameters(N.toList(batchParameters));
-    }
-
-    /**
-     *
-     * @param <T>
      * @param batchParameters single batch parameters.
      * @param type
      * @return
@@ -2001,26 +1987,40 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     public <T> This addBatchParameters(final Collection<? extends T> batchParameters, final Class<T> type) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
         checkArgNotNull(type, "type");
-
+    
         boolean noException = false;
         final Type<T> setter = N.typeOf(type);
-
+    
         try {
             for (T parameter : batchParameters) {
                 setter.set(stmt, 1, parameter);
                 stmt.addBatch();
             }
-
+    
             isBatch = batchParameters.size() > 0;
-
+    
             noException = true;
         } finally {
             if (noException == false) {
                 close();
             }
         }
-
+    
         return (This) this;
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param batchParameters
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public <T> This addBatchParameters(final Iterator<T> batchParameters) throws SQLException {
+        checkArgNotNull(batchParameters, "batchParameters");
+
+        return addBatchParameters(N.toList(batchParameters));
     }
 
     /**
