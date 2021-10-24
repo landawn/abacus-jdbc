@@ -1163,20 +1163,22 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
-    /**
-     * Sets the parameters.
-     *
-     * @param param1
-     * @param param2
-     * @return
-     * @throws SQLException
-     */
-    public This setParameters(final Object param1, final Object param2) throws SQLException {
-        setObject(1, param1);
-        setObject(2, param2);
-
-        return (This) this;
-    }
+    //    /**
+    //     * Sets the parameters.
+    //     *
+    //     * @param param1
+    //     * @param param2
+    //     * @return
+    //     * @throws SQLException
+    //     * @deprecated to void error: java ambiguous method call with other {@code setParameters} methods
+    //     */
+    //    @Deprecated
+    //    public This setParameters(final Object param1, final Object param2) throws SQLException {
+    //        setObject(1, param1);
+    //        setObject(2, param2);
+    //
+    //        return (This) this;
+    //    }
 
     /**
      * Sets the parameters.
@@ -1987,25 +1989,25 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     public <T> This addBatchParameters(final Collection<? extends T> batchParameters, final Class<T> type) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
         checkArgNotNull(type, "type");
-    
+
         boolean noException = false;
         final Type<T> setter = N.typeOf(type);
-    
+
         try {
             for (T parameter : batchParameters) {
                 setter.set(stmt, 1, parameter);
                 stmt.addBatch();
             }
-    
+
             isBatch = batchParameters.size() > 0;
-    
+
             noException = true;
         } finally {
             if (noException == false) {
                 close();
             }
         }
-    
+
         return (This) this;
     }
 
