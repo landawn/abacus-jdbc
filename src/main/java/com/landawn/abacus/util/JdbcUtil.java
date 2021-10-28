@@ -6007,9 +6007,9 @@ public final class JdbcUtil {
     @FunctionalInterface
     public interface BiResultExtractor<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
 
-        ResultExtractor<DataSet> TO_DATA_SET = new ResultExtractor<DataSet>() {
+        BiResultExtractor<DataSet> TO_DATA_SET = new BiResultExtractor<DataSet>() {
             @Override
-            public DataSet apply(final ResultSet rs) throws SQLException {
+            public DataSet apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 if (rs == null) {
                     return N.newEmptyDataSet();
                 }
