@@ -83,7 +83,14 @@ public class JdbcTest {
             //    JdbcUtil.enableSqlLog(true);
             //    JdbcUtil.setMinExecutionTimeForSqlPerfLog(10);
 
+            final String sql_address_drop_table = "DROP TABLE IF EXISTS address";
+            final String sql_device_drop_table = "DROP TABLE IF EXISTS device";
             final String sql_user_drop_table = "DROP TABLE IF EXISTS user";
+
+            JdbcUtil.executeUpdate(dataSource, sql_address_drop_table);
+            JdbcUtil.executeUpdate(dataSource, sql_device_drop_table);
+            JdbcUtil.executeUpdate(dataSource, sql_user_drop_table);
+
             final String sql_user_creat_table = "CREATE TABLE IF NOT EXISTS user (" //
                     + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
                     + "first_name varchar(32) NOT NULL, " //
@@ -92,10 +99,8 @@ public class JdbcTest {
                     + "email varchar(32), " //
                     + "create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)";
 
-            JdbcUtil.executeUpdate(dataSource, sql_user_drop_table);
             JdbcUtil.executeUpdate(dataSource, sql_user_creat_table);
 
-            final String sql_device_drop_table = "DROP TABLE IF EXISTS device";
             final String sql_device_creat_table = "CREATE TABLE IF NOT EXISTS device (" //
                     + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
                     + "manufacture varchar(64) NOT NULL, " //
@@ -103,10 +108,8 @@ public class JdbcTest {
                     + "user_id bigint(20), " //
                     + "FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE)";
 
-            JdbcUtil.executeUpdate(dataSource, sql_device_drop_table);
             JdbcUtil.executeUpdate(dataSource, sql_device_creat_table);
 
-            final String sql_address_drop_table = "DROP TABLE IF EXISTS address";
             final String sql_address_creat_table = "CREATE TABLE IF NOT EXISTS address (" //
                     + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
                     + "street varchar(64) NOT NULL, " //
@@ -114,7 +117,6 @@ public class JdbcTest {
                     + "user_id bigint(20), " //
                     + "FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE)";
 
-            JdbcUtil.executeUpdate(dataSource, sql_address_drop_table);
             JdbcUtil.executeUpdate(dataSource, sql_address_creat_table);
 
             // this code is copied from: https://www.baeldung.com/hibernate-many-to-many
@@ -241,30 +243,30 @@ public class JdbcTest {
 
         String sql = PSC.insertInto(User.class).sql();
         JdbcUtil.prepareQuery(dataSource, sql) //
-        .setLong(1, 100)
-        .setString(2, "Forrest")
-        .setString(3, "Gump")
-        .setString(4, "Forrest")
-        .setString(5, "123@email.com")
-        .insert();
+                .setLong(1, 100)
+                .setString(2, "Forrest")
+                .setString(3, "Gump")
+                .setString(4, "Forrest")
+                .setString(5, "123@email.com")
+                .insert();
 
         sql = PSC.selectFrom(User.class).where("id = ?").sql();
         JdbcUtil.prepareQuery(dataSource, sql) //
-        .setLong(1, 100)
-        .findOnlyOne(User.class) // or findFirst/list/stream/... a lot more we can do.
-        .ifPresent(System.out::println);
+                .setLong(1, 100)
+                .findOnlyOne(User.class) // or findFirst/list/stream/... a lot more we can do.
+                .ifPresent(System.out::println);
 
         sql = PSC.update(User.class).set("firstName", "lastName").where("id = ?").sql();
         JdbcUtil.prepareQuery(dataSource, sql) //
-        .setString(1, "Tom")
-        .setString(2, "Hanks")
-        .setLong(3, 100)
-        .update();
+                .setString(1, "Tom")
+                .setString(2, "Hanks")
+                .setLong(3, 100)
+                .update();
 
         sql = PSC.deleteFrom(User.class).where("id = ?").sql();
         JdbcUtil.prepareQuery(dataSource, sql) //
-        .setLong(1, 100)
-        .update();
+                .setLong(1, 100)
+                .update();
 
         // Improvements:
         // 1, No need to manually create/open/close Connection/Statement/ResultSet.

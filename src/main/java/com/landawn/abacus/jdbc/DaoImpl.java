@@ -4862,7 +4862,7 @@ final class DaoImpl {
                                                 isDefaultIdTester);
 
                                 if (isEntity && id.isPresent()) {
-                                    idSetter.accept(id, entity);
+                                    idSetter.accept(id.get(), entity);
                                 }
 
                                 return insertResultConvertor.apply(id, entity, isEntity);
