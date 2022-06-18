@@ -20,7 +20,7 @@ class MyBatisTest {
 
     static {
         TransactionFactory transactionFactory = new JdbcTransactionFactory();
-        Environment environment = new Environment("development", transactionFactory, Jdbc.dataSource);
+        Environment environment = new Environment("development", transactionFactory, JdbcTest.dataSource);
         Configuration configuration = new Configuration(environment);
         configuration.addMapper(UserMapper.class);
         sqlSessionFactory = new SqlSessionFactoryBuilder().build(configuration);

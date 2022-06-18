@@ -4,9 +4,9 @@ import java.util.Random;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.DataSet;
 import com.landawn.abacus.samples.entity.Address;
 import com.landawn.abacus.samples.entity.User;
+import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.N;
 
 public class DataSetTest {

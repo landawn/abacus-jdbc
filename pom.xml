@@ -4,7 +4,7 @@
 
 	<groupId>com.landawn</groupId>
 	<artifactId>abacus-jdbc</artifactId>
-	<version>2.9.1</version>
+	<version>3.1</version>
 	<packaging>jar</packaging>
 
 	<name>abacus-jdbc</name>
@@ -12,10 +12,10 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<maven.compiler.source>1.8</maven.compiler.source>
-		<maven.compiler.target>1.8</maven.compiler.target>
-		<java.version>1.8</java.version>
-		<log4j2.version>2.17.1</log4j2.version>
+		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.target>17</maven.compiler.target>
+		<java.version>17</java.version>
+		<log4j2.version>2.17.2</log4j2.version>
 	</properties>
 
 	<dependencies>
@@ -29,14 +29,14 @@
 		<dependency>
 			<groupId>com.landawn</groupId>
 			<artifactId>abacus-common</artifactId>
-            <version>2.3.17</version>
+			<version>3.1</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>com.landawn</groupId>
 			<artifactId>abacus-query</artifactId>
-            <version>0.8.1</version>
+			<version>1.1</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -45,7 +45,7 @@
 			<artifactId>abacus-cache</artifactId>
 			<version>0.8</version>
 			<scope>provided</scope>
-		</dependency> 
+		</dependency>
 
 		<dependency>
 			<groupId>javax.persistence</groupId>
@@ -56,7 +56,7 @@
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-core</artifactId>
-  			<version>[5.2.19,)</version>
+			<version>[5.2.19,)</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -234,11 +234,11 @@
 					<show>public</show>
 					<doclint>none</doclint>
 					<source>8</source>
-                    <sourceFileExcludes> 
-                        <exclude>/com/landawn/abacus/util/JoinInfo.java</exclude>
-                        <exclude>/com/landawn/abacus/util/DaoImpl.java</exclude>
-                        <exclude>/com/landawn/abacus/util/dao/DaoUtil.java</exclude>
-                    </sourceFileExcludes>
+					<sourceFileExcludes>
+						<exclude>/com/landawn/abacus/util/JoinInfo.java</exclude>
+						<exclude>/com/landawn/abacus/util/DaoImpl.java</exclude>
+						<exclude>/com/landawn/abacus/util/dao/DaoUtil.java</exclude>
+					</sourceFileExcludes>
 				</configuration>
 
 				<executions>

@@ -1,17 +1,17 @@
 package com.landawn.abacus.samples;
 
-import static com.landawn.abacus.samples.Jdbc.addressDao;
-import static com.landawn.abacus.samples.Jdbc.dataSource;
-import static com.landawn.abacus.samples.Jdbc.deviceDao;
-import static com.landawn.abacus.samples.Jdbc.employeeDao;
-import static com.landawn.abacus.samples.Jdbc.employeeProjectDao;
-import static com.landawn.abacus.samples.Jdbc.employeeProjectDao2;
-import static com.landawn.abacus.samples.Jdbc.myUserDaoA;
-import static com.landawn.abacus.samples.Jdbc.noUpdateUserDao;
-import static com.landawn.abacus.samples.Jdbc.projectDao;
-import static com.landawn.abacus.samples.Jdbc.readOnlyUserDao;
-import static com.landawn.abacus.samples.Jdbc.userDao;
-import static com.landawn.abacus.samples.Jdbc.userDao2;
+import static com.landawn.abacus.samples.JdbcTest.addressDao;
+import static com.landawn.abacus.samples.JdbcTest.dataSource;
+import static com.landawn.abacus.samples.JdbcTest.deviceDao;
+import static com.landawn.abacus.samples.JdbcTest.employeeDao;
+import static com.landawn.abacus.samples.JdbcTest.employeeProjectDao;
+import static com.landawn.abacus.samples.JdbcTest.employeeProjectDao2;
+import static com.landawn.abacus.samples.JdbcTest.myUserDaoA;
+import static com.landawn.abacus.samples.JdbcTest.noUpdateUserDao;
+import static com.landawn.abacus.samples.JdbcTest.projectDao;
+import static com.landawn.abacus.samples.JdbcTest.readOnlyUserDao;
+import static com.landawn.abacus.samples.JdbcTest.userDao;
+import static com.landawn.abacus.samples.JdbcTest.userDao2;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -28,32 +28,28 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.EntityId;
 import com.landawn.abacus.condition.ConditionFactory.CB;
 import com.landawn.abacus.condition.ConditionFactory.CF;
+import com.landawn.abacus.jdbc.Jdbc;
+import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.samples.entity.Address;
 import com.landawn.abacus.samples.entity.Device;
 import com.landawn.abacus.samples.entity.Employee;
 import com.landawn.abacus.samples.entity.EmployeeProject;
+import com.landawn.abacus.samples.entity.ImmutableUser;
 import com.landawn.abacus.samples.entity.Project;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.DateUtil;
+import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
-import com.landawn.abacus.util.JdbcUtil;
-import com.landawn.abacus.util.JdbcUtil.BiRowConsumer;
-import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
-import com.landawn.abacus.util.JdbcUtil.ResultExtractor;
-import com.landawn.abacus.util.JdbcUtil.RowConsumer;
-import com.landawn.abacus.util.JdbcUtil.RowMapper;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Pair;
 import com.landawn.abacus.util.Profiler;
-import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLParser;
-import com.landawn.abacus.util.SQLTransaction;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.LongStream;
 import com.landawn.abacus.util.stream.Stream;
@@ -86,41 +82,41 @@ public class DaoTest {
         assertEquals(0, userDao.count(ids));
     }
 
-    @Test
-    public void test_preparedQuery() throws Exception {
-
-        List<User> users = IntStream.range(1, 1000)
-                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
-                .toList();
-
-        userDao.batchInsertWithId(users);
-
-        List<User> dbUsers = userDao.prepareQueryForBigResult(CF.ge("id", users.get(0).getId()))
-                .stream(User.class)
-                .onEach(it -> it.setCreateTime(null))
-                .sortedBy(it -> it.getId())
-                .toList();
-
-        assertEquals(users.get(0), dbUsers.get(0));
-        assertTrue(N.equals(users, dbUsers));
-
-        dbUsers = userDao.prepareNamedQueryForBigResult(CF.ge("id", users.get(0).getId()))
-                .stream(User.class)
-                .onEach(it -> it.setCreateTime(null))
-                .sortedBy(it -> it.getId())
-                .toList();
-
-        assertEquals(users.get(0), dbUsers.get(0));
-        assertTrue(N.equals(users, dbUsers));
-
-        PSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toPreparedQuery(userDao.dataSource()).update();
-        NSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toNamedQuery(userDao.dataSource()).update();
-        NSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toNamedQuery(userDao.dataSource()).setIntForMultiPositions(0, 1).update();
-
-        NSC.deleteFrom(User.class)
-                .where(CF.ge("id", users.get(0).getId()))
-                .accept(sp -> JdbcUtil.executeUpdate(userDao.dataSource(), sp.sql, sp.parameters.toArray()));
-    }
+    //    @Test
+    //    public void test_preparedQuery() throws Exception {
+    //
+    //        List<User> users = IntStream.range(1, 1000)
+    //                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+    //                .toList();
+    //
+    //        userDao.batchInsertWithId(users);
+    //
+    //        List<User> dbUsers = userDao.prepareQueryForBigResult(CF.ge("id", users.get(0).getId()))
+    //                .stream(User.class)
+    //                .onEach(it -> it.setCreateTime(null))
+    //                .sortedBy(it -> it.getId())
+    //                .toList();
+    //
+    //        assertEquals(users.get(0), dbUsers.get(0));
+    //        assertTrue(N.equals(users, dbUsers));
+    //
+    //        dbUsers = userDao.prepareNamedQueryForBigResult(CF.ge("id", users.get(0).getId()))
+    //                .stream(User.class)
+    //                .onEach(it -> it.setCreateTime(null))
+    //                .sortedBy(it -> it.getId())
+    //                .toList();
+    //
+    //        assertEquals(users.get(0), dbUsers.get(0));
+    //        assertTrue(N.equals(users, dbUsers));
+    //
+    //        PSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toPreparedQuery(userDao.dataSource()).update();
+    //        NSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toNamedQuery(userDao.dataSource()).update();
+    //        NSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toNamedQuery(userDao.dataSource()).setIntForMultiPositions(0, 1).update();
+    //
+    //        NSC.deleteFrom(User.class)
+    //                .where(CF.ge("id", users.get(0).getId()))
+    //                .accept(sp -> JdbcUtil.executeUpdate(userDao.dataSource(), sp.sql, sp.parameters.toArray()));
+    //    }
 
     @Test
     public void test_parallel() throws Exception {
@@ -449,9 +445,9 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        userDao.findFirst(CF.eq("id", 100L), BiRowMapper.TO_MAP).ifPresent(Fn.println());
+        userDao.findFirst(CF.eq("id", 100L), Jdbc.BiRowMapper.TO_MAP).ifPresent(Fn.println());
 
-        userDao.findFirst(CF.eq("id", 100L), BiRowMapper.toMap(Fn.toUpperCaseWithUnderscore())).ifPresent(Fn.println());
+        userDao.findFirst(CF.eq("id", 100L), Jdbc.BiRowMapper.toMap(Fn.toUpperCaseWithUnderscore())).ifPresent(Fn.println());
 
         userDao.deleteById(100L);
 
@@ -695,6 +691,9 @@ public class DaoTest {
             userDao.findFirst(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).ifPresent(Fn.println());
         }
 
+        userDao.prepareQuery("select * from user").list(ImmutableUser.class).forEach(Fn.println());
+        userDao.prepareQuery("select * from user").list(Jdbc.BiRowMapper.to(ImmutableUser.class)).forEach(Fn.println());
+
         userDao.getOne(0).ifPresent(Fn.println());
 
         userDao.updateFirstAndLastName("Tom", "Hanks", 100);
@@ -786,19 +785,19 @@ public class DaoTest {
             userDao.stream(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fnn.println());
         }
 
-        userDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null, JdbcUtil.RowMapper.builder().get(1, (i, rs) -> rs.getString(i)).toList())
-                .forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null, Jdbc.RowMapper.builder().get(1, (rs, i) -> rs.getString(i)).toList())
+        .forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.builder().get("firstName", (i, rs) -> rs.getString(i)).to(List.class))
-                .forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(List.class))
+        .forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
-                .forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
+        .forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.builder().get("firstName", (i, rs) -> rs.getString(i)).to(User.class))
-                .forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(User.class))
+        .forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.to(User.class)).forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.to(User.class)).forEach(Fn.println());
 
         userDao.streamOne(0).forEach(Fn.println());
 
@@ -842,7 +841,7 @@ public class DaoTest {
         final String query = "select first_name, last_name, device.manufacture as \" devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.street as \"address.street\", address.city as \"address.city\" from user left join device on user.id = device.user_id left join address on user.id = address.user_id";
 
         userDao.prepareQuery(query).list(User.class).forEach(Fn.println());
-        userDao.prepareQuery(query).query(ResultExtractor.toDataSet(User.class)).println();
+        userDao.prepareQuery(query).query(Jdbc.ResultExtractor.toDataSet(User.class)).println();
 
         userDao.deleteAllJoinEntities(user);
         userDao.delete(user);
@@ -1148,17 +1147,17 @@ public class DaoTest {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        userDao.forEach(CF.eq("firstName", "Forrest"), RowConsumer.oneOff(a -> N.println(a.join(", "))));
-        userDao.forEach(CF.eq("firstName", "Forrest"), RowConsumer.oneOff(User.class, a -> N.println(a.join(", "))));
+        userDao.forEach(CF.eq("firstName", "Forrest"), Jdbc.RowConsumer.oneOff(a -> N.println(a.join(", "))));
+        userDao.forEach(CF.eq("firstName", "Forrest"), Jdbc.RowConsumer.oneOff(User.class, a -> N.println(a.join(", "))));
 
-        userDao.forEach(CF.eq("firstName", "Forrest"), BiRowConsumer.oneOff((cls, a) -> N.println(a.join(", "))));
-        userDao.forEach(CF.eq("firstName", "Forrest"), BiRowConsumer.oneOff(User.class, (cls, a) -> N.println(a.join(", "))));
+        userDao.forEach(CF.eq("firstName", "Forrest"), Jdbc.BiRowConsumer.oneOff((cls, a) -> N.println(a.join(", "))));
+        userDao.forEach(CF.eq("firstName", "Forrest"), Jdbc.BiRowConsumer.oneOff(User.class, (cls, a) -> N.println(a.join(", "))));
 
-        userDao.stream(CF.eq("firstName", "Forrest"), RowMapper.toDisposableObjArray()).forEach(Fn.println());
-        userDao.stream(CF.eq("firstName", "Forrest"), RowMapper.toDisposableObjArray(User.class)).forEach(Fn.println());
+        userDao.stream(CF.eq("firstName", "Forrest"), Jdbc.RowMapper.toDisposableObjArray()).forEach(Fn.println());
+        userDao.stream(CF.eq("firstName", "Forrest"), Jdbc.RowMapper.toDisposableObjArray(User.class)).forEach(Fn.println());
 
-        userDao.stream(CF.eq("firstName", "Forrest"), BiRowMapper.toDisposableObjArray()).forEach(Fn.println());
-        userDao.stream(CF.eq("firstName", "Forrest"), BiRowMapper.toDisposableObjArray(User.class)).forEach(Fn.println());
+        userDao.stream(CF.eq("firstName", "Forrest"), Jdbc.BiRowMapper.toDisposableObjArray()).forEach(Fn.println());
+        userDao.stream(CF.eq("firstName", "Forrest"), Jdbc.BiRowMapper.toDisposableObjArray(User.class)).forEach(Fn.println());
 
         userDao.deleteById(100L);
     }
@@ -1172,9 +1171,9 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        myUserDaoA.findFirst(CF.eq("id", 100L), BiRowMapper.TO_MAP).ifPresent(Fn.println());
+        myUserDaoA.findFirst(CF.eq("id", 100L), Jdbc.BiRowMapper.TO_MAP).ifPresent(Fn.println());
 
-        myUserDaoA.findFirst(CF.eq("id", 100L), BiRowMapper.toMap(Fn.toUpperCaseWithUnderscore())).ifPresent(Fn.println());
+        myUserDaoA.findFirst(CF.eq("id", 100L), Jdbc.BiRowMapper.toMap(Fn.toUpperCaseWithUnderscore())).ifPresent(Fn.println());
 
         myUserDaoA.deleteById(100L);
 

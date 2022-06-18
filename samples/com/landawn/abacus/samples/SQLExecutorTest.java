@@ -1,7 +1,7 @@
 package com.landawn.abacus.samples;
 
-import static com.landawn.abacus.samples.Jdbc.sqlExecutor;
-import static com.landawn.abacus.samples.Jdbc.userDao;
+import static com.landawn.abacus.samples.JdbcTest.sqlExecutor;
+import static com.landawn.abacus.samples.JdbcTest.userDao;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.JdbcSettings;
 import com.landawn.abacus.samples.entity.User;
-import com.landawn.abacus.util.JdbcSettings;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.SP;

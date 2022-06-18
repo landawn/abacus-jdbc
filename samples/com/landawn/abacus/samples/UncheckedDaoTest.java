@@ -1,16 +1,16 @@
 package com.landawn.abacus.samples;
 
-import static com.landawn.abacus.samples.Jdbc.addressDao;
-import static com.landawn.abacus.samples.Jdbc.dataSource;
-import static com.landawn.abacus.samples.Jdbc.deviceDao;
-import static com.landawn.abacus.samples.Jdbc.employeeDao;
-import static com.landawn.abacus.samples.Jdbc.employeeProjectDao;
-import static com.landawn.abacus.samples.Jdbc.employeeProjectDao2;
-import static com.landawn.abacus.samples.Jdbc.noUpdateUserDao;
-import static com.landawn.abacus.samples.Jdbc.projectDao;
-import static com.landawn.abacus.samples.Jdbc.readOnlyUserDao;
-import static com.landawn.abacus.samples.Jdbc.uncheckedUserDao;
-import static com.landawn.abacus.samples.Jdbc.uncheckedUserDao2;
+import static com.landawn.abacus.samples.JdbcTest.addressDao;
+import static com.landawn.abacus.samples.JdbcTest.dataSource;
+import static com.landawn.abacus.samples.JdbcTest.deviceDao;
+import static com.landawn.abacus.samples.JdbcTest.employeeDao;
+import static com.landawn.abacus.samples.JdbcTest.employeeProjectDao;
+import static com.landawn.abacus.samples.JdbcTest.employeeProjectDao2;
+import static com.landawn.abacus.samples.JdbcTest.noUpdateUserDao;
+import static com.landawn.abacus.samples.JdbcTest.projectDao;
+import static com.landawn.abacus.samples.JdbcTest.readOnlyUserDao;
+import static com.landawn.abacus.samples.JdbcTest.uncheckedUserDao;
+import static com.landawn.abacus.samples.JdbcTest.uncheckedUserDao2;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -25,22 +25,22 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.EntityId;
 import com.landawn.abacus.condition.ConditionFactory.CF;
+import com.landawn.abacus.jdbc.Jdbc;
+import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.samples.entity.Address;
 import com.landawn.abacus.samples.entity.Device;
 import com.landawn.abacus.samples.entity.Employee;
 import com.landawn.abacus.samples.entity.EmployeeProject;
 import com.landawn.abacus.samples.entity.Project;
 import com.landawn.abacus.samples.entity.User;
+import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
-import com.landawn.abacus.util.JdbcUtil;
-import com.landawn.abacus.util.JdbcUtil.BiRowMapper;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Profiler;
 import com.landawn.abacus.util.SQLParser;
-import com.landawn.abacus.util.SQLTransaction;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.LongStream;
 import com.landawn.abacus.util.stream.Stream;
@@ -517,21 +517,21 @@ public class UncheckedDaoTest {
             uncheckedUserDao.stream(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fnn.println());
         }
 
-        uncheckedUserDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null, JdbcUtil.RowMapper.builder().get(1, (i, rs) -> rs.getString(i)).toList())
-                .forEach(Fn.println());
+        uncheckedUserDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null, Jdbc.RowMapper.builder().get(1, (rs, i) -> rs.getString(i)).toList())
+        .forEach(Fn.println());
 
         uncheckedUserDao
-                .list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.builder().get("firstName", (i, rs) -> rs.getString(i)).to(List.class))
-                .forEach(Fn.println());
+        .list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(List.class))
+        .forEach(Fn.println());
 
-        uncheckedUserDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
-                .forEach(Fn.println());
+        uncheckedUserDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
+        .forEach(Fn.println());
 
         uncheckedUserDao
-                .list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.builder().get("firstName", (i, rs) -> rs.getString(i)).to(User.class))
-                .forEach(Fn.println());
+        .list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(User.class))
+        .forEach(Fn.println());
 
-        uncheckedUserDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, BiRowMapper.to(User.class)).forEach(Fn.println());
+        uncheckedUserDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.to(User.class)).forEach(Fn.println());
 
         uncheckedUserDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
