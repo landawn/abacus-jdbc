@@ -2801,11 +2801,17 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
 
                 if (ClassUtil.isEntity(cls)) {
                     final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+                    final PropInfo[] propInfos = new PropInfo[parameterCount];
+
+                    for (int i = 0; i < parameterCount; i++) {
+                        propInfos[i] = entityInfo.getPropInfo(parameterNames.get(i));
+                    }
+
                     PropInfo propInfo = null;
 
                     for (Object entity : batchParameters) {
                         for (int i = 0; i < parameterCount; i++) {
-                            propInfo = entityInfo.getPropInfo(parameterNames.get(i));
+                            propInfo = propInfos[i];
 
                             if (propInfo != null) {
                                 propInfo.dbType.set(stmt, i + 1, propInfo.getPropValue(entity));
