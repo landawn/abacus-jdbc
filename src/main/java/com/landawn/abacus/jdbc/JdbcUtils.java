@@ -53,7 +53,7 @@ import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.DateTimeFormat;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IOUtil;
-import com.landawn.abacus.util.Iterables;
+import com.landawn.abacus.util.Iterators;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.ObjIterator;
 import com.landawn.abacus.util.Objectory;
@@ -3257,7 +3257,7 @@ public final class JdbcUtils {
             }
         };
 
-        Iterables.forEach(iter, 0, count, processThreadNum, queueSize, rowParser, onComplete);
+        Iterators.forEach(iter, 0, count, processThreadNum, queueSize, rowParser, onComplete);
     }
 
     private static void setFetchForBigResult(final Connection conn, PreparedStatement stmt) throws SQLException {
