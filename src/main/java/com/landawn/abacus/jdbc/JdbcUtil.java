@@ -49,6 +49,16 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.cache.Cache;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.Jdbc.BiParametersSetter;
+import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
+import com.landawn.abacus.jdbc.Jdbc.BiRowFilter;
+import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
+import com.landawn.abacus.jdbc.Jdbc.OutParam;
+import com.landawn.abacus.jdbc.Jdbc.OutParamResult;
+import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
+import com.landawn.abacus.jdbc.Jdbc.RowExtractor;
+import com.landawn.abacus.jdbc.Jdbc.RowFilter;
+import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.jdbc.SQLTransaction.CreatedBy;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
@@ -124,7 +134,7 @@ public final class JdbcUtil {
 
     static final Logger logger = LoggerFactory.getLogger(JdbcUtil.class);
 
-    static final Logger sqlLogger = LoggerFactory.getLogger("com.landawn.abacus.jdbc.SQL");
+    static final Logger sqlLogger = LoggerFactory.getLogger("com.landawn.abacus.SQL");
 
     public static final int DEFAULT_BATCH_SIZE = 200;
 
@@ -160,7 +170,7 @@ public final class JdbcUtil {
             N.max(128, IOUtil.CPU_CORES * 16, (IOUtil.MAX_MEMORY_IN_MB / 1024) * 16), // maxThreadPoolSize
             180L, TimeUnit.SECONDS);
 
-    static final Jdbc.BiParametersSetter<? super PreparedStatement, ? super Object[]> DEFAULT_STMT_SETTER = (stmt, parameters) -> {
+    static final BiParametersSetter<? super PreparedStatement, ? super Object[]> DEFAULT_STMT_SETTER = (stmt, parameters) -> {
         for (int i = 0, len = parameters.length; i < len; i++) {
             stmt.setObject(i + 1, parameters[i]);
         }
@@ -361,7 +371,7 @@ public final class JdbcUtil {
         Class<? extends Driver> driverClass = null;
         // jdbc:mysql://localhost:3306/abacustest
         if (url.indexOf("mysql") > 0 || StringUtil.indexOfIgnoreCase(url, "mysql") > 0) {
-            driverClass = ClassUtil.forClass("com.mysql.jdbc.Driver");
+            driverClass = ClassUtil.forClass("com.mysql.Driver");
             // jdbc:postgresql://localhost:5432/abacustest
         } else if (url.indexOf("postgresql") > 0 || StringUtil.indexOfIgnoreCase(url, "postgresql") > 0) {
             driverClass = ClassUtil.forClass("org.postgresql.Driver");
@@ -370,13 +380,13 @@ public final class JdbcUtil {
             driverClass = ClassUtil.forClass("org.h2.Driver");
             // jdbc:hsqldb:hsql://localhost/abacustest
         } else if (url.indexOf("hsqldb") > 0 || StringUtil.indexOfIgnoreCase(url, "hsqldb") > 0) {
-            driverClass = ClassUtil.forClass("org.hsqldb.jdbc.JDBCDriver");
-            // jdbc.url=jdbc:oracle:thin:@localhost:1521:abacustest
+            driverClass = ClassUtil.forClass("org.hsqldb.JDBCDriver");
+            // url=jdbc:oracle:thin:@localhost:1521:abacustest
         } else if (url.indexOf("oracle") > 0 || StringUtil.indexOfIgnoreCase(url, "oracle") > 0) {
-            driverClass = ClassUtil.forClass("oracle.jdbc.driver.OracleDriver");
-            // jdbc.url=jdbc:sqlserver://localhost:1433;Database=abacustest
+            driverClass = ClassUtil.forClass("oracle.driver.OracleDriver");
+            // url=jdbc:sqlserver://localhost:1433;Database=abacustest
         } else if (url.indexOf("sqlserver") > 0 || StringUtil.indexOfIgnoreCase(url, "sqlserver") > 0) {
-            driverClass = ClassUtil.forClass("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+            driverClass = ClassUtil.forClass("com.microsoft.sqlserver.SQLServerDriver");
             // jdbc:db2://localhost:50000/abacustest
         } else if (url.indexOf("db2") > 0 || StringUtil.indexOfIgnoreCase(url, "db2") > 0) {
             driverClass = ClassUtil.forClass("com.ibm.db2.jcc.DB2Driver");
@@ -391,7 +401,7 @@ public final class JdbcUtil {
 
     static {
         try {
-            isInSpring = ClassUtil.forClass("org.springframework.jdbc.datasource.DataSourceUtils") != null;
+            isInSpring = ClassUtil.forClass("org.springframework.datasource.DataSourceUtils") != null;
         } catch (Throwable e) {
             isInSpring = false;
         }
@@ -3642,9 +3652,9 @@ public final class JdbcUtil {
         return ClassUtil.isEntity(cls) || ClassUtil.isRecordClass(cls) || Map.class.isAssignableFrom(cls) || EntityId.class.isAssignableFrom(cls);
     }
 
-    static final Jdbc.RowFilter INTERNAL_DUMMY_ROW_FILTER = Jdbc.RowFilter.ALWAYS_TRUE;
+    static final RowFilter INTERNAL_DUMMY_ROW_FILTER = RowFilter.ALWAYS_TRUE;
 
-    static final Jdbc.RowExtractor INTERNAL_DUMMY_ROW_EXTRACTOR = (rs, outputRow) -> {
+    static final RowExtractor INTERNAL_DUMMY_ROW_EXTRACTOR = (rs, outputRow) -> {
         throw new UnsupportedOperationException("DO NOT CALL ME.");
     };
 
@@ -3704,8 +3714,7 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    public static DataSet extractData(final ResultSet rs, int offset, int count, final Jdbc.RowFilter filter, final boolean closeResultSet)
-            throws SQLException {
+    public static DataSet extractData(final ResultSet rs, int offset, int count, final RowFilter filter, final boolean closeResultSet) throws SQLException {
         return extractData(rs, offset, count, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, closeResultSet);
     }
 
@@ -3719,7 +3728,7 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    public static DataSet extractData(final ResultSet rs, int offset, int count, final Jdbc.RowExtractor rowExtractor, final boolean closeResultSet)
+    public static DataSet extractData(final ResultSet rs, int offset, int count, final RowExtractor rowExtractor, final boolean closeResultSet)
             throws SQLException {
         return extractData(rs, offset, count, INTERNAL_DUMMY_ROW_FILTER, rowExtractor, closeResultSet);
     }
@@ -3735,7 +3744,7 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    public static DataSet extractData(final ResultSet rs, int offset, int count, final Jdbc.RowFilter filter, final Jdbc.RowExtractor rowExtractor,
+    public static DataSet extractData(final ResultSet rs, int offset, int count, final RowFilter filter, final RowExtractor rowExtractor,
             final boolean closeResultSet) throws SQLException {
         N.checkArgNotNull(rs, "ResultSet");
         N.checkArgNotNegative(offset, "offset");
@@ -3816,7 +3825,7 @@ public final class JdbcUtil {
         }
     }
 
-    static <R> R extractAndCloseResultSet(ResultSet rs, final Jdbc.ResultExtractor<R> resultExtrator) throws SQLException {
+    static <R> R extractAndCloseResultSet(ResultSet rs, final ResultExtractor<R> resultExtrator) throws SQLException {
         try {
             return checkNotResultSet(resultExtrator.apply(rs));
         } finally {
@@ -3824,7 +3833,7 @@ public final class JdbcUtil {
         }
     }
 
-    static <R> R extractAndCloseResultSet(ResultSet rs, final Jdbc.BiResultExtractor<R> resultExtrator) throws SQLException {
+    static <R> R extractAndCloseResultSet(ResultSet rs, final BiResultExtractor<R> resultExtrator) throws SQLException {
         try {
             return checkNotResultSet(resultExtrator.apply(rs, getColumnLabelList(rs)));
         } finally {
@@ -3843,7 +3852,7 @@ public final class JdbcUtil {
      * @return
      */
     public static ExceptionalStream<DataSet, SQLException> extractAllResultSets(final Statement stmt) {
-        return extractAllResultSets(stmt, Jdbc.ResultExtractor.TO_DATA_SET);
+        return extractAllResultSets(stmt, ResultExtractor.TO_DATA_SET);
     }
 
     /**
@@ -3856,7 +3865,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> extractAllResultSets(final Statement stmt, final Jdbc.ResultExtractor<T> resultExtractor) {
+    public static <T> ExceptionalStream<T, SQLException> extractAllResultSets(final Statement stmt, final ResultExtractor<T> resultExtractor) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(resultExtractor, "resultExtractor");
 
@@ -3878,7 +3887,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> extractAllResultSets(final Statement stmt, final Jdbc.BiResultExtractor<T> resultExtractor) {
+    public static <T> ExceptionalStream<T, SQLException> extractAllResultSets(final Statement stmt, final BiResultExtractor<T> resultExtractor) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(resultExtractor, "resultExtractor");
 
@@ -3916,7 +3925,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(targetClass, "targetClass");
         N.checkArgNotNull(resultSet, "resultSet");
 
-        return stream(resultSet, Jdbc.BiRowMapper.to(targetClass));
+        return stream(resultSet, BiRowMapper.to(targetClass));
     }
 
     /**
@@ -3929,14 +3938,14 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final Jdbc.RowMapper<T> rowMapper) {
+    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final RowMapper<T> rowMapper) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
         return InternalUtil.newStream(iterate(resultSet, rowMapper, null));
     }
 
-    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final Jdbc.RowMapper<T> rowMapper,
+    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final RowMapper<T> rowMapper,
             final Throwables.Runnable<SQLException> onClose) {
         return new ExceptionalIterator<>() {
             private boolean hasNext;
@@ -4004,7 +4013,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<T> rowMapper) {
+    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<T> rowMapper) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -4012,7 +4021,7 @@ public final class JdbcUtil {
         return InternalUtil.newStream(iterate(resultSet, rowFilter, rowMapper, null));
     }
 
-    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<T> rowMapper,
+    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<T> rowMapper,
             final Throwables.Runnable<SQLException> onClose) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowFilter, "rowFilter");
@@ -4065,14 +4074,14 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final Jdbc.BiRowMapper<T> rowMapper) {
+    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final BiRowMapper<T> rowMapper) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
         return InternalUtil.newStream(iterate(resultSet, rowMapper, null));
     }
 
-    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final Jdbc.BiRowMapper<T> rowMapper,
+    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowMapper<T> rowMapper,
             final Throwables.Runnable<SQLException> onClose) {
         return new ExceptionalIterator<>() {
             private List<String> columnLabels = null;
@@ -4145,8 +4154,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final Jdbc.BiRowFilter rowFilter,
-            final Jdbc.BiRowMapper<T> rowMapper) {
+    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -4154,7 +4162,7 @@ public final class JdbcUtil {
         return InternalUtil.newStream(iterate(resultSet, rowFilter, rowMapper));
     }
 
-    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<T> rowMapper) {
+    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) {
         return new ExceptionalIterator<>() {
             private List<String> columnLabels = null;
             private boolean hasNext;
@@ -4204,7 +4212,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgPositive(columnIndex, "columnIndex");
 
-        final Jdbc.RowMapper<T> rowMapper = rs -> (T) getColumnValue(resultSet, columnIndex);
+        final RowMapper<T> rowMapper = rs -> (T) getColumnValue(resultSet, columnIndex);
 
         return stream(resultSet, rowMapper);
     }
@@ -4223,7 +4231,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNullOrEmpty(columnName, "columnName");
 
-        final Jdbc.RowMapper<T> rowMapper = new Jdbc.RowMapper<>() {
+        final RowMapper<T> rowMapper = new RowMapper<>() {
             private int columnIndex = -1;
 
             @Override
@@ -4249,7 +4257,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final Jdbc.RowMapper<T> rowMapper) {
+    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowMapper<T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
@@ -4272,8 +4280,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final Jdbc.RowFilter rowFilter,
-            final Jdbc.RowMapper<T> rowMapper) {
+    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowFilter rowFilter, final RowMapper<T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -4296,7 +4303,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final Jdbc.BiRowMapper<T> rowMapper) {
+    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowMapper<T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
@@ -4319,8 +4326,8 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final Jdbc.BiRowFilter rowFilter,
-            final Jdbc.BiRowMapper<T> rowMapper) {
+    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter,
+            final BiRowMapper<T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -4696,11 +4703,11 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    public static Jdbc.OutParamResult getOutParameters(final CallableStatement stmt, final List<Jdbc.OutParam> outParams) throws SQLException {
+    public static OutParamResult getOutParameters(final CallableStatement stmt, final List<OutParam> outParams) throws SQLException {
         N.checkArgNotNull(stmt, "stmt");
 
         if (N.isNullOrEmpty(outParams)) {
-            return new Jdbc.OutParamResult(N.<Jdbc.OutParam> emptyList(), N.<Object, Object> emptyMap());
+            return new OutParamResult(N.<OutParam> emptyList(), N.<Object, Object> emptyMap());
         }
 
         final Map<Object, Object> outParamValues = new LinkedHashMap<>(outParams.size());
@@ -4708,7 +4715,7 @@ public final class JdbcUtil {
         Object key = null;
         Object value = null;
 
-        for (Jdbc.OutParam outParam : outParams) {
+        for (OutParam outParam : outParams) {
             outParameterGetter = sqlTypeGetterMap.getOrDefault(outParam.getSqlType(), objOutParameterGetter);
 
             key = outParam.getParameterIndex() > 0 ? outParam.getParameterIndex() : outParam.getParameterName();
@@ -4733,7 +4740,7 @@ public final class JdbcUtil {
             outParamValues.put(key, value);
         }
 
-        return new Jdbc.OutParamResult(outParams, outParamValues);
+        return new OutParamResult(outParams, outParamValues);
     }
 
     /**
@@ -5585,12 +5592,12 @@ public final class JdbcUtil {
         return N.newLinkedHashMap(columnCount);
     }
 
-    static final Jdbc.RowMapper<Object> NO_GENERATED_KEY_EXTRACTOR = rs -> null;
+    static final RowMapper<Object> NO_GENERATED_KEY_EXTRACTOR = rs -> null;
 
-    static final Jdbc.RowMapper<Object> SINGLE_GENERATED_KEY_EXTRACTOR = rs -> getColumnValue(rs, 1);
+    static final RowMapper<Object> SINGLE_GENERATED_KEY_EXTRACTOR = rs -> getColumnValue(rs, 1);
 
     @SuppressWarnings("deprecation")
-    static final Jdbc.RowMapper<Object> MULTI_GENERATED_KEY_EXTRACTOR = rs -> {
+    static final RowMapper<Object> MULTI_GENERATED_KEY_EXTRACTOR = rs -> {
         final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
         if (columnLabels.size() == 1) {
@@ -5607,12 +5614,12 @@ public final class JdbcUtil {
         }
     };
 
-    static final Jdbc.BiRowMapper<Object> NO_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> null;
+    static final BiRowMapper<Object> NO_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> null;
 
-    static final Jdbc.BiRowMapper<Object> SINGLE_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> getColumnValue(rs, 1);
+    static final BiRowMapper<Object> SINGLE_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> getColumnValue(rs, 1);
 
     @SuppressWarnings("deprecation")
-    static final Jdbc.BiRowMapper<Object> MULTI_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> {
+    static final BiRowMapper<Object> MULTI_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> {
         if (columnLabels.size() == 1) {
             return getColumnValue(rs, 1);
         } else {
@@ -5686,19 +5693,19 @@ public final class JdbcUtil {
         return N.isNullOrEmpty(sp.parameters) ? N.EMPTY_OBJECT_ARRAY : sp.parameters.toArray();
     }
 
-    static <R> Jdbc.BiRowMapper<R> toBiRowMapper(final Jdbc.RowMapper<R> rowMapper) {
+    static <R> BiRowMapper<R> toBiRowMapper(final RowMapper<R> rowMapper) {
         return (rs, columnLabels) -> rowMapper.apply(rs);
     }
 
     @SuppressWarnings("rawtypes")
-    private static final Map<Tuple2<Class<?>, Class<?>>, Map<NamingPolicy, Tuple3<Jdbc.BiRowMapper, Function, BiConsumer>>> idGeneratorGetterSetterPool = new ConcurrentHashMap<>();
+    private static final Map<Tuple2<Class<?>, Class<?>>, Map<NamingPolicy, Tuple3<BiRowMapper, Function, BiConsumer>>> idGeneratorGetterSetterPool = new ConcurrentHashMap<>();
 
     @SuppressWarnings("rawtypes")
-    private static final Tuple3<Jdbc.BiRowMapper, Function, BiConsumer> noIdGeneratorGetterSetter = Tuple.of(NO_BI_GENERATED_KEY_EXTRACTOR, entity -> null,
+    private static final Tuple3<BiRowMapper, Function, BiConsumer> noIdGeneratorGetterSetter = Tuple.of(NO_BI_GENERATED_KEY_EXTRACTOR, entity -> null,
             BiConsumers.doNothing());
 
     @SuppressWarnings({ "rawtypes", "deprecation", "null" })
-    static <ID> Tuple3<Jdbc.BiRowMapper<ID>, Function<Object, ID>, BiConsumer<ID, Object>> getIdGeneratorGetterSetter(final Class<? extends Dao> daoInterface,
+    static <ID> Tuple3<BiRowMapper<ID>, Function<Object, ID>, BiConsumer<ID, Object>> getIdGeneratorGetterSetter(final Class<? extends Dao> daoInterface,
             final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
         if (entityClass == null || !ClassUtil.isEntity(entityClass)) {
             return (Tuple3) noIdGeneratorGetterSetter;
@@ -5706,7 +5713,7 @@ public final class JdbcUtil {
 
         final Tuple2<Class<?>, Class<?>> key = Tuple.of(entityClass, idType);
 
-        Map<NamingPolicy, Tuple3<Jdbc.BiRowMapper, Function, BiConsumer>> map = idGeneratorGetterSetterPool.get(key);
+        Map<NamingPolicy, Tuple3<BiRowMapper, Function, BiConsumer>> map = idGeneratorGetterSetterPool.get(key);
 
         if (map == null) {
             final List<String> idPropNameList = QueryUtil.getIdFieldNames(entityClass);
@@ -5778,8 +5785,8 @@ public final class JdbcUtil {
                         .distinctByKey()
                         .toImmutableMap();
 
-                final Jdbc.BiRowMapper<Object> keyExtractor = isNoId ? noIdGeneratorGetterSetter._1
-                        : (idExtractorPool.containsKey(daoInterface) ? (Jdbc.BiRowMapper<Object>) idExtractorPool.get(daoInterface) //
+                final BiRowMapper<Object> keyExtractor = isNoId ? noIdGeneratorGetterSetter._1
+                        : (idExtractorPool.containsKey(daoInterface) ? (BiRowMapper<Object>) idExtractorPool.get(daoInterface) //
                                 : (isOneId ? (rs, columnLabels) -> idPropInfo.dbType.get(rs, 1) //
                                         : (rs, columnLabels) -> {
                                             if (columnLabels.size() == 1) {
@@ -5828,10 +5835,10 @@ public final class JdbcUtil {
     }
 
     @SuppressWarnings("rawtypes")
-    private static final Map<Class<? extends Dao>, Jdbc.BiRowMapper<?>> idExtractorPool = new ConcurrentHashMap<>();
+    private static final Map<Class<? extends Dao>, BiRowMapper<?>> idExtractorPool = new ConcurrentHashMap<>();
 
     public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
-            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final Jdbc.RowMapper<ID> idExtractor) {
+            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final RowMapper<ID> idExtractor) {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(idExtractor, "idExtractor");
 
@@ -5839,7 +5846,7 @@ public final class JdbcUtil {
     }
 
     public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
-            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final Jdbc.BiRowMapper<ID> idExtractor) {
+            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final BiRowMapper<ID> idExtractor) {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(idExtractor, "idExtractor");
 

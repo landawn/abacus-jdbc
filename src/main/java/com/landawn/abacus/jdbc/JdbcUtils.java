@@ -43,6 +43,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.landawn.abacus.exception.UncheckedIOException;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.Jdbc.BiParametersSetter;
+import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.parser.JSONSerializationConfig;
 import com.landawn.abacus.parser.JSONSerializationConfig.JSC;
 import com.landawn.abacus.type.Type;
@@ -334,7 +336,7 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final Connection conn, final String insertSQL,
-            final Jdbc.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
+            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
         return importData(dataset, 0, dataset.size(), conn, insertSQL, stmtSetter);
     }
 
@@ -356,7 +358,7 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final int offset, final int count, final Connection conn, final String insertSQL,
-            final Jdbc.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
+            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
         return importData(dataset, offset, count, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
@@ -380,7 +382,7 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final int offset, final int count, final Connection conn, final String insertSQL, final int batchSize,
-            final int batchInterval, final Jdbc.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
+            final int batchInterval, final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
         return importData(dataset, offset, count, Fn.alwaysTrue(), conn, insertSQL, batchSize, batchInterval, stmtSetter);
     }
 
@@ -408,7 +410,7 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
             final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
-            final Jdbc.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException, E {
+            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
@@ -662,7 +664,7 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final PreparedStatement stmt,
-            final Jdbc.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
+            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
         return importData(dataset, 0, dataset.size(), stmt, stmtSetter);
     }
 
@@ -678,7 +680,7 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final int offset, final int count, final PreparedStatement stmt,
-            final Jdbc.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
+            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
         return importData(dataset, offset, count, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
@@ -696,7 +698,7 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final int offset, final int count, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final Jdbc.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
+            final int batchInterval, final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
         return importData(dataset, offset, count, Fn.alwaysTrue(), stmt, batchSize, batchInterval, stmtSetter);
     }
 
@@ -718,7 +720,7 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
             final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
-            final Jdbc.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException, E {
+            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
                 batchInterval);
@@ -1201,7 +1203,7 @@ public final class JdbcUtils {
      * @return
      */
     public static <T> long importData(final Iterator<T> iter, final Connection conn, final String insertSQL,
-            final Jdbc.BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) {
+            final BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) {
         return importData(iter, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
@@ -1219,7 +1221,7 @@ public final class JdbcUtils {
      * @return
      */
     public static <T> long importData(final Iterator<T> iter, final long offset, final long count, final Connection conn, final String insertSQL,
-            final int batchSize, final int batchInterval, final Jdbc.BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) {
+            final int batchSize, final int batchInterval, final BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) {
         return importData(iter, offset, count, Fn.alwaysTrue(), conn, insertSQL, batchSize, batchInterval, stmtSetter);
     }
 
@@ -1242,7 +1244,7 @@ public final class JdbcUtils {
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, final long offset, final long count,
             final Throwables.Predicate<? super T, E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
-            final Jdbc.BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) throws UncheckedSQLException, E {
+            final BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
@@ -1265,7 +1267,7 @@ public final class JdbcUtils {
      * @return
      */
     public static <T> long importData(final Iterator<T> iter, final PreparedStatement stmt,
-            final Jdbc.BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) {
+            final BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) {
         return importData(iter, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
@@ -1282,7 +1284,7 @@ public final class JdbcUtils {
      * @return
      */
     public static <T> long importData(final Iterator<T> iter, long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final Jdbc.BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) {
+            final int batchInterval, final BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) {
         return importData(iter, offset, count, Fn.alwaysTrue(), stmt, batchSize, batchInterval, stmtSetter);
     }
 
@@ -1305,7 +1307,7 @@ public final class JdbcUtils {
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, long offset, final long count,
             final Throwables.Predicate<? super T, E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
-            final Jdbc.BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) throws UncheckedSQLException, E {
+            final BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) throws UncheckedSQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
                 batchInterval);
@@ -2814,7 +2816,7 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final long offset, final long count,
-            final Connection targetConn, final String insertSql, final Jdbc.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter,
+            final Connection targetConn, final String insertSql, final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter,
             final int batchSize, final int batchInterval, final boolean inParallel) throws UncheckedSQLException {
         PreparedStatement selectStmt = null;
         PreparedStatement insertStmt = null;
@@ -2847,7 +2849,7 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static long copy(final PreparedStatement selectStmt, final PreparedStatement insertStmt,
-            final Jdbc.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
+            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
         return copy(selectStmt, 0, Integer.MAX_VALUE, insertStmt, stmtSetter, JdbcUtil.DEFAULT_BATCH_SIZE, 0, false);
     }
 
@@ -2865,15 +2867,14 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static long copy(final PreparedStatement selectStmt, final long offset, final long count, final PreparedStatement insertStmt,
-            final Jdbc.BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter, final int batchSize, final int batchInterval,
+            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter, final int batchSize, final int batchInterval,
             final boolean inParallel) throws UncheckedSQLException {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
                 batchInterval);
 
         @SuppressWarnings("rawtypes")
-        final Jdbc.BiParametersSetter<? super PreparedStatement, ? super Object[]> setter = (Jdbc.BiParametersSetter) (stmtSetter == null
-                ? JdbcUtil.DEFAULT_STMT_SETTER
+        final BiParametersSetter<? super PreparedStatement, ? super Object[]> setter = (BiParametersSetter) (stmtSetter == null ? JdbcUtil.DEFAULT_STMT_SETTER
                 : stmtSetter);
         final AtomicLong result = new AtomicLong();
 
@@ -3238,7 +3239,7 @@ public final class JdbcUtils {
             throws UncheckedSQLException, E, E2 {
 
         final Iterator<Object[]> iter = new ObjIterator<>() {
-            private final Jdbc.BiRowMapper<Object[]> biFunc = Jdbc.BiRowMapper.TO_ARRAY;
+            private final BiRowMapper<Object[]> biFunc = BiRowMapper.TO_ARRAY;
             private List<String> columnLabels = null;
             private boolean hasNext = false;
             private boolean initialized = false;
