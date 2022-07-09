@@ -341,7 +341,7 @@ public class JdbcTest {
                 .generateBuilder(true)
                 .build();
 
-        String str = JdbcUtil.generateEntityClass(dataSource, "account", ecc);
+        String str = JdbcUtil.generateEntityClass(dataSource, "user", ecc);
         System.out.println(str);
 
         ecc = EntityCodeConfig.builder()
