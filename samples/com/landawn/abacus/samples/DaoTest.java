@@ -19,6 +19,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -26,12 +29,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.util.Strings;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.condition.ConditionFactory.CB;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.JdbcUtils;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.samples.entity.Address;
 import com.landawn.abacus.samples.entity.Device;
@@ -45,6 +50,7 @@ import com.landawn.abacus.util.DateUtil;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
+import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Pair;
 import com.landawn.abacus.util.Profiler;
@@ -161,6 +167,32 @@ public class DaoTest {
         dbUsers.forEach(Fn.println());
 
         userDao.batchDelete(dbUsers);
+    }
+
+    @Test
+    public void test_exportCSV() throws Exception {
+        List<User> users = IntStream.range(1, 30)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                .toList();
+
+        userDao.batchInsertWithId(users);
+
+        try (Connection conn = JdbcTest.dataSource.getConnection();
+                PreparedStatement stmt = conn.prepareStatement("select * from user");
+                ResultSet rs = stmt.executeQuery()) {
+            JdbcUtils.exportCSV(System.out, rs);
+        }
+
+        N.println(IOUtil.LINE_SEPARATOR);
+        N.println(Strings.repeat("=", 80));
+
+        try (Connection conn = JdbcTest.dataSource.getConnection();
+                PreparedStatement stmt = conn.prepareStatement("select * from user");
+                ResultSet rs = stmt.executeQuery()) {
+            JdbcUtils.exportCSV(System.out, rs, 0, 10, true, false);
+        }
+
+        userDao.batchDelete(users);
     }
 
     @Test
@@ -785,17 +817,16 @@ public class DaoTest {
             userDao.stream(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fnn.println());
         }
 
-        userDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null, Jdbc.RowMapper.builder().get(1, (rs, i) -> rs.getString(i)).toList())
-        .forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null, Jdbc.RowMapper.builder().get(1, (rs, i) -> rs.getString(i)).toList()).forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(List.class))
-        .forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
+                Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(List.class)).forEach(Fn.println());
 
         userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
-        .forEach(Fn.println());
+                .forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(User.class))
-        .forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
+                Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(User.class)).forEach(Fn.println());
 
         userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.to(User.class)).forEach(Fn.println());
 

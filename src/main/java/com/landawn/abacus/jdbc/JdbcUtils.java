@@ -1349,6 +1349,8 @@ public final class JdbcUtils {
 
     /**
      * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
      * @param conn
@@ -1363,6 +1365,8 @@ public final class JdbcUtils {
 
     /**
      * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
      * @param conn
@@ -1382,6 +1386,8 @@ public final class JdbcUtils {
 
     /**
      * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
      * @param conn
@@ -1415,6 +1421,8 @@ public final class JdbcUtils {
 
     /**
      * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
      * @param stmt
@@ -1429,6 +1437,8 @@ public final class JdbcUtils {
 
     /**
      * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
      * @param stmt
@@ -1447,6 +1457,8 @@ public final class JdbcUtils {
 
     /**
      * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
      * @param stmt
@@ -1477,6 +1489,8 @@ public final class JdbcUtils {
 
     /**
      * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
      * @param rs
@@ -1490,6 +1504,8 @@ public final class JdbcUtils {
 
     /**
      * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
      * @param rs
@@ -1507,6 +1523,7 @@ public final class JdbcUtils {
     }
 
     /**
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
      * @param rs
@@ -1544,6 +1561,8 @@ public final class JdbcUtils {
 
     /**
      * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
      * @param rs
@@ -1557,6 +1576,8 @@ public final class JdbcUtils {
 
     /**
      * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
      * @param rs
@@ -1575,6 +1596,8 @@ public final class JdbcUtils {
 
     /**
      * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
      * @param rs
@@ -1606,6 +1629,8 @@ public final class JdbcUtils {
 
     /**
      * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
      * @param rs
@@ -1619,6 +1644,8 @@ public final class JdbcUtils {
 
     /**
      * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
      * @param rs
@@ -1637,6 +1664,8 @@ public final class JdbcUtils {
 
     /**
      * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
      * @param rs
@@ -1698,7 +1727,13 @@ public final class JdbcUtils {
                         bw.write(N.ELEMENT_SEPARATOR_CHAR_ARRAY);
                     }
 
-                    bw.write(columnNames[i]);
+                    if (quoted) {
+                        bw.write(WD._QUOTATION_D);
+                        bw.write(columnNames[i]);
+                        bw.write(WD._QUOTATION_D);
+                    } else {
+                        bw.write(columnNames[i]);
+                    }
                 }
 
                 bw.write(IOUtil.LINE_SEPARATOR);
