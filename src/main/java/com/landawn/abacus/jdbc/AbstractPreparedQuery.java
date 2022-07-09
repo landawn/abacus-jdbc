@@ -4295,11 +4295,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
                 }
             }
 
-            if (N.allNull(generatedKeysList)) {
-                return Tuple.of(updatedRowCount, new ArrayList<>(0));
-            } else {
-                return Tuple.of(updatedRowCount, generatedKeysList);
-            }
+            return verifyResult(updatedRowCount, generatedKeysList);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4326,14 +4322,21 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
                 }
             }
 
-            if (N.allNull(generatedKeysList)) {
-                return Tuple.of(updatedRowCount, new ArrayList<>(0));
-            } else {
-                return Tuple.of(updatedRowCount, generatedKeysList);
-            }
+            return verifyResult(updatedRowCount, generatedKeysList);
         } finally {
             closeAfterExecutionIfAllowed();
         }
+    }
+
+    private <U, T> Tuple2<U, List<T>> verifyResult(final U updatedRowCount, final List<T> generatedKeysList) {
+
+        //    if (N.allNull(generatedKeysList)) {
+        //        return Tuple.of(updatedRowCount, new ArrayList<>(0));
+        //    } else {
+        //        return Tuple.of(updatedRowCount, generatedKeysList);
+        //    }
+
+        return Tuple.of(updatedRowCount, generatedKeysList);
     }
 
     /**
@@ -4370,11 +4373,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
                 }
             }
 
-            if (N.allNull(generatedKeysList)) {
-                return Tuple.of(updatedRowCount, new ArrayList<>(0));
-            } else {
-                return Tuple.of(updatedRowCount, generatedKeysList);
-            }
+            return verifyResult(updatedRowCount, generatedKeysList);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4401,11 +4400,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
                 }
             }
 
-            if (N.allNull(generatedKeysList)) {
-                return Tuple.of(updatedRowCount, new ArrayList<>(0));
-            } else {
-                return Tuple.of(updatedRowCount, generatedKeysList);
-            }
+            return verifyResult(updatedRowCount, generatedKeysList);
         } finally {
             closeAfterExecutionIfAllowed();
         }
