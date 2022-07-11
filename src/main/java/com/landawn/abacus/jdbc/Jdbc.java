@@ -35,6 +35,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
+import java.util.function.BinaryOperator;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.IntFunction;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+import java.util.stream.Collector;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.SequentialOnly;
@@ -52,7 +61,6 @@ import com.landawn.abacus.util.Fn.IntFunctions;
 import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.ListMultimap;
-import com.landawn.abacus.util.Maps;
 import com.landawn.abacus.util.Multimap;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
@@ -63,15 +71,6 @@ import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
-import com.landawn.abacus.util.function.BiConsumer;
-import com.landawn.abacus.util.function.BiPredicate;
-import com.landawn.abacus.util.function.BinaryOperator;
-import com.landawn.abacus.util.function.Consumer;
-import com.landawn.abacus.util.function.Function;
-import com.landawn.abacus.util.function.IntFunction;
-import com.landawn.abacus.util.function.Predicate;
-import com.landawn.abacus.util.function.Supplier;
-import com.landawn.abacus.util.stream.Collector;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -269,7 +268,7 @@ public final class Jdbc {
                 final M result = supplier.get();
 
                 while (rs.next()) {
-                    Maps.merge(result, keyExtractor.apply(rs), valueExtractor.apply(rs), mergeFunction);
+                    Jdbc.merge(result, keyExtractor.apply(rs), valueExtractor.apply(rs), mergeFunction);
                 }
 
                 return result;
@@ -696,7 +695,7 @@ public final class Jdbc {
                 final M result = supplier.get();
 
                 while (rs.next()) {
-                    Maps.merge(result, keyExtractor.apply(rs, columnLabels), valueExtractor.apply(rs, columnLabels), mergeFunction);
+                    Jdbc.merge(result, keyExtractor.apply(rs, columnLabels), valueExtractor.apply(rs, columnLabels), mergeFunction);
                 }
 
                 return result;
@@ -4178,6 +4177,16 @@ public final class Jdbc {
                     afterInvokeAction.accept(result, targetObject, args, methodSignature);
                 }
             };
+        }
+    }
+
+    static <K, V> void merge(Map<K, V> map, K key, V value, BinaryOperator<V> remappingFunction) {
+        final V oldValue = map.get(key);
+
+        if (oldValue == null && !map.containsKey(key)) {
+            map.put(key, value);
+        } else {
+            map.put(key, remappingFunction.apply(oldValue, value));
         }
     }
 }

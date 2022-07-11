@@ -42,6 +42,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import javax.sql.DataSource;
 
@@ -99,9 +101,6 @@ import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.u.Holder;
 import com.landawn.abacus.util.u.Optional;
-import com.landawn.abacus.util.function.BiConsumer;
-import com.landawn.abacus.util.function.Function;
-import com.landawn.abacus.util.function.Predicate;
 import com.landawn.abacus.util.stream.EntryStream;
 import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
@@ -5204,7 +5203,7 @@ public final class JdbcUtil {
         }
     }
 
-    static final Predicate<Object> defaultIdTester = JdbcUtil::isDefaultIdPropValue;
+    static final com.landawn.abacus.util.function.Predicate<Object> defaultIdTester = JdbcUtil::isDefaultIdPropValue;
 
     /**
      * Checks if is default id prop value.
@@ -5240,7 +5239,7 @@ public final class JdbcUtil {
     }
 
     static <ID> boolean isAllNullIds(final List<ID> ids, final Predicate<Object> isDefaultIdTester) {
-        return N.notNullOrEmpty(ids) && Stream.of(ids).allMatch(isDefaultIdTester);
+        return N.notNullOrEmpty(ids) && java.util.stream.Stream.of(ids).allMatch(isDefaultIdTester);
     }
 
     public static Collection<String> getInsertPropNames(final Object entity) {
@@ -5698,22 +5697,23 @@ public final class JdbcUtil {
     }
 
     @SuppressWarnings("rawtypes")
-    private static final Map<Tuple2<Class<?>, Class<?>>, Map<NamingPolicy, Tuple3<BiRowMapper, Function, BiConsumer>>> idGeneratorGetterSetterPool = new ConcurrentHashMap<>();
+    private static final Map<Tuple2<Class<?>, Class<?>>, Map<NamingPolicy, Tuple3<BiRowMapper, com.landawn.abacus.util.function.Function, com.landawn.abacus.util.function.BiConsumer>>> idGeneratorGetterSetterPool = new ConcurrentHashMap<>();
 
     @SuppressWarnings("rawtypes")
-    private static final Tuple3<BiRowMapper, Function, BiConsumer> noIdGeneratorGetterSetter = Tuple.of(NO_BI_GENERATED_KEY_EXTRACTOR, entity -> null,
-            BiConsumers.doNothing());
+    private static final Tuple3<BiRowMapper, com.landawn.abacus.util.function.Function, com.landawn.abacus.util.function.BiConsumer> noIdGeneratorGetterSetter = Tuple
+            .of(NO_BI_GENERATED_KEY_EXTRACTOR, entity -> null, BiConsumers.doNothing());
 
     @SuppressWarnings({ "rawtypes", "deprecation", "null" })
-    static <ID> Tuple3<BiRowMapper<ID>, Function<Object, ID>, BiConsumer<ID, Object>> getIdGeneratorGetterSetter(final Class<? extends Dao> daoInterface,
-            final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
+    static <ID> Tuple3<BiRowMapper<ID>, com.landawn.abacus.util.function.Function<Object, ID>, com.landawn.abacus.util.function.BiConsumer<ID, Object>> getIdGeneratorGetterSetter(
+            final Class<? extends Dao> daoInterface, final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
         if (entityClass == null || !ClassUtil.isEntity(entityClass)) {
             return (Tuple3) noIdGeneratorGetterSetter;
         }
 
         final Tuple2<Class<?>, Class<?>> key = Tuple.of(entityClass, idType);
 
-        Map<NamingPolicy, Tuple3<BiRowMapper, Function, BiConsumer>> map = idGeneratorGetterSetterPool.get(key);
+        Map<NamingPolicy, Tuple3<BiRowMapper, com.landawn.abacus.util.function.Function, com.landawn.abacus.util.function.BiConsumer>> map = idGeneratorGetterSetterPool
+                .get(key);
 
         if (map == null) {
             final List<String> idPropNameList = QueryUtil.getIdFieldNames(entityClass);
@@ -5726,7 +5726,7 @@ public final class JdbcUtil {
             final boolean isEntityId = idType != null && EntityId.class.isAssignableFrom(idType);
             final EntityInfo idEntityInfo = idType != null && ClassUtil.isEntity(idType) ? ParserUtil.getEntityInfo(idType) : null;
 
-            final Function<Object, ID> idGetter = isNoId ? noIdGeneratorGetterSetter._2 //
+            final com.landawn.abacus.util.function.Function<Object, ID> idGetter = isNoId ? noIdGeneratorGetterSetter._2 //
                     : (isOneId ? entity -> idPropInfo.getPropValue(entity) //
                             : (isEntityId ? entity -> {
                                 final Seid ret = Seid.of(ClassUtil.getSimpleClassName(entityClass));
@@ -5746,7 +5746,7 @@ public final class JdbcUtil {
                                 return (ID) idEntityInfo.finishEntityResult(ret);
                             }));
 
-            final BiConsumer<ID, Object> idSetter = isNoId ? noIdGeneratorGetterSetter._3 //
+            final com.landawn.abacus.util.function.BiConsumer<ID, Object> idSetter = isNoId ? noIdGeneratorGetterSetter._3 //
                     : (isOneId ? (id, entity) -> idPropInfo.setPropValue(entity, id) //
                             : (isEntityId ? (id, entity) -> {
                                 if (id instanceof EntityId entityId) {

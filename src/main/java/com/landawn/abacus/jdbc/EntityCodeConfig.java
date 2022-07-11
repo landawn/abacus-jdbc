@@ -18,13 +18,13 @@ package com.landawn.abacus.jdbc;
 import java.lang.annotation.Annotation;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.BiFunction;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Type.EnumBy;
 import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
-import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.QuadFunction;
 
 import lombok.AllArgsConstructor;

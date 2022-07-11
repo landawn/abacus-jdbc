@@ -37,6 +37,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.LazyEvaluation;
@@ -68,8 +70,6 @@ import com.landawn.abacus.util.u.OptionalFloat;
 import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
-import com.landawn.abacus.util.function.Consumer;
-import com.landawn.abacus.util.function.Predicate;
 
 /**
  * Performance Tips:

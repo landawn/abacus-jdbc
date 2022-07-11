@@ -40,6 +40,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import com.landawn.abacus.exception.UncheckedIOException;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -62,8 +64,6 @@ import com.landawn.abacus.util.Objectory;
 import com.landawn.abacus.util.ParsedSql;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.WD;
-import com.landawn.abacus.util.function.BiConsumer;
-import com.landawn.abacus.util.function.Function;
 
 /**
  *

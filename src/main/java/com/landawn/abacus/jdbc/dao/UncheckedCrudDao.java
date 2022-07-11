@@ -48,7 +48,6 @@ import com.landawn.abacus.util.u.OptionalFloat;
 import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
-import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
@@ -705,7 +704,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
         final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
         final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
-        final Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);
+        final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);
         final List<ID> ids = N.map(entities, idExtractorFunc);
 
         final List<T> dbEntities = batchGet(ids, batchSize);
@@ -859,7 +858,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
         final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
         final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
 
-        final Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);
+        final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);
         final Map<ID, List<T>> idEntityMap = StreamEx.of(entities).groupTo(idExtractorFunc, Fn.identity());
         final Collection<String> selectPropNames = DaoUtil.getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
