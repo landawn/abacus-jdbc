@@ -45,7 +45,7 @@ import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.Maps;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Splitter;
-import com.landawn.abacus.util.StringUtil;
+import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.function.QuadFunction;
@@ -63,7 +63,7 @@ final class CodeGenerationUtil {
             + "@Accessors(chain = true)\r\n";
 
     private static final EntityCodeConfig defaultEntityCodeConfig = EntityCodeConfig.builder()
-            .fieldNameConverter((tableName, columnName) -> StringUtil.toCamelCase(columnName))
+            .fieldNameConverter((tableName, columnName) -> Strings.toCamelCase(columnName))
             .build();
 
     @SuppressWarnings("deprecation")
@@ -98,7 +98,7 @@ final class CodeGenerationUtil {
         final String packageName = configToUse.getPackageName();
         final String srcDir = configToUse.getSrcDir();
 
-        final BiFunction<String, String, String> fieldNameConverter = configToUse.getFieldNameConverter() == null ? (tn, cn) -> StringUtil.toCamelCase(cn)
+        final BiFunction<String, String, String> fieldNameConverter = configToUse.getFieldNameConverter() == null ? (tn, cn) -> Strings.toCamelCase(cn)
                 : configToUse.getFieldNameConverter();
         final QuadFunction<String, String, String, String, String> fieldTypeConverter = configToUse.getFieldTypeConverter();
 
@@ -130,7 +130,7 @@ final class CodeGenerationUtil {
 
         try (PreparedStatement stmt = conn.prepareStatement("select * from " + tableName + " where 1 > 2"); //
                 ResultSet rs = stmt.executeQuery()) {
-            String finalClassName = N.isNullOrEmpty(className) ? StringUtil.capitalize(StringUtil.toCamelCase(tableName)) : className;
+            String finalClassName = N.isNullOrEmpty(className) ? Strings.capitalize(Strings.toCamelCase(tableName)) : className;
 
             if (N.commonSet(readOnlyFields, nonUpdatableFields).size() > 0) {
                 throw new RuntimeException("Fields: " + N.commonSet(readOnlyFields, nonUpdatableFields)
@@ -245,7 +245,7 @@ final class CodeGenerationUtil {
                     tmp.add("enumerated = EnumBy." + eccJsonXmlConfig.getEnumerated().name() + "");
                 }
 
-                sb.append("@JsonXmlConfig" + StringUtil.join(tmp, ", ", "(", ")")).append("\r\n");
+                sb.append("@JsonXmlConfig" + Strings.join(tmp, ", ", "(", ")")).append("\r\n");
             }
 
             sb.append(isJavaPersistenceTable ? "@Table(name = \"" + tableName + "\")" : "@Table(\"" + tableName + "\")")
@@ -263,7 +263,7 @@ final class CodeGenerationUtil {
             for (int i = 1; i <= columnCount; i++) {
                 final String columnName = rsmd.getColumnName(i);
 
-                final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(StringUtil.toCamelCase(columnName),
+                final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(Strings.toCamelCase(columnName),
                         customizedFieldMap.get(columnName));
 
                 final String fieldName = customizedField == null || N.isNullOrEmpty(customizedField._2) ? fieldNameConverter.apply(tableName, columnName)
@@ -342,7 +342,7 @@ final class CodeGenerationUtil {
                         packageDir += "/";
                     }
 
-                    packageDir += StringUtil.replaceAll(packageName, ".", "/");
+                    packageDir += Strings.replaceAll(packageName, ".", "/");
                 }
 
                 IOUtil.mkdirsIfNotExists(new File(packageDir));

@@ -41,7 +41,7 @@ import com.landawn.abacus.util.SQLBuilder.PAC;
 import com.landawn.abacus.util.SQLBuilder.PLC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLParser;
-import com.landawn.abacus.util.StringUtil;
+import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
@@ -121,17 +121,17 @@ public final class JoinInfo {
 
         final JoinedBy joinedByAnno = joinPropInfo.getAnnotation(JoinedBy.class);
         final boolean cascadeDeleteDefinedInDB = true; // joinedByAnno.cascadeDeleteDefinedInDB(); // TODO should be defined/implemented on DB server side.
-        final String joinByVal = StringUtil.join(joinedByAnno.value(), ", ");
+        final String joinByVal = Strings.join(joinedByAnno.value(), ", ");
 
         if (N.isNullOrEmpty(joinByVal)) {
             throw new IllegalArgumentException(
                     "Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: " + entityClass);
         }
 
-        final String[] joinColumnPairs = StringUtil.split(joinByVal, ',', true);
+        final String[] joinColumnPairs = Strings.split(joinByVal, ',', true);
 
         this.isManyToManyJoin = StreamEx.of(joinColumnPairs)
-                .flatMapp(it -> StringUtil.split(joinColumnPairs[0], '=', true))
+                .flatMapp(it -> Strings.split(joinColumnPairs[0], '=', true))
                 .filter(it -> it.indexOf('.') > 0)
                 .map(it -> it.substring(0, it.indexOf('.')).trim())
                 .anyMatch(it -> !(it.equalsIgnoreCase(entityInfo.simpleClassName) || it.equalsIgnoreCase(referencedEntityInfo.simpleClassName)));
@@ -147,8 +147,8 @@ public final class JoinInfo {
             srcPropInfos = new PropInfo[1];
             referencedPropInfos = new PropInfo[1];
 
-            final String[] left = StringUtil.split(joinColumnPairs[0], '=', true);
-            final String[] right = StringUtil.split(joinColumnPairs[1], '=', true);
+            final String[] left = Strings.split(joinColumnPairs[0], '=', true);
+            final String[] right = Strings.split(joinColumnPairs[1], '=', true);
 
             if ((srcPropInfos[0] = entityInfo.getPropInfo(left[0])) == null) {
                 throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
@@ -188,7 +188,7 @@ public final class JoinInfo {
 
             final List<Integer> dummyList = N.asList(1, 2, 3);
             final Condition cond = CF.in(right[1], dummyList); //
-            final String inCondToReplace = StringUtil.repeat("?", dummyList.size(), ", ");
+            final String inCondToReplace = Strings.repeat("?", dummyList.size(), ", ");
 
             final List<String> middleSelectPropNames = N.asList(right[0].substring(right[0].indexOf('.') + 1));
             final Condition middleEntityCond = CF.eq(left[1].substring(left[1].indexOf('.') + 1));
@@ -268,7 +268,7 @@ public final class JoinInfo {
 
                 final BiFunction<Collection<String>, Integer, String> batchSQLBuilder = (selectPropNames, size) -> {
                     if (N.isNullOrEmpty(selectPropNames)) {
-                        return StringUtil.repeat("?", size, ", ", batchSelectAllLeftSql, ")");
+                        return Strings.repeat("?", size, ", ", batchSelectAllLeftSql, ")");
                     } else {
                         Collection<String> newSelectPropNames = selectPropNames;
 
@@ -290,7 +290,7 @@ public final class JoinInfo {
 
                         Objectory.recycle(sb);
 
-                        return StringUtil.repeat("?", size, ", ", sql, ")");
+                        return Strings.repeat("?", size, ", ", sql, ")");
                     }
                 };
 
@@ -314,7 +314,7 @@ public final class JoinInfo {
                     if (size == 1) {
                         return deleteSql;
                     } else {
-                        return StringUtil.repeat("?", size, ", ", batchDeleteSqlHeader, "))");
+                        return Strings.repeat("?", size, ", ", batchDeleteSqlHeader, "))");
                     }
                 };
 
@@ -324,7 +324,7 @@ public final class JoinInfo {
                     if (size == 1) {
                         return middleDeleteSql;
                     } else {
-                        return StringUtil.repeat("?", size, ", ", batchMiddleDeleteSql, ")");
+                        return Strings.repeat("?", size, ", ", batchMiddleDeleteSql, ")");
                     }
                 };
 
@@ -342,7 +342,7 @@ public final class JoinInfo {
             final List<Condition> conds = new ArrayList<>(joinColumnPairs.length);
 
             for (int i = 0, len = joinColumnPairs.length; i < len; i++) {
-                final String[] tmp = StringUtil.split(joinColumnPairs[i], '=', true);
+                final String[] tmp = Strings.split(joinColumnPairs[i], '=', true);
 
                 if (tmp.length > 2) {
                     throw new IllegalArgumentException(
@@ -434,7 +434,7 @@ public final class JoinInfo {
 
                 final BiFunction<SQLBuilder, Integer, SQLBuilder> appendWhereFunc = referencedPropInfos.length == 1
                         ? (sb, batchSize) -> sb.append(CF.expr(referencedPropInfos[0].name)) //
-                                .append(StringUtil.repeat("?", batchSize, ", ", " IN (", ")")) //
+                                .append(Strings.repeat("?", batchSize, ", ", " IN (", ")")) //
                         : (sb, batchSize) -> sb.where(CF.or(N.repeat(cond, batchSize)));
 
                 final BiFunction<Collection<String>, Integer, String> batchSelectSQLBuilder = (selectPropNames, size) -> {

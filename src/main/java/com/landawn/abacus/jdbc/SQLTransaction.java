@@ -26,7 +26,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.StringUtil;
+import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 
 // TODO: Auto-generated Javadoc
@@ -417,8 +417,7 @@ public final class SQLTransaction implements Transaction, Closeable {
      * @return
      */
     static String getTransactionId(javax.sql.DataSource ds, final CreatedBy creator) {
-        return StringUtil.concat(System.identityHashCode(ds), "_", Thread.currentThread().getId(), "_", Thread.currentThread().getName(), "_",
-                creator.ordinal());
+        return Strings.concat(System.identityHashCode(ds), "_", Thread.currentThread().getId(), "_", Thread.currentThread().getName(), "_", creator.ordinal());
     }
 
     /**

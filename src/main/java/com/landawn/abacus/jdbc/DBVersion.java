@@ -16,7 +16,7 @@
 
 package com.landawn.abacus.jdbc;
 
-import com.landawn.abacus.util.StringUtil;
+import com.landawn.abacus.util.Strings;
 
 public enum DBVersion {
 
@@ -68,10 +68,10 @@ public enum DBVersion {
     OTHERS;
 
     public boolean isMySQL() {
-        return StringUtil.startsWithIgnoreCase(name(), "mysql");
+        return Strings.startsWithIgnoreCase(name(), "mysql");
     }
 
     public boolean isPostgreSQL() {
-        return StringUtil.startsWithIgnoreCase(name(), "postgresql");
+        return Strings.startsWithIgnoreCase(name(), "postgresql");
     }
 }

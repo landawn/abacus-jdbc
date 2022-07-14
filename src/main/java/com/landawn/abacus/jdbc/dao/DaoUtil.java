@@ -47,7 +47,7 @@ import com.landawn.abacus.util.SQLBuilder.PSB;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.Seid;
-import com.landawn.abacus.util.StringUtil;
+import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
@@ -337,11 +337,11 @@ final class DaoUtil {
     }
 
     static boolean isSelectQuery(String sql) throws UnsupportedOperationException {
-        return sql.startsWith("select ") || sql.startsWith("SELECT ") || StringUtil.startsWithIgnoreCase(StringUtil.trim(sql), "select ");
+        return sql.startsWith("select ") || sql.startsWith("SELECT ") || Strings.startsWithIgnoreCase(Strings.trim(sql), "select ");
     }
 
     static boolean isInsertQuery(String sql) throws UnsupportedOperationException {
-        return sql.startsWith("insert ") || sql.startsWith("INSERT ") || StringUtil.startsWithIgnoreCase(StringUtil.trim(sql), "insert ");
+        return sql.startsWith("insert ") || sql.startsWith("INSERT ") || Strings.startsWithIgnoreCase(Strings.trim(sql), "insert ");
     }
 
     static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass) {

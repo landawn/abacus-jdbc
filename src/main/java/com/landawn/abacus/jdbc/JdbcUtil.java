@@ -94,7 +94,7 @@ import com.landawn.abacus.util.SQLMapper;
 import com.landawn.abacus.util.SQLOperation;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.Splitter;
-import com.landawn.abacus.util.StringUtil;
+import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
@@ -369,25 +369,25 @@ public final class JdbcUtil {
 
         Class<? extends Driver> driverClass = null;
         // jdbc:mysql://localhost:3306/abacustest
-        if (url.indexOf("mysql") > 0 || StringUtil.indexOfIgnoreCase(url, "mysql") > 0) {
+        if (url.indexOf("mysql") > 0 || Strings.indexOfIgnoreCase(url, "mysql") > 0) {
             driverClass = ClassUtil.forClass("com.mysql.Driver");
             // jdbc:postgresql://localhost:5432/abacustest
-        } else if (url.indexOf("postgresql") > 0 || StringUtil.indexOfIgnoreCase(url, "postgresql") > 0) {
+        } else if (url.indexOf("postgresql") > 0 || Strings.indexOfIgnoreCase(url, "postgresql") > 0) {
             driverClass = ClassUtil.forClass("org.postgresql.Driver");
             // jdbc:h2:hsql://<host>:<port>/<database>
-        } else if (url.indexOf("h2") > 0 || StringUtil.indexOfIgnoreCase(url, "h2") > 0) {
+        } else if (url.indexOf("h2") > 0 || Strings.indexOfIgnoreCase(url, "h2") > 0) {
             driverClass = ClassUtil.forClass("org.h2.Driver");
             // jdbc:hsqldb:hsql://localhost/abacustest
-        } else if (url.indexOf("hsqldb") > 0 || StringUtil.indexOfIgnoreCase(url, "hsqldb") > 0) {
+        } else if (url.indexOf("hsqldb") > 0 || Strings.indexOfIgnoreCase(url, "hsqldb") > 0) {
             driverClass = ClassUtil.forClass("org.hsqldb.JDBCDriver");
             // url=jdbc:oracle:thin:@localhost:1521:abacustest
-        } else if (url.indexOf("oracle") > 0 || StringUtil.indexOfIgnoreCase(url, "oracle") > 0) {
+        } else if (url.indexOf("oracle") > 0 || Strings.indexOfIgnoreCase(url, "oracle") > 0) {
             driverClass = ClassUtil.forClass("oracle.driver.OracleDriver");
             // url=jdbc:sqlserver://localhost:1433;Database=abacustest
-        } else if (url.indexOf("sqlserver") > 0 || StringUtil.indexOfIgnoreCase(url, "sqlserver") > 0) {
+        } else if (url.indexOf("sqlserver") > 0 || Strings.indexOfIgnoreCase(url, "sqlserver") > 0) {
             driverClass = ClassUtil.forClass("com.microsoft.sqlserver.SQLServerDriver");
             // jdbc:db2://localhost:50000/abacustest
-        } else if (url.indexOf("db2") > 0 || StringUtil.indexOfIgnoreCase(url, "db2") > 0) {
+        } else if (url.indexOf("db2") > 0 || Strings.indexOfIgnoreCase(url, "db2") > 0) {
             driverClass = ClassUtil.forClass("com.ibm.db2.jcc.DB2Driver");
         } else {
             throw new IllegalArgumentException(
@@ -1546,19 +1546,19 @@ public final class JdbcUtil {
      * @return
      */
     static SQLOperation getSQLOperation(String sql) {
-        if (StringUtil.startsWithIgnoreCase(sql.trim(), "select ")) {
+        if (Strings.startsWithIgnoreCase(sql.trim(), "select ")) {
             return SQLOperation.SELECT;
-        } else if (StringUtil.startsWithIgnoreCase(sql.trim(), "update ")) {
+        } else if (Strings.startsWithIgnoreCase(sql.trim(), "update ")) {
             return SQLOperation.UPDATE;
-        } else if (StringUtil.startsWithIgnoreCase(sql.trim(), "insert ")) {
+        } else if (Strings.startsWithIgnoreCase(sql.trim(), "insert ")) {
             return SQLOperation.INSERT;
-        } else if (StringUtil.startsWithIgnoreCase(sql.trim(), "delete ")) {
+        } else if (Strings.startsWithIgnoreCase(sql.trim(), "delete ")) {
             return SQLOperation.DELETE;
-        } else if (StringUtil.startsWithIgnoreCase(sql.trim(), "merge ")) {
+        } else if (Strings.startsWithIgnoreCase(sql.trim(), "merge ")) {
             return SQLOperation.MERGE;
         } else {
             for (SQLOperation so : SQLOperation.values()) {
-                if (StringUtil.startsWithIgnoreCase(sql.trim(), so.name())) {
+                if (Strings.startsWithIgnoreCase(sql.trim(), so.name())) {
                     return so;
                 }
             }
@@ -5048,9 +5048,9 @@ public final class JdbcUtil {
             final String sql = sqlExtractor.apply(stmt);
 
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
-                sqlLogger.info(StringUtil.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", sql));
+                sqlLogger.info(Strings.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", sql));
             } else {
-                sqlLogger.info(StringUtil.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", sql.substring(0, sqlLogConfig.maxSqlLogLength)));
+                sqlLogger.info(Strings.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", sql.substring(0, sqlLogConfig.maxSqlLogLength)));
             }
         }
     }

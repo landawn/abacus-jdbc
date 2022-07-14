@@ -128,7 +128,7 @@ import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.SQLMapper;
 import com.landawn.abacus.util.Splitter;
-import com.landawn.abacus.util.StringUtil;
+import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
@@ -181,10 +181,10 @@ final class DaoImpl {
             final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
             final boolean isSingleParameter = tmp.isSingleParameter();
 
-            String sql = StringUtil.trim(tmp.sql());
+            String sql = Strings.trim(tmp.sql());
 
             if (N.isNullOrEmpty(sql)) {
-                sql = StringUtil.trim(tmp.value());
+                sql = Strings.trim(tmp.value());
             }
 
             if (N.notNullOrEmpty(tmp.id())) {
@@ -221,10 +221,10 @@ final class DaoImpl {
             final OP op = OP.DEFAULT;
             final boolean isSingleParameter = tmp.isSingleParameter();
 
-            String sql = StringUtil.trim(tmp.sql());
+            String sql = Strings.trim(tmp.sql());
 
             if (N.isNullOrEmpty(sql)) {
-                sql = StringUtil.trim(tmp.value());
+                sql = Strings.trim(tmp.value());
             }
 
             if (N.notNullOrEmpty(tmp.id())) {
@@ -265,10 +265,10 @@ final class DaoImpl {
             final OP op = tmp.op() == null ? OP.update : tmp.op();
             final boolean isSingleParameter = tmp.isSingleParameter();
 
-            String sql = StringUtil.trim(tmp.sql());
+            String sql = Strings.trim(tmp.sql());
 
             if (N.isNullOrEmpty(sql)) {
-                sql = StringUtil.trim(tmp.value());
+                sql = Strings.trim(tmp.value());
             }
 
             if (N.notNullOrEmpty(tmp.id())) {
@@ -309,10 +309,10 @@ final class DaoImpl {
             final OP op = OP.DEFAULT;
             final boolean isSingleParameter = tmp.isSingleParameter();
 
-            String sql = StringUtil.trim(tmp.sql());
+            String sql = Strings.trim(tmp.sql());
 
             if (N.isNullOrEmpty(sql)) {
-                sql = StringUtil.trim(tmp.value());
+                sql = Strings.trim(tmp.value());
             }
 
             if (N.notNullOrEmpty(tmp.id())) {
@@ -353,10 +353,10 @@ final class DaoImpl {
             final OP op = OP.DEFAULT;
             final boolean isSingleParameter = tmp.isSingleParameter();
 
-            String sql = StringUtil.trim(tmp.sql());
+            String sql = Strings.trim(tmp.sql());
 
             if (N.isNullOrEmpty(sql)) {
-                sql = StringUtil.trim(tmp.value());
+                sql = Strings.trim(tmp.value());
             }
 
             if (N.notNullOrEmpty(tmp.id())) {
@@ -1480,7 +1480,7 @@ final class DaoImpl {
 
         if (N.notNullOrEmpty(defines)) {
             for (int i = 0, len = defines.length; i < len; i++) {
-                query = StringUtil.replaceAll(query, defines[i], defineMappers[i].apply(args[defineParamIndexes[i]]));
+                query = Strings.replaceAll(query, defines[i], defineMappers[i].apply(args[defineParamIndexes[i]]));
             }
 
             if (N.notNullOrEmpty(parsedSql.getNamedParameters()) || parsedSql.getParameterCount() == 0) {
@@ -1637,7 +1637,7 @@ final class DaoImpl {
             final long elapsedTime = System.currentTimeMillis() - startTime;
 
             if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                daoLogger.info(StringUtil.concat("[DAO-OP-PERF]-[", simpleClassMethodName, "]: ", String.valueOf(elapsedTime)));
+                daoLogger.info(Strings.concat("[DAO-OP-PERF]-[", simpleClassMethodName, "]: ", String.valueOf(elapsedTime)));
             }
         }
     }
@@ -2027,7 +2027,7 @@ final class DaoImpl {
             }
 
             final Predicate<String> filterByMethodName = it -> N.notNullOrEmpty(it)
-                    && (StringUtil.containsIgnoreCase(method.getName(), it) || Pattern.matches(it, method.getName()));
+                    && (Strings.containsIgnoreCase(method.getName(), it) || Pattern.matches(it, method.getName()));
 
             final Class<?> declaringClass = method.getDeclaringClass();
             final String methodName = method.getName();
@@ -4621,9 +4621,9 @@ final class DaoImpl {
                     final Function<Object, String> defineParamMapper = N::stringOf;
                     final Function<Object, String> defineListParamMapper = param -> N.toJSON(param, jsc_no_bracket);
                     final Function<Object, String> arrayBindListParamMapper = param -> param == null ? ""
-                            : StringUtil.repeat(WD.QUESTION_MARK, Array.getLength(param), WD.COMMA_SPACE);
+                            : Strings.repeat(WD.QUESTION_MARK, Array.getLength(param), WD.COMMA_SPACE);
                     final Function<Object, String> collBindListParamMapper = param -> param == null ? ""
-                            : StringUtil.repeat(WD.QUESTION_MARK, N.size((Collection) param), WD.COMMA_SPACE);
+                            : Strings.repeat(WD.QUESTION_MARK, N.size((Collection) param), WD.COMMA_SPACE);
 
                     final String[] defines = IntStreamEx.of(defineParamIndexes)
                             .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i])
@@ -4764,7 +4764,7 @@ final class DaoImpl {
                             : Splitter.with(',')
                                     .trimResults()
                                     .split(N.notNullOrEmpty(mergedByIdAnno.value()) ? mergedByIdAnno.value()
-                                            : (N.notNullOrEmpty(mergedByIdAnno.ids()) ? mergedByIdAnno.ids() : StringUtil.join(idPropNameList, ",")));
+                                            : (N.notNullOrEmpty(mergedByIdAnno.ids()) ? mergedByIdAnno.ids() : Strings.join(idPropNameList, ",")));
 
                     if (mergedByIdAnno != null && N.isNullOrEmpty(mergedByIds)) {
                         throw new IllegalArgumentException("Merged id name(s) can't be null or empty in method: " + fullClassMethodName);

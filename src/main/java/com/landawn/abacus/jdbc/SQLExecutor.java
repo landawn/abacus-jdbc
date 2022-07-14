@@ -59,7 +59,7 @@ import com.landawn.abacus.util.ParsedSql;
 import com.landawn.abacus.util.QueryUtil;
 import com.landawn.abacus.util.SQLMapper;
 import com.landawn.abacus.util.SQLOperation;
-import com.landawn.abacus.util.StringUtil.Strings;
+import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
