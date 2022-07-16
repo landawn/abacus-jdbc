@@ -108,6 +108,7 @@ import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.ExceptionalStream;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.IntFunctions;
+import com.landawn.abacus.util.Holder;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.ImmutableMap;
 import com.landawn.abacus.util.ImmutableSet;
@@ -135,7 +136,6 @@ import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.WD;
 import com.landawn.abacus.util.u;
-import com.landawn.abacus.util.u.Holder;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.function.BiConsumer;
@@ -164,7 +164,7 @@ final class DaoImpl {
 
     private static final KryoParser kryoParser = ParserFactory.isKryoAvailable() ? ParserFactory.createKryoParser() : null;
 
-    private static final JSONSerializationConfig jsc_no_bracket = JSC.create().setStringQuotation(N.CHAR_0).setBracketRootValue(false);
+    private static final JSONSerializationConfig jsc_no_bracket = JSC.create().setStringQuotation(JdbcUtil.CHAR_ZERO).setBracketRootValue(false);
 
     @SuppressWarnings("rawtypes")
     private static final Map<String, Dao> daoPool = new ConcurrentHashMap<>();

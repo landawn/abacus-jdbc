@@ -62,6 +62,7 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.ObjIterator;
 import com.landawn.abacus.util.Objectory;
 import com.landawn.abacus.util.ParsedSql;
+import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.WD;
 
@@ -1726,7 +1727,7 @@ public final class JdbcUtils {
                     }
 
                     if (j++ > 0) {
-                        bw.write(N.ELEMENT_SEPARATOR_CHAR_ARRAY);
+                        bw.write(Strings.ELEMENT_SEPARATOR_CHAR_ARRAY);
                     }
 
                     if (quoted) {
@@ -1760,7 +1761,7 @@ public final class JdbcUtils {
                     }
 
                     if (j++ > 0) {
-                        bw.write(N.ELEMENT_SEPARATOR_CHAR_ARRAY);
+                        bw.write(Strings.ELEMENT_SEPARATOR_CHAR_ARRAY);
                     }
 
                     type = typeArray[i];
@@ -1769,7 +1770,7 @@ public final class JdbcUtils {
                         value = JdbcUtil.getColumnValue(rs, i + 1);
 
                         if (value == null) {
-                            bw.write(N.NULL_CHAR_ARRAY);
+                            bw.write(Strings.NULL_CHAR_ARRAY);
                         } else {
                             type = N.typeOf(value.getClass());
                             typeArray[i] = type;

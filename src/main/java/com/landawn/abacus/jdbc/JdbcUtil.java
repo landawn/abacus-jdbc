@@ -79,6 +79,7 @@ import com.landawn.abacus.util.ExceptionalStream;
 import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
 import com.landawn.abacus.util.Fn.BiConsumers;
 import com.landawn.abacus.util.Fn.Fnn;
+import com.landawn.abacus.util.Holder;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.ImmutableMap;
 import com.landawn.abacus.util.InternalUtil;
@@ -99,7 +100,6 @@ import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
-import com.landawn.abacus.util.u.Holder;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.stream.EntryStream;
 import com.landawn.abacus.util.stream.Stream;
@@ -134,6 +134,8 @@ public final class JdbcUtil {
     static final Logger logger = LoggerFactory.getLogger(JdbcUtil.class);
 
     static final Logger sqlLogger = LoggerFactory.getLogger("com.landawn.abacus.SQL");
+
+    static final char CHAR_ZERO = 0;
 
     public static final int DEFAULT_BATCH_SIZE = 200;
 
