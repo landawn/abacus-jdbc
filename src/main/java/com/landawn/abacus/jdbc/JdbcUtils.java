@@ -85,6 +85,10 @@ import com.landawn.abacus.util.WD;
  */
 public final class JdbcUtils {
 
+    static final char[] ELEMENT_SEPARATOR_CHAR_ARRAY = Strings.ELEMENT_SEPARATOR.toCharArray();
+
+    static final char[] NULL_CHAR_ARRAY = Strings.NULL_STRING.toCharArray();
+
     static final int DEFAULT_QUEUE_SIZE_FOR_ROW_PARSER = 1024;
 
     private JdbcUtils() {
@@ -1727,7 +1731,7 @@ public final class JdbcUtils {
                     }
 
                     if (j++ > 0) {
-                        bw.write(Strings.ELEMENT_SEPARATOR_CHAR_ARRAY);
+                        bw.write(ELEMENT_SEPARATOR_CHAR_ARRAY);
                     }
 
                     if (quoted) {
@@ -1761,7 +1765,7 @@ public final class JdbcUtils {
                     }
 
                     if (j++ > 0) {
-                        bw.write(Strings.ELEMENT_SEPARATOR_CHAR_ARRAY);
+                        bw.write(ELEMENT_SEPARATOR_CHAR_ARRAY);
                     }
 
                     type = typeArray[i];
@@ -1770,7 +1774,7 @@ public final class JdbcUtils {
                         value = JdbcUtil.getColumnValue(rs, i + 1);
 
                         if (value == null) {
-                            bw.write(Strings.NULL_CHAR_ARRAY);
+                            bw.write(NULL_CHAR_ARRAY);
                         } else {
                             type = N.typeOf(value.getClass());
                             typeArray[i] = type;
