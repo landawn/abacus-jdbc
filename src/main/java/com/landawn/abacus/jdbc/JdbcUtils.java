@@ -2801,8 +2801,8 @@ public final class JdbcUtils {
      */
     public static long copy(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql)
             throws UncheckedSQLException {
-        return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, 0, Integer.MAX_VALUE, targetConn, insertSql,
-                JdbcUtil.DEFAULT_STMT_SETTER, JdbcUtil.DEFAULT_BATCH_SIZE, 0, false);
+        return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, 0, Long.MAX_VALUE, targetConn, insertSql, JdbcUtil.DEFAULT_STMT_SETTER,
+                JdbcUtil.DEFAULT_BATCH_SIZE, 0, false);
     }
 
     /**
@@ -2857,7 +2857,7 @@ public final class JdbcUtils {
      */
     public static long copy(final PreparedStatement selectStmt, final PreparedStatement insertStmt,
             final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter) throws UncheckedSQLException {
-        return copy(selectStmt, 0, Integer.MAX_VALUE, insertStmt, stmtSetter, JdbcUtil.DEFAULT_BATCH_SIZE, 0, false);
+        return copy(selectStmt, 0, Long.MAX_VALUE, insertStmt, stmtSetter, JdbcUtil.DEFAULT_BATCH_SIZE, 0, false);
     }
 
     /**
@@ -2913,11 +2913,167 @@ public final class JdbcUtils {
                     throw new UncheckedSQLException(e);
                 }
             }
+
+            try {
+                insertStmt.clearBatch();
+            } catch (SQLException e) {
+                throw new UncheckedSQLException(e);
+            }
         };
 
         parse(selectStmt, offset, count, 0, inParallel ? DEFAULT_QUEUE_SIZE_FOR_ROW_PARSER : 0, rowParser, onComplete);
 
         return result.longValue();
+    }
+
+    /**
+     *
+     * @param sourceConn
+     * @param selectSql
+     * @param targetConn
+     * @param insertSql
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    public static long copy2(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql)
+            throws UncheckedSQLException {
+        final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> stmtSetter = createStmtSetterForCopy2();
+
+        return copy2(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, 0, Long.MAX_VALUE, targetConn, insertSql, stmtSetter,
+                JdbcUtil.DEFAULT_BATCH_SIZE, 0);
+    }
+
+    private static Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> createStmtSetterForCopy2() {
+        return new Throwables.BiConsumer<PreparedStatement, ResultSet, SQLException>() {
+            private int columnCount = -1;
+
+            @Override
+            public void accept(PreparedStatement stmt, ResultSet rs) throws SQLException {
+                if (columnCount < 0) {
+                    columnCount = rs.getMetaData().getColumnCount();
+                }
+
+                for (int i = 1; i <= columnCount; i++) {
+                    stmt.setObject(i, rs.getObject(i));
+                }
+            }
+        };
+    }
+
+    /**
+     *
+     * @param sourceConn
+     * @param selectSql
+     * @param fetchSize
+     * @param offset
+     * @param count
+     * @param targetConn
+     * @param insertSql
+     * @param stmtSetter
+     * @param batchSize
+     * @param batchInterval
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    public static long copy2(final Connection sourceConn, final String selectSql, final int fetchSize, final long offset, final long count,
+            final Connection targetConn, final String insertSql,
+            final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> stmtSetter, final int batchSize, final int batchInterval)
+            throws UncheckedSQLException {
+        PreparedStatement selectStmt = null;
+        PreparedStatement insertStmt = null;
+
+        int result = 0;
+
+        try {
+            insertStmt = JdbcUtil.prepareStatement(targetConn, insertSql);
+
+            selectStmt = JdbcUtil.prepareStatement(sourceConn, selectSql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+            selectStmt.setFetchSize(fetchSize);
+
+            copy2(selectStmt, offset, count, insertStmt, stmtSetter, batchSize, batchInterval);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        } finally {
+            JdbcUtil.closeQuietly(selectStmt);
+            JdbcUtil.closeQuietly(insertStmt);
+        }
+
+        return result;
+    }
+
+    /**
+     *
+     * @param selectStmt
+     * @param insertStmt
+     * @param stmtSetter
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    public static long copy2(final PreparedStatement selectStmt, final PreparedStatement insertStmt,
+            final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> stmtSetter) throws UncheckedSQLException {
+        return copy2(selectStmt, 0, Long.MAX_VALUE, insertStmt, stmtSetter, JdbcUtil.DEFAULT_BATCH_SIZE, 0);
+    }
+
+    /**
+     *
+     * @param selectStmt
+     * @param offset
+     * @param count
+     * @param insertStmt
+     * @param stmtSetter
+     * @param batchSize
+     * @param batchInterval
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    public static long copy2(final PreparedStatement selectStmt, final long offset, final long count, final PreparedStatement insertStmt,
+            final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> stmtSetter, final int batchSize, final int batchInterval)
+            throws UncheckedSQLException {
+        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
+        N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
+                batchInterval);
+
+        final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> setter = stmtSetter == null ? createStmtSetterForCopy2()
+                : stmtSetter;
+
+        ResultSet rs = null;
+
+        try {
+            rs = JdbcUtil.executeQuery(selectStmt);
+
+            if (offset > 0) {
+                JdbcUtil.skip(rs, offset);
+            }
+
+            long cnt = 0;
+
+            while (cnt < count && rs.next()) {
+                cnt++;
+
+                setter.accept(insertStmt, rs);
+                insertStmt.addBatch();
+
+                if (cnt % batchSize == 0) {
+                    JdbcUtil.executeBatch(insertStmt);
+
+                    if (batchInterval > 0) {
+                        N.sleep(batchInterval);
+                    }
+                }
+            }
+
+            if (cnt % batchSize > 0) {
+                JdbcUtil.executeBatch(insertStmt);
+            }
+
+            insertStmt.clearBatch();
+
+            return cnt;
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        } finally {
+            JdbcUtil.closeQuietly(rs);
+        }
     }
 
     /**
