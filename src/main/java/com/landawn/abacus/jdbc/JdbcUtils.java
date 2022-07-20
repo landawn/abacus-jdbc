@@ -45,7 +45,6 @@ import java.util.function.Function;
 
 import com.landawn.abacus.exception.UncheckedIOException;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.jdbc.Jdbc.BiParametersSetter;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.parser.JSONSerializationConfig;
 import com.landawn.abacus.parser.JSONSerializationConfig.JSC;
@@ -341,7 +340,7 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final Connection conn, final String insertSQL,
-            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
+            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter) throws UncheckedSQLException {
         return importData(dataset, 0, dataset.size(), conn, insertSQL, stmtSetter);
     }
 
@@ -363,7 +362,7 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final int offset, final int count, final Connection conn, final String insertSQL,
-            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
+            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter) throws UncheckedSQLException {
         return importData(dataset, offset, count, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
@@ -387,7 +386,8 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final int offset, final int count, final Connection conn, final String insertSQL, final int batchSize,
-            final int batchInterval, final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
+            final int batchInterval, final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter)
+            throws UncheckedSQLException {
         return importData(dataset, offset, count, Fn.alwaysTrue(), conn, insertSQL, batchSize, batchInterval, stmtSetter);
     }
 
@@ -415,7 +415,7 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
             final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
-            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException, E {
+            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter) throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
@@ -669,7 +669,7 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final PreparedStatement stmt,
-            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
+            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter) throws UncheckedSQLException {
         return importData(dataset, 0, dataset.size(), stmt, stmtSetter);
     }
 
@@ -685,7 +685,7 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final int offset, final int count, final PreparedStatement stmt,
-            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
+            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter) throws UncheckedSQLException {
         return importData(dataset, offset, count, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
@@ -703,7 +703,8 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final int offset, final int count, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
+            final int batchInterval, final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter)
+            throws UncheckedSQLException {
         return importData(dataset, offset, count, Fn.alwaysTrue(), stmt, batchSize, batchInterval, stmtSetter);
     }
 
@@ -725,7 +726,7 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
             final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
-            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException, E {
+            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter) throws UncheckedSQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
                 batchInterval);
@@ -1208,7 +1209,7 @@ public final class JdbcUtils {
      * @return
      */
     public static <T> long importData(final Iterator<T> iter, final Connection conn, final String insertSQL,
-            final BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) {
+            final Throwables.BiConsumer<? super PreparedStatement, ? super T, SQLException> stmtSetter) {
         return importData(iter, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
@@ -1226,7 +1227,7 @@ public final class JdbcUtils {
      * @return
      */
     public static <T> long importData(final Iterator<T> iter, final long offset, final long count, final Connection conn, final String insertSQL,
-            final int batchSize, final int batchInterval, final BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) {
+            final int batchSize, final int batchInterval, final Throwables.BiConsumer<? super PreparedStatement, ? super T, SQLException> stmtSetter) {
         return importData(iter, offset, count, Fn.alwaysTrue(), conn, insertSQL, batchSize, batchInterval, stmtSetter);
     }
 
@@ -1249,7 +1250,7 @@ public final class JdbcUtils {
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, final long offset, final long count,
             final Throwables.Predicate<? super T, E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
-            final BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) throws UncheckedSQLException, E {
+            final Throwables.BiConsumer<? super PreparedStatement, ? super T, SQLException> stmtSetter) throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
@@ -1272,7 +1273,7 @@ public final class JdbcUtils {
      * @return
      */
     public static <T> long importData(final Iterator<T> iter, final PreparedStatement stmt,
-            final BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) {
+            final Throwables.BiConsumer<? super PreparedStatement, ? super T, SQLException> stmtSetter) {
         return importData(iter, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
@@ -1289,7 +1290,7 @@ public final class JdbcUtils {
      * @return
      */
     public static <T> long importData(final Iterator<T> iter, long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) {
+            final int batchInterval, final Throwables.BiConsumer<? super PreparedStatement, ? super T, SQLException> stmtSetter) {
         return importData(iter, offset, count, Fn.alwaysTrue(), stmt, batchSize, batchInterval, stmtSetter);
     }
 
@@ -1312,7 +1313,7 @@ public final class JdbcUtils {
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, long offset, final long count,
             final Throwables.Predicate<? super T, E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
-            final BiParametersSetter<? super PreparedStatement, ? super T> stmtSetter) throws UncheckedSQLException, E {
+            final Throwables.BiConsumer<? super PreparedStatement, ? super T, SQLException> stmtSetter) throws UncheckedSQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
                 batchInterval);
@@ -1349,461 +1350,6 @@ public final class JdbcUtils {
             }
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
-        }
-
-        return result;
-    }
-
-    /**
-     * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
-     * <br />
-     * Each line in the output file/Writer is an array of JSON String without root bracket.
-     *
-     * @param out
-     * @param conn
-     * @param querySQL
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static long exportCSV(final File out, final Connection conn, final String querySQL) throws UncheckedSQLException, UncheckedIOException {
-        return exportCSV(out, conn, querySQL, 0, Long.MAX_VALUE, true, true);
-    }
-
-    /**
-     * Exports the data from database to CVS.
-     * <br />
-     * Each line in the output file/Writer is an array of JSON String without root bracket.
-     *
-     * @param out
-     * @param conn
-     * @param querySQL
-     * @param offset
-     * @param count
-     * @param writeTitle
-     * @param quoted
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static long exportCSV(final File out, final Connection conn, final String querySQL, final long offset, final long count, final boolean writeTitle,
-            final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
-        return exportCSV(out, conn, querySQL, null, offset, count, writeTitle, quoted);
-    }
-
-    /**
-     * Exports the data from database to CVS.
-     * <br />
-     * Each line in the output file/Writer is an array of JSON String without root bracket.
-     *
-     * @param out
-     * @param conn
-     * @param querySQL
-     * @param selectColumnNames
-     * @param offset
-     * @param count
-     * @param writeTitle
-     * @param quoted
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static long exportCSV(final File out, final Connection conn, final String querySQL, final Collection<String> selectColumnNames, final long offset,
-            final long count, final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
-        final ParsedSql sql = ParsedSql.parse(querySQL);
-        PreparedStatement stmt = null;
-
-        try {
-            stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-
-            setFetchForBigResult(conn, stmt);
-
-            return exportCSV(out, stmt, selectColumnNames, offset, count, writeTitle, quoted);
-        } catch (SQLException e) {
-            throw new UncheckedSQLException(e);
-        } finally {
-            JdbcUtil.closeQuietly(stmt);
-        }
-    }
-
-    /**
-     * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
-     * <br />
-     * Each line in the output file/Writer is an array of JSON String without root bracket.
-     *
-     * @param out
-     * @param stmt
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    @SuppressWarnings("unchecked")
-    public static long exportCSV(final File out, final PreparedStatement stmt) throws UncheckedSQLException, UncheckedIOException {
-        return exportCSV(out, stmt, 0, Long.MAX_VALUE, true, true);
-    }
-
-    /**
-     * Exports the data from database to CVS.
-     * <br />
-     * Each line in the output file/Writer is an array of JSON String without root bracket.
-     *
-     * @param out
-     * @param stmt
-     * @param offset
-     * @param count
-     * @param writeTitle
-     * @param quoted
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static long exportCSV(final File out, final PreparedStatement stmt, final long offset, final long count, final boolean writeTitle,
-            final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
-        return exportCSV(out, stmt, null, offset, count, writeTitle, quoted);
-    }
-
-    /**
-     * Exports the data from database to CVS.
-     * <br />
-     * Each line in the output file/Writer is an array of JSON String without root bracket.
-     *
-     * @param out
-     * @param stmt
-     * @param selectColumnNames
-     * @param offset
-     * @param count
-     * @param writeTitle
-     * @param quoted
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static long exportCSV(final File out, final PreparedStatement stmt, final Collection<String> selectColumnNames, final long offset, final long count,
-            final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
-        ResultSet rs = null;
-
-        try {
-            rs = JdbcUtil.executeQuery(stmt);
-            // rs.setFetchSize(DEFAULT_FETCH_SIZE);
-
-            return exportCSV(out, rs, selectColumnNames, offset, count, writeTitle, quoted);
-        } catch (SQLException e) {
-            throw new UncheckedSQLException(e);
-        } finally {
-            JdbcUtil.closeQuietly(rs);
-        }
-    }
-
-    /**
-     * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
-     * <br />
-     * Each line in the output file/Writer is an array of JSON String without root bracket.
-     *
-     * @param out
-     * @param rs
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static long exportCSV(final File out, final ResultSet rs) throws UncheckedSQLException, UncheckedIOException {
-        return exportCSV(out, rs, 0, Long.MAX_VALUE, true, true);
-    }
-
-    /**
-     * Exports the data from database to CVS.
-     * <br />
-     * Each line in the output file/Writer is an array of JSON String without root bracket.
-     *
-     * @param out
-     * @param rs
-     * @param offset
-     * @param count
-     * @param writeTitle
-     * @param quoted
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static long exportCSV(final File out, final ResultSet rs, final long offset, final long count, final boolean writeTitle, final boolean quoted)
-            throws UncheckedSQLException, UncheckedIOException {
-        return exportCSV(out, rs, null, offset, count, writeTitle, quoted);
-    }
-
-    /**
-     * Each line in the output file/Writer is an array of JSON String without root bracket.
-     *
-     * @param out
-     * @param rs
-     * @param selectColumnNames
-     * @param offset
-     * @param count
-     * @param writeTitle
-     * @param quoted
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static long exportCSV(final File out, final ResultSet rs, final Collection<String> selectColumnNames, final long offset, final long count,
-            final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
-        OutputStream os = null;
-
-        try {
-            if (!out.exists()) {
-                out.createNewFile();
-            }
-
-            os = new FileOutputStream(out);
-
-            long result = exportCSV(os, rs, selectColumnNames, offset, count, writeTitle, quoted);
-
-            os.flush();
-
-            return result;
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        } finally {
-            IOUtil.close(os);
-        }
-    }
-
-    /**
-     * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
-     * <br />
-     * Each line in the output file/Writer is an array of JSON String without root bracket.
-     *
-     * @param out
-     * @param rs
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static long exportCSV(final OutputStream out, final ResultSet rs) throws UncheckedSQLException, UncheckedIOException {
-        return exportCSV(out, rs, 0, Long.MAX_VALUE, true, true);
-    }
-
-    /**
-     * Exports the data from database to CVS.
-     * <br />
-     * Each line in the output file/Writer is an array of JSON String without root bracket.
-     *
-     * @param out
-     * @param rs
-     * @param offset
-     * @param count
-     * @param writeTitle
-     * @param quoted
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static long exportCSV(final OutputStream out, final ResultSet rs, final long offset, final long count, final boolean writeTitle,
-            final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
-        return exportCSV(out, rs, null, offset, count, writeTitle, quoted);
-    }
-
-    /**
-     * Exports the data from database to CVS.
-     * <br />
-     * Each line in the output file/Writer is an array of JSON String without root bracket.
-     *
-     * @param out
-     * @param rs
-     * @param selectColumnNames
-     * @param offset
-     * @param count
-     * @param writeTitle
-     * @param quoted
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static long exportCSV(final OutputStream out, final ResultSet rs, final Collection<String> selectColumnNames, final long offset, final long count,
-            final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
-        Writer writer = null;
-
-        try {
-            writer = new OutputStreamWriter(out);
-
-            long result = exportCSV(writer, rs, selectColumnNames, offset, count, writeTitle, quoted);
-
-            writer.flush();
-
-            return result;
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    /**
-     * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
-     * <br />
-     * Each line in the output file/Writer is an array of JSON String without root bracket.
-     *
-     * @param out
-     * @param rs
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static long exportCSV(final Writer out, final ResultSet rs) throws UncheckedSQLException, UncheckedIOException {
-        return exportCSV(out, rs, 0, Long.MAX_VALUE, true, true);
-    }
-
-    /**
-     * Exports the data from database to CVS.
-     * <br />
-     * Each line in the output file/Writer is an array of JSON String without root bracket.
-     *
-     * @param out
-     * @param rs
-     * @param offset
-     * @param count
-     * @param writeTitle
-     * @param quoted
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    public static long exportCSV(final Writer out, final ResultSet rs, final long offset, final long count, final boolean writeTitle, final boolean quoted)
-            throws UncheckedSQLException, UncheckedIOException {
-        return exportCSV(out, rs, null, offset, count, writeTitle, quoted);
-    }
-
-    /**
-     * Exports the data from database to CVS.
-     * <br />
-     * Each line in the output file/Writer is an array of JSON String without root bracket.
-     *
-     * @param out
-     * @param rs
-     * @param selectColumnNames
-     * @param offset
-     * @param count
-     * @param writeTitle
-     * @param quoted
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UncheckedIOException the unchecked IO exception
-     */
-    @SuppressWarnings("deprecation")
-    public static long exportCSV(final Writer out, final ResultSet rs, final Collection<String> selectColumnNames, final long offset, final long count,
-            final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
-        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
-
-        final JSONSerializationConfig config = JSC.create();
-        config.setDateTimeFormat(DateTimeFormat.ISO_8601_TIMESTAMP);
-
-        if (quoted) {
-            config.setCharQuotation(WD._QUOTATION_D);
-            config.setStringQuotation(WD._QUOTATION_D);
-        } else {
-            config.setCharQuotation((char) 0);
-            config.setStringQuotation((char) 0);
-        }
-
-        long result = 0;
-        final Type<Object> strType = N.typeOf(String.class);
-        final BufferedJSONWriter bw = out instanceof BufferedJSONWriter ? (BufferedJSONWriter) out : Objectory.createBufferedJSONWriter(out);
-
-        try {
-            final ResultSetMetaData rsmd = rs.getMetaData();
-            final int columnCount = rsmd.getColumnCount();
-            final String[] columnNames = new String[columnCount];
-            final Set<String> columnNameSet = selectColumnNames == null ? null : N.newHashSet(selectColumnNames);
-            String label = null;
-
-            for (int i = 0; i < columnCount; i++) {
-                label = JdbcUtil.getColumnLabel(rsmd, i + 1);
-
-                if (columnNameSet == null || columnNameSet.remove(label)) {
-                    columnNames[i] = label;
-                }
-            }
-
-            if (columnNameSet != null && columnNameSet.size() > 0) {
-                throw new IllegalArgumentException(columnNameSet + " are not included in query result");
-            }
-
-            if (writeTitle) {
-                for (int i = 0, j = 0, len = columnNames.length; i < len; i++) {
-                    if (columnNames[i] == null) {
-                        continue;
-                    }
-
-                    if (j++ > 0) {
-                        bw.write(ELEMENT_SEPARATOR_CHAR_ARRAY);
-                    }
-
-                    if (quoted) {
-                        bw.write(WD._QUOTATION_D);
-                        bw.write(columnNames[i]);
-                        bw.write(WD._QUOTATION_D);
-                    } else {
-                        bw.write(columnNames[i]);
-                    }
-                }
-
-                bw.write(IOUtil.LINE_SEPARATOR);
-            }
-
-            final Type<Object>[] typeArray = new Type[columnCount];
-            Type<Object> type = null;
-            Object value = null;
-
-            if (offset > 0) {
-                JdbcUtil.skip(rs, offset);
-            }
-
-            while (result < count && rs.next()) {
-                if (result++ > 0) {
-                    bw.write(IOUtil.LINE_SEPARATOR);
-                }
-
-                for (int i = 0, j = 0; i < columnCount; i++) {
-                    if (columnNames[i] == null) {
-                        continue;
-                    }
-
-                    if (j++ > 0) {
-                        bw.write(ELEMENT_SEPARATOR_CHAR_ARRAY);
-                    }
-
-                    type = typeArray[i];
-
-                    if (type == null) {
-                        value = JdbcUtil.getColumnValue(rs, i + 1);
-
-                        if (value == null) {
-                            bw.write(NULL_CHAR_ARRAY);
-                        } else {
-                            type = N.typeOf(value.getClass());
-                            typeArray[i] = type;
-
-                            if (type.isSerializable()) {
-                                type.writeCharacter(bw, value, config);
-                            } else {
-                                type.writeCharacter(bw, CSVUtil.jsonParser.serialize(value, config), config);
-                            }
-                        }
-                    } else {
-                        if (type.isSerializable()) {
-                            type.writeCharacter(bw, type.get(rs, i + 1), config);
-                        } else {
-                            strType.writeCharacter(bw, CSVUtil.jsonParser.serialize(type.get(rs, i + 1), config), config);
-                        }
-                    }
-                }
-            }
-
-            bw.flush();
-        } catch (SQLException e) {
-            throw new UncheckedSQLException(e);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        } finally {
-            if (bw != out) {
-                Objectory.recycle(bw);
-            }
         }
 
         return result;
@@ -2790,6 +2336,461 @@ public final class JdbcUtils {
     }
 
     /**
+     * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param conn
+     * @param querySQL
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static long exportCSV(final File out, final Connection conn, final String querySQL) throws UncheckedSQLException, UncheckedIOException {
+        return exportCSV(out, conn, querySQL, 0, Long.MAX_VALUE, true, true);
+    }
+
+    /**
+     * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param conn
+     * @param querySQL
+     * @param offset
+     * @param count
+     * @param writeTitle
+     * @param quoted
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static long exportCSV(final File out, final Connection conn, final String querySQL, final long offset, final long count, final boolean writeTitle,
+            final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
+        return exportCSV(out, conn, querySQL, null, offset, count, writeTitle, quoted);
+    }
+
+    /**
+     * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param conn
+     * @param querySQL
+     * @param selectColumnNames
+     * @param offset
+     * @param count
+     * @param writeTitle
+     * @param quoted
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static long exportCSV(final File out, final Connection conn, final String querySQL, final Collection<String> selectColumnNames, final long offset,
+            final long count, final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
+        final ParsedSql sql = ParsedSql.parse(querySQL);
+        PreparedStatement stmt = null;
+
+        try {
+            stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+
+            setFetchForBigResult(conn, stmt);
+
+            return exportCSV(out, stmt, selectColumnNames, offset, count, writeTitle, quoted);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        } finally {
+            JdbcUtil.closeQuietly(stmt);
+        }
+    }
+
+    /**
+     * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param stmt
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    @SuppressWarnings("unchecked")
+    public static long exportCSV(final File out, final PreparedStatement stmt) throws UncheckedSQLException, UncheckedIOException {
+        return exportCSV(out, stmt, 0, Long.MAX_VALUE, true, true);
+    }
+
+    /**
+     * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param stmt
+     * @param offset
+     * @param count
+     * @param writeTitle
+     * @param quoted
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static long exportCSV(final File out, final PreparedStatement stmt, final long offset, final long count, final boolean writeTitle,
+            final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
+        return exportCSV(out, stmt, null, offset, count, writeTitle, quoted);
+    }
+
+    /**
+     * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param stmt
+     * @param selectColumnNames
+     * @param offset
+     * @param count
+     * @param writeTitle
+     * @param quoted
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static long exportCSV(final File out, final PreparedStatement stmt, final Collection<String> selectColumnNames, final long offset, final long count,
+            final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
+        ResultSet rs = null;
+
+        try {
+            rs = JdbcUtil.executeQuery(stmt);
+            // rs.setFetchSize(DEFAULT_FETCH_SIZE);
+
+            return exportCSV(out, rs, selectColumnNames, offset, count, writeTitle, quoted);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        } finally {
+            JdbcUtil.closeQuietly(rs);
+        }
+    }
+
+    /**
+     * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param rs
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static long exportCSV(final File out, final ResultSet rs) throws UncheckedSQLException, UncheckedIOException {
+        return exportCSV(out, rs, 0, Long.MAX_VALUE, true, true);
+    }
+
+    /**
+     * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param rs
+     * @param offset
+     * @param count
+     * @param writeTitle
+     * @param quoted
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static long exportCSV(final File out, final ResultSet rs, final long offset, final long count, final boolean writeTitle, final boolean quoted)
+            throws UncheckedSQLException, UncheckedIOException {
+        return exportCSV(out, rs, null, offset, count, writeTitle, quoted);
+    }
+
+    /**
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param rs
+     * @param selectColumnNames
+     * @param offset
+     * @param count
+     * @param writeTitle
+     * @param quoted
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static long exportCSV(final File out, final ResultSet rs, final Collection<String> selectColumnNames, final long offset, final long count,
+            final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
+        OutputStream os = null;
+
+        try {
+            if (!out.exists()) {
+                out.createNewFile();
+            }
+
+            os = new FileOutputStream(out);
+
+            long result = exportCSV(os, rs, selectColumnNames, offset, count, writeTitle, quoted);
+
+            os.flush();
+
+            return result;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } finally {
+            IOUtil.close(os);
+        }
+    }
+
+    /**
+     * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param rs
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static long exportCSV(final OutputStream out, final ResultSet rs) throws UncheckedSQLException, UncheckedIOException {
+        return exportCSV(out, rs, 0, Long.MAX_VALUE, true, true);
+    }
+
+    /**
+     * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param rs
+     * @param offset
+     * @param count
+     * @param writeTitle
+     * @param quoted
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static long exportCSV(final OutputStream out, final ResultSet rs, final long offset, final long count, final boolean writeTitle,
+            final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
+        return exportCSV(out, rs, null, offset, count, writeTitle, quoted);
+    }
+
+    /**
+     * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param rs
+     * @param selectColumnNames
+     * @param offset
+     * @param count
+     * @param writeTitle
+     * @param quoted
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static long exportCSV(final OutputStream out, final ResultSet rs, final Collection<String> selectColumnNames, final long offset, final long count,
+            final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
+        Writer writer = null;
+
+        try {
+            writer = new OutputStreamWriter(out);
+
+            long result = exportCSV(writer, rs, selectColumnNames, offset, count, writeTitle, quoted);
+
+            writer.flush();
+
+            return result;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param rs
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static long exportCSV(final Writer out, final ResultSet rs) throws UncheckedSQLException, UncheckedIOException {
+        return exportCSV(out, rs, 0, Long.MAX_VALUE, true, true);
+    }
+
+    /**
+     * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param rs
+     * @param offset
+     * @param count
+     * @param writeTitle
+     * @param quoted
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    public static long exportCSV(final Writer out, final ResultSet rs, final long offset, final long count, final boolean writeTitle, final boolean quoted)
+            throws UncheckedSQLException, UncheckedIOException {
+        return exportCSV(out, rs, null, offset, count, writeTitle, quoted);
+    }
+
+    /**
+     * Exports the data from database to CVS.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param rs
+     * @param selectColumnNames
+     * @param offset
+     * @param count
+     * @param writeTitle
+     * @param quoted
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedIOException the unchecked IO exception
+     */
+    @SuppressWarnings("deprecation")
+    public static long exportCSV(final Writer out, final ResultSet rs, final Collection<String> selectColumnNames, final long offset, final long count,
+            final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
+        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
+
+        final JSONSerializationConfig config = JSC.create();
+        config.setDateTimeFormat(DateTimeFormat.ISO_8601_TIMESTAMP);
+
+        if (quoted) {
+            config.setCharQuotation(WD._QUOTATION_D);
+            config.setStringQuotation(WD._QUOTATION_D);
+        } else {
+            config.setCharQuotation((char) 0);
+            config.setStringQuotation((char) 0);
+        }
+
+        long result = 0;
+        final Type<Object> strType = N.typeOf(String.class);
+        final BufferedJSONWriter bw = out instanceof BufferedJSONWriter ? (BufferedJSONWriter) out : Objectory.createBufferedJSONWriter(out);
+
+        try {
+            final ResultSetMetaData rsmd = rs.getMetaData();
+            final int columnCount = rsmd.getColumnCount();
+            final String[] columnNames = new String[columnCount];
+            final Set<String> columnNameSet = selectColumnNames == null ? null : N.newHashSet(selectColumnNames);
+            String label = null;
+
+            for (int i = 0; i < columnCount; i++) {
+                label = JdbcUtil.getColumnLabel(rsmd, i + 1);
+
+                if (columnNameSet == null || columnNameSet.remove(label)) {
+                    columnNames[i] = label;
+                }
+            }
+
+            if (columnNameSet != null && columnNameSet.size() > 0) {
+                throw new IllegalArgumentException(columnNameSet + " are not included in query result");
+            }
+
+            if (writeTitle) {
+                for (int i = 0, j = 0, len = columnNames.length; i < len; i++) {
+                    if (columnNames[i] == null) {
+                        continue;
+                    }
+
+                    if (j++ > 0) {
+                        bw.write(ELEMENT_SEPARATOR_CHAR_ARRAY);
+                    }
+
+                    if (quoted) {
+                        bw.write(WD._QUOTATION_D);
+                        bw.write(columnNames[i]);
+                        bw.write(WD._QUOTATION_D);
+                    } else {
+                        bw.write(columnNames[i]);
+                    }
+                }
+
+                bw.write(IOUtil.LINE_SEPARATOR);
+            }
+
+            final Type<Object>[] typeArray = new Type[columnCount];
+            Type<Object> type = null;
+            Object value = null;
+
+            if (offset > 0) {
+                JdbcUtil.skip(rs, offset);
+            }
+
+            while (result < count && rs.next()) {
+                if (result++ > 0) {
+                    bw.write(IOUtil.LINE_SEPARATOR);
+                }
+
+                for (int i = 0, j = 0; i < columnCount; i++) {
+                    if (columnNames[i] == null) {
+                        continue;
+                    }
+
+                    if (j++ > 0) {
+                        bw.write(ELEMENT_SEPARATOR_CHAR_ARRAY);
+                    }
+
+                    type = typeArray[i];
+
+                    if (type == null) {
+                        value = JdbcUtil.getColumnValue(rs, i + 1);
+
+                        if (value == null) {
+                            bw.write(NULL_CHAR_ARRAY);
+                        } else {
+                            type = N.typeOf(value.getClass());
+                            typeArray[i] = type;
+
+                            if (type.isSerializable()) {
+                                type.writeCharacter(bw, value, config);
+                            } else {
+                                type.writeCharacter(bw, CSVUtil.jsonParser.serialize(value, config), config);
+                            }
+                        }
+                    } else {
+                        if (type.isSerializable()) {
+                            type.writeCharacter(bw, type.get(rs, i + 1), config);
+                        } else {
+                            strType.writeCharacter(bw, CSVUtil.jsonParser.serialize(type.get(rs, i + 1), config), config);
+                        }
+                    }
+                }
+            }
+
+            bw.flush();
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } finally {
+            if (bw != out) {
+                Objectory.recycle(bw);
+            }
+        }
+
+        return result;
+    }
+
+    /**
      *
      * @param sourceConn
      * @param selectSql
@@ -2821,8 +2822,9 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final long offset, final long count,
-            final Connection targetConn, final String insertSql, final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter,
-            final int batchSize, final int batchInterval, final boolean inParallel) throws UncheckedSQLException {
+            final Connection targetConn, final String insertSql,
+            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter, final int batchSize, final int batchInterval,
+            final boolean inParallel) throws UncheckedSQLException {
         PreparedStatement selectStmt = null;
         PreparedStatement insertStmt = null;
 
@@ -2854,7 +2856,7 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static long copy(final PreparedStatement selectStmt, final PreparedStatement insertStmt,
-            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter) throws UncheckedSQLException {
+            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter) throws UncheckedSQLException {
         return copy(selectStmt, 0, Integer.MAX_VALUE, insertStmt, stmtSetter, JdbcUtil.DEFAULT_BATCH_SIZE, 0, false);
     }
 
@@ -2872,14 +2874,15 @@ public final class JdbcUtils {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static long copy(final PreparedStatement selectStmt, final long offset, final long count, final PreparedStatement insertStmt,
-            final BiParametersSetter<? super PreparedStatement, ? super Object[]> stmtSetter, final int batchSize, final int batchInterval,
+            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter, final int batchSize, final int batchInterval,
             final boolean inParallel) throws UncheckedSQLException {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
                 batchInterval);
 
         @SuppressWarnings("rawtypes")
-        final BiParametersSetter<? super PreparedStatement, ? super Object[]> setter = (BiParametersSetter) (stmtSetter == null ? JdbcUtil.DEFAULT_STMT_SETTER
+        final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> setter = (Throwables.BiConsumer) (stmtSetter == null
+                ? JdbcUtil.DEFAULT_STMT_SETTER
                 : stmtSetter);
         final AtomicLong result = new AtomicLong();
 
