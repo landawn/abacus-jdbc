@@ -23,6 +23,7 @@ import java.math.BigDecimal;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Date;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Time;
@@ -143,6 +144,80 @@ public final class Jdbc {
 
         @Override
         void accept(QS preparedQuery, T param) throws SQLException;
+
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param <T>
+         * @param fieldNameList
+         * @param entityClass
+         * @return
+         */
+        @Beta
+        @Stateful
+        static <T> BiParametersSetter<PreparedStatement, T[]> createForArray(final List<String> fieldNameList, final Class<?> entityClass) {
+            N.checkArgNotNullOrEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
+            N.checkArgument(ClassUtil.isEntity(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
+
+            return new BiParametersSetter<>() {
+                private final int len = fieldNameList.size();
+                @SuppressWarnings("rawtypes")
+                private Type[] fieldTypes = null;
+
+                @Override
+                public void accept(PreparedStatement stmt, T[] params) throws SQLException {
+                    if (fieldTypes == null) {
+                        final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+                        fieldTypes = new Type[len];
+
+                        for (int i = 0; i < len; i++) {
+                            fieldTypes[i] = entityInfo.getPropInfo(fieldNameList.get(i)).dbType;
+                        }
+                    }
+
+                    for (int i = 0; i < len; i++) {
+                        fieldTypes[i].set(stmt, i + 1, params[i]);
+                    }
+                }
+            };
+        }
+
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param <T>
+         * @param fieldNameList
+         * @param entityClass
+         * @return
+         */
+        @Beta
+        @Stateful
+        static <T> BiParametersSetter<PreparedStatement, List<T>> createForList(final List<String> fieldNameList, final Class<?> entityClass) {
+            N.checkArgNotNullOrEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
+            N.checkArgument(ClassUtil.isEntity(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
+
+            return new BiParametersSetter<>() {
+                private final int len = fieldNameList.size();
+                @SuppressWarnings("rawtypes")
+                private Type[] fieldTypes = null;
+
+                @Override
+                public void accept(PreparedStatement stmt, List<T> params) throws SQLException {
+                    if (fieldTypes == null) {
+                        final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+                        fieldTypes = new Type[len];
+
+                        for (int i = 0; i < len; i++) {
+                            fieldTypes[i] = entityInfo.getPropInfo(fieldNameList.get(i)).dbType;
+                        }
+                    }
+
+                    for (int i = 0; i < len; i++) {
+                        fieldTypes[i].set(stmt, i + 1, params.get(i));
+                    }
+                }
+            };
+        }
     }
 
     /**
