@@ -2921,7 +2921,7 @@ public final class JdbcUtils {
             }
         };
 
-        parse(selectStmt, offset, count, 0, inParallel ? DEFAULT_QUEUE_SIZE_FOR_ROW_PARSER : 0, rowParser, onComplete);
+        parse(selectStmt, offset, count, 0, inParallel ? batchSize : 0, rowParser, onComplete);
 
         return result.longValue();
     }

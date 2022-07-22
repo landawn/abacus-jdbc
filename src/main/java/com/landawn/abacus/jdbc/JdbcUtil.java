@@ -804,6 +804,8 @@ public final class JdbcUtil {
         return skip(rs, (long) n);
     }
 
+    private static final Set<Class<?>> resultSetClassNotSupportAbsolute = ConcurrentHashMap.newKeySet();
+
     /**
      *
      * @param rs
@@ -821,7 +823,8 @@ public final class JdbcUtil {
             final int currentRow = rs.getRow();
 
             if (n <= Integer.MAX_VALUE) {
-                if (n > Integer.MAX_VALUE - currentRow) {
+                if (n > Integer.MAX_VALUE - currentRow
+                        || (resultSetClassNotSupportAbsolute.size() > 0 && resultSetClassNotSupportAbsolute.contains(rs.getClass()))) {
                     while (n-- > 0L && rs.next()) {
                         // continue.
                     }
@@ -832,6 +835,8 @@ public final class JdbcUtil {
                         while (n-- > 0L && rs.next()) {
                             // continue.
                         }
+
+                        resultSetClassNotSupportAbsolute.add(rs.getClass());
                     }
                 }
             } else {
