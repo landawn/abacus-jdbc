@@ -1855,12 +1855,10 @@ public final class Jdbc {
                 if ((columnNameFilter == null || Objects.equals(columnNameFilter, Fn.alwaysTrue()))
                         && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()))) {
                     return new BiRowMapper<>() {
-                        private final boolean isListOrArrayList = targetClass.equals(List.class) || targetClass.equals(ArrayList.class);
-
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             final int columnCount = columnLabelList.size();
-                            final List<Object> c = isListOrArrayList ? new ArrayList<>(columnCount) : (List<Object>) N.newInstance(targetClass);
+                            final Collection<Object> c = N.newCollection(targetClass, columnCount);
 
                             for (int i = 0; i < columnCount; i++) {
                                 c.add(JdbcUtil.getColumnValue(rs, i + 1));
@@ -1871,8 +1869,7 @@ public final class Jdbc {
                     };
                 } else {
                     return new BiRowMapper<>() {
-                        private final boolean isListOrArrayList = targetClass.equals(List.class) || targetClass.equals(ArrayList.class);
-                        private volatile String[] columnLabels = null;
+                        private String[] columnLabels = null;
 
                         @SuppressWarnings("hiding")
                         @Override
@@ -1894,7 +1891,7 @@ public final class Jdbc {
                                 this.columnLabels = columnLabels;
                             }
 
-                            final List<Object> c = isListOrArrayList ? new ArrayList<>(columnCount) : (List<Object>) N.newInstance(targetClass);
+                            final Collection<Object> c = N.newCollection(targetClass, columnCount);
 
                             for (int i = 0; i < columnCount; i++) {
                                 if (columnLabels[i] == null) {
@@ -2686,10 +2683,8 @@ public final class Jdbc {
                     };
                 } else if (List.class.isAssignableFrom(targetClass)) {
                     return new BiRowMapper<>() {
-                        private final boolean isListOrArrayList = targetClass.equals(List.class) || targetClass.equals(ArrayList.class);
-
-                        private volatile int rsColumnCount = -1;
-                        private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                        private int rsColumnCount = -1;
+                        private ColumnGetter<?>[] rsColumnGetters = null;
 
                         @SuppressWarnings("hiding")
                         @Override
@@ -2702,7 +2697,7 @@ public final class Jdbc {
                                 this.rsColumnGetters = rsColumnGetters;
                             }
 
-                            final List<Object> c = isListOrArrayList ? new ArrayList<>(rsColumnCount) : (List<Object>) N.newInstance(targetClass);
+                            final Collection<Object> c = N.newCollection(targetClass, rsColumnCount);
 
                             for (int i = 0; i < rsColumnCount; i++) {
                                 c.add(rsColumnGetters[i].apply(rs, i + 1));
