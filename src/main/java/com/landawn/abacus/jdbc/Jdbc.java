@@ -31,7 +31,6 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -1659,7 +1658,7 @@ public final class Jdbc {
         /** The Constant TO_MAP. */
         BiRowMapper<Map<String, Object>> TO_MAP = (rs, columnLabels) -> {
             final int columnCount = columnLabels.size();
-            final Map<String, Object> result = JdbcUtil.newRowHashMap(columnCount);
+            final Map<String, Object> result = N.newHashMap(columnCount);
 
             for (int i = 1; i <= columnCount; i++) {
                 result.put(columnLabels.get(i - 1), JdbcUtil.getColumnValue(rs, i));
@@ -1671,7 +1670,7 @@ public final class Jdbc {
         /** The Constant TO_LINKED_HASH_MAP. */
         BiRowMapper<Map<String, Object>> TO_LINKED_HASH_MAP = (rs, columnLabels) -> {
             final int columnCount = columnLabels.size();
-            final Map<String, Object> result = JdbcUtil.newRowLinkedHashMap(columnCount);
+            final Map<String, Object> result = N.newLinkedHashMap(columnCount);
 
             for (int i = 1; i <= columnCount; i++) {
                 result.put(columnLabels.get(i - 1), JdbcUtil.getColumnValue(rs, i));
@@ -1913,9 +1912,7 @@ public final class Jdbc {
                 if ((columnNameFilter == null || Objects.equals(columnNameFilter, Fn.alwaysTrue()))
                         && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()))) {
                     return new BiRowMapper<>() {
-                        private final boolean isMapOrHashMap = targetClass.equals(Map.class) || targetClass.equals(HashMap.class);
-                        private final boolean isLinkedHashMap = targetClass.equals(LinkedHashMap.class);
-                        private volatile String[] columnLabels = null;
+                        private String[] columnLabels = null;
 
                         @SuppressWarnings("hiding")
                         @Override
@@ -1928,8 +1925,7 @@ public final class Jdbc {
                                 this.columnLabels = columnLabels;
                             }
 
-                            final Map<String, Object> m = isMapOrHashMap ? JdbcUtil.newRowHashMap(columnCount)
-                                    : (isLinkedHashMap ? JdbcUtil.newRowLinkedHashMap(columnCount) : (Map<String, Object>) N.newInstance(targetClass));
+                            final Map<String, Object> m = N.newMap(targetClass, columnCount);
 
                             for (int i = 0; i < columnCount; i++) {
                                 m.put(columnLabels[i], JdbcUtil.getColumnValue(rs, i + 1));
@@ -1940,9 +1936,7 @@ public final class Jdbc {
                     };
                 } else {
                     return new BiRowMapper<>() {
-                        private final boolean isMapOrHashMap = targetClass.equals(Map.class) || targetClass.equals(HashMap.class);
-                        private final boolean isLinkedHashMap = targetClass.equals(LinkedHashMap.class);
-                        private volatile String[] columnLabels = null;
+                        private String[] columnLabels = null;
 
                         @SuppressWarnings("hiding")
                         @Override
@@ -1964,8 +1958,7 @@ public final class Jdbc {
                                 this.columnLabels = columnLabels;
                             }
 
-                            final Map<String, Object> m = isMapOrHashMap ? JdbcUtil.newRowHashMap(columnCount)
-                                    : (isLinkedHashMap ? JdbcUtil.newRowLinkedHashMap(columnCount) : (Map<String, Object>) N.newInstance(targetClass));
+                            final Map<String, Object> m = N.newMap(targetClass, columnCount);
 
                             for (int i = 0; i < columnCount; i++) {
                                 if (columnLabels[i] == null) {
@@ -2193,7 +2186,7 @@ public final class Jdbc {
         static BiRowMapper<Map<String, Object>> toMap(final Predicate<Object> valueFilter) {
             return (rs, columnLabels) -> {
                 final int columnCount = columnLabels.size();
-                final Map<String, Object> result = JdbcUtil.newRowHashMap(columnCount);
+                final Map<String, Object> result = N.newHashMap(columnCount);
 
                 Object value = null;
 
@@ -2377,7 +2370,7 @@ public final class Jdbc {
 
                     rowExtractor.accept(rs, outputValuesForRowExtractor);
 
-                    final Map<String, Object> result = JdbcUtil.newRowHashMap(columnCount);
+                    final Map<String, Object> result = N.newHashMap(columnCount);
 
                     for (int i = 0; i < columnCount; i++) {
                         result.put(columnLabels.get(i), outputValuesForRowExtractor[i]);
@@ -2720,11 +2713,8 @@ public final class Jdbc {
                     };
                 } else if (Map.class.isAssignableFrom(targetClass)) {
                     return new BiRowMapper<>() {
-                        private final boolean isMapOrHashMap = targetClass.equals(Map.class) || targetClass.equals(HashMap.class);
-                        private final boolean isLinkedHashMap = targetClass.equals(LinkedHashMap.class);
-
-                        private volatile int rsColumnCount = -1;
-                        private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                        private int rsColumnCount = -1;
+                        private ColumnGetter<?>[] rsColumnGetters = null;
                         private String[] columnLabels = null;
 
                         @SuppressWarnings("hiding")
@@ -2740,8 +2730,7 @@ public final class Jdbc {
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
                             }
 
-                            final Map<String, Object> m = isMapOrHashMap ? JdbcUtil.newRowHashMap(rsColumnCount)
-                                    : (isLinkedHashMap ? JdbcUtil.newRowLinkedHashMap(rsColumnCount) : (Map<String, Object>) N.newInstance(targetClass));
+                            final Map<String, Object> m = N.newMap(targetClass, rsColumnCount);
 
                             for (int i = 0; i < rsColumnCount; i++) {
                                 m.put(columnLabels[i], rsColumnGetters[i].apply(rs, i + 1));
@@ -2754,10 +2743,10 @@ public final class Jdbc {
                     return new BiRowMapper<>() {
                         private final EntityInfo entityInfo = ParserUtil.getEntityInfo(targetClass);
 
-                        private volatile int rsColumnCount = -1;
-                        private volatile ColumnGetter<?>[] rsColumnGetters = null;
-                        private volatile String[] columnLabels = null;
-                        private volatile PropInfo[] propInfos;
+                        private int rsColumnCount = -1;
+                        private ColumnGetter<?>[] rsColumnGetters = null;
+                        private String[] columnLabels = null;
+                        private PropInfo[] propInfos;
 
                         @SuppressWarnings("hiding")
                         @Override

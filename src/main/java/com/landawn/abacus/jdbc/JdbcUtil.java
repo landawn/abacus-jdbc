@@ -5590,14 +5590,6 @@ public final class JdbcUtil {
         return asyncExecutor.execute(() -> sqlAction.apply(a, b, c));
     }
 
-    static Map<String, Object> newRowHashMap(int columnCount) {
-        return N.newHashMap(columnCount);
-    }
-
-    static Map<String, Object> newRowLinkedHashMap(int columnCount) {
-        return N.newLinkedHashMap(columnCount);
-    }
-
     static final RowMapper<Object> NO_GENERATED_KEY_EXTRACTOR = rs -> null;
 
     static final RowMapper<Object> SINGLE_GENERATED_KEY_EXTRACTOR = rs -> getColumnValue(rs, 1);
