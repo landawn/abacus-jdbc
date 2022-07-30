@@ -29,7 +29,7 @@
 		<dependency>
 			<groupId>com.landawn</groupId>
 			<artifactId>abacus-common</artifactId>
-			<version>3.2.7</version>
+			<version>3.2.8</version>
 			<scope>provided</scope>
 		</dependency>
 
