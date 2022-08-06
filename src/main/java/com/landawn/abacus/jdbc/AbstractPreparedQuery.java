@@ -3541,12 +3541,12 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
-        final Throwables.Supplier<ResultSet, SQLException> supplier = () -> executeQuery();
+        final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
         return ExceptionalStream.just(supplier, SQLException.class)
                 .map(Supplier::get)
                 .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
-                .onClose(() -> closeAfterExecutionIfAllowed());
+                .onClose(this::closeAfterExecutionIfAllowed);
     }
 
     // Will it cause confusion if it's called in transaction?
@@ -3570,12 +3570,12 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
-        final Throwables.Supplier<ResultSet, SQLException> supplier = () -> executeQuery();
+        final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
         return ExceptionalStream.just(supplier, SQLException.class)
                 .map(Supplier::get)
                 .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
-                .onClose(() -> closeAfterExecutionIfAllowed());
+                .onClose(this::closeAfterExecutionIfAllowed);
     }
 
     // Will it cause confusion if it's called in transaction?
@@ -3601,12 +3601,12 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
-        final Throwables.Supplier<ResultSet, SQLException> supplier = () -> executeQuery();
+        final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
         return ExceptionalStream.just(supplier, SQLException.class)
                 .map(Supplier::get)
                 .flatMap(rs -> JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
-                .onClose(() -> closeAfterExecutionIfAllowed());
+                .onClose(this::closeAfterExecutionIfAllowed);
     }
 
     // Will it cause confusion if it's called in transaction?
@@ -3632,12 +3632,12 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
-        final Throwables.Supplier<ResultSet, SQLException> supplier = () -> executeQuery();
+        final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
         return ExceptionalStream.just(supplier, SQLException.class)
                 .map(Supplier::get)
                 .flatMap(rs -> JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
-                .onClose(() -> closeAfterExecutionIfAllowed());
+                .onClose(this::closeAfterExecutionIfAllowed);
     }
 
     /**
@@ -4694,9 +4694,8 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * Close after execution if allowed.
      *
-     * @throws SQLException
      */
-    void closeAfterExecutionIfAllowed() throws SQLException {
+    void closeAfterExecutionIfAllowed() {
         if (isCloseAfterExecution) {
             close();
         }

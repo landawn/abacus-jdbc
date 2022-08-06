@@ -371,25 +371,25 @@ public final class JdbcUtil {
 
         Class<? extends Driver> driverClass = null;
         // jdbc:mysql://localhost:3306/abacustest
-        if (url.indexOf("mysql") > 0 || Strings.indexOfIgnoreCase(url, "mysql") > 0) {
+        if (Strings.indexOfIgnoreCase(url, "mysql") >= 0) {
             driverClass = ClassUtil.forClass("com.mysql.Driver");
             // jdbc:postgresql://localhost:5432/abacustest
-        } else if (url.indexOf("postgresql") > 0 || Strings.indexOfIgnoreCase(url, "postgresql") > 0) {
+        } else if (Strings.indexOfIgnoreCase(url, "postgresql") >= 0) {
             driverClass = ClassUtil.forClass("org.postgresql.Driver");
             // jdbc:h2:hsql://<host>:<port>/<database>
-        } else if (url.indexOf("h2") > 0 || Strings.indexOfIgnoreCase(url, "h2") > 0) {
+        } else if (Strings.indexOfIgnoreCase(url, "h2") >= 0) {
             driverClass = ClassUtil.forClass("org.h2.Driver");
             // jdbc:hsqldb:hsql://localhost/abacustest
-        } else if (url.indexOf("hsqldb") > 0 || Strings.indexOfIgnoreCase(url, "hsqldb") > 0) {
+        } else if (Strings.indexOfIgnoreCase(url, "hsqldb") >= 0) {
             driverClass = ClassUtil.forClass("org.hsqldb.JDBCDriver");
             // url=jdbc:oracle:thin:@localhost:1521:abacustest
-        } else if (url.indexOf("oracle") > 0 || Strings.indexOfIgnoreCase(url, "oracle") > 0) {
+        } else if (Strings.indexOfIgnoreCase(url, "oracle") >= 0) {
             driverClass = ClassUtil.forClass("oracle.driver.OracleDriver");
             // url=jdbc:sqlserver://localhost:1433;Database=abacustest
-        } else if (url.indexOf("sqlserver") > 0 || Strings.indexOfIgnoreCase(url, "sqlserver") > 0) {
+        } else if (Strings.indexOfIgnoreCase(url, "sqlserver") >= 0) {
             driverClass = ClassUtil.forClass("com.microsoft.sqlserver.SQLServerDriver");
             // jdbc:db2://localhost:50000/abacustest
-        } else if (url.indexOf("db2") > 0 || Strings.indexOfIgnoreCase(url, "db2") > 0) {
+        } else if (Strings.indexOfIgnoreCase(url, "db2") >= 0) {
             driverClass = ClassUtil.forClass("com.ibm.db2.jcc.DB2Driver");
         } else {
             throw new IllegalArgumentException(
