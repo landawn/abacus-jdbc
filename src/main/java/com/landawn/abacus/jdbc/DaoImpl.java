@@ -1666,8 +1666,7 @@ final class DaoImpl {
         final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(ds);
         final DBVersion dbVersion = dbProductInfo.getVersion();
 
-        final Executor nonNullExecutor = executor == null ? JdbcUtil.asyncExecutor.getExecutor() : executor;
-        final AsyncExecutor asyncExecutor = new AsyncExecutor(nonNullExecutor);
+        final AsyncExecutor asyncExecutor = executor == null ? JdbcUtil.asyncExecutor : new AsyncExecutor(executor);
         final boolean isUnchecked = UncheckedDao.class.isAssignableFrom(daoInterface);
         final boolean isCrudDao = CrudDao.class.isAssignableFrom(daoInterface) || UncheckedCrudDao.class.isAssignableFrom(daoInterface);
         final boolean isCrudDaoL = CrudDaoL.class.isAssignableFrom(daoInterface) || UncheckedCrudDaoL.class.isAssignableFrom(daoInterface);
@@ -2093,7 +2092,7 @@ final class DaoImpl {
                 };
 
             } else if (methodName.equals("executor") && Executor.class.isAssignableFrom(returnType) && paramLen == 0) {
-                call = (proxy, args) -> nonNullExecutor;
+                call = (proxy, args) -> asyncExecutor.getExecutor();
             } else if (methodName.equals("asyncExecutor") && AsyncExecutor.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> asyncExecutor;
             } else if (method.getName().equals("targetEntityClass") && Class.class.isAssignableFrom(returnType) && paramLen == 0) {
