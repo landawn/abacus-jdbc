@@ -333,7 +333,7 @@ public final class JoinInfo {
             }
 
             srcEntityKeyExtractor = entity -> getJoinPropValue(srcPropInfos[0], entity);
-            referencedEntityKeyExtractor = entity -> referencedPropInfos[0].getPropValue(entity);
+            referencedEntityKeyExtractor = referencedPropInfos[0]::getPropValue;
             // ===============================================================================================================================
         } else {
             srcPropInfos = new PropInfo[joinColumnPairs.length];

@@ -185,7 +185,7 @@ public final class SQLExecutor {
     static final String QUERY_WITH_DATA_SOURCE = "queryWithDataSource";
 
     /** The Constant EXISTS_RESULT_SET_EXTRACTOR. */
-    private static final Jdbc.ResultExtractor<Boolean> EXISTS_RESULT_SET_EXTRACTOR = rs -> rs.next();
+    private static final Jdbc.ResultExtractor<Boolean> EXISTS_RESULT_SET_EXTRACTOR = ResultSet::next;
 
     /** The Constant COUNT_RESULT_SET_EXTRACTOR. */
     private static final Jdbc.ResultExtractor<Integer> COUNT_RESULT_SET_EXTRACTOR = rs -> {

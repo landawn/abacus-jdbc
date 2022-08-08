@@ -3409,42 +3409,42 @@ public final class Jdbc {
     @FunctionalInterface
     public interface ColumnGetter<V> {
 
-        ColumnGetter<Boolean> GET_BOOLEAN = (rs, columnIndex) -> rs.getBoolean(columnIndex);
+        ColumnGetter<Boolean> GET_BOOLEAN = ResultSet::getBoolean;
 
-        ColumnGetter<Byte> GET_BYTE = (rs, columnIndex) -> rs.getByte(columnIndex);
+        ColumnGetter<Byte> GET_BYTE = ResultSet::getByte;
 
-        ColumnGetter<Short> GET_SHORT = (rs, columnIndex) -> rs.getShort(columnIndex);
+        ColumnGetter<Short> GET_SHORT = ResultSet::getShort;
 
-        ColumnGetter<Integer> GET_INT = (rs, columnIndex) -> rs.getInt(columnIndex);
+        ColumnGetter<Integer> GET_INT = ResultSet::getInt;
 
-        ColumnGetter<Long> GET_LONG = (rs, columnIndex) -> rs.getLong(columnIndex);
+        ColumnGetter<Long> GET_LONG = ResultSet::getLong;
 
-        ColumnGetter<Float> GET_FLOAT = (rs, columnIndex) -> rs.getFloat(columnIndex);
+        ColumnGetter<Float> GET_FLOAT = ResultSet::getFloat;
 
-        ColumnGetter<Double> GET_DOUBLE = (rs, columnIndex) -> rs.getDouble(columnIndex);
+        ColumnGetter<Double> GET_DOUBLE = ResultSet::getDouble;
 
-        ColumnGetter<BigDecimal> GET_BIG_DECIMAL = (rs, columnIndex) -> rs.getBigDecimal(columnIndex);
+        ColumnGetter<BigDecimal> GET_BIG_DECIMAL = ResultSet::getBigDecimal;
 
-        ColumnGetter<String> GET_STRING = (rs, columnIndex) -> rs.getString(columnIndex);
+        ColumnGetter<String> GET_STRING = ResultSet::getString;
 
-        ColumnGetter<Date> GET_DATE = (rs, columnIndex) -> rs.getDate(columnIndex);
+        ColumnGetter<Date> GET_DATE = ResultSet::getDate;
 
-        ColumnGetter<Time> GET_TIME = (rs, columnIndex) -> rs.getTime(columnIndex);
+        ColumnGetter<Time> GET_TIME = ResultSet::getTime;
 
-        ColumnGetter<Timestamp> GET_TIMESTAMP = (rs, columnIndex) -> rs.getTimestamp(columnIndex);
+        ColumnGetter<Timestamp> GET_TIMESTAMP = ResultSet::getTimestamp;
 
-        ColumnGetter<byte[]> GET_BYTES = (rs, columnIndex) -> rs.getBytes(columnIndex);
+        ColumnGetter<byte[]> GET_BYTES = ResultSet::getBytes;
 
-        ColumnGetter<InputStream> GET_BINARY_STREAM = (rs, columnIndex) -> rs.getBinaryStream(columnIndex);
+        ColumnGetter<InputStream> GET_BINARY_STREAM = ResultSet::getBinaryStream;
 
-        ColumnGetter<Reader> GET_CHARACTER_STREAM = (rs, columnIndex) -> rs.getCharacterStream(columnIndex);
+        ColumnGetter<Reader> GET_CHARACTER_STREAM = ResultSet::getCharacterStream;
 
-        ColumnGetter<Blob> GET_BLOB = (rs, columnIndex) -> rs.getBlob(columnIndex);
+        ColumnGetter<Blob> GET_BLOB = ResultSet::getBlob;
 
-        ColumnGetter<Clob> GET_CLOB = (rs, columnIndex) -> rs.getClob(columnIndex);
+        ColumnGetter<Clob> GET_CLOB = ResultSet::getClob;
 
         @SuppressWarnings("rawtypes")
-        ColumnGetter GET_OBJECT = (rs, columnIndex) -> JdbcUtil.getColumnValue(rs, columnIndex);
+        ColumnGetter GET_OBJECT = JdbcUtil::getColumnValue;
 
         /**
          *
