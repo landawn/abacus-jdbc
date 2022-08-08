@@ -3948,7 +3948,7 @@ public final class SQLExecutor {
             }
         });
 
-        return Stream.of(lazyIter).onClose(() -> lazyIter.close());
+        return Stream.of(lazyIter).onClose(lazyIter::close);
     }
 
     private static Connection directGetConnectionFromPool(final DataSource ds) throws UncheckedSQLException {

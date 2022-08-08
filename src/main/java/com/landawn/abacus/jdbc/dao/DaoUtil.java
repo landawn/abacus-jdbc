@@ -79,9 +79,9 @@ final class DaoUtil {
         if (idPropNameList.size() == 1) {
             final PropInfo idPropInfo = entityInfo.getPropInfo(idPropNameList.get(0));
 
-            return it -> idPropInfo.getPropValue(it);
+            return idPropInfo::getPropValue;
         } else {
-            final List<PropInfo> idPropInfos = N.map(idPropNameList, idPropName -> entityInfo.getPropInfo(idPropName));
+            final List<PropInfo> idPropInfos = N.map(idPropNameList, entityInfo::getPropInfo);
 
             return it -> {
                 final Seid entityId = Seid.of(entityInfo.simpleClassName);

@@ -268,7 +268,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
 
         if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
             if (result.size() > JdbcUtil.DEFAULT_BATCH_SIZE) {
-                StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(it -> loadAllJoinEntities(it));
+                StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(this::loadAllJoinEntities);
             } else {
                 loadAllJoinEntities(result);
             }
@@ -327,7 +327,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             return DaoUtil.getDao(this)
                     .stream(selectPropNames, cond)
                     .splitToList(JdbcUtil.DEFAULT_BATCH_SIZE) //
-                    .onEach(it -> loadAllJoinEntities(it))
+                    .onEach(this::loadAllJoinEntities)
                     .flattMap(Fnn.identity());
 
         } else {

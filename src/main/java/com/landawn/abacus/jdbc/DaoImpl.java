@@ -1125,7 +1125,7 @@ final class DaoImpl {
         } else if (isListQuery) {
             if (N.notNullOrEmpty(mappedByKey)) {
                 final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass).getPropInfo(mappedByKey);
-                final Function<Object, Object> keyMapper = t -> propInfo.getPropValue(t);
+                final Function<Object, Object> keyMapper = propInfo::getPropValue;
 
                 return (preparedQuery,
                         args) -> (R) preparedQuery.stream(targetEntityClass).toMap(keyMapper, Fn.identity(), () -> N.newMap(targetMapClass));
@@ -1921,7 +1921,7 @@ final class DaoImpl {
 
         final String[] returnColumnNames = isNoId ? N.EMPTY_STRING_ARRAY
                 : (isOneId ? Array.of(propColumnNameMap.get(oneIdPropName))
-                        : Stream.of(idPropNameList).map(idName -> propColumnNameMap.get(idName)).toArray(IntFunctions.ofStringArray()));
+                        : Stream.of(idPropNameList).map(propColumnNameMap::get).toArray(IntFunctions.ofStringArray()));
 
         final Tuple3<Jdbc.BiRowMapper<Object>, Function<Object, Object>, BiConsumer<Object, Object>> tp3 = JdbcUtil.getIdGeneratorGetterSetter(daoInterface,
                 entityClass, namingPolicy, idClass);
@@ -4816,6 +4816,7 @@ final class DaoImpl {
                                 // skip.
                             } else if (op == OP.exists || isExistsQuery(method, op, fullClassMethodName) || op == OP.findFirst || op == OP.queryForSingle
                                     || isSingleReturnType(returnType)) {
+                                // skip
                             } else if (op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll || op == OP.stream || op == OP.streamAll
                                     || isListQuery(method, op, fullClassMethodName)) {
                                 // skip.

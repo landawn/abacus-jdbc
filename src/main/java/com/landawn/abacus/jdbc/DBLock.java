@@ -122,8 +122,8 @@ public final class DBLock {
                     m.putAll(targetCodePool);
 
                     try {
-                        for (String target : m.keySet()) {
-                            JdbcUtil.executeUpdate(conn, refreshSQL, DateUtil.currentTimestamp(), target, m.get(target));
+                        for (Map.Entry<String, String> entry : m.entrySet()) {
+                            JdbcUtil.executeUpdate(conn, refreshSQL, DateUtil.currentTimestamp(), entry.getKey(), m.get(entry.getKey()));
                         }
                     } catch (SQLException e) {
                         throw new UncheckedSQLException(e);

@@ -522,7 +522,7 @@ public final class JdbcUtil {
         Statement stmt = null;
 
         try {
-            if (closeStatement || closeConnection) {
+            if (closeStatement) {
                 stmt = rs.getStatement();
             }
 
@@ -691,7 +691,7 @@ public final class JdbcUtil {
         Statement stmt = null;
 
         try {
-            if (closeStatement || closeConnection) {
+            if (closeStatement) {
                 stmt = rs.getStatement();
             }
 
@@ -3880,7 +3880,7 @@ public final class JdbcUtil {
         return ExceptionalStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
-                .map(rs -> resultExtractor.apply(rs));
+                .map(resultExtractor::apply);
     }
 
     /**
@@ -5726,7 +5726,7 @@ public final class JdbcUtil {
             final EntityInfo idEntityInfo = idType != null && ClassUtil.isEntity(idType) ? ParserUtil.getEntityInfo(idType) : null;
 
             final com.landawn.abacus.util.function.Function<Object, ID> idGetter = isNoId ? noIdGeneratorGetterSetter._2 //
-                    : (isOneId ? entity -> idPropInfo.getPropValue(entity) //
+                    : (isOneId ? idPropInfo::getPropValue //
                             : (isEntityId ? entity -> {
                                 final Seid ret = Seid.of(ClassUtil.getSimpleClassName(entityClass));
 

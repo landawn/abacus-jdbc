@@ -3463,7 +3463,7 @@ public final class Jdbc {
             ColumnGetter<?> columnGetter = COLUMN_GETTER_POOL.get(type);
 
             if (columnGetter == null) {
-                columnGetter = (rs, columnIndex) -> type.get(rs, columnIndex);
+                columnGetter = type::get;
 
                 COLUMN_GETTER_POOL.put(type, columnGetter);
             }

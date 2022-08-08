@@ -245,7 +245,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
 
         if (N.notNullOrEmpty(result)) {
             if (result.size() > JdbcUtil.DEFAULT_BATCH_SIZE) {
-                StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(it -> loadAllJoinEntities(it));
+                StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(this::loadAllJoinEntities);
             } else {
                 loadAllJoinEntities(result);
             }

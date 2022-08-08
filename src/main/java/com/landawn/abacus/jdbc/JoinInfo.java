@@ -489,7 +489,7 @@ public final class JoinInfo {
                 final PropInfo referencedPropInfo = referencedPropInfos[0];
 
                 srcEntityKeyExtractorTmp = entity -> getJoinPropValue(srcPropInfo, entity);
-                referencedEntityKeyExtractorTmp = entity -> referencedPropInfo.getPropValue(entity);
+                referencedEntityKeyExtractorTmp = referencedPropInfo::getPropValue;
             } else if (srcPropInfos.length == 2) {
                 final PropInfo srcPropInfo_1 = srcPropInfos[0];
                 final PropInfo srcPropInfo_2 = srcPropInfos[1];

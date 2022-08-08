@@ -2296,6 +2296,7 @@ public final class JdbcUtils {
             final String[] titles = headerParser.apply(line);
 
             while (offset-- > 0 && br.readLine() != null) {
+                // continue
             }
 
             final String[] strs = new String[titles.length];
