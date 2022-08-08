@@ -1127,8 +1127,7 @@ final class DaoImpl {
                 final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass).getPropInfo(mappedByKey);
                 final Function<Object, Object> keyMapper = propInfo::getPropValue;
 
-                return (preparedQuery,
-                        args) -> (R) preparedQuery.stream(targetEntityClass).toMap(keyMapper, Fn.identity(), () -> N.newMap(targetMapClass));
+                return (preparedQuery, args) -> (R) preparedQuery.stream(targetEntityClass).toMap(keyMapper, Fn.identity(), () -> N.newMap(targetMapClass));
             } else if (returnType.equals(List.class)) {
                 return (preparedQuery, args) -> (R) preparedQuery.list(firstReturnEleType);
             } else {
