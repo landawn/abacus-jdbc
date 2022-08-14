@@ -2025,6 +2025,7 @@ final class DaoImpl {
                 continue;
             }
 
+            final boolean isNonDBOperation = StreamEx.of(method.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(NonDBOperation.class));
             final Predicate<String> filterByMethodName = it -> N.notNullOrEmpty(it)
                     && (Strings.containsIgnoreCase(method.getName(), it) || Pattern.matches(it, method.getName()));
 
@@ -4448,7 +4449,7 @@ final class DaoImpl {
                                 + ". Please use the OptionalXXX classes defined in com.landawn.abacus.util.u");
                     }
 
-                    if (!(isUnchecked || throwsSQLException || isStreamReturn)) {
+                    if (!(isNonDBOperation || isUnchecked || throwsSQLException || isStreamReturn)) {
                         throw new UnsupportedOperationException("'throws SQLException' is not declared in method: " + fullClassMethodName
                                 + ". It's required for Dao interface extends Dao. Don't want to throw SQLException? extends UncheckedDao");
                     }
@@ -5095,8 +5096,6 @@ final class DaoImpl {
                     call = tmp;
                 }
             }
-
-            final boolean isNonDBOperation = StreamEx.of(method.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(NonDBOperation.class));
 
             if (isNonDBOperation) {
                 nonDBOperationSet.add(method);

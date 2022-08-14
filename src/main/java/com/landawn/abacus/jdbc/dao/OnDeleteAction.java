@@ -23,6 +23,7 @@ import com.landawn.abacus.annotation.Beta;
  * @deprecated won't & should not be implemented.
  */
 @Beta
+@Deprecated
 public enum OnDeleteAction {
     /**
      * Field NO_ACTION.

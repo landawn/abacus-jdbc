@@ -4237,6 +4237,10 @@ public final class Jdbc {
                 }
             };
         }
+
+        private HandlerFactory() {
+            // singleton.
+        }
     }
 
     static <K, V> void merge(Map<K, V> map, K key, V value, BinaryOperator<V> remappingFunction) {

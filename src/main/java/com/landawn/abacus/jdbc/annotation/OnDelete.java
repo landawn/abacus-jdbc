@@ -29,6 +29,7 @@ import com.landawn.abacus.jdbc.dao.OnDeleteAction;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })
+@Deprecated
 public @interface OnDelete {
     OnDeleteAction action() default OnDeleteAction.NO_ACTION;
 }
