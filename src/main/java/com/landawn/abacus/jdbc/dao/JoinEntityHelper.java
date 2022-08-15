@@ -290,7 +290,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
                 .stream(selectPropNames, cond)
                 .splitToList(JdbcUtil.DEFAULT_BATCH_SIZE)
                 .onEach(it -> loadJoinEntities(it, joinEntitiesToLoad))
-                .flattMap(Fnn.identity());
+                .flatmap(Fnn.identity());
     }
 
     /**
@@ -311,7 +311,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
                         loadJoinEntities(it, joinEntityClass);
                     }
                 })
-                .flattMap(Fnn.identity());
+                .flatmap(Fnn.identity());
     }
 
     /**
@@ -328,7 +328,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
                     .stream(selectPropNames, cond)
                     .splitToList(JdbcUtil.DEFAULT_BATCH_SIZE) //
                     .onEach(this::loadAllJoinEntities)
-                    .flattMap(Fnn.identity());
+                    .flatmap(Fnn.identity());
 
         } else {
             return DaoUtil.getDao(this).stream(selectPropNames, cond);

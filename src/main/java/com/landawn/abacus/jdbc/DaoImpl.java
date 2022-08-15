@@ -1676,7 +1676,7 @@ final class DaoImpl {
         final SQLMapper newSQLMapper = sqlMapper == null ? new SQLMapper() : sqlMapper.copy();
 
         StreamEx.of(allInterfaces) //
-                .flatMapp(Class::getAnnotations)
+                .flattMap(Class::getAnnotations)
                 .select(SqlMapper.class)
                 .map(SqlMapper::value)
                 .map(SQLMapper::fromFile)
@@ -1691,36 +1691,36 @@ final class DaoImpl {
                 });
 
         final boolean addLimitForSingleQuery = StreamEx.of(allInterfaces)
-                .flatMapp(Class::getAnnotations)
+                .flattMap(Class::getAnnotations)
                 .select(Config.class)
                 .map(Config::addLimitForSingleQuery)
                 .first()
                 .orElse(false);
 
         final boolean callGenerateIdForInsert = StreamEx.of(allInterfaces)
-                .flatMapp(Class::getAnnotations)
+                .flattMap(Class::getAnnotations)
                 .select(Config.class)
                 .map(Config::callGenerateIdForInsertIfIdNotSet)
                 .first()
                 .orElse(false);
 
         final boolean callGenerateIdForInsertWithSql = StreamEx.of(allInterfaces)
-                .flatMapp(Class::getAnnotations)
+                .flattMap(Class::getAnnotations)
                 .select(Config.class)
                 .map(Config::callGenerateIdForInsertWithSqlIfIdNotSet)
                 .first()
                 .orElse(false);
 
         final boolean fetchColumnByEntityClassForDataSetQuery = StreamEx.of(allInterfaces)
-                .flatMapp(Class::getAnnotations)
+                .flattMap(Class::getAnnotations)
                 .select(Config.class)
                 .map(Config::fetchColumnByEntityClassForDataSetQuery)
                 .first()
                 .orElse(true);
 
         final Map<String, String> sqlFieldMap = StreamEx.of(allInterfaces)
-                .flatMapp(Class::getDeclaredFields)
-                .append(StreamEx.of(allInterfaces).flatMapp(Class::getDeclaredClasses).flatMapp(Class::getDeclaredFields))
+                .flattMap(Class::getDeclaredFields)
+                .append(StreamEx.of(allInterfaces).flattMap(Class::getDeclaredClasses).flattMap(Class::getDeclaredFields))
                 .filter(it -> it.isAnnotationPresent(SqlField.class))
                 .onEach(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()) && String.class.equals(it.getType()),
                         "Field annotated with @SqlField must be static&final String. but {} is not in Dao class {}.", it, daoInterface))
@@ -1796,7 +1796,7 @@ final class DaoImpl {
         final List<Method> sqlMethods = StreamEx.of(allInterfaces)
                 .reversed()
                 .distinct()
-                .flatMapp(Class::getDeclaredMethods)
+                .flattMap(Class::getDeclaredMethods)
                 .filter(m -> !Modifier.isStatic(m.getModifiers()))
                 .toList();
 
@@ -1956,9 +1956,9 @@ final class DaoImpl {
                 ? (pq, entity) -> pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity), idPropInfo.dbType)
                 : (pq, entity) -> pq.settParameters(entity, objParamsSetter);
 
-        final CacheResult daoClassCacheResultAnno = StreamEx.of(allInterfaces).flatMapp(Class::getAnnotations).select(CacheResult.class).first().orNull();
+        final CacheResult daoClassCacheResultAnno = StreamEx.of(allInterfaces).flattMap(Class::getAnnotations).select(CacheResult.class).first().orNull();
 
-        final RefreshCache daoClassRefreshCacheAnno = StreamEx.of(allInterfaces).flatMapp(Class::getAnnotations).select(RefreshCache.class).first().orNull();
+        final RefreshCache daoClassRefreshCacheAnno = StreamEx.of(allInterfaces).flattMap(Class::getAnnotations).select(RefreshCache.class).first().orNull();
 
         if (NoUpdateDao.class.isAssignableFrom(daoInterface) || UncheckedNoUpdateDao.class.isAssignableFrom(daoInterface)) {
             // OK
@@ -1975,14 +1975,14 @@ final class DaoImpl {
 
         final List<Handler> daoClassHandlerList = StreamEx.of(allInterfaces)
                 .reversed()
-                .flatMapp(Class::getAnnotations)
+                .flattMap(Class::getAnnotations)
                 .filter(anno -> anno.annotationType().equals(Handler.class) || anno.annotationType().equals(HandlerList.class))
-                .flattMap(anno -> anno.annotationType().equals(Handler.class) ? N.asList((Handler) anno) : N.asList(((HandlerList) anno).value()))
+                .flatmap(anno -> anno.annotationType().equals(Handler.class) ? N.asList((Handler) anno) : N.asList(((HandlerList) anno).value()))
                 .toList();
 
         final Map<String, Jdbc.Handler<?>> daoClassHandlerMap = StreamEx.of(allInterfaces)
-                .flatMapp(Class::getDeclaredFields)
-                .append(StreamEx.of(allInterfaces).flatMapp(Class::getDeclaredClasses).flatMapp(Class::getDeclaredFields))
+                .flattMap(Class::getDeclaredFields)
+                .append(StreamEx.of(allInterfaces).flattMap(Class::getDeclaredClasses).flattMap(Class::getDeclaredFields))
                 .filter(it -> Jdbc.Handler.class.isAssignableFrom(it.getType()))
                 .onEach(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()),
                         "Handler Fields defined in Dao declared classes must be static&final Handler. but {} is not in Dao class {}.", it, daoInterface))
@@ -1993,7 +1993,7 @@ final class DaoImpl {
                 .toMap(Field::getName, Fn.ff(it -> (Jdbc.Handler<?>) it.get(null)));
 
         final com.landawn.abacus.jdbc.annotation.Cache daoClassCacheAnno = StreamEx.of(allInterfaces)
-                .flatMapp(Class::getAnnotations)
+                .flattMap(Class::getAnnotations)
                 .select(com.landawn.abacus.jdbc.annotation.Cache.class)
                 .first()
                 .orNull();
@@ -3376,7 +3376,7 @@ final class DaoImpl {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
                                         ids = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize)
-                                                .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor, isDefaultIdTester))
+                                                .flatmap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor, isDefaultIdTester))
                                                 .toList();
                                     }
 
@@ -3449,7 +3449,7 @@ final class DaoImpl {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
                                         ids = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize)
-                                                .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor, isDefaultIdTester))
+                                                .flatmap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor, isDefaultIdTester))
                                                 .toList();
                                     }
 
@@ -3520,7 +3520,7 @@ final class DaoImpl {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
                                         ids = ExceptionalStream.of(entities)
                                                 .splitToList(batchSize)
-                                                .flattMap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor, isDefaultIdTester))
+                                                .flatmap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor, isDefaultIdTester))
                                                 .toList();
                                     }
 
@@ -4689,7 +4689,7 @@ final class DaoImpl {
 
                     final List<OutParameter> outParameterList = StreamEx.of(method.getAnnotations())
                             .select(OutParameter.class)
-                            .append(StreamEx.of(method.getAnnotations()).select(OutParameterList.class).flatMapp(OutParameterList::value))
+                            .append(StreamEx.of(method.getAnnotations()).select(OutParameterList.class).flattMap(OutParameterList::value))
                             .toList();
 
                     if (N.notNullOrEmpty(outParameterList)) {
@@ -4918,13 +4918,13 @@ final class DaoImpl {
                                             if (isSingleParameter) {
                                                 ids = ExceptionalStream.of(batchParameters)
                                                         .splitToList(batchSize) //
-                                                        .flattMap(bp -> preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT)
+                                                        .flatmap(bp -> preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT)
                                                                 .batchInsert(keyExtractor, isDefaultIdTester))
                                                         .toList();
                                             } else {
                                                 ids = ExceptionalStream.of((Collection<List<?>>) (Collection) batchParameters)
                                                         .splitToList(batchSize) //
-                                                        .flattMap(bp -> preparedQuery.addBatchParameters(bp).batchInsert(keyExtractor, isDefaultIdTester))
+                                                        .flatmap(bp -> preparedQuery.addBatchParameters(bp).batchInsert(keyExtractor, isDefaultIdTester))
                                                         .toList();
                                             }
                                         }
@@ -5115,14 +5115,14 @@ final class DaoImpl {
                 //    }
 
                 final SqlLogEnabled daoClassSqlLogAnno = StreamEx.of(allInterfaces)
-                        .flatMapp(Class::getAnnotations)
+                        .flattMap(Class::getAnnotations)
                         .select(SqlLogEnabled.class)
                         .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
                         .first()
                         .orNull();
 
                 final PerfLog daoClassPerfLogAnno = StreamEx.of(allInterfaces)
-                        .flatMapp(Class::getAnnotations)
+                        .flattMap(Class::getAnnotations)
                         .select(PerfLog.class)
                         .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
                         .first()
@@ -5466,7 +5466,7 @@ final class DaoImpl {
 
                 final List<Tuple2<Jdbc.Handler, Boolean>> handlerList = StreamEx.of(method.getAnnotations())
                         .filter(anno -> anno.annotationType().equals(Handler.class) || anno.annotationType().equals(HandlerList.class))
-                        .flattMap(anno -> anno.annotationType().equals(Handler.class) ? N.asList((Handler) anno) : N.asList(((HandlerList) anno).value()))
+                        .flatmap(anno -> anno.annotationType().equals(Handler.class) ? N.asList((Handler) anno) : N.asList(((HandlerList) anno).value()))
                         .prepend(StreamEx.of(daoClassHandlerList).filter(h -> StreamEx.of(h.filter()).anyMatch(filterByMethodName)))
                         .map(handlerAnno -> Tuple.of((Jdbc.Handler) (N.notNullOrEmpty(handlerAnno.qualifier())
                                 ? daoClassHandlerMap.getOrDefault(handlerAnno.qualifier(), HandlerFactory.get(handlerAnno.qualifier()))

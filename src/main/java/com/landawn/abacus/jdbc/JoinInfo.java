@@ -131,7 +131,7 @@ public final class JoinInfo {
         final String[] joinColumnPairs = Strings.split(joinByVal, ',', true);
 
         this.isManyToManyJoin = StreamEx.of(joinColumnPairs)
-                .flatMapp(it -> Strings.split(joinColumnPairs[0], '=', true))
+                .flattMap(it -> Strings.split(joinColumnPairs[0], '=', true))
                 .filter(it -> it.indexOf('.') > 0)
                 .map(it -> it.substring(0, it.indexOf('.')).trim())
                 .anyMatch(it -> !(it.equalsIgnoreCase(entityInfo.simpleClassName) || it.equalsIgnoreCase(referencedEntityInfo.simpleClassName)));

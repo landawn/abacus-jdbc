@@ -3115,6 +3115,7 @@ public final class Jdbc {
         @Override
         boolean test(final ResultSet rs) throws SQLException;
 
+        @Override
         default RowFilter negate() {
             return rs -> !test(rs);
         }

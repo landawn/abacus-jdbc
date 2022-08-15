@@ -167,8 +167,8 @@ public final class JdbcUtil {
     static final String CURRENT_DIR_PATH = "./";
 
     static final AsyncExecutor asyncExecutor = new AsyncExecutor(//
-            N.max(64, IOUtil.CPU_CORES * 8, (IOUtil.MAX_MEMORY_IN_MB / 1024) * 8), // coreThreadPoolSize
-            N.max(128, IOUtil.CPU_CORES * 16, (IOUtil.MAX_MEMORY_IN_MB / 1024) * 16), // maxThreadPoolSize
+            N.max(64, IOUtil.CPU_CORES * 8), // coreThreadPoolSize
+            N.max(128, IOUtil.CPU_CORES * 16), // maxThreadPoolSize
             180L, TimeUnit.SECONDS);
 
     static final BiParametersSetter<? super PreparedStatement, ? super Object[]> DEFAULT_STMT_SETTER = (stmt, parameters) -> {
@@ -5792,7 +5792,7 @@ public final class JdbcUtil {
 
                 final ImmutableMap<String, String> columnPropNameMap = EntryStream.of(propColumnNameMap)
                         .inversed()
-                        .flattMapKey(e -> N.asList(e, e.toLowerCase(), e.toUpperCase()))
+                        .flatmapKey(e -> N.asList(e, e.toLowerCase(), e.toUpperCase()))
                         .distinctByKey()
                         .toImmutableMap();
 
