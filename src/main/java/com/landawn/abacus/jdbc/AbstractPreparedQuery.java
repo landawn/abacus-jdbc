@@ -248,7 +248,11 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      */
     public This setBoolean(int parameterIndex, Boolean x) throws SQLException {
-        stmt.setBoolean(parameterIndex, N.defaultIfNull(x));
+        if (x == null) {
+            stmt.setNull(parameterIndex, java.sql.Types.BOOLEAN);
+        } else {
+            stmt.setBoolean(parameterIndex, x);
+        }
 
         return (This) this;
     }
@@ -276,7 +280,11 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      */
     public This setByte(int parameterIndex, Byte x) throws SQLException {
-        stmt.setByte(parameterIndex, N.defaultIfNull(x));
+        if (x == null) {
+            stmt.setNull(parameterIndex, java.sql.Types.TINYINT);
+        } else {
+            stmt.setByte(parameterIndex, x);
+        }
 
         return (This) this;
     }
@@ -304,7 +312,11 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      */
     public This setShort(int parameterIndex, Short x) throws SQLException {
-        stmt.setShort(parameterIndex, N.defaultIfNull(x));
+        if (x == null) {
+            stmt.setNull(parameterIndex, java.sql.Types.SMALLINT);
+        } else {
+            stmt.setShort(parameterIndex, x);
+        }
 
         return (This) this;
     }
@@ -332,7 +344,11 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      */
     public This setInt(int parameterIndex, Integer x) throws SQLException {
-        stmt.setInt(parameterIndex, N.defaultIfNull(x));
+        if (x == null) {
+            stmt.setNull(parameterIndex, java.sql.Types.INTEGER);
+        } else {
+            stmt.setInt(parameterIndex, x);
+        }
 
         return (This) this;
     }
@@ -345,6 +361,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
+    @Beta
     public This setInt(int parameterIndex, char x) throws SQLException {
         stmt.setInt(parameterIndex, x);
 
@@ -359,8 +376,13 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
+    @Beta
     public This setInt(int parameterIndex, Character x) throws SQLException {
-        stmt.setInt(parameterIndex, N.defaultIfNull(x));
+        if (x == null) {
+            stmt.setNull(parameterIndex, java.sql.Types.INTEGER);
+        } else {
+            stmt.setInt(parameterIndex, x);
+        }
 
         return (This) this;
     }
@@ -388,7 +410,11 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      */
     public This setLong(int parameterIndex, Long x) throws SQLException {
-        stmt.setLong(parameterIndex, N.defaultIfNull(x));
+        if (x == null) {
+            stmt.setNull(parameterIndex, java.sql.Types.BIGINT);
+        } else {
+            stmt.setLong(parameterIndex, x);
+        }
 
         return (This) this;
     }
@@ -416,7 +442,11 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      */
     public This setFloat(int parameterIndex, Float x) throws SQLException {
-        stmt.setFloat(parameterIndex, N.defaultIfNull(x));
+        if (x == null) {
+            stmt.setNull(parameterIndex, java.sql.Types.FLOAT);
+        } else {
+            stmt.setFloat(parameterIndex, x);
+        }
 
         return (This) this;
     }
@@ -444,7 +474,11 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      */
     public This setDouble(int parameterIndex, Double x) throws SQLException {
-        stmt.setDouble(parameterIndex, x);
+        if (x == null) {
+            stmt.setNull(parameterIndex, java.sql.Types.DOUBLE);
+        } else {
+            stmt.setDouble(parameterIndex, x);
+        }
 
         return (This) this;
     }
