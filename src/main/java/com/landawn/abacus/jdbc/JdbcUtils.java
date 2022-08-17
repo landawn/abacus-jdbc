@@ -2792,6 +2792,53 @@ public final class JdbcUtils {
     }
 
     /**
+    *
+    * @param sourceDataSource
+    * @param selectSql
+    * @param targetDataSource
+    * @param insertSql
+    * @return
+    * @throws UncheckedSQLException the unchecked SQL exception
+    */
+    public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource,
+            final String insertSql) throws UncheckedSQLException {
+        return copy(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, false);
+    }
+
+    /**
+    *
+    * @param sourceDataSource
+    * @param selectSql
+    * @param fetchSize
+    * @param targetDataSource
+    * @param insertSql
+    * @param batchSize
+    * @param inParallel
+    * @return
+    * @throws UncheckedSQLException
+    */
+    public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
+            final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize, final boolean inParallel) throws UncheckedSQLException {
+        Connection sourceConn = null;
+        Connection targetConn = null;
+
+        try {
+            sourceConn = JdbcUtil.getConnection(sourceDataSource);
+            targetConn = JdbcUtil.getConnection(targetDataSource);
+
+            return copy(sourceConn, selectSql, fetchSize, targetConn, insertSql, batchSize, inParallel);
+        } finally {
+            if (sourceConn != null) {
+                JdbcUtil.releaseConnection(sourceConn, sourceDataSource);
+            }
+
+            if (targetConn != null) {
+                JdbcUtil.releaseConnection(targetConn, targetDataSource);
+            }
+        }
+    }
+
+    /**
      *
      * @param sourceConn
      * @param selectSql
@@ -2802,8 +2849,24 @@ public final class JdbcUtils {
      */
     public static long copy(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql)
             throws UncheckedSQLException {
-        return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, 0, Long.MAX_VALUE, targetConn, insertSql, JdbcUtil.DEFAULT_STMT_SETTER,
-                JdbcUtil.DEFAULT_BATCH_SIZE, 0, false);
+        return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetConn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, false);
+    }
+
+    /**
+     *
+     * @param sourceConn
+     * @param selectSql
+     * @param fetchSize
+     * @param targetConn
+     * @param insertSql
+     * @param batchSize
+     * @param inParallel
+     * @return
+     * @throws UncheckedSQLException
+     */
+    public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql,
+            final int batchSize, final boolean inParallel) throws UncheckedSQLException {
+        return copy(sourceConn, selectSql, fetchSize, 0, Long.MAX_VALUE, targetConn, insertSql, JdbcUtil.DEFAULT_STMT_SETTER, batchSize, 0, inParallel);
     }
 
     /**
