@@ -354,13 +354,15 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Sets the int.
      *
      * @param parameterIndex starts from 1, not 0.
      * @param x
      * @return
      * @throws SQLException
+     * @deprecated generally {@code char} should be saved as {@code String} in db.
+     * @see #setString(int, char)
      */
+    @Deprecated
     @Beta
     public This setInt(int parameterIndex, char x) throws SQLException {
         stmt.setInt(parameterIndex, x);
@@ -369,13 +371,15 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Sets the int.
      *
      * @param parameterIndex
      * @param x
      * @return
      * @throws SQLException
+     * @deprecated generally {@code char} should be saved as {@code String} in db.
+     * @see #setString(int, Character)
      */
+    @Deprecated
     @Beta
     public This setInt(int parameterIndex, Character x) throws SQLException {
         if (x == null) {
