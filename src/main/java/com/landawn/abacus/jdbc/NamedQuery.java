@@ -283,7 +283,11 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
      * @throws SQLException the SQL exception
      */
     public NamedQuery setBoolean(String parameterName, Boolean x) throws SQLException {
-        setBoolean(parameterName, N.defaultIfNull(x));
+        if (x == null) {
+            setNull(parameterName, java.sql.Types.BOOLEAN);
+        } else {
+            setBoolean(parameterName, x.booleanValue());
+        }
 
         return this;
     }
@@ -351,7 +355,11 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
      * @throws SQLException the SQL exception
      */
     public NamedQuery setByte(String parameterName, Byte x) throws SQLException {
-        setByte(parameterName, N.defaultIfNull(x));
+        if (x == null) {
+            setNull(parameterName, java.sql.Types.TINYINT);
+        } else {
+            setByte(parameterName, x.byteValue());
+        }
 
         return this;
     }
@@ -419,7 +427,11 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
      * @throws SQLException the SQL exception
      */
     public NamedQuery setShort(String parameterName, Short x) throws SQLException {
-        setShort(parameterName, N.defaultIfNull(x));
+        if (x == null) {
+            setNull(parameterName, java.sql.Types.SMALLINT);
+        } else {
+            setShort(parameterName, x.shortValue());
+        }
 
         return this;
     }
@@ -487,17 +499,47 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
      * @throws SQLException the SQL exception
      */
     public NamedQuery setInt(String parameterName, Integer x) throws SQLException {
-        setInt(parameterName, N.defaultIfNull(x));
+        if (x == null) {
+            setNull(parameterName, java.sql.Types.INTEGER);
+        } else {
+            setInt(parameterName, x.intValue());
+        }
 
         return this;
     }
 
+    /**
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     * @deprecated generally {@code char} should be saved as {@code String} in db.
+     * @see #setString(String, char)
+     */
+    @Deprecated
     public NamedQuery setInt(String parameterName, char x) throws SQLException {
         return setInt(parameterName, (int) x);
     }
 
+    /**
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     * @deprecated generally {@code char} should be saved as {@code String} in db.
+     * @see #setString(String, Character)
+     */
+    @Deprecated
     public NamedQuery setInt(String parameterName, Character x) throws SQLException {
-        return setInt(parameterName, x == null ? 0 : (int) x.charValue());
+        if (x == null) {
+            setNull(parameterName, java.sql.Types.INTEGER);
+        } else {
+            setInt(parameterName, x.charValue());
+        }
+
+        return this;
     }
 
     /**
@@ -563,7 +605,11 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
      * @throws SQLException the SQL exception
      */
     public NamedQuery setLong(String parameterName, Long x) throws SQLException {
-        setLong(parameterName, N.defaultIfNull(x));
+        if (x == null) {
+            setNull(parameterName, java.sql.Types.BIGINT);
+        } else {
+            setLong(parameterName, x.longValue());
+        }
 
         return this;
     }
@@ -631,7 +677,11 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
      * @throws SQLException the SQL exception
      */
     public NamedQuery setFloat(String parameterName, Float x) throws SQLException {
-        setFloat(parameterName, N.defaultIfNull(x));
+        if (x == null) {
+            setNull(parameterName, java.sql.Types.FLOAT);
+        } else {
+            setFloat(parameterName, x.floatValue());
+        }
 
         return this;
     }
@@ -699,7 +749,11 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
      * @throws SQLException the SQL exception
      */
     public NamedQuery setDouble(String parameterName, Double x) throws SQLException {
-        setDouble(parameterName, N.defaultIfNull(x));
+        if (x == null) {
+            setNull(parameterName, java.sql.Types.DOUBLE);
+        } else {
+            setDouble(parameterName, x.doubleValue());
+        }
 
         return this;
     }

@@ -138,7 +138,11 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setBoolean(String parameterName, Boolean x) throws SQLException {
-        cstmt.setBoolean(parameterName, N.defaultIfNull(x));
+        if (x == null) {
+            cstmt.setNull(parameterName, java.sql.Types.BOOLEAN);
+        } else {
+            cstmt.setBoolean(parameterName, x.booleanValue());
+        }
 
         return this;
     }
@@ -166,7 +170,11 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setByte(String parameterName, Byte x) throws SQLException {
-        cstmt.setByte(parameterName, N.defaultIfNull(x));
+        if (x == null) {
+            cstmt.setNull(parameterName, java.sql.Types.TINYINT);
+        } else {
+            cstmt.setByte(parameterName, x.byteValue());
+        }
 
         return this;
     }
@@ -194,7 +202,11 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setShort(String parameterName, Short x) throws SQLException {
-        cstmt.setShort(parameterName, N.defaultIfNull(x));
+        if (x == null) {
+            cstmt.setNull(parameterName, java.sql.Types.SMALLINT);
+        } else {
+            cstmt.setShort(parameterName, x.shortValue());
+        }
 
         return this;
     }
@@ -222,7 +234,11 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setInt(String parameterName, Integer x) throws SQLException {
-        cstmt.setInt(parameterName, N.defaultIfNull(x));
+        if (x == null) {
+            cstmt.setNull(parameterName, java.sql.Types.INTEGER);
+        } else {
+            cstmt.setInt(parameterName, x.intValue());
+        }
 
         return this;
     }
@@ -250,7 +266,11 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setLong(String parameterName, Long x) throws SQLException {
-        cstmt.setLong(parameterName, N.defaultIfNull(x));
+        if (x == null) {
+            cstmt.setNull(parameterName, java.sql.Types.BIGINT);
+        } else {
+            cstmt.setLong(parameterName, x.longValue());
+        }
 
         return this;
     }
@@ -278,7 +298,11 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setFloat(String parameterName, Float x) throws SQLException {
-        cstmt.setFloat(parameterName, N.defaultIfNull(x));
+        if (x == null) {
+            cstmt.setNull(parameterName, java.sql.Types.FLOAT);
+        } else {
+            cstmt.setFloat(parameterName, x.floatValue());
+        }
 
         return this;
     }
@@ -306,7 +330,11 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
      * @throws SQLException the SQL exception
      */
     public PreparedCallableQuery setDouble(String parameterName, Double x) throws SQLException {
-        cstmt.setDouble(parameterName, N.defaultIfNull(x));
+        if (x == null) {
+            cstmt.setNull(parameterName, java.sql.Types.DOUBLE);
+        } else {
+            cstmt.setDouble(parameterName, x.doubleValue());
+        }
 
         return this;
     }
