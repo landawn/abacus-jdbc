@@ -167,7 +167,7 @@ public final class JdbcUtil {
     static final String CURRENT_DIR_PATH = "./";
 
     static final AsyncExecutor asyncExecutor = new AsyncExecutor(//
-            N.max(16, IOUtil.CPU_CORES * 2), // coreThreadPoolSize
+            N.max(64, IOUtil.CPU_CORES * 8), // coreThreadPoolSize
             N.max(128, IOUtil.CPU_CORES * 16), // maxThreadPoolSize
             180L, TimeUnit.SECONDS);
 
