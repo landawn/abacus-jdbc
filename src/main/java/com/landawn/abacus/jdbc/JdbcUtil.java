@@ -6020,16 +6020,32 @@ public final class JdbcUtil {
         return CodeGenerationUtil.generateEntityClass(ds, tableName);
     }
 
-    public static String generateEntityClass(final Connection conn, final String tableName) {
-        return CodeGenerationUtil.generateEntityClass(conn, tableName);
-    }
-
     public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
         return CodeGenerationUtil.generateEntityClass(ds, tableName, config);
     }
 
+    public static String generateEntityClass(final Connection conn, final String tableName) {
+        return CodeGenerationUtil.generateEntityClass(conn, tableName);
+    }
+
     public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
         return CodeGenerationUtil.generateEntityClass(conn, tableName, config);
+    }
+
+    public static String generateEntityClass(final DataSource ds, final String entityName, String query) {
+        return CodeGenerationUtil.generateEntityClass(ds, entityName, query);
+    }
+
+    public static String generateEntityClass(final DataSource ds, final String entityName, String query, final EntityCodeConfig config) {
+        return CodeGenerationUtil.generateEntityClass(ds, entityName, query, config);
+    }
+
+    public static String generateEntityClass(final Connection conn, final String entityName, String query) {
+        return CodeGenerationUtil.generateEntityClass(conn, entityName, query);
+    }
+
+    public static String generateEntityClass(final Connection conn, final String entityName, String query, final EntityCodeConfig config) {
+        return CodeGenerationUtil.generateEntityClass(conn, entityName, query, config);
     }
 
     public static boolean isNullOrDefault(final Object value) {

@@ -94,23 +94,53 @@ final class CodeGenerationUtil {
     }
 
     static String generateEntityClass(final DataSource ds, final String tableName) {
-        return generateEntityClass(ds, tableName, null);
-    }
-
-    static String generateEntityClass(final Connection conn, final String tableName) {
-        return generateEntityClass(conn, tableName, null);
+        return generateEntityClass(ds, tableName, createQueryByTableName(tableName));
     }
 
     static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
+        return generateEntityClass(ds, tableName, createQueryByTableName(tableName), config);
+    }
+
+    static String generateEntityClass(final Connection conn, final String tableName) {
+        return generateEntityClass(conn, tableName, createQueryByTableName(tableName));
+    }
+
+    static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
+        return generateEntityClass(conn, tableName, createQueryByTableName(tableName), config);
+    }
+
+    private static String createQueryByTableName(String tableName) {
+        return "select * from " + tableName + " where 1 > 2";
+    }
+
+    static String generateEntityClass(final DataSource ds, final String entityName, String query) {
+        return generateEntityClass(ds, entityName, query, null);
+    }
+
+    static String generateEntityClass(final DataSource ds, final String entityName, String query, final EntityCodeConfig config) {
         try (Connection conn = ds.getConnection()) {
-            return generateEntityClass(conn, tableName, config);
+            return generateEntityClass(conn, entityName, query, config);
 
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
 
-    static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
+    static String generateEntityClass(final Connection conn, final String entityName, String query) {
+        return generateEntityClass(conn, entityName, query, null);
+    }
+
+    static String generateEntityClass(final Connection conn, final String entityName, String query, final EntityCodeConfig config) {
+        try (PreparedStatement stmt = conn.prepareStatement(query); //
+                ResultSet rs = stmt.executeQuery()) {
+
+            return generateEntityClass(entityName, rs, config);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    static String generateEntityClass(final String entityName, final ResultSet rs, final EntityCodeConfig config) {
         final EntityCodeConfig configToUse = config == null ? defaultEntityCodeConfig : config;
 
         final String className = configToUse.getClassName();
@@ -147,9 +177,8 @@ final class CodeGenerationUtil {
         final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = Maps.newMap(N.nullToEmpty(configToUse.getCustomizedFields()), tp -> tp._1);
         final Map<String, Tuple2<String, String>> customizedFieldDbTypeMap = Maps.newMap(N.nullToEmpty(configToUse.getCustomizedFieldDbTypes()), tp -> tp._1);
 
-        try (PreparedStatement stmt = conn.prepareStatement("select * from " + tableName + " where 1 > 2"); //
-                ResultSet rs = stmt.executeQuery()) {
-            String finalClassName = N.isNullOrEmpty(className) ? Strings.capitalize(Strings.toCamelCase(tableName)) : className;
+        try {
+            String finalClassName = N.isNullOrEmpty(className) ? Strings.capitalize(Strings.toCamelCase(entityName)) : className;
 
             if (N.commonSet(readOnlyFields, nonUpdatableFields).size() > 0) {
                 throw new RuntimeException("Fields: " + N.commonSet(readOnlyFields, nonUpdatableFields)
@@ -157,7 +186,7 @@ final class CodeGenerationUtil {
             }
 
             if (idFields.size() == 0) {
-                try (ResultSet pkColumns = conn.getMetaData().getPrimaryKeys(null, null, tableName)) {
+                try (ResultSet pkColumns = rs.getStatement().getConnection().getMetaData().getPrimaryKeys(null, null, entityName)) {
                     while (pkColumns.next()) {
                         idFields.add(pkColumns.getString("COLUMN_NAME"));
                     }
@@ -267,7 +296,7 @@ final class CodeGenerationUtil {
                 sb.append("@JsonXmlConfig" + Strings.join(tmp, ", ", "(", ")")).append("\n");
             }
 
-            sb.append(isJavaPersistenceTable ? "@Table(name = \"" + tableName + "\")" : "@Table(\"" + tableName + "\")")
+            sb.append(isJavaPersistenceTable ? "@Table(name = \"" + entityName + "\")" : "@Table(\"" + entityName + "\")")
                     .append("\n")
                     .append("public class " + finalClassName)
                     .append(" {")
@@ -285,11 +314,11 @@ final class CodeGenerationUtil {
                 final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(Strings.toCamelCase(columnName),
                         customizedFieldMap.get(columnName));
 
-                final String fieldName = customizedField == null || N.isNullOrEmpty(customizedField._2) ? fieldNameConverter.apply(tableName, columnName)
+                final String fieldName = customizedField == null || N.isNullOrEmpty(customizedField._2) ? fieldNameConverter.apply(entityName, columnName)
                         : customizedField._2;
 
                 final String columnClassName = customizedField == null || customizedField._3 == null
-                        ? (fieldTypeConverter != null ? fieldTypeConverter.apply(tableName, columnName, fieldName, getColumnClassName(rsmd, i))
+                        ? (fieldTypeConverter != null ? fieldTypeConverter.apply(entityName, columnName, fieldName, getColumnClassName(rsmd, i))
                                 : getClassName(getColumnClassName(rsmd, i), false, configToUse))
                         : getClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
 
