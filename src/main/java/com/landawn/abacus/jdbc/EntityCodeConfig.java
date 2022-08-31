@@ -60,9 +60,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public final class EntityCodeConfig {
 
-    private String className;
-    private String packageName;
     private String srcDir;
+    private String packageName;
+    private String className;
+
     /**
      * First parameter in the function is table name, 2nd is column name.
      */
@@ -71,7 +72,18 @@ public final class EntityCodeConfig {
      * First parameter in the function is table name, 2nd is column name, 3rd is field name, 4th is column class name.
      */
     private QuadFunction<String, String, String, String, String> fieldTypeConverter;
+
+    /**
+     *
+     * First parameter in the Tuple is column name, 2nd is field name, 3rd is column class.
+     *
+     */
     private List<Tuple3<String, String, Class<?>>> customizedFields;
+
+    /**
+     * First parameter in the Tuple is column name, 2nd is field name, 3rd is column class.
+     *
+     */
     private List<Tuple2<String, String>> customizedFieldDbTypes;
 
     private boolean useBoxedType;
