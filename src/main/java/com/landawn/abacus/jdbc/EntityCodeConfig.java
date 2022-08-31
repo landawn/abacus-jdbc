@@ -81,7 +81,7 @@ public final class EntityCodeConfig {
     private List<Tuple3<String, String, Class<?>>> customizedFields;
 
     /**
-     * First parameter in the Tuple is column name, 2nd is field name, 3rd is column class.
+     * First parameter in the Tuple is column name, 2nd is db type.
      *
      */
     private List<Tuple2<String, String>> customizedFieldDbTypes;
