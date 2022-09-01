@@ -149,7 +149,10 @@ final class CodeGenerationUtil {
 
         final BiFunction<String, String, String> fieldNameConverter = configToUse.getFieldNameConverter() == null ? (tn, cn) -> Strings.toCamelCase(cn)
                 : configToUse.getFieldNameConverter();
-        final QuadFunction<String, String, String, String, String> fieldTypeConverter = configToUse.getFieldTypeConverter();
+
+        final QuadFunction<String, String, String, String, String> fieldTypeConverter = configToUse.getFieldTypeConverter() == null ? null
+                : (en, columnName, fieldName, columnClassName) -> getClassName(
+                        configToUse.getFieldTypeConverter().apply(en, columnName, fieldName, columnClassName), false, configToUse);
 
         final Set<String> readOnlyFields = configToUse.getReadOnlyFields() == null ? new HashSet<>() : new HashSet<>(configToUse.getReadOnlyFields());
 
@@ -419,6 +422,15 @@ final class CodeGenerationUtil {
             // ignore.
         }
 
+        if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className) || Strings.endsWithIgnoreCase(className, ".Timestamp")
+                || Strings.endsWithIgnoreCase(className, ".DateTime")) {
+            className = ClassUtil.getCanonicalClassName(java.sql.Timestamp.class);
+        } else if ("oracle.sql.DATE".equals(className) || Strings.endsWithIgnoreCase(className, ".Date")) {
+            className = ClassUtil.getCanonicalClassName(java.sql.Date.class);
+        } else if ("oracle.sql.TIME".equals(className) || Strings.endsWithIgnoreCase(className, ".Time")) {
+            className = ClassUtil.getCanonicalClassName(java.sql.Time.class);
+        }
+
         className = className.replace("java.lang.", "");
 
         return eccClassNameMap.getOrDefault(className, className);
@@ -430,10 +442,12 @@ final class CodeGenerationUtil {
         if (isCustomizedType) {
             return className;
         } else if (configToUse.isMapBigIntegerToLong() && ClassUtil.getCanonicalClassName(BigInteger.class).equals(columnClassName)) {
-            return "long";
+            className = "long";
         } else if (configToUse.isMapBigDecimalToDouble() && ClassUtil.getCanonicalClassName(BigDecimal.class).equals(columnClassName)) {
-            return "double";
-        } else if (configToUse.isUseBoxedType()) {
+            className = "double";
+        }
+
+        if (configToUse.isUseBoxedType()) {
             return eccClassNameMap.containsValue(className) ? eccClassNameMap.getByValue(className) : className;
         } else {
             return className;
