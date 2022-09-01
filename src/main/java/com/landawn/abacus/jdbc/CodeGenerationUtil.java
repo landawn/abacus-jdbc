@@ -150,9 +150,7 @@ final class CodeGenerationUtil {
         final BiFunction<String, String, String> fieldNameConverter = configToUse.getFieldNameConverter() == null ? (tn, cn) -> Strings.toCamelCase(cn)
                 : configToUse.getFieldNameConverter();
 
-        final QuadFunction<String, String, String, String, String> fieldTypeConverter = configToUse.getFieldTypeConverter() == null ? null
-                : (en, columnName, fieldName, columnClassName) -> getClassName(
-                        configToUse.getFieldTypeConverter().apply(en, columnName, fieldName, columnClassName), false, configToUse);
+        final QuadFunction<String, String, String, String, String> fieldTypeConverter = configToUse.getFieldTypeConverter();
 
         final Set<String> readOnlyFields = configToUse.getReadOnlyFields() == null ? new HashSet<>() : new HashSet<>(configToUse.getReadOnlyFields());
 
@@ -321,8 +319,8 @@ final class CodeGenerationUtil {
                         : customizedField._2;
 
                 final String columnClassName = customizedField == null || customizedField._3 == null
-                        ? (fieldTypeConverter != null ? fieldTypeConverter.apply(entityName, columnName, fieldName, getColumnClassName(rsmd, i))
-                                : getClassName(getColumnClassName(rsmd, i), false, configToUse))
+                        ? getClassName((fieldTypeConverter == null ? getColumnClassName(rsmd, i)
+                                : fieldTypeConverter.apply(entityName, columnName, fieldName, getColumnClassName(rsmd, i))), false, configToUse)
                         : getClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
 
                 sb.append("\n");
@@ -441,16 +439,18 @@ final class CodeGenerationUtil {
 
         if (isCustomizedType) {
             return className;
-        } else if (configToUse.isMapBigIntegerToLong() && ClassUtil.getCanonicalClassName(BigInteger.class).equals(columnClassName)) {
+        }
+
+        if (configToUse.isMapBigIntegerToLong() && ClassUtil.getCanonicalClassName(BigInteger.class).equals(columnClassName)) {
             className = "long";
         } else if (configToUse.isMapBigDecimalToDouble() && ClassUtil.getCanonicalClassName(BigDecimal.class).equals(columnClassName)) {
             className = "double";
         }
 
-        if (configToUse.isUseBoxedType()) {
-            return eccClassNameMap.containsValue(className) ? eccClassNameMap.getByValue(className) : className;
-        } else {
-            return className;
+        if (configToUse.isUseBoxedType() && eccClassNameMap.containsValue(className)) {
+            className = eccClassNameMap.getByValue(className);
         }
+
+        return className;
     }
 }
