@@ -26,6 +26,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -41,14 +42,17 @@ import com.landawn.abacus.exception.UncheckedIOException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.util.BiMap;
 import com.landawn.abacus.util.ClassUtil;
+import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.Maps;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Splitter;
 import com.landawn.abacus.util.Strings;
+import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.function.QuadFunction;
+import com.landawn.abacus.util.stream.Stream;
 
 final class CodeGenerationUtil {
     private static final String eccImports = """
@@ -194,13 +198,43 @@ final class CodeGenerationUtil {
                 }
             }
 
+            final List<Tuple2<String, String>> additionalFields = N.isNullOrEmpty(configToUse.getAdditionalFieldsOrLines()) ? new ArrayList<>()
+                    : Stream.split(configToUse.getAdditionalFieldsOrLines(), "\n")
+                            .map(it -> it.contains("//") ? Strings.substringBefore(it, "//") : it)
+                            .map(Strings::strip)
+                            .peek(Fn.println())
+                            .filter(Fn.notNullOrEmpty())
+                            .filter(it -> Strings.startsWithAny(it, "private ", "protected ", "public ") && it.endsWith(";"))
+                            .map(it -> Strings.substringBetween(it, " ", ";").trim())
+                            .map(it -> {
+                                int idx = it.lastIndexOf(' ');
+                                return Tuple.of(it.substring(0, idx).trim(), it.substring(idx + 1).trim());
+                            })
+                            .toList();
+
             final StringBuilder sb = new StringBuilder();
 
             if (N.notNullOrEmpty(packageName)) {
-                sb.append("package ").append(packageName + ";").append("\n");
+                sb.append("package ").append(packageName + ";");
             }
 
-            String headPart = eccImports + "\n" + eccClassAnnos;
+            String headPart = "";
+
+            for (Tuple2<String, String> tp : additionalFields) {
+                if (tp._1.indexOf('<') > 0) {
+                    String clsName = tp._1.substring(0, tp._1.indexOf('<'));
+
+                    if (ClassUtil.forClass("java.util." + clsName) != null) {
+                        headPart += "\n" + "import java.util." + clsName + ";";
+                    }
+                }
+            }
+
+            if (N.notNullOrEmpty(headPart)) {
+                headPart += "\n";
+            }
+
+            headPart += "\n" + eccImports + "\n" + eccClassAnnos;
 
             if (isJavaPersistenceColumn) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Column;\n", "");
@@ -303,6 +337,7 @@ final class CodeGenerationUtil {
                     .append(" {")
                     .append("\n");
 
+            final Collection<String> excludedFields = configToUse.getExcludedFields();
             final List<String> columnNameList = new ArrayList<>();
             final List<String> fieldNameList = new ArrayList<>();
 
@@ -318,15 +353,19 @@ final class CodeGenerationUtil {
                 final String fieldName = customizedField == null || N.isNullOrEmpty(customizedField._2) ? fieldNameConverter.apply(entityName, columnName)
                         : customizedField._2;
 
-                final String columnClassName = customizedField == null || customizedField._3 == null
-                        ? getClassName((fieldTypeConverter == null ? getColumnClassName(rsmd, i)
-                                : fieldTypeConverter.apply(entityName, columnName, fieldName, getColumnClassName(rsmd, i))), false, configToUse)
-                        : getClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
+                if (N.notNullOrEmpty(excludedFields) && (excludedFields.contains(fieldName) || excludedFields.contains(columnName))) {
+                    continue;
+                }
 
-                sb.append("\n");
+                final String columnClassName = customizedField == null || customizedField._3 == null
+                        ? mapColumClassnName((fieldTypeConverter == null ? getColumnClassName(rsmd, i)
+                                : fieldTypeConverter.apply(entityName, columnName, fieldName, getColumnClassName(rsmd, i))), false, configToUse)
+                        : mapColumClassnName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
 
                 columnNameList.add(columnName);
                 fieldNameList.add(fieldName);
+
+                sb.append("\n");
 
                 if (idFields.remove(fieldName) || idFields.remove(columnName)) {
                     sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append("\n");
@@ -364,7 +403,13 @@ final class CodeGenerationUtil {
             //                + tableName + ": with columns: " + columnNameList);
             //    }
 
+            if (N.notNullOrEmpty(configToUse.getAdditionalFieldsOrLines())) {
+                sb.append("\n").append(configToUse.getAdditionalFieldsOrLines());
+            }
+
             if (configToUse.isGenerateCopyMethod()) {
+                // TODO extract fields from additionalFieldsOrLines?
+
                 sb.append("\n")
                         .append("    public " + className + " copy() {")
                         .append("\n") //
@@ -375,8 +420,11 @@ final class CodeGenerationUtil {
                     sb.append("        copy." + fieldName + " = this." + fieldName + ";").append("\n");
                 }
 
-                sb.append("        return copy;").append("\n").append("    }").append("\n");
+                for (Tuple2<String, String> tp : additionalFields) {
+                    sb.append("        copy." + tp._2 + " = this." + tp._2 + ";").append("\n");
+                }
 
+                sb.append("        return copy;").append("\n").append("    }").append("\n");
             }
 
             sb.append("\n").append("}").append("\n");
@@ -434,7 +482,7 @@ final class CodeGenerationUtil {
         return eccClassNameMap.getOrDefault(className, className);
     }
 
-    private static String getClassName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
+    private static String mapColumClassnName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
         String className = columnClassName.replace("java.lang.", "");
 
         if (isCustomizedType) {

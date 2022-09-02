@@ -372,5 +372,17 @@ public class JdbcTest {
 
         str = JdbcUtil.generateEntityClass(dataSource, "user", ecc);
         System.out.println(str);
+
+        String additionalLines = """
+                    // test
+                    private List<User> users;
+
+                    private Set<User> userSet; // test
+                """;
+
+        ecc.setClassName("UserQueryAllResult");
+        ecc.setAdditionalFieldsOrLines(additionalLines);
+        str = JdbcUtil.generateEntityClass(dataSource, "UserQueryAllResult", "select * from user", ecc);
+        System.out.println(str);
     }
 }

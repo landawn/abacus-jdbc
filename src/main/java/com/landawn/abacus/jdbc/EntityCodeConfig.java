@@ -95,6 +95,9 @@ public final class EntityCodeConfig {
     private Collection<String> idFields;
     private String idField;
 
+    private Collection<String> excludedFields;
+    private String additionalFieldsOrLines;
+
     private Class<? extends Annotation> tableAnnotationClass;
     private Class<? extends Annotation> columnAnnotationClass;
     private Class<? extends Annotation> idAnnotationClass;
