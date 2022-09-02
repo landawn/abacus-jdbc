@@ -224,8 +224,12 @@ final class CodeGenerationUtil {
                 if (tp._1.indexOf('<') > 0) {
                     String clsName = tp._1.substring(0, tp._1.indexOf('<'));
 
-                    if (ClassUtil.forClass("java.util." + clsName) != null) {
-                        headPart += "\n" + "import java.util." + clsName + ";";
+                    try {
+                        if (ClassUtil.forClass("java.util." + clsName) != null) {
+                            headPart += "\n" + "import java.util." + clsName + ";";
+                        }
+                    } catch (Exception e) {
+                        // ignore.
                     }
                 }
             }
