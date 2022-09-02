@@ -117,6 +117,7 @@ import com.landawn.abacus.util.Joiner;
 import com.landawn.abacus.util.MutableBoolean;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
+import com.landawn.abacus.util.Numbers;
 import com.landawn.abacus.util.Pair;
 import com.landawn.abacus.util.ParsedSql;
 import com.landawn.abacus.util.QueryUtil;
@@ -4040,7 +4041,7 @@ final class DaoImpl {
                                 }
                             }
 
-                            return N.toIntExact(result);
+                            return Numbers.toIntExact(result);
                         };
                     } else if (methodName.equals("batchUpdate") && paramLen == 3 && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
@@ -4076,7 +4077,7 @@ final class DaoImpl {
                                 }
                             }
 
-                            return N.toIntExact(result);
+                            return Numbers.toIntExact(result);
                         };
                     } else if (methodName.equals("deleteById")) {
                         call = (proxy, args) -> {
@@ -4129,7 +4130,7 @@ final class DaoImpl {
                         //                tran.rollbackIfNotCommitted();
                         //            }
                         //
-                        //            return N.toIntExact(result);
+                        //            return Numbers.toIntExact(result);
                         //        }
                         //    };
                     } else if ((methodName.equals("batchDelete") || methodName.equals("batchDeleteByIds")) && paramLen == 2
@@ -4165,7 +4166,7 @@ final class DaoImpl {
                                     tran.rollbackIfNotCommitted();
                                 }
 
-                                return N.toIntExact(result);
+                                return Numbers.toIntExact(result);
                             }
                         };
                         //    } else if (methodName.equals("batchDelete") && paramLen == 3 && OnDeleteAction.class.equals(paramTypes[1])
@@ -4221,7 +4222,7 @@ final class DaoImpl {
                         //            tran.rollbackIfNotCommitted();
                         //        }
                         //
-                        //        return N.toIntExact(result);
+                        //        return Numbers.toIntExact(result);
                         //    };
                     } else {
                         call = (proxy, args) -> {
@@ -4371,7 +4372,7 @@ final class DaoImpl {
                                     tran.rollbackIfNotCommitted();
                                 }
 
-                                return N.toIntExact(result);
+                                return Numbers.toIntExact(result);
                             }
                         };
                     } else if (methodName.equals("deleteJoinEntities") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
@@ -4434,7 +4435,7 @@ final class DaoImpl {
                                     tran.rollbackIfNotCommitted();
                                 }
 
-                                return N.toIntExact(result);
+                                return Numbers.toIntExact(result);
                             }
                         };
                     } else {
@@ -4974,7 +4975,7 @@ final class DaoImpl {
 
                         final LongFunction<?> updateResultConvertor = void.class.equals(returnType) ? updatedRecordCount -> null
                                 : (Boolean.class.equals(N.wrap(returnType)) ? updatedRecordCount -> updatedRecordCount > 0
-                                        : (Integer.class.equals(N.wrap(returnType)) ? N::toIntExact : LongFunction.identity()));
+                                        : (Integer.class.equals(N.wrap(returnType)) ? Numbers::toIntExact : LongFunction.identity()));
 
                         final boolean isLargeUpdate = op == OP.largeUpdate
                                 || (op == OP.DEFAULT && (returnType.equals(long.class) || returnType.equals(Long.class)));
