@@ -160,6 +160,24 @@ userDao.deleteById(100L);
     
     // general query by DataSet
     JdbcUtil.prepareQuery(sql).setParameters(...).query();
+    
+    // Merge result.
+    String sql = "select user.id, first_name, last_name, device.id "devices.id", device.model "devices.model" from user left join device on user.id = device.user_id;
+    List<User> userWithDevices = JdbcUtil.prepareQuery(sql).setParameters(...).query().toMergedEntities(User.class);
+    
+    @Data
+    public class User {
+    	private int id;
+    	private String firstName;
+    	private String lastName;
+    	List<Device> devices;
+    }
+    
+    @Data
+    public class Device {
+    	private int id;
+    	private String model;
+    }
 ```
 
 * More samples/questions? 
