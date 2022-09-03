@@ -991,7 +991,7 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    public static Object getColumnValue(final ResultSet rs, final int columnIndex, final boolean checkDateType) throws SQLException {
+    static Object getColumnValue(final ResultSet rs, final int columnIndex, final boolean checkDateType) throws SQLException {
         return getColumnValue(rs, columnIndex, checkDateType ? 1 : -1);
     }
 
@@ -1064,7 +1064,7 @@ public final class JdbcUtil {
      * @throws SQLException
      */
     @Deprecated
-    public static Object getColumnValue(final ResultSet rs, final String columnLabel, final boolean checkDateType) throws SQLException {
+    static Object getColumnValue(final ResultSet rs, final String columnLabel, final boolean checkDateType) throws SQLException {
         return getColumnValue(rs, columnLabel, checkDateType ? 1 : -1);
     }
 
