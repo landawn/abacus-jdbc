@@ -1396,11 +1396,7 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
             final ResultSet rs = executeQuery();
 
             if (rs != null) {
-                try {
-                    result = JdbcUtil.extractAndCloseResultSet(rs, resultExtrator);
-                } finally {
-                    JdbcUtil.closeQuietly(rs);
-                }
+                result = JdbcUtil.extractAndCloseResultSet(rs, resultExtrator);
             }
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -1715,6 +1711,8 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
             final ResultSet rs = executeQuery();
 
             if (rs != null) {
+                JdbcUtil.setCheckDateTypeFlag(rs);
+
                 while (rs.next()) {
                     result.add(rowMapper.apply(rs));
                 }
@@ -1722,6 +1720,8 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             closeAfterExecutionIfAllowed();
         }
     }
@@ -1745,6 +1745,8 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
             final ResultSet rs = executeQuery();
 
             if (rs != null) {
+                JdbcUtil.setCheckDateTypeFlag(rs);
+
                 while (rs.next()) {
                     if (rowFilter.test(rs)) {
                         result.add(rowMapper.apply(rs));
@@ -1754,6 +1756,8 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             closeAfterExecutionIfAllowed();
         }
     }
@@ -1774,6 +1778,8 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
             final ResultSet rs = executeQuery();
 
             if (rs != null) {
+                JdbcUtil.setCheckDateTypeFlag(rs);
+
                 final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
                 while (rs.next()) {
@@ -1783,6 +1789,8 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             closeAfterExecutionIfAllowed();
         }
     }
@@ -1806,6 +1814,8 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
             final ResultSet rs = executeQuery();
 
             if (rs != null) {
+                JdbcUtil.setCheckDateTypeFlag(rs);
+
                 final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
                 while (rs.next()) {
@@ -1817,6 +1827,8 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             closeAfterExecutionIfAllowed();
         }
     }

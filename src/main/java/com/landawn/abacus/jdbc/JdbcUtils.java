@@ -2688,7 +2688,9 @@ public final class JdbcUtils {
         final BufferedJSONWriter bw = out instanceof BufferedJSONWriter ? (BufferedJSONWriter) out : Objectory.createBufferedJSONWriter(out);
 
         try {
-            final boolean validateDateType = JdbcUtil.isOracleResultSet(rs);
+            final boolean checkDateType = JdbcUtil.checkDateType(rs);
+            JdbcUtil.setCheckDateTypeFlag(checkDateType);
+
             final ResultSetMetaData rsmd = rs.getMetaData();
             final int columnCount = rsmd.getColumnCount();
             final String[] columnNames = new String[columnCount];
@@ -2754,7 +2756,7 @@ public final class JdbcUtils {
                     type = typeArray[i];
 
                     if (type == null) {
-                        value = JdbcUtil.getColumnValue(rs, i + 1, validateDateType);
+                        value = JdbcUtil.getColumnValue(rs, i + 1, checkDateType);
 
                         if (value == null) {
                             bw.write(NULL_CHAR_ARRAY);
@@ -2784,6 +2786,8 @@ public final class JdbcUtils {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             if (bw != out) {
                 Objectory.recycle(bw);
             }

@@ -2874,8 +2874,12 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
+            JdbcUtil.setCheckDateTypeFlag(rs);
+
             return JdbcUtil.checkNotResultSet(resultExtrator.apply(rs));
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             closeAfterExecutionIfAllowed();
         }
     }
@@ -2892,8 +2896,12 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
+            JdbcUtil.setCheckDateTypeFlag(rs);
+
             return JdbcUtil.checkNotResultSet(resultExtrator.apply(rs, JdbcUtil.getColumnLabelList(rs)));
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             closeAfterExecutionIfAllowed();
         }
     }
@@ -3434,6 +3442,8 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
+            JdbcUtil.setCheckDateTypeFlag(rs);
+
             final List<T> result = new ArrayList<>();
 
             while (maxResult > 0 && rs.next()) {
@@ -3445,6 +3455,8 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
             return result;
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             closeAfterExecutionIfAllowed();
         }
     }
@@ -3502,6 +3514,8 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
+            JdbcUtil.setCheckDateTypeFlag(rs);
+
             final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
             final List<T> result = new ArrayList<>();
 
@@ -3514,6 +3528,8 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
             return result;
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             closeAfterExecutionIfAllowed();
         }
     }
@@ -3581,10 +3597,15 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
-        return ExceptionalStream.just(supplier, SQLException.class)
-                .map(Supplier::get)
-                .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
-                .onClose(this::closeAfterExecutionIfAllowed);
+        return ExceptionalStream.just(supplier, SQLException.class).map(Supplier::get).flatMap(rs -> {
+            JdbcUtil.setCheckDateTypeFlag(rs);
+
+            return JdbcUtil.stream(rs, rowMapper).onClose(() -> {
+                JdbcUtil.resetCheckDateTypeFlag();
+
+                JdbcUtil.closeQuietly(rs);
+            });
+        }).onClose(this::closeAfterExecutionIfAllowed);
     }
 
     // Will it cause confusion if it's called in transaction?
@@ -3610,10 +3631,15 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
-        return ExceptionalStream.just(supplier, SQLException.class)
-                .map(Supplier::get)
-                .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
-                .onClose(this::closeAfterExecutionIfAllowed);
+        return ExceptionalStream.just(supplier, SQLException.class).map(Supplier::get).flatMap(rs -> {
+            JdbcUtil.setCheckDateTypeFlag(rs);
+
+            return JdbcUtil.stream(rs, rowMapper).onClose(() -> {
+                JdbcUtil.resetCheckDateTypeFlag();
+
+                JdbcUtil.closeQuietly(rs);
+            });
+        }).onClose(this::closeAfterExecutionIfAllowed);
     }
 
     // Will it cause confusion if it's called in transaction?
@@ -3641,10 +3667,15 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
-        return ExceptionalStream.just(supplier, SQLException.class)
-                .map(Supplier::get)
-                .flatMap(rs -> JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
-                .onClose(this::closeAfterExecutionIfAllowed);
+        return ExceptionalStream.just(supplier, SQLException.class).map(Supplier::get).flatMap(rs -> {
+            JdbcUtil.setCheckDateTypeFlag(rs);
+
+            return JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> {
+                JdbcUtil.resetCheckDateTypeFlag();
+
+                JdbcUtil.closeQuietly(rs);
+            });
+        }).onClose(this::closeAfterExecutionIfAllowed);
     }
 
     // Will it cause confusion if it's called in transaction?
@@ -3672,10 +3703,15 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
-        return ExceptionalStream.just(supplier, SQLException.class)
-                .map(Supplier::get)
-                .flatMap(rs -> JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
-                .onClose(this::closeAfterExecutionIfAllowed);
+        return ExceptionalStream.just(supplier, SQLException.class).map(Supplier::get).flatMap(rs -> {
+            JdbcUtil.setCheckDateTypeFlag(rs);
+
+            return JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> {
+                JdbcUtil.resetCheckDateTypeFlag();
+
+                JdbcUtil.closeQuietly(rs);
+            });
+        }).onClose(this::closeAfterExecutionIfAllowed);
     }
 
     /**
@@ -3993,12 +4029,15 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
+            JdbcUtil.setCheckDateTypeFlag(rs);
 
             while (rs.next()) {
                 rowConsumer.accept(rs);
             }
 
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             closeAfterExecutionIfAllowed();
         }
     }
@@ -4015,6 +4054,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
+            JdbcUtil.setCheckDateTypeFlag(rs);
 
             while (rs.next()) {
                 if (rowFilter.test(rs)) {
@@ -4022,6 +4062,8 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
                 }
             }
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             closeAfterExecutionIfAllowed();
         }
     }
@@ -4036,6 +4078,8 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
+            JdbcUtil.setCheckDateTypeFlag(rs);
+
             final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
             while (rs.next()) {
@@ -4043,6 +4087,8 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
             }
 
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             closeAfterExecutionIfAllowed();
         }
     }
@@ -4059,6 +4105,8 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
+            JdbcUtil.setCheckDateTypeFlag(rs);
+
             final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
             while (rs.next()) {
@@ -4068,6 +4116,8 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
             }
 
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             closeAfterExecutionIfAllowed();
         }
     }

@@ -953,6 +953,24 @@ public final class JdbcUtil {
         return -1;
     }
 
+    static final ThreadLocal<Boolean> checkDateType_TL = ThreadLocal.withInitial(() -> true);
+
+    static void setCheckDateTypeFlag(final boolean checkDateType) {
+        checkDateType_TL.set(checkDateType);
+    }
+
+    static void setCheckDateTypeFlag(final ResultSet rs) {
+        if (rs == null) {
+            return;
+        }
+
+        setCheckDateTypeFlag(checkDateType(rs));
+    }
+
+    static void resetCheckDateTypeFlag() {
+        checkDateType_TL.set(true);
+    }
+
     /**
      * Gets the column value.
      *
@@ -962,7 +980,7 @@ public final class JdbcUtil {
      * @throws SQLException
      */
     public static Object getColumnValue(final ResultSet rs, final int columnIndex) throws SQLException {
-        return getColumnValue(rs, columnIndex, false);
+        return getColumnValue(rs, columnIndex, 0);
     }
 
     /**
@@ -974,6 +992,10 @@ public final class JdbcUtil {
      * @throws SQLException
      */
     public static Object getColumnValue(final ResultSet rs, final int columnIndex, final boolean checkDateType) throws SQLException {
+        return getColumnValue(rs, columnIndex, checkDateType ? 1 : -1);
+    }
+
+    private static Object getColumnValue(final ResultSet rs, final int columnIndex, final int checkDateType) throws SQLException {
         // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
 
         Object obj = rs.getObject(columnIndex);
@@ -988,7 +1010,7 @@ public final class JdbcUtil {
             obj = clob.getSubString(1, (int) clob.length());
         } else if (obj instanceof NClob nclob) {
             obj = nclob.getSubString(1, (int) nclob.length());
-        } else if (checkDateType) {
+        } else if (checkDateType == 1 || (checkDateType == 0 && checkDateType_TL.get())) {
             final String className = obj.getClass().getName();
 
             if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
@@ -1025,7 +1047,7 @@ public final class JdbcUtil {
      */
     @Deprecated
     public static Object getColumnValue(final ResultSet rs, final String columnLabel) throws SQLException {
-        return getColumnValue(rs, columnLabel, false);
+        return getColumnValue(rs, columnLabel, 0);
     }
 
     /**
@@ -1038,6 +1060,11 @@ public final class JdbcUtil {
      */
     @Deprecated
     public static Object getColumnValue(final ResultSet rs, final String columnLabel, final boolean checkDateType) throws SQLException {
+        return getColumnValue(rs, columnLabel, checkDateType ? 1 : -1);
+    }
+
+    @Deprecated
+    private static Object getColumnValue(final ResultSet rs, final String columnLabel, final int checkDateType) throws SQLException {
         // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
 
         Object obj = rs.getObject(columnLabel);
@@ -1052,7 +1079,7 @@ public final class JdbcUtil {
             obj = clob.getSubString(1, (int) clob.length());
         } else if (obj instanceof NClob nclob) {
             obj = nclob.getSubString(1, (int) nclob.length());
-        } else if (checkDateType) {
+        } else if (checkDateType == 1 || (checkDateType == 0 && checkDateType_TL.get())) {
             final String className = obj.getClass().getName();
 
             if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
@@ -3797,7 +3824,9 @@ public final class JdbcUtil {
 
         try {
             // TODO [performance improvement]. it will improve performance a lot if MetaData is cached.
-            final boolean checkDateType = isOracleResultSet(rs);
+            final boolean checkDateType = checkDateType(rs);
+            JdbcUtil.setCheckDateTypeFlag(checkDateType);
+
             final ResultSetMetaData rsmd = rs.getMetaData();
             final int columnCount = rsmd.getColumnCount();
             final List<String> columnNameList = new ArrayList<>(columnCount);
@@ -3863,6 +3892,8 @@ public final class JdbcUtil {
             // return new RowDataSet(null, entityClass, columnNameList, columnList);
             return new RowDataSet(columnNameList, columnList);
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             if (closeResultSet) {
                 closeQuietly(rs);
             }
@@ -3871,16 +3902,24 @@ public final class JdbcUtil {
 
     static <R> R extractAndCloseResultSet(ResultSet rs, final ResultExtractor<R> resultExtrator) throws SQLException {
         try {
+            JdbcUtil.setCheckDateTypeFlag(rs);
+
             return checkNotResultSet(resultExtrator.apply(rs));
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             closeQuietly(rs);
         }
     }
 
     static <R> R extractAndCloseResultSet(ResultSet rs, final BiResultExtractor<R> resultExtrator) throws SQLException {
         try {
+            JdbcUtil.setCheckDateTypeFlag(rs);
+
             return checkNotResultSet(resultExtrator.apply(rs, getColumnLabelList(rs)));
         } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
             closeQuietly(rs);
         }
     }
@@ -4256,7 +4295,8 @@ public final class JdbcUtil {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgPositive(columnIndex, "columnIndex");
 
-        final RowMapper<T> rowMapper = rs -> (T) getColumnValue(resultSet, columnIndex);
+        final boolean checkDateType = JdbcUtil.checkDateType(resultSet);
+        final RowMapper<T> rowMapper = rs -> (T) getColumnValue(resultSet, columnIndex, checkDateType);
 
         return stream(resultSet, rowMapper);
     }
@@ -4277,14 +4317,16 @@ public final class JdbcUtil {
 
         final RowMapper<T> rowMapper = new RowMapper<>() {
             private int columnIndex = -1;
+            private boolean checkDateType = true;
 
             @Override
             public T apply(ResultSet rs) throws SQLException {
                 if (columnIndex == -1) {
                     columnIndex = getColumnIndex(resultSet, columnName);
+                    checkDateType = JdbcUtil.checkDateType(resultSet);
                 }
 
-                return (T) getColumnValue(resultSet, columnIndex);
+                return (T) getColumnValue(resultSet, columnIndex, checkDateType);
             }
         };
 
@@ -4310,7 +4352,15 @@ public final class JdbcUtil {
         return ExceptionalStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
-                .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
+                .flatMap(rs -> {
+                    JdbcUtil.setCheckDateTypeFlag(rs);
+
+                    return JdbcUtil.stream(rs, rowMapper).onClose(() -> {
+                        JdbcUtil.resetCheckDateTypeFlag();
+
+                        JdbcUtil.closeQuietly(rs);
+                    });
+                });
     }
 
     /**
@@ -4334,7 +4384,15 @@ public final class JdbcUtil {
         return ExceptionalStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
-                .flatMap(rs -> JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
+                .flatMap(rs -> {
+                    JdbcUtil.setCheckDateTypeFlag(rs);
+
+                    return JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> {
+                        JdbcUtil.resetCheckDateTypeFlag();
+
+                        JdbcUtil.closeQuietly(rs);
+                    });
+                });
     }
 
     /**
@@ -4356,7 +4414,15 @@ public final class JdbcUtil {
         return ExceptionalStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
-                .flatMap(rs -> JdbcUtil.stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
+                .flatMap(rs -> {
+                    JdbcUtil.setCheckDateTypeFlag(rs);
+
+                    return JdbcUtil.stream(rs, rowMapper).onClose(() -> {
+                        JdbcUtil.resetCheckDateTypeFlag();
+
+                        JdbcUtil.closeQuietly(rs);
+                    });
+                });
     }
 
     /**
@@ -4381,7 +4447,15 @@ public final class JdbcUtil {
         return ExceptionalStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
-                .flatMap(rs -> JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
+                .flatMap(rs -> {
+                    JdbcUtil.setCheckDateTypeFlag(rs);
+
+                    return JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> {
+                        JdbcUtil.resetCheckDateTypeFlag();
+
+                        JdbcUtil.closeQuietly(rs);
+                    });
+                });
     }
 
     static ExceptionalIterator<ResultSet, SQLException> iterateAllResultSets(final Statement stmt) throws SQLException {
@@ -4436,8 +4510,12 @@ public final class JdbcUtil {
         return result;
     }
 
-    static boolean isOracleResultSet(final ResultSet rs) throws SQLException {
-        return Strings.containsIgnoreCase(JdbcUtil.getDBProductInfo(rs.getStatement().getConnection()).getProductName(), "Oracle");
+    static boolean checkDateType(final ResultSet rs) {
+        try {
+            return Strings.containsIgnoreCase(JdbcUtil.getDBProductInfo(rs.getStatement().getConnection()).getProductName(), "Oracle");
+        } catch (SQLException e) {
+            return true;
+        }
     }
 
     interface OutParameterGetter {
