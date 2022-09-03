@@ -995,6 +995,11 @@ public final class JdbcUtil {
         return getColumnValue(rs, columnIndex, checkDateType ? 1 : -1);
     }
 
+    private static final Throwables.Function<Object, java.sql.Timestamp, SQLException> fromOracleTimestampToJavaTimestamp = obj -> ((oracle.sql.Datum) obj)
+            .timestampValue();
+
+    private static final Throwables.Function<Object, java.sql.Date, SQLException> fromOracleTimestampToJavaDate = obj -> ((oracle.sql.Datum) obj).dateValue();
+
     private static Object getColumnValue(final ResultSet rs, final int columnIndex, final int checkDateType) throws SQLException {
         // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
 
@@ -1014,15 +1019,15 @@ public final class JdbcUtil {
             final String className = obj.getClass().getName();
 
             if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
-                obj = rs.getTimestamp(columnIndex);
+                obj = fromOracleTimestampToJavaTimestamp.apply(obj);
             } else if (className.startsWith("oracle.sql.DATE")) {
                 final ResultSetMetaData metaData = rs.getMetaData();
                 final String metaDataClassName = metaData.getColumnClassName(columnIndex);
 
                 if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                    obj = rs.getTimestamp(columnIndex);
+                    obj = fromOracleTimestampToJavaTimestamp.apply(obj);
                 } else {
-                    obj = rs.getDate(columnIndex);
+                    obj = fromOracleTimestampToJavaDate.apply(obj);
                 }
             } else if ((obj instanceof java.sql.Date)) {
                 final ResultSetMetaData metaData = rs.getMetaData();
@@ -1083,7 +1088,7 @@ public final class JdbcUtil {
             final String className = obj.getClass().getName();
 
             if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
-                obj = rs.getTimestamp(columnLabel);
+                obj = fromOracleTimestampToJavaTimestamp.apply(obj);
             } else if (className.startsWith("oracle.sql.DATE")) {
                 final ResultSetMetaData metaData = rs.getMetaData();
                 final int columnIndex = getColumnIndex(metaData, columnLabel);
@@ -1091,9 +1096,9 @@ public final class JdbcUtil {
                 final String metaDataClassName = metaData.getColumnClassName(columnIndex);
 
                 if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                    obj = rs.getTimestamp(columnLabel);
+                    obj = fromOracleTimestampToJavaTimestamp.apply(obj);
                 } else {
-                    obj = rs.getDate(columnLabel);
+                    obj = fromOracleTimestampToJavaDate.apply(obj);
                 }
             } else if ((obj instanceof java.sql.Date)) {
                 final ResultSetMetaData metaData = rs.getMetaData();
