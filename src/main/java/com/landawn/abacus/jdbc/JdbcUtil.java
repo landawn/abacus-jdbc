@@ -962,11 +962,23 @@ public final class JdbcUtil {
      * @throws SQLException
      */
     public static Object getColumnValue(final ResultSet rs, final int columnIndex) throws SQLException {
+        return getColumnValue(rs, columnIndex, false);
+    }
+
+    /**
+     *
+     * @param rs
+     * @param columnIndex starts with 1, not 0.
+     * @param checkDateType
+     * @return
+     * @throws SQLException
+     */
+    public static Object getColumnValue(final ResultSet rs, final int columnIndex, final boolean checkDateType) throws SQLException {
         // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
 
         Object obj = rs.getObject(columnIndex);
 
-        if (obj == null || obj instanceof String || obj instanceof Number) {
+        if (obj == null || obj instanceof String || obj instanceof Number || obj instanceof java.sql.Timestamp || obj instanceof Boolean) {
             return obj;
         }
 
@@ -976,7 +988,7 @@ public final class JdbcUtil {
             obj = clob.getSubString(1, (int) clob.length());
         } else if (obj instanceof NClob nclob) {
             obj = nclob.getSubString(1, (int) nclob.length());
-        } else {
+        } else if (checkDateType) {
             final String className = obj.getClass().getName();
 
             if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
@@ -1013,11 +1025,24 @@ public final class JdbcUtil {
      */
     @Deprecated
     public static Object getColumnValue(final ResultSet rs, final String columnLabel) throws SQLException {
+        return getColumnValue(rs, columnLabel, false);
+    }
+
+    /**
+     *
+     * @param rs
+     * @param columnLabel
+     * @param checkDateType
+     * @return
+     * @throws SQLException
+     */
+    @Deprecated
+    public static Object getColumnValue(final ResultSet rs, final String columnLabel, final boolean checkDateType) throws SQLException {
         // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
 
         Object obj = rs.getObject(columnLabel);
 
-        if (obj == null || obj instanceof String || obj instanceof Number || obj instanceof Boolean) {
+        if (obj == null || obj instanceof String || obj instanceof Number || obj instanceof java.sql.Timestamp || obj instanceof Boolean) {
             return obj;
         }
 
@@ -1027,7 +1052,7 @@ public final class JdbcUtil {
             obj = clob.getSubString(1, (int) clob.length());
         } else if (obj instanceof NClob nclob) {
             obj = nclob.getSubString(1, (int) nclob.length());
-        } else {
+        } else if (checkDateType) {
             final String className = obj.getClass().getName();
 
             if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
@@ -3772,6 +3797,7 @@ public final class JdbcUtil {
 
         try {
             // TODO [performance improvement]. it will improve performance a lot if MetaData is cached.
+            final boolean checkDateType = isOracleResultSet(rs);
             final ResultSetMetaData rsmd = rs.getMetaData();
             final int columnCount = rsmd.getColumnCount();
             final List<String> columnNameList = new ArrayList<>(columnCount);
@@ -3788,7 +3814,7 @@ public final class JdbcUtil {
                 if (rowExtractor == INTERNAL_DUMMY_ROW_EXTRACTOR) {
                     while (count > 0 && rs.next()) {
                         for (int i = 0; i < columnCount;) {
-                            columnList.get(i).add(JdbcUtil.getColumnValue(rs, ++i));
+                            columnList.get(i).add(JdbcUtil.getColumnValue(rs, ++i, checkDateType));
                         }
 
                         count--;
@@ -3811,7 +3837,7 @@ public final class JdbcUtil {
                     while (count > 0 && rs.next()) {
                         if (filter.test(rs)) {
                             for (int i = 0; i < columnCount;) {
-                                columnList.get(i).add(JdbcUtil.getColumnValue(rs, ++i));
+                                columnList.get(i).add(JdbcUtil.getColumnValue(rs, ++i, checkDateType));
                             }
 
                             count--;
@@ -4408,6 +4434,10 @@ public final class JdbcUtil {
         }
 
         return result;
+    }
+
+    static boolean isOracleResultSet(final ResultSet rs) throws SQLException {
+        return Strings.containsIgnoreCase(JdbcUtil.getDBProductInfo(rs.getStatement().getConnection()).getProductName(), "Oracle");
     }
 
     interface OutParameterGetter {

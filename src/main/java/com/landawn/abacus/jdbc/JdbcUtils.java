@@ -2688,6 +2688,7 @@ public final class JdbcUtils {
         final BufferedJSONWriter bw = out instanceof BufferedJSONWriter ? (BufferedJSONWriter) out : Objectory.createBufferedJSONWriter(out);
 
         try {
+            final boolean validateDateType = JdbcUtil.isOracleResultSet(rs);
             final ResultSetMetaData rsmd = rs.getMetaData();
             final int columnCount = rsmd.getColumnCount();
             final String[] columnNames = new String[columnCount];
@@ -2753,7 +2754,7 @@ public final class JdbcUtils {
                     type = typeArray[i];
 
                     if (type == null) {
-                        value = JdbcUtil.getColumnValue(rs, i + 1);
+                        value = JdbcUtil.getColumnValue(rs, i + 1, validateDateType);
 
                         if (value == null) {
                             bw.write(NULL_CHAR_ARRAY);
