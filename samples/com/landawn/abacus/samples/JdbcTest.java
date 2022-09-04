@@ -19,7 +19,6 @@ import com.landawn.abacus.jdbc.EntityCodeConfig;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.SQLExecutor;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.samples.dao.AddressDao;
 import com.landawn.abacus.samples.dao.DeviceDao;
@@ -75,7 +74,7 @@ public class JdbcTest {
     static final DeviceDao deviceDao = JdbcUtil.createDao(DeviceDao.class, dataSource);
     static final AddressDao addressDao = JdbcUtil.createDao(AddressDao.class, dataSource);
 
-    static final SQLExecutor sqlExecutor = new SQLExecutor(dataSource);
+    // static final SQLExecutor sqlExecutor = new SQLExecutor(dataSource);
 
     // initialize DB schema.
     static {
