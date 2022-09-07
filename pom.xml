@@ -4,7 +4,7 @@
 
 	<groupId>com.landawn</groupId>
 	<artifactId>abacus-jdbc</artifactId>
-	<version>3.2.7</version>
+	<version>3.2.8</version>
 	<packaging>jar</packaging>
 
 	<name>abacus-jdbc</name>
