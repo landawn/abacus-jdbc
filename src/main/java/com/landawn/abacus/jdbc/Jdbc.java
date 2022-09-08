@@ -281,7 +281,7 @@ public final class Jdbc {
          * @param valueExtractor
          * @return
          */
-        static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor) {
+        static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor) {
             return toMap(keyExtractor, valueExtractor, Suppliers.<K, V> ofMap());
         }
 
@@ -295,7 +295,7 @@ public final class Jdbc {
          * @param supplier
          * @return
          */
-        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final Supplier<? extends M> supplier) {
             return toMap(keyExtractor, valueExtractor, Fn.<V> throwingMerger(), supplier);
         }
@@ -312,7 +312,7 @@ public final class Jdbc {
          * @see {@link Fn.replacingMerger()}
          * @see {@link Fn.ignoringMerger()}
          */
-        static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+        static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final BinaryOperator<V> mergeFunction) {
             return toMap(keyExtractor, valueExtractor, mergeFunction, Suppliers.<K, V> ofMap());
         }
@@ -331,7 +331,7 @@ public final class Jdbc {
          * @see {@link Fn.replacingMerger()}
          * @see {@link Fn.ignoringMerger()}
          */
-        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+        static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final BinaryOperator<V> mergeFunction, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
@@ -363,7 +363,7 @@ public final class Jdbc {
          * @see #groupTo(RowMapper, RowMapper, Collector)
          */
         @Deprecated
-        static <K, V, A, D> ResultExtractor<Map<K, D>> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+        static <K, V, A, D> ResultExtractor<Map<K, D>> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final Collector<? super V, A, D> downstream) {
             return toMap(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
         }
@@ -384,8 +384,8 @@ public final class Jdbc {
          * @see #groupTo(RowMapper, RowMapper, Collector, Supplier)
          */
         @Deprecated
-        static <K, V, A, D, M extends Map<K, D>> ResultExtractor<M> toMap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
-                final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
+        static <K, V, A, D, M extends Map<K, D>> ResultExtractor<M> toMap(final RowMapper<? extends K> keyExtractor,
+                final RowMapper<? extends V> valueExtractor, final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
             return groupTo(keyExtractor, valueExtractor, downstream, supplier);
         }
 
@@ -397,7 +397,7 @@ public final class Jdbc {
          * @param valueExtractor
          * @return
          */
-        static <K, V> ResultExtractor<ListMultimap<K, V>> toMultimap(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor) {
+        static <K, V> ResultExtractor<ListMultimap<K, V>> toMultimap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor) {
             return toMultimap(keyExtractor, valueExtractor, Suppliers.<K, V> ofListMultimap());
         }
 
@@ -412,8 +412,8 @@ public final class Jdbc {
          * @param multimapSupplier
          * @return
          */
-        static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> ResultExtractor<M> toMultimap(final RowMapper<K> keyExtractor,
-                final RowMapper<V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
+        static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> ResultExtractor<M> toMultimap(final RowMapper<? extends K> keyExtractor,
+                final RowMapper<? extends V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(multimapSupplier, "multimapSupplier");
@@ -438,7 +438,7 @@ public final class Jdbc {
          * @return
          * @throws SQLException
          */
-        static <K, V> ResultExtractor<Map<K, List<V>>> groupTo(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor) {
+        static <K, V> ResultExtractor<Map<K, List<V>>> groupTo(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor) {
             return groupTo(keyExtractor, valueExtractor, Suppliers.<K, List<V>> ofMap());
         }
 
@@ -452,8 +452,8 @@ public final class Jdbc {
          * @param supplier
          * @return
          */
-        static <K, V, M extends Map<K, List<V>>> ResultExtractor<M> groupTo(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
-                final Supplier<? extends M> supplier) {
+        static <K, V, M extends Map<K, List<V>>> ResultExtractor<M> groupTo(final RowMapper<? extends K> keyExtractor,
+                final RowMapper<? extends V> valueExtractor, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(supplier, "supplier");
@@ -491,7 +491,7 @@ public final class Jdbc {
          * @param downstream
          * @return
          */
-        static <K, V, A, D> ResultExtractor<Map<K, D>> groupTo(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
+        static <K, V, A, D> ResultExtractor<Map<K, D>> groupTo(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final Collector<? super V, A, D> downstream) {
             return groupTo(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
         }
@@ -509,8 +509,8 @@ public final class Jdbc {
          * @param supplier
          * @return
          */
-        static <K, V, A, D, M extends Map<K, D>> ResultExtractor<M> groupTo(final RowMapper<K> keyExtractor, final RowMapper<V> valueExtractor,
-                final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
+        static <K, V, A, D, M extends Map<K, D>> ResultExtractor<M> groupTo(final RowMapper<? extends K> keyExtractor,
+                final RowMapper<? extends V> valueExtractor, final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(downstream, "downstream");
@@ -547,11 +547,11 @@ public final class Jdbc {
             };
         }
 
-        static <T> ResultExtractor<List<T>> toList(final RowMapper<T> rowMapper) {
+        static <T> ResultExtractor<List<T>> toList(final RowMapper<? extends T> rowMapper) {
             return toList(RowFilter.ALWAYS_TRUE, rowMapper);
         }
 
-        static <T> ResultExtractor<List<T>> toList(final RowFilter rowFilter, RowMapper<T> rowMapper) {
+        static <T> ResultExtractor<List<T>> toList(final RowFilter rowFilter, RowMapper<? extends T> rowMapper) {
             N.checkArgNotNull(rowFilter, "rowFilter");
             N.checkArgNotNull(rowMapper, "rowMapper");
 
@@ -581,7 +581,7 @@ public final class Jdbc {
             N.checkArgNotNull(targetClass, "targetClass");
 
             return rs -> {
-                final BiRowMapper<T> rowMapper = BiRowMapper.to(targetClass);
+                final BiRowMapper<? extends T> rowMapper = BiRowMapper.to(targetClass);
                 final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
                 final List<T> result = new ArrayList<>();
 
@@ -708,7 +708,7 @@ public final class Jdbc {
          * @param valueExtractor
          * @return
          */
-        static <K, V> BiResultExtractor<Map<K, V>> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor) {
+        static <K, V> BiResultExtractor<Map<K, V>> toMap(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor) {
             return toMap(keyExtractor, valueExtractor, Suppliers.<K, V> ofMap());
         }
 
@@ -722,8 +722,8 @@ public final class Jdbc {
          * @param supplier
          * @return
          */
-        static <K, V, M extends Map<K, V>> BiResultExtractor<M> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
-                final Supplier<? extends M> supplier) {
+        static <K, V, M extends Map<K, V>> BiResultExtractor<M> toMap(final BiRowMapper<? extends K> keyExtractor,
+                final BiRowMapper<? extends V> valueExtractor, final Supplier<? extends M> supplier) {
             return toMap(keyExtractor, valueExtractor, Fn.<V> throwingMerger(), supplier);
         }
 
@@ -739,7 +739,7 @@ public final class Jdbc {
          * @see {@link Fn.replacingMerger()}
          * @see {@link Fn.ignoringMerger()}
          */
-        static <K, V> BiResultExtractor<Map<K, V>> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
+        static <K, V> BiResultExtractor<Map<K, V>> toMap(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor,
                 final BinaryOperator<V> mergeFunction) {
             return toMap(keyExtractor, valueExtractor, mergeFunction, Suppliers.<K, V> ofMap());
         }
@@ -758,8 +758,8 @@ public final class Jdbc {
          * @see {@link Fn.replacingMerger()}
          * @see {@link Fn.ignoringMerger()}
          */
-        static <K, V, M extends Map<K, V>> BiResultExtractor<M> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
-                final BinaryOperator<V> mergeFunction, final Supplier<? extends M> supplier) {
+        static <K, V, M extends Map<K, V>> BiResultExtractor<M> toMap(final BiRowMapper<? extends K> keyExtractor,
+                final BiRowMapper<? extends V> valueExtractor, final BinaryOperator<V> mergeFunction, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(mergeFunction, "mergeFunction");
@@ -790,7 +790,7 @@ public final class Jdbc {
          * @see #groupTo(BiRowMapper, BiRowMapper, Collector)
          */
         @Deprecated
-        static <K, V, A, D> BiResultExtractor<Map<K, D>> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
+        static <K, V, A, D> BiResultExtractor<Map<K, D>> toMap(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor,
                 final Collector<? super V, A, D> downstream) {
             return toMap(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
         }
@@ -811,8 +811,8 @@ public final class Jdbc {
          * @see #groupTo(BiRowMapper, BiRowMapper, Collector, Supplier)
          */
         @Deprecated
-        static <K, V, A, D, M extends Map<K, D>> BiResultExtractor<M> toMap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
-                final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
+        static <K, V, A, D, M extends Map<K, D>> BiResultExtractor<M> toMap(final BiRowMapper<? extends K> keyExtractor,
+                final BiRowMapper<? extends V> valueExtractor, final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
             return groupTo(keyExtractor, valueExtractor, downstream, supplier);
         }
 
@@ -824,7 +824,8 @@ public final class Jdbc {
          * @param valueExtractor
          * @return
          */
-        static <K, V> BiResultExtractor<ListMultimap<K, V>> toMultimap(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor) {
+        static <K, V> BiResultExtractor<ListMultimap<K, V>> toMultimap(final BiRowMapper<? extends K> keyExtractor,
+                final BiRowMapper<? extends V> valueExtractor) {
             return toMultimap(keyExtractor, valueExtractor, Suppliers.<K, V> ofListMultimap());
         }
 
@@ -839,8 +840,8 @@ public final class Jdbc {
          * @param multimapSupplier
          * @return
          */
-        static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> BiResultExtractor<M> toMultimap(final BiRowMapper<K> keyExtractor,
-                final BiRowMapper<V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
+        static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> BiResultExtractor<M> toMultimap(final BiRowMapper<? extends K> keyExtractor,
+                final BiRowMapper<? extends V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(multimapSupplier, "multimapSupplier");
@@ -864,7 +865,7 @@ public final class Jdbc {
          * @param valueExtractor
          * @return
          */
-        static <K, V> BiResultExtractor<Map<K, List<V>>> groupTo(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor) {
+        static <K, V> BiResultExtractor<Map<K, List<V>>> groupTo(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor) {
             return groupTo(keyExtractor, valueExtractor, Suppliers.<K, List<V>> ofMap());
         }
 
@@ -878,8 +879,8 @@ public final class Jdbc {
          * @param supplier
          * @return
          */
-        static <K, V, M extends Map<K, List<V>>> BiResultExtractor<M> groupTo(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
-                final Supplier<? extends M> supplier) {
+        static <K, V, M extends Map<K, List<V>>> BiResultExtractor<M> groupTo(final BiRowMapper<? extends K> keyExtractor,
+                final BiRowMapper<? extends V> valueExtractor, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(supplier, "supplier");
@@ -916,7 +917,7 @@ public final class Jdbc {
          * @param downstream
          * @return
          */
-        static <K, V, A, D> BiResultExtractor<Map<K, D>> groupTo(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
+        static <K, V, A, D> BiResultExtractor<Map<K, D>> groupTo(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor,
                 final Collector<? super V, A, D> downstream) {
             return groupTo(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
         }
@@ -934,8 +935,8 @@ public final class Jdbc {
          * @param supplier
          * @return
          */
-        static <K, V, A, D, M extends Map<K, D>> BiResultExtractor<M> groupTo(final BiRowMapper<K> keyExtractor, final BiRowMapper<V> valueExtractor,
-                final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
+        static <K, V, A, D, M extends Map<K, D>> BiResultExtractor<M> groupTo(final BiRowMapper<? extends K> keyExtractor,
+                final BiRowMapper<? extends V> valueExtractor, final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(downstream, "downstream");
@@ -972,11 +973,11 @@ public final class Jdbc {
             };
         }
 
-        static <T> BiResultExtractor<List<T>> toList(final BiRowMapper<T> rowMapper) {
+        static <T> BiResultExtractor<List<T>> toList(final BiRowMapper<? extends T> rowMapper) {
             return toList(BiRowFilter.ALWAYS_TRUE, rowMapper);
         }
 
-        static <T> BiResultExtractor<List<T>> toList(final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) {
+        static <T> BiResultExtractor<List<T>> toList(final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper) {
             N.checkArgNotNull(rowFilter, "rowFilter");
             N.checkArgNotNull(rowMapper, "rowMapper");
 
@@ -1006,7 +1007,7 @@ public final class Jdbc {
             N.checkArgNotNull(targetClass, "targetClass");
 
             return (rs, columnLabels) -> {
-                final BiRowMapper<T> rowMapper = BiRowMapper.to(targetClass);
+                final BiRowMapper<? extends T> rowMapper = BiRowMapper.to(targetClass);
                 final List<T> result = new ArrayList<>();
 
                 while (rs.next()) {
@@ -1055,7 +1056,7 @@ public final class Jdbc {
         @Deprecated
         @SequentialOnly
         @Stateful
-        static <T> RowMapper<T> from(final BiRowMapper<T> biRowMapper) {
+        static <T> RowMapper<T> from(final BiRowMapper<? extends T> biRowMapper) {
             N.checkArgNotNull(biRowMapper, "biRowMapper");
 
             return new RowMapper<>() {
@@ -1072,7 +1073,7 @@ public final class Jdbc {
             };
         }
 
-        static <T, U> RowMapper<Tuple2<T, U>> combine(final RowMapper<T> rowMapper1, final RowMapper<U> rowMapper2) {
+        static <T, U> RowMapper<Tuple2<T, U>> combine(final RowMapper<? extends T> rowMapper1, final RowMapper<? extends U> rowMapper2) {
             N.checkArgNotNull(rowMapper1, "rowMapper1");
             N.checkArgNotNull(rowMapper2, "rowMapper2");
 
@@ -1716,13 +1717,13 @@ public final class Jdbc {
             return RowMapper.from(this);
         }
 
-        static <T> BiRowMapper<T> from(final RowMapper<T> rowMapper) {
+        static <T> BiRowMapper<T> from(final RowMapper<? extends T> rowMapper) {
             N.checkArgNotNull(rowMapper, "rowMapper");
 
             return (rs, columnLabels) -> rowMapper.apply(rs);
         }
 
-        static <T, U> BiRowMapper<Tuple2<T, U>> combine(final BiRowMapper<T> rowMapper1, final BiRowMapper<U> rowMapper2) {
+        static <T, U> BiRowMapper<Tuple2<T, U>> combine(final BiRowMapper<? extends T> rowMapper1, final BiRowMapper<? extends U> rowMapper2) {
             N.checkArgNotNull(rowMapper1, "rowMapper1");
             N.checkArgNotNull(rowMapper2, "rowMapper2");
 

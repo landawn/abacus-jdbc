@@ -2931,7 +2931,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @deprecated replaced by {@code findOnlyOne}.
      */
     @Deprecated
-    public <T> Optional<T> get(Jdbc.RowMapper<T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    public <T> Optional<T> get(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
         return Optional.ofNullable(gett(rowMapper));
     }
 
@@ -2946,7 +2946,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @deprecated replaced by {@code findOnlyOne}.
      */
     @Deprecated
-    public <T> Optional<T> get(Jdbc.BiRowMapper<T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    public <T> Optional<T> get(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
         return Optional.ofNullable(gett(rowMapper));
     }
 
@@ -2975,7 +2975,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @deprecated replaced by {@code findOnlyOneOrNull}.
      */
     @Deprecated
-    public <T> T gett(Jdbc.RowMapper<T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    public <T> T gett(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
         return findOnlyOneOrNull(rowMapper);
     }
 
@@ -2990,7 +2990,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @deprecated replaced by {@code findOnlyOneOrNull}.
      */
     @Deprecated
-    public <T> T gett(Jdbc.BiRowMapper<T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    public <T> T gett(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
         return findOnlyOneOrNull(rowMapper);
     }
 
@@ -3026,7 +3026,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> Optional<T> findOnlyOne(Jdbc.RowMapper<T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    public <T> Optional<T> findOnlyOne(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
         return Optional.ofNullable(findOnlyOneOrNull(rowMapper));
     }
 
@@ -3039,7 +3039,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> Optional<T> findOnlyOne(Jdbc.BiRowMapper<T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    public <T> Optional<T> findOnlyOne(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
         return Optional.ofNullable(findOnlyOneOrNull(rowMapper));
     }
 
@@ -3091,7 +3091,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> T findOnlyOneOrNull(Jdbc.RowMapper<T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    public <T> T findOnlyOneOrNull(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -3122,7 +3122,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> T findOnlyOneOrNull(Jdbc.BiRowMapper<T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    public <T> T findOnlyOneOrNull(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -3172,7 +3172,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> Optional<T> findFirst(Jdbc.RowMapper<T> rowMapper) throws SQLException, NullPointerException {
+    public <T> Optional<T> findFirst(Jdbc.RowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
         return Optional.ofNullable(findFirstOrNull(rowMapper));
     }
 
@@ -3187,7 +3187,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @deprecated Use {@link stream(RowFilter, RowMapper).first()} instead.
      */
     @Deprecated
-    public <T> Optional<T> findFirst(final Jdbc.RowFilter rowFilter, Jdbc.RowMapper<T> rowMapper) throws SQLException, NullPointerException {
+    public <T> Optional<T> findFirst(final Jdbc.RowFilter rowFilter, Jdbc.RowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
         return Optional.ofNullable(findFirstOrNull(rowFilter, rowMapper));
     }
 
@@ -3199,7 +3199,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> Optional<T> findFirst(Jdbc.BiRowMapper<T> rowMapper) throws SQLException, NullPointerException {
+    public <T> Optional<T> findFirst(Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
         return Optional.ofNullable(findFirstOrNull(rowMapper));
     }
 
@@ -3214,7 +3214,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @deprecated Use {@link stream(BiRowFilter, BiRowMapper).first()} instead.
      */
     @Deprecated
-    public <T> Optional<T> findFirst(final Jdbc.BiRowFilter rowFilter, Jdbc.BiRowMapper<T> rowMapper) throws SQLException, NullPointerException {
+    public <T> Optional<T> findFirst(final Jdbc.BiRowFilter rowFilter, Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
         return Optional.ofNullable(findFirstOrNull(rowFilter, rowMapper));
     }
 
@@ -3257,7 +3257,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> T findFirstOrNull(Jdbc.RowMapper<T> rowMapper) throws SQLException, NullPointerException {
+    public <T> T findFirstOrNull(Jdbc.RowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -3283,7 +3283,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @deprecated Use {@link stream(RowFilter, RowMapper).first()} instead.
      */
     @Deprecated
-    public <T> T findFirstOrNull(final Jdbc.RowFilter rowFilter, Jdbc.RowMapper<T> rowMapper) throws SQLException, NullPointerException {
+    public <T> T findFirstOrNull(final Jdbc.RowFilter rowFilter, Jdbc.RowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -3309,7 +3309,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> T findFirstOrNull(Jdbc.BiRowMapper<T> rowMapper) throws SQLException, NullPointerException {
+    public <T> T findFirstOrNull(Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -3335,7 +3335,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @deprecated Use {@link stream(BiRowFilter, BiRowMapper).first()} instead.
      */
     @Deprecated
-    public <T> T findFirstOrNull(final Jdbc.BiRowFilter rowFilter, Jdbc.BiRowMapper<T> rowMapper) throws SQLException, NullPointerException {
+    public <T> T findFirstOrNull(final Jdbc.BiRowFilter rowFilter, Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -3396,7 +3396,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    public <T> List<T> list(Jdbc.RowMapper<T> rowMapper) throws SQLException {
+    public <T> List<T> list(Jdbc.RowMapper<? extends T> rowMapper) throws SQLException {
         return list(rowMapper, Integer.MAX_VALUE);
     }
 
@@ -3410,7 +3410,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @deprecated the result size should be limited in database server side by sql scripts.
      */
     @Deprecated
-    public <T> List<T> list(Jdbc.RowMapper<T> rowMapper, int maxResult) throws SQLException {
+    public <T> List<T> list(Jdbc.RowMapper<? extends T> rowMapper, int maxResult) throws SQLException {
         return list(Jdbc.RowFilter.ALWAYS_TRUE, rowMapper, maxResult);
     }
 
@@ -3422,7 +3422,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    public <T> List<T> list(final Jdbc.RowFilter rowFilter, Jdbc.RowMapper<T> rowMapper) throws SQLException {
+    public <T> List<T> list(final Jdbc.RowFilter rowFilter, Jdbc.RowMapper<? extends T> rowMapper) throws SQLException {
         return list(rowFilter, rowMapper, Integer.MAX_VALUE);
     }
 
@@ -3435,7 +3435,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    public <T> List<T> list(final Jdbc.RowFilter rowFilter, Jdbc.RowMapper<T> rowMapper, int maxResult) throws SQLException {
+    public <T> List<T> list(final Jdbc.RowFilter rowFilter, Jdbc.RowMapper<? extends T> rowMapper, int maxResult) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         checkArg(maxResult >= 0, "'maxResult' can' be negative: " + maxResult);
@@ -3468,7 +3468,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    public <T> List<T> list(Jdbc.BiRowMapper<T> rowMapper) throws SQLException {
+    public <T> List<T> list(Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException {
         return list(rowMapper, Integer.MAX_VALUE);
     }
 
@@ -3482,7 +3482,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @deprecated the result size should be limited in database server side by sql scripts.
      */
     @Deprecated
-    public <T> List<T> list(Jdbc.BiRowMapper<T> rowMapper, int maxResult) throws SQLException {
+    public <T> List<T> list(Jdbc.BiRowMapper<? extends T> rowMapper, int maxResult) throws SQLException {
         return list(Jdbc.BiRowFilter.ALWAYS_TRUE, rowMapper, maxResult);
     }
 
@@ -3494,7 +3494,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    public <T> List<T> list(final Jdbc.BiRowFilter rowFilter, Jdbc.BiRowMapper<T> rowMapper) throws SQLException {
+    public <T> List<T> list(final Jdbc.BiRowFilter rowFilter, Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException {
         return list(rowFilter, rowMapper, Integer.MAX_VALUE);
     }
 
@@ -3507,7 +3507,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    public <T> List<T> list(final Jdbc.BiRowFilter rowFilter, Jdbc.BiRowMapper<T> rowMapper, int maxResult) throws SQLException {
+    public <T> List<T> list(final Jdbc.BiRowFilter rowFilter, Jdbc.BiRowMapper<? extends T> rowMapper, int maxResult) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         checkArg(maxResult >= 0, "'maxResult' can' be negative: " + maxResult);
@@ -3591,7 +3591,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @see Jdbc.BiResultExtractor
      */
     @LazyEvaluation
-    public <T> ExceptionalStream<T, SQLException> stream(final Jdbc.RowMapper<T> rowMapper) {
+    public <T> ExceptionalStream<T, SQLException> stream(final Jdbc.RowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -3600,7 +3600,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return ExceptionalStream.just(supplier, SQLException.class).map(Supplier::get).flatMap(rs -> {
             JdbcUtil.setCheckDateTypeFlag(rs);
 
-            return JdbcUtil.stream(rs, rowMapper).onClose(() -> {
+            return JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> {
                 JdbcUtil.resetCheckDateTypeFlag();
 
                 JdbcUtil.closeQuietly(rs);
@@ -3625,7 +3625,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @see Jdbc.BiResultExtractor
      */
     @LazyEvaluation
-    public <T> ExceptionalStream<T, SQLException> stream(final Jdbc.BiRowMapper<T> rowMapper) {
+    public <T> ExceptionalStream<T, SQLException> stream(final Jdbc.BiRowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -3634,43 +3634,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return ExceptionalStream.just(supplier, SQLException.class).map(Supplier::get).flatMap(rs -> {
             JdbcUtil.setCheckDateTypeFlag(rs);
 
-            return JdbcUtil.stream(rs, rowMapper).onClose(() -> {
-                JdbcUtil.resetCheckDateTypeFlag();
-
-                JdbcUtil.closeQuietly(rs);
-            });
-        }).onClose(this::closeAfterExecutionIfAllowed);
-    }
-
-    // Will it cause confusion if it's called in transaction?
-    /**
-     * lazy-execution, lazy-fetch.
-     *
-     * <br />
-     *
-     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
-     *
-     * @param <T>
-     * @param rowFilter
-     * @param rowMapper
-     * @return
-     * @see {@link #query(ResultExtractor)}
-     * @see {@link #query(BiResultExtractor)}
-     * @see Jdbc.ResultExtractor
-     * @see Jdbc.BiResultExtractor
-     */
-    @LazyEvaluation
-    public <T> ExceptionalStream<T, SQLException> stream(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<T> rowMapper) {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowMapper, "rowMapper");
-        assertNotClosed();
-
-        final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
-
-        return ExceptionalStream.just(supplier, SQLException.class).map(Supplier::get).flatMap(rs -> {
-            JdbcUtil.setCheckDateTypeFlag(rs);
-
-            return JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> {
+            return JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> {
                 JdbcUtil.resetCheckDateTypeFlag();
 
                 JdbcUtil.closeQuietly(rs);
@@ -3696,7 +3660,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @see Jdbc.BiResultExtractor
      */
     @LazyEvaluation
-    public <T> ExceptionalStream<T, SQLException> stream(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<T> rowMapper) {
+    public <T> ExceptionalStream<T, SQLException> stream(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -3706,7 +3670,43 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return ExceptionalStream.just(supplier, SQLException.class).map(Supplier::get).flatMap(rs -> {
             JdbcUtil.setCheckDateTypeFlag(rs);
 
-            return JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> {
+            return JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> {
+                JdbcUtil.resetCheckDateTypeFlag();
+
+                JdbcUtil.closeQuietly(rs);
+            });
+        }).onClose(this::closeAfterExecutionIfAllowed);
+    }
+
+    // Will it cause confusion if it's called in transaction?
+    /**
+     * lazy-execution, lazy-fetch.
+     *
+     * <br />
+     *
+     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     *
+     * @param <T>
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     * @see {@link #query(ResultExtractor)}
+     * @see {@link #query(BiResultExtractor)}
+     * @see Jdbc.ResultExtractor
+     * @see Jdbc.BiResultExtractor
+     */
+    @LazyEvaluation
+    public <T> ExceptionalStream<T, SQLException> stream(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) {
+        checkArgNotNull(rowFilter, "rowFilter");
+        checkArgNotNull(rowMapper, "rowMapper");
+        assertNotClosed();
+
+        final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
+
+        return ExceptionalStream.just(supplier, SQLException.class).map(Supplier::get).flatMap(rs -> {
+            JdbcUtil.setCheckDateTypeFlag(rs);
+
+            return JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> {
                 JdbcUtil.resetCheckDateTypeFlag();
 
                 JdbcUtil.closeQuietly(rs);

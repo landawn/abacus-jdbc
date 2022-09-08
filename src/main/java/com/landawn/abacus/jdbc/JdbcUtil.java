@@ -4026,14 +4026,14 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final RowMapper<T> rowMapper) {
+    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final RowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
         return InternalUtil.newStream(iterate(resultSet, rowMapper, null));
     }
 
-    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final RowMapper<T> rowMapper,
+    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final RowMapper<? extends T> rowMapper,
             final Throwables.Runnable<SQLException> onClose) {
         return new ExceptionalIterator<>() {
             private boolean hasNext;
@@ -4101,7 +4101,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<T> rowMapper) {
+    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -4109,7 +4109,7 @@ public final class JdbcUtil {
         return InternalUtil.newStream(iterate(resultSet, rowFilter, rowMapper, null));
     }
 
-    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<T> rowMapper,
+    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper,
             final Throwables.Runnable<SQLException> onClose) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowFilter, "rowFilter");
@@ -4162,14 +4162,14 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final BiRowMapper<T> rowMapper) {
+    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final BiRowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
         return InternalUtil.newStream(iterate(resultSet, rowMapper, null));
     }
 
-    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowMapper<T> rowMapper,
+    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowMapper<? extends T> rowMapper,
             final Throwables.Runnable<SQLException> onClose) {
         return new ExceptionalIterator<>() {
             private List<String> columnLabels = null;
@@ -4242,7 +4242,8 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) {
+    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final BiRowFilter rowFilter,
+            final BiRowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -4250,7 +4251,7 @@ public final class JdbcUtil {
         return InternalUtil.newStream(iterate(resultSet, rowFilter, rowMapper));
     }
 
-    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<T> rowMapper) {
+    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper) {
         return new ExceptionalIterator<>() {
             private List<String> columnLabels = null;
             private boolean hasNext;
@@ -4301,7 +4302,7 @@ public final class JdbcUtil {
         N.checkArgPositive(columnIndex, "columnIndex");
 
         final boolean checkDateType = JdbcUtil.checkDateType(resultSet);
-        final RowMapper<T> rowMapper = rs -> (T) getColumnValue(resultSet, columnIndex, checkDateType);
+        final RowMapper<? extends T> rowMapper = rs -> (T) getColumnValue(resultSet, columnIndex, checkDateType);
 
         return stream(resultSet, rowMapper);
     }
@@ -4320,7 +4321,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNullOrEmpty(columnName, "columnName");
 
-        final RowMapper<T> rowMapper = new RowMapper<>() {
+        final RowMapper<? extends T> rowMapper = new RowMapper<>() {
             private int columnIndex = -1;
             private boolean checkDateType = true;
 
@@ -4348,7 +4349,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowMapper<T> rowMapper) {
+    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
@@ -4379,7 +4380,8 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowFilter rowFilter, final RowMapper<T> rowMapper) {
+    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowFilter rowFilter,
+            final RowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -4410,7 +4412,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowMapper<T> rowMapper) {
+    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
@@ -4442,7 +4444,7 @@ public final class JdbcUtil {
      * @return
      */
     public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter,
-            final BiRowMapper<T> rowMapper) {
+            final BiRowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");

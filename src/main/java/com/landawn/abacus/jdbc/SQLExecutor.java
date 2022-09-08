@@ -1681,7 +1681,7 @@ public final class SQLExecutor {
     //     * @throws DuplicatedResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> Optional<T> get(final String sql, final Jdbc.RowMapper<T> rowMapper, final Object... parameters) throws DuplicatedResultException {
+    //    public final <T> Optional<T> get(final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters) throws DuplicatedResultException {
     //        return Optional.ofNullable(gett(sql, rowMapper, parameters));
     //    }
     //
@@ -1696,7 +1696,7 @@ public final class SQLExecutor {
     //     * @return
     //     * @throws DuplicatedResultException if two or more records are found.
     //     */
-    //    public final <T> Optional<T> get(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<T> rowMapper, final Object... parameters)
+    //    public final <T> Optional<T> get(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters)
     //            throws DuplicatedResultException {
     //        return Optional.ofNullable(gett(sql, statementSetter, rowMapper, parameters));
     //    }
@@ -1712,7 +1712,7 @@ public final class SQLExecutor {
     //     * @return
     //     * @throws DuplicatedResultException if two or more records are found.
     //     */
-    //    public final <T> Optional<T> get(final String sql, final Jdbc.RowMapper<T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters)
+    //    public final <T> Optional<T> get(final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters)
     //            throws DuplicatedResultException {
     //        return Optional.ofNullable(gett(sql, rowMapper, jdbcSettings, parameters));
     //    }
@@ -1731,7 +1731,7 @@ public final class SQLExecutor {
     //     * @throws DuplicatedResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> Optional<T> get(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<T> rowMapper,
+    //    public final <T> Optional<T> get(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper,
     //            final JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
     //        return Optional.ofNullable(gett(sql, statementSetter, rowMapper, jdbcSettings, parameters));
     //    }
@@ -1749,7 +1749,7 @@ public final class SQLExecutor {
     //     * @throws DuplicatedResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> Optional<T> get(final Connection conn, final String sql, final Jdbc.RowMapper<T> rowMapper, final Object... parameters)
+    //    public final <T> Optional<T> get(final Connection conn, final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters)
     //            throws DuplicatedResultException {
     //        return Optional.ofNullable(gett(conn, sql, rowMapper, parameters));
     //    }
@@ -1767,7 +1767,7 @@ public final class SQLExecutor {
     //     * @throws DuplicatedResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> Optional<T> get(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<T> rowMapper,
+    //    public final <T> Optional<T> get(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper,
     //            final Object... parameters) {
     //        return Optional.ofNullable(gett(conn, sql, statementSetter, rowMapper, parameters));
     //    }
@@ -1785,7 +1785,7 @@ public final class SQLExecutor {
     //     * @throws DuplicatedResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> Optional<T> get(final Connection conn, final String sql, final Jdbc.RowMapper<T> rowMapper, JdbcSettings jdbcSettings,
+    //    public final <T> Optional<T> get(final Connection conn, final String sql, final Jdbc.RowMapper<? extends T> rowMapper, JdbcSettings jdbcSettings,
     //            final Object... parameters) throws DuplicatedResultException {
     //        return Optional.ofNullable(gett(conn, sql, rowMapper, jdbcSettings, parameters));
     //    }
@@ -1805,7 +1805,7 @@ public final class SQLExecutor {
     //     * @throws DuplicatedResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> Optional<T> get(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<T> rowMapper,
+    //    public final <T> Optional<T> get(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper,
     //            final JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
     //        return Optional.ofNullable(gett(conn, sql, statementSetter, rowMapper, jdbcSettings, parameters));
     //    }
@@ -1948,7 +1948,7 @@ public final class SQLExecutor {
     //            JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
     //        N.checkArgNotNull(targetClass, "targetClass");
     //
-    //        final Jdbc.RowMapper<T> rowMapper = toRowMapper(targetClass);
+    //        final Jdbc.RowMapper<? extends T> rowMapper = toRowMapper(targetClass);
     //
     //        return gett(conn, sql, statementSetter, rowMapper, jdbcSettings, parameters);
     //    }
@@ -1983,7 +1983,7 @@ public final class SQLExecutor {
     //     * @throws DuplicatedResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> T gett(final String sql, final Jdbc.RowMapper<T> rowMapper, final Object... parameters) throws DuplicatedResultException {
+    //    public final <T> T gett(final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters) throws DuplicatedResultException {
     //        return gett(sql, StatementSetter.DEFAULT, rowMapper, parameters);
     //    }
     //
@@ -1999,7 +1999,7 @@ public final class SQLExecutor {
     //     * @throws DuplicatedResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> T gett(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<T> rowMapper, final Object... parameters)
+    //    public final <T> T gett(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters)
     //            throws DuplicatedResultException {
     //        return gett(sql, statementSetter, rowMapper, null, parameters);
     //    }
@@ -2016,7 +2016,7 @@ public final class SQLExecutor {
     //     * @throws DuplicatedResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> T gett(final String sql, final Jdbc.RowMapper<T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters)
+    //    public final <T> T gett(final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters)
     //            throws DuplicatedResultException {
     //        return gett(sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, parameters);
     //    }
@@ -2034,7 +2034,7 @@ public final class SQLExecutor {
     //     * @throws DuplicatedResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> T gett(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<T> rowMapper, final JdbcSettings jdbcSettings,
+    //    public final <T> T gett(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper, final JdbcSettings jdbcSettings,
     //            final Object... parameters) throws DuplicatedResultException {
     //        return gett(null, sql, statementSetter, rowMapper, jdbcSettings, parameters);
     //    }
@@ -2051,7 +2051,7 @@ public final class SQLExecutor {
     //     * @throws DuplicatedResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> T gett(final Connection conn, final String sql, final Jdbc.RowMapper<T> rowMapper, final Object... parameters)
+    //    public final <T> T gett(final Connection conn, final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters)
     //            throws DuplicatedResultException {
     //        return gett(conn, sql, StatementSetter.DEFAULT, rowMapper, parameters);
     //    }
@@ -2068,7 +2068,7 @@ public final class SQLExecutor {
     //     * @return
     //     * @throws DuplicatedResultException if two or more records are found.
     //     */
-    //    public final <T> T gett(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<T> rowMapper,
+    //    public final <T> T gett(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper,
     //            final Object... parameters) throws DuplicatedResultException {
     //        return gett(conn, sql, statementSetter, rowMapper, null, parameters);
     //    }
@@ -2085,7 +2085,7 @@ public final class SQLExecutor {
     //     * @return
     //     * @throws DuplicatedResultException if two or more records are found.
     //     */
-    //    public final <T> T gett(final Connection conn, final String sql, final Jdbc.RowMapper<T> rowMapper, JdbcSettings jdbcSettings, final Object... parameters)
+    //    public final <T> T gett(final Connection conn, final String sql, final Jdbc.RowMapper<? extends T> rowMapper, JdbcSettings jdbcSettings, final Object... parameters)
     //            throws DuplicatedResultException {
     //        return gett(conn, sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, parameters);
     //    }
@@ -2105,7 +2105,7 @@ public final class SQLExecutor {
     //     */
     //    @SuppressWarnings("unchecked")
     //    @SafeVarargs
-    //    public final <T> T gett(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<T> rowMapper,
+    //    public final <T> T gett(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper,
     //            JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
     //        N.checkArgNotNull(rowMapper, "rowMapper");
     //
@@ -2250,7 +2250,7 @@ public final class SQLExecutor {
     //            final JdbcSettings jdbcSettings, final Object... parameters) {
     //        N.checkArgNotNull(targetClass, "targetClass");
     //
-    //        final Jdbc.RowMapper<T> rowMapper = toRowMapper(targetClass);
+    //        final Jdbc.RowMapper<? extends T> rowMapper = toRowMapper(targetClass);
     //
     //        return findFirst(conn, sql, statementSetter, rowMapper, jdbcSettings, parameters);
     //    }
@@ -2264,7 +2264,7 @@ public final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <T> Optional<T> findFirst(final String sql, final Jdbc.RowMapper<T> rowMapper, final Object... parameters) {
+    //    public final <T> Optional<T> findFirst(final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters) {
     //        return findFirst(sql, StatementSetter.DEFAULT, rowMapper, parameters);
     //    }
     //
@@ -2278,7 +2278,7 @@ public final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <T> Optional<T> findFirst(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<T> rowMapper,
+    //    public final <T> Optional<T> findFirst(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper,
     //            final Object... parameters) {
     //        return findFirst(sql, statementSetter, rowMapper, null, parameters);
     //    }
@@ -2293,7 +2293,7 @@ public final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <T> Optional<T> findFirst(final String sql, final Jdbc.RowMapper<T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters) {
+    //    public final <T> Optional<T> findFirst(final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters) {
     //        return findFirst(sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, parameters);
     //    }
     //
@@ -2308,7 +2308,7 @@ public final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <T> Optional<T> findFirst(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<T> rowMapper,
+    //    public final <T> Optional<T> findFirst(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper,
     //            final JdbcSettings jdbcSettings, final Object... parameters) {
     //        return findFirst(null, sql, statementSetter, rowMapper, jdbcSettings, parameters);
     //    }
@@ -2323,7 +2323,7 @@ public final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <T> Optional<T> findFirst(final Connection conn, final String sql, final Jdbc.RowMapper<T> rowMapper, final Object... parameters) {
+    //    public final <T> Optional<T> findFirst(final Connection conn, final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters) {
     //        return findFirst(conn, sql, StatementSetter.DEFAULT, rowMapper, parameters);
     //    }
     //
@@ -2337,7 +2337,7 @@ public final class SQLExecutor {
     //     * @param parameters
     //     * @return
     //     */
-    //    public final <T> Optional<T> findFirst(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<T> rowMapper,
+    //    public final <T> Optional<T> findFirst(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper,
     //            final Object... parameters) {
     //        return findFirst(conn, sql, statementSetter, rowMapper, null, parameters);
     //    }
@@ -2352,7 +2352,7 @@ public final class SQLExecutor {
     //     * @param parameters
     //     * @return
     //     */
-    //    public final <T> Optional<T> findFirst(final Connection conn, final String sql, final Jdbc.RowMapper<T> rowMapper, final JdbcSettings jdbcSettings,
+    //    public final <T> Optional<T> findFirst(final Connection conn, final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final JdbcSettings jdbcSettings,
     //            final Object... parameters) {
     //        return findFirst(conn, sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, parameters);
     //    }
@@ -2372,7 +2372,7 @@ public final class SQLExecutor {
     //     */
     //    @SuppressWarnings("unchecked")
     //    @SafeVarargs
-    //    public final <T> Optional<T> findFirst(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<T> rowMapper,
+    //    public final <T> Optional<T> findFirst(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper,
     //            final JdbcSettings jdbcSettings, final Object... parameters) {
     //        N.checkArgNotNull(rowMapper, "rowMapper");
     //
@@ -2510,7 +2510,7 @@ public final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <T> List<T> list(final String sql, final Jdbc.BiRowMapper<T> rowMapper, final Object... parameters) {
+    //    public final <T> List<T> list(final String sql, final Jdbc.BiRowMapper<? extends T> rowMapper, final Object... parameters) {
     //        return list(sql, StatementSetter.DEFAULT, rowMapper, parameters);
     //    }
     //
@@ -2524,7 +2524,7 @@ public final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <T> List<T> list(final String sql, final StatementSetter statementSetter, final Jdbc.BiRowMapper<T> rowMapper, final Object... parameters) {
+    //    public final <T> List<T> list(final String sql, final StatementSetter statementSetter, final Jdbc.BiRowMapper<? extends T> rowMapper, final Object... parameters) {
     //        return list(sql, statementSetter, rowMapper, null, parameters);
     //    }
     //
@@ -2538,7 +2538,7 @@ public final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <T> List<T> list(final String sql, final Jdbc.BiRowMapper<T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters) {
+    //    public final <T> List<T> list(final String sql, final Jdbc.BiRowMapper<? extends T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters) {
     //        return list(sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, parameters);
     //    }
     //
@@ -2553,7 +2553,7 @@ public final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <T> List<T> list(final String sql, final StatementSetter statementSetter, final Jdbc.BiRowMapper<T> rowMapper, final JdbcSettings jdbcSettings,
+    //    public final <T> List<T> list(final String sql, final StatementSetter statementSetter, final Jdbc.BiRowMapper<? extends T> rowMapper, final JdbcSettings jdbcSettings,
     //            final Object... parameters) {
     //        return list(null, sql, statementSetter, rowMapper, jdbcSettings, parameters);
     //    }
@@ -2568,7 +2568,7 @@ public final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <T> List<T> list(final Connection conn, final String sql, final Jdbc.BiRowMapper<T> rowMapper, final Object... parameters) {
+    //    public final <T> List<T> list(final Connection conn, final String sql, final Jdbc.BiRowMapper<? extends T> rowMapper, final Object... parameters) {
     //        return list(conn, sql, StatementSetter.DEFAULT, rowMapper, parameters);
     //    }
     //
@@ -2582,7 +2582,7 @@ public final class SQLExecutor {
     //     * @param parameters
     //     * @return
     //     */
-    //    public final <T> List<T> list(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.BiRowMapper<T> rowMapper,
+    //    public final <T> List<T> list(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.BiRowMapper<? extends T> rowMapper,
     //            final Object... parameters) {
     //        return list(conn, sql, statementSetter, rowMapper, null, parameters);
     //    }
@@ -2597,7 +2597,7 @@ public final class SQLExecutor {
     //     * @param parameters
     //     * @return
     //     */
-    //    public final <T> List<T> list(final Connection conn, final String sql, final Jdbc.BiRowMapper<T> rowMapper, final JdbcSettings jdbcSettings,
+    //    public final <T> List<T> list(final Connection conn, final String sql, final Jdbc.BiRowMapper<? extends T> rowMapper, final JdbcSettings jdbcSettings,
     //            final Object... parameters) {
     //        return list(conn, sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, parameters);
     //    }
@@ -2616,7 +2616,7 @@ public final class SQLExecutor {
     //     */
     //    @SuppressWarnings("unchecked")
     //    @SafeVarargs
-    //    public final <T> List<T> list(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.BiRowMapper<T> rowMapper,
+    //    public final <T> List<T> list(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.BiRowMapper<? extends T> rowMapper,
     //            final JdbcSettings jdbcSettings, final Object... parameters) {
     //        N.checkArgNotNull(rowMapper);
     //
@@ -2684,7 +2684,7 @@ public final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <T> List<T> listAll(final List<String> sqls, final Jdbc.BiRowMapper<T> rowMapper, final JdbcSettings jdbcSettings,
+    //    public final <T> List<T> listAll(final List<String> sqls, final Jdbc.BiRowMapper<? extends T> rowMapper, final JdbcSettings jdbcSettings,
     //            final Object... parameters) {
     //        return listAll(sqls, null, rowMapper, jdbcSettings, parameters);
     //    }
@@ -2703,7 +2703,7 @@ public final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <T> List<T> listAll(final List<String> sqls, final StatementSetter statementSetter, final Jdbc.BiRowMapper<T> rowMapper,
+    //    public final <T> List<T> listAll(final List<String> sqls, final StatementSetter statementSetter, final Jdbc.BiRowMapper<? extends T> rowMapper,
     //            final JdbcSettings jdbcSettings, final Object... parameters) {
     //        if (sqls.size() == 1) {
     //            return list(sqls.get(0), statementSetter, rowMapper, jdbcSettings, parameters);
@@ -3711,7 +3711,7 @@ public final class SQLExecutor {
     //     */
     //    @SafeVarargs
     //    @LazyEvaluation
-    //    public final <T> Stream<T> stream(final String sql, final Jdbc.BiRowMapper<T> rowMapper, final Object... parameters) {
+    //    public final <T> Stream<T> stream(final String sql, final Jdbc.BiRowMapper<? extends T> rowMapper, final Object... parameters) {
     //        return stream(sql, StatementSetter.DEFAULT, rowMapper, parameters);
     //    }
     //
@@ -3728,7 +3728,7 @@ public final class SQLExecutor {
     //     */
     //    @SafeVarargs
     //    @LazyEvaluation
-    //    public final <T> Stream<T> stream(final String sql, final StatementSetter statementSetter, final Jdbc.BiRowMapper<T> rowMapper,
+    //    public final <T> Stream<T> stream(final String sql, final StatementSetter statementSetter, final Jdbc.BiRowMapper<? extends T> rowMapper,
     //            final Object... parameters) {
     //        return stream(sql, statementSetter, rowMapper, null, parameters);
     //    }
@@ -3746,7 +3746,7 @@ public final class SQLExecutor {
     //     */
     //    @SafeVarargs
     //    @LazyEvaluation
-    //    public final <T> Stream<T> stream(final String sql, final Jdbc.BiRowMapper<T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters) {
+    //    public final <T> Stream<T> stream(final String sql, final Jdbc.BiRowMapper<? extends T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters) {
     //        return stream(sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, parameters);
     //    }
     //
@@ -3767,7 +3767,7 @@ public final class SQLExecutor {
     //     */
     //    @SafeVarargs
     //    @LazyEvaluation
-    //    public final <T> Stream<T> stream(final String sql, final StatementSetter statementSetter, final Jdbc.BiRowMapper<T> rowMapper,
+    //    public final <T> Stream<T> stream(final String sql, final StatementSetter statementSetter, final Jdbc.BiRowMapper<? extends T> rowMapper,
     //            final JdbcSettings jdbcSettings, final Object... parameters) {
     //        N.checkArgNotNull(rowMapper, "rowMapper");
     //
@@ -3967,7 +3967,7 @@ public final class SQLExecutor {
     //     */
     //    @SafeVarargs
     //    @LazyEvaluation
-    //    public final <T> Stream<T> streamAll(final List<String> sqls, final Jdbc.BiRowMapper<T> rowMapper, final JdbcSettings jdbcSettings,
+    //    public final <T> Stream<T> streamAll(final List<String> sqls, final Jdbc.BiRowMapper<? extends T> rowMapper, final JdbcSettings jdbcSettings,
     //            final Object... parameters) {
     //        return streamAll(sqls, null, rowMapper, jdbcSettings, parameters);
     //    }
@@ -3991,7 +3991,7 @@ public final class SQLExecutor {
     //     */
     //    @SafeVarargs
     //    @LazyEvaluation
-    //    public final <T> Stream<T> streamAll(final List<String> sqls, final StatementSetter statementSetter, final Jdbc.BiRowMapper<T> rowMapper,
+    //    public final <T> Stream<T> streamAll(final List<String> sqls, final StatementSetter statementSetter, final Jdbc.BiRowMapper<? extends T> rowMapper,
     //            final JdbcSettings jdbcSettings, final Object... parameters) {
     //        N.checkArgNotNullOrEmpty(sqls, "sqls");
     //        N.checkArgNotNull(rowMapper, "rowMapper");
