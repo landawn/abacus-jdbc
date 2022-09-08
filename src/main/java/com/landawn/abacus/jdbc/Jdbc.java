@@ -1080,7 +1080,8 @@ public final class Jdbc {
             return rs -> Tuple.of(rowMapper1.apply(rs), rowMapper2.apply(rs));
         }
 
-        static <A, B, C> RowMapper<Tuple3<A, B, C>> combine(final RowMapper<A> rowMapper1, final RowMapper<B> rowMapper2, final RowMapper<C> rowMapper3) {
+        static <A, B, C> RowMapper<Tuple3<A, B, C>> combine(final RowMapper<? extends A> rowMapper1, final RowMapper<? extends B> rowMapper2,
+                final RowMapper<? extends C> rowMapper3) {
             N.checkArgNotNull(rowMapper1, "rowMapper1");
             N.checkArgNotNull(rowMapper2, "rowMapper2");
             N.checkArgNotNull(rowMapper3, "rowMapper3");
@@ -1730,8 +1731,8 @@ public final class Jdbc {
             return (rs, cls) -> Tuple.of(rowMapper1.apply(rs, cls), rowMapper2.apply(rs, cls));
         }
 
-        static <A, B, C> BiRowMapper<Tuple3<A, B, C>> combine(final BiRowMapper<A> rowMapper1, final BiRowMapper<B> rowMapper2,
-                final BiRowMapper<C> rowMapper3) {
+        static <A, B, C> BiRowMapper<Tuple3<A, B, C>> combine(final BiRowMapper<? extends A> rowMapper1, final BiRowMapper<? extends B> rowMapper2,
+                final BiRowMapper<? extends C> rowMapper3) {
             N.checkArgNotNull(rowMapper1, "rowMapper1");
             N.checkArgNotNull(rowMapper2, "rowMapper2");
             N.checkArgNotNull(rowMapper3, "rowMapper3");
