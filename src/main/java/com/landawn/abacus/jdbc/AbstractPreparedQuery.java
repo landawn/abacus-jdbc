@@ -2847,7 +2847,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    private static <T> T getRow(Class<T> targetClass, ResultSet rs) throws SQLException {
+    private static <T> T getRow(final Class<? extends T> targetClass, ResultSet rs) throws SQLException {
         final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
         return Jdbc.BiRowMapper.to(targetClass).apply(rs, columnLabels);
@@ -2869,7 +2869,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    public <R> R query(final Jdbc.ResultExtractor<R> resultExtrator) throws SQLException {
+    public <R> R query(final Jdbc.ResultExtractor<? extends R> resultExtrator) throws SQLException {
         checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
@@ -2891,7 +2891,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    public <R> R query(final Jdbc.BiResultExtractor<R> resultExtrator) throws SQLException {
+    public <R> R query(final Jdbc.BiResultExtractor<? extends R> resultExtrator) throws SQLException {
         checkArgNotNull(resultExtrator, "resultExtrator");
         assertNotClosed();
 
@@ -2916,7 +2916,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @deprecated replaced by {@code findOnlyOne}.
      */
     @Deprecated
-    public <T> Optional<T> get(final Class<T> targetClass) throws DuplicatedResultException, SQLException {
+    public <T> Optional<T> get(final Class<? extends T> targetClass) throws DuplicatedResultException, SQLException {
         return Optional.ofNullable(gett(targetClass));
     }
 
@@ -2960,7 +2960,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @deprecated replaced by {@code findOnlyOneOrNull}.
      */
     @Deprecated
-    public <T> T gett(final Class<T> targetClass) throws DuplicatedResultException, SQLException {
+    public <T> T gett(final Class<? extends T> targetClass) throws DuplicatedResultException, SQLException {
         return findOnlyOneOrNull(targetClass);
     }
 
@@ -3013,7 +3013,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      * @throws SQLException
      */
-    public <T> Optional<T> findOnlyOne(final Class<T> targetClass) throws DuplicatedResultException, SQLException {
+    public <T> Optional<T> findOnlyOne(final Class<? extends T> targetClass) throws DuplicatedResultException, SQLException {
         return Optional.ofNullable(findOnlyOneOrNull(targetClass));
     }
 
@@ -3061,7 +3061,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException
      */
-    public <T> T findOnlyOneOrNull(final Class<T> targetClass) throws DuplicatedResultException, SQLException {
+    public <T> T findOnlyOneOrNull(final Class<? extends T> targetClass) throws DuplicatedResultException, SQLException {
         checkArgNotNull(targetClass, "targetClass");
         assertNotClosed();
 
@@ -3160,7 +3160,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    public <T> Optional<T> findFirst(final Class<T> targetClass) throws SQLException {
+    public <T> Optional<T> findFirst(final Class<? extends T> targetClass) throws SQLException {
         return Optional.ofNullable(findFirstOrNull(targetClass));
     }
 
@@ -3234,7 +3234,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    public <T> T findFirstOrNull(final Class<T> targetClass) throws SQLException {
+    public <T> T findFirstOrNull(final Class<? extends T> targetClass) throws SQLException {
         checkArgNotNull(targetClass, "targetClass");
         assertNotClosed();
 
@@ -3371,7 +3371,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    public <T> List<T> list(final Class<T> targetClass) throws SQLException {
+    public <T> List<T> list(final Class<? extends T> targetClass) throws SQLException {
         return list(Jdbc.BiRowMapper.to(targetClass));
     }
 
@@ -3385,7 +3385,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @deprecated the result size should be limited in database server side by sql scripts.
      */
     @Deprecated
-    public <T> List<T> list(final Class<T> targetClass, int maxResult) throws SQLException {
+    public <T> List<T> list(final Class<? extends T> targetClass, int maxResult) throws SQLException {
         return list(Jdbc.BiRowMapper.to(targetClass), maxResult);
     }
 
@@ -3570,7 +3570,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @see Jdbc.BiResultExtractor
      */
     @LazyEvaluation
-    public <T> ExceptionalStream<T, SQLException> stream(final Class<T> targetClass) {
+    public <T> ExceptionalStream<T, SQLException> stream(final Class<? extends T> targetClass) {
         return stream(Jdbc.BiRowMapper.to(targetClass));
     }
 
@@ -4180,7 +4180,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    public <ID> Optional<ID> insert(final Jdbc.RowMapper<ID> autoGeneratedKeyExtractor) throws SQLException {
+    public <ID> Optional<ID> insert(final Jdbc.RowMapper<? extends ID> autoGeneratedKeyExtractor) throws SQLException {
         return insert(autoGeneratedKeyExtractor, JdbcUtil.defaultIdTester);
     }
 
@@ -4191,7 +4191,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    public <ID> Optional<ID> insert(final Jdbc.BiRowMapper<ID> autoGeneratedKeyExtractor) throws SQLException {
+    public <ID> Optional<ID> insert(final Jdbc.BiRowMapper<? extends ID> autoGeneratedKeyExtractor) throws SQLException {
         return insert(autoGeneratedKeyExtractor, JdbcUtil.defaultIdTester);
     }
 
@@ -4202,7 +4202,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    <ID> Optional<ID> insert(final Jdbc.RowMapper<ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
+    <ID> Optional<ID> insert(final Jdbc.RowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
         assertNotClosed();
         checkArgNotNull(autoGeneratedKeyExtractor, "autoGeneratedKeyExtractor");
         checkArgNotNull(isDefaultIdTester, "isDefaultIdTester");
@@ -4226,7 +4226,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    <ID> Optional<ID> insert(final Jdbc.BiRowMapper<ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
+    <ID> Optional<ID> insert(final Jdbc.BiRowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
         assertNotClosed();
         checkArgNotNull(autoGeneratedKeyExtractor, "autoGeneratedKeyExtractor");
         checkArgNotNull(isDefaultIdTester, "isDefaultIdTester");
@@ -4266,7 +4266,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    public <ID> List<ID> batchInsert(final Jdbc.RowMapper<ID> autoGeneratedKeyExtractor) throws SQLException {
+    public <ID> List<ID> batchInsert(final Jdbc.RowMapper<? extends ID> autoGeneratedKeyExtractor) throws SQLException {
         return batchInsert(autoGeneratedKeyExtractor, JdbcUtil.defaultIdTester);
     }
 
@@ -4277,7 +4277,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    public <ID> List<ID> batchInsert(final Jdbc.BiRowMapper<ID> autoGeneratedKeyExtractor) throws SQLException {
+    public <ID> List<ID> batchInsert(final Jdbc.BiRowMapper<? extends ID> autoGeneratedKeyExtractor) throws SQLException {
         return batchInsert(autoGeneratedKeyExtractor, JdbcUtil.defaultIdTester);
     }
 
@@ -4288,7 +4288,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    <ID> List<ID> batchInsert(final Jdbc.RowMapper<ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
+    <ID> List<ID> batchInsert(final Jdbc.RowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
         assertNotClosed();
         checkArgNotNull(autoGeneratedKeyExtractor, "autoGeneratedKeyExtractor");
         checkArgNotNull(isDefaultIdTester, "isDefaultIdTester");
@@ -4321,7 +4321,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
-    <ID> List<ID> batchInsert(final Jdbc.BiRowMapper<ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
+    <ID> List<ID> batchInsert(final Jdbc.BiRowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
         assertNotClosed();
         checkArgNotNull(autoGeneratedKeyExtractor, "autoGeneratedKeyExtractor");
         checkArgNotNull(isDefaultIdTester, "isDefaultIdTester");

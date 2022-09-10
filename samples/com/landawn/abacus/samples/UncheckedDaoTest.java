@@ -518,18 +518,20 @@ public class UncheckedDaoTest {
         }
 
         uncheckedUserDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null, Jdbc.RowMapper.builder().get(1, (rs, i) -> rs.getString(i)).toList())
-        .forEach(Fn.println());
+                .forEach(Fn.println());
 
         uncheckedUserDao
-        .list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(List.class))
-        .forEach(Fn.println());
+                .list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
+                        Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(List.class))
+                .forEach(Fn.println());
 
         uncheckedUserDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
-        .forEach(Fn.println());
+                .forEach(Fn.println());
 
         uncheckedUserDao
-        .list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(User.class))
-        .forEach(Fn.println());
+                .list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
+                        Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(User.class))
+                .forEach(Fn.println());
 
         uncheckedUserDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.to(User.class)).forEach(Fn.println());
 

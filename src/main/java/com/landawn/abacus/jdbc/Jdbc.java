@@ -577,7 +577,7 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static <T> ResultExtractor<List<T>> toList(final Class<T> targetClass) {
+        static <T> ResultExtractor<List<T>> toList(final Class<? extends T> targetClass) {
             N.checkArgNotNull(targetClass, "targetClass");
 
             return rs -> {
@@ -604,7 +604,7 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static <T> ResultExtractor<List<T>> toMergedList(final Class<T> targetClass) {
+        static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass) {
             N.checkArgNotNull(targetClass, "targetClass");
 
             return rs -> {
@@ -624,7 +624,7 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static <T> ResultExtractor<List<T>> toMergedList(final Class<T> targetClass, Collection<String> idPropNamesForMerge) {
+        static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, Collection<String> idPropNamesForMerge) {
             N.checkArgNotNull(targetClass, "targetClass");
 
             return rs -> {
@@ -694,7 +694,7 @@ public final class Jdbc {
             return (rs, columnLabels) -> after.apply(apply(rs, columnLabels));
         }
 
-        static <R> BiResultExtractor<R> from(final ResultExtractor<R> resultExtractor) {
+        static <R> BiResultExtractor<R> from(final ResultExtractor<? extends R> resultExtractor) {
             N.checkArgNotNull(resultExtractor);
 
             return (rs, columnLabels) -> resultExtractor.apply(rs);
@@ -1003,7 +1003,7 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static <T> BiResultExtractor<List<T>> toList(final Class<T> targetClass) {
+        static <T> BiResultExtractor<List<T>> toList(final Class<? extends T> targetClass) {
             N.checkArgNotNull(targetClass, "targetClass");
 
             return (rs, columnLabels) -> {
@@ -1778,7 +1778,7 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static <T> BiRowMapper<T> to(Class<? extends T> targetClass, final Predicate<? super String> columnNameFilter,
+        static <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final Predicate<? super String> columnNameFilter,
                 final Function<? super String, String> columnNameConverter) {
             return to(targetClass, columnNameFilter, columnNameConverter, false);
         }
@@ -1795,7 +1795,7 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static <T> BiRowMapper<T> to(Class<? extends T> targetClass, final Predicate<? super String> columnNameFilter,
+        static <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final Predicate<? super String> columnNameFilter,
                 final Function<? super String, String> columnNameConverter, final boolean ignoreNonMatchedColumns) {
             N.checkArgNotNull(targetClass, "targetClass");
 

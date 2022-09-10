@@ -547,7 +547,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> R query(final Condition cond, final Jdbc.ResultExtractor<R> resultExtrator) throws UncheckedSQLException;
+    <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtrator) throws UncheckedSQLException;
 
     /**
      *
@@ -558,7 +558,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<R> resultExtrator) throws UncheckedSQLException;
+    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtrator)
+            throws UncheckedSQLException;
 
     /**
      *
@@ -568,7 +569,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> R query(final Condition cond, final Jdbc.BiResultExtractor<R> resultExtrator) throws UncheckedSQLException;
+    <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtrator) throws UncheckedSQLException;
 
     /**
      *
@@ -579,7 +580,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<R> resultExtrator) throws UncheckedSQLException;
+    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtrator)
+            throws UncheckedSQLException;
 
     /**
      *

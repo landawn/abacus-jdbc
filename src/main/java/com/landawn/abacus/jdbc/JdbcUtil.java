@@ -1062,12 +1062,23 @@ public final class JdbcUtil {
      * @param checkDateType
      * @return
      * @throws SQLException
+     * @deprecate internal only
+     * @deprecate use {@link #getColumnValue(ResultSet, int, boolean)}
      */
     @Deprecated
     static Object getColumnValue(final ResultSet rs, final String columnLabel, final boolean checkDateType) throws SQLException {
         return getColumnValue(rs, columnLabel, checkDateType ? 1 : -1);
     }
 
+    /**
+     *
+     * @param rs
+     * @param columnLabel
+     * @param checkDateType
+     * @return
+     * @throws SQLException
+     * @deprecate use {@link #getColumnValue(ResultSet, int, int)}
+     */
     @Deprecated
     private static Object getColumnValue(final ResultSet rs, final String columnLabel, final int checkDateType) throws SQLException {
         // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
@@ -1123,7 +1134,7 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    public static <T> T getColumnValue(final Class<T> targetClass, final ResultSet rs, final int columnIndex) throws SQLException {
+    public static <T> T getColumnValue(final Class<? extends T> targetClass, final ResultSet rs, final int columnIndex) throws SQLException {
         return N.<T> typeOf(targetClass).get(rs, columnIndex);
     }
 
@@ -1139,7 +1150,7 @@ public final class JdbcUtil {
      * @deprecated please consider using {@link #getColumnValue(Class, ResultSet, int)}
      */
     @Deprecated
-    public static <T> T getColumnValue(final Class<T> targetClass, final ResultSet rs, final String columnLabel) throws SQLException {
+    public static <T> T getColumnValue(final Class<? extends T> targetClass, final ResultSet rs, final String columnLabel) throws SQLException {
         return N.<T> typeOf(targetClass).get(rs, columnLabel);
     }
 
@@ -3905,7 +3916,7 @@ public final class JdbcUtil {
         }
     }
 
-    static <R> R extractAndCloseResultSet(ResultSet rs, final ResultExtractor<R> resultExtrator) throws SQLException {
+    static <R> R extractAndCloseResultSet(ResultSet rs, final ResultExtractor<? extends R> resultExtrator) throws SQLException {
         try {
             JdbcUtil.setCheckDateTypeFlag(rs);
 
@@ -3917,7 +3928,7 @@ public final class JdbcUtil {
         }
     }
 
-    static <R> R extractAndCloseResultSet(ResultSet rs, final BiResultExtractor<R> resultExtrator) throws SQLException {
+    static <R> R extractAndCloseResultSet(ResultSet rs, final BiResultExtractor<? extends R> resultExtrator) throws SQLException {
         try {
             JdbcUtil.setCheckDateTypeFlag(rs);
 
@@ -4009,7 +4020,7 @@ public final class JdbcUtil {
      * @param resultSet
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final Class<T> targetClass, final ResultSet resultSet) {
+    public static <T> ExceptionalStream<T, SQLException> stream(final Class<? extends T> targetClass, final ResultSet resultSet) {
         N.checkArgNotNull(targetClass, "targetClass");
         N.checkArgNotNull(resultSet, "resultSet");
 
@@ -5373,7 +5384,7 @@ public final class JdbcUtil {
     }
 
     static <ID> boolean isAllNullIds(final List<ID> ids, final Predicate<Object> isDefaultIdTester) {
-        return N.notNullOrEmpty(ids) && java.util.stream.Stream.of(ids).allMatch(isDefaultIdTester);
+        return N.notNullOrEmpty(ids) && ids.stream().allMatch(isDefaultIdTester);
     }
 
     public static Collection<String> getInsertPropNames(final Object entity) {
@@ -5964,7 +5975,7 @@ public final class JdbcUtil {
     private static final Map<Class<? extends Dao>, BiRowMapper<?>> idExtractorPool = new ConcurrentHashMap<>();
 
     public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
-            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final RowMapper<ID> idExtractor) {
+            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final RowMapper<? extends ID> idExtractor) {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(idExtractor, "idExtractor");
 
@@ -5972,7 +5983,7 @@ public final class JdbcUtil {
     }
 
     public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
-            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final BiRowMapper<ID> idExtractor) {
+            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final BiRowMapper<? extends ID> idExtractor) {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(idExtractor, "idExtractor");
 

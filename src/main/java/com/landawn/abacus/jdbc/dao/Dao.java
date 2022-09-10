@@ -1266,7 +1266,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> R query(final Condition cond, final Jdbc.ResultExtractor<R> resultExtrator) throws SQLException;
+    <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtrator) throws SQLException;
 
     /**
      *
@@ -1278,7 +1278,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<R> resultExtrator) throws SQLException;
+    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtrator) throws SQLException;
 
     /**
      *
@@ -1287,7 +1287,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @return
      * @throws SQLException
      */
-    <R> R query(final Condition cond, final Jdbc.BiResultExtractor<R> resultExtrator) throws SQLException;
+    <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtrator) throws SQLException;
 
     /**
      *
@@ -1299,7 +1299,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<R> resultExtrator) throws SQLException;
+    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtrator) throws SQLException;
 
     /**
      *
