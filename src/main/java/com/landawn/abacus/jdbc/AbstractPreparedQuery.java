@@ -2865,18 +2865,18 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      *
      * @param <R>
-     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return
      * @throws SQLException
      */
-    public <R> R query(final Jdbc.ResultExtractor<? extends R> resultExtrator) throws SQLException {
-        checkArgNotNull(resultExtrator, "resultExtrator");
+    public <R> R query(final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException {
+        checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
             JdbcUtil.setCheckDateTypeFlag(rs);
 
-            return JdbcUtil.checkNotResultSet(resultExtrator.apply(rs));
+            return JdbcUtil.checkNotResultSet(resultExtractor.apply(rs));
         } finally {
             JdbcUtil.resetCheckDateTypeFlag();
 
@@ -2887,18 +2887,18 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      *
      * @param <R>
-     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return
      * @throws SQLException
      */
-    public <R> R query(final Jdbc.BiResultExtractor<? extends R> resultExtrator) throws SQLException {
-        checkArgNotNull(resultExtrator, "resultExtrator");
+    public <R> R query(final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException {
+        checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
             JdbcUtil.setCheckDateTypeFlag(rs);
 
-            return JdbcUtil.checkNotResultSet(resultExtrator.apply(rs, JdbcUtil.getColumnLabelList(rs)));
+            return JdbcUtil.checkNotResultSet(resultExtractor.apply(rs, JdbcUtil.getColumnLabelList(rs)));
         } finally {
             JdbcUtil.resetCheckDateTypeFlag();
 

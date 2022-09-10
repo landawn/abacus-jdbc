@@ -542,45 +542,45 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     /**
      *
      * @param cond
-     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtrator) throws UncheckedSQLException;
+    <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws UncheckedSQLException;
 
     /**
      *
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
      * @param cond
-     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtrator)
+    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor)
             throws UncheckedSQLException;
 
     /**
      *
      * @param cond
-     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtrator) throws UncheckedSQLException;
+    <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws UncheckedSQLException;
 
     /**
      *
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
      * @param cond
-     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtrator)
+    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor)
             throws UncheckedSQLException;
 
     /**

@@ -3916,11 +3916,11 @@ public final class JdbcUtil {
         }
     }
 
-    static <R> R extractAndCloseResultSet(ResultSet rs, final ResultExtractor<? extends R> resultExtrator) throws SQLException {
+    static <R> R extractAndCloseResultSet(ResultSet rs, final ResultExtractor<? extends R> resultExtractor) throws SQLException {
         try {
             JdbcUtil.setCheckDateTypeFlag(rs);
 
-            return checkNotResultSet(resultExtrator.apply(rs));
+            return checkNotResultSet(resultExtractor.apply(rs));
         } finally {
             JdbcUtil.resetCheckDateTypeFlag();
 
@@ -3928,11 +3928,11 @@ public final class JdbcUtil {
         }
     }
 
-    static <R> R extractAndCloseResultSet(ResultSet rs, final BiResultExtractor<? extends R> resultExtrator) throws SQLException {
+    static <R> R extractAndCloseResultSet(ResultSet rs, final BiResultExtractor<? extends R> resultExtractor) throws SQLException {
         try {
             JdbcUtil.setCheckDateTypeFlag(rs);
 
-            return checkNotResultSet(resultExtrator.apply(rs, getColumnLabelList(rs)));
+            return checkNotResultSet(resultExtractor.apply(rs, getColumnLabelList(rs)));
         } finally {
             JdbcUtil.resetCheckDateTypeFlag();
 

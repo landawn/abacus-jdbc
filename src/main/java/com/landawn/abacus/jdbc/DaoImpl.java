@@ -1086,10 +1086,19 @@ final class DaoImpl {
                 }
             }
         } else if (N.notNullOrEmpty(mergedByIds)) {
-            if (returnType.isAssignableFrom(List.class)) {
+            if (returnType.isAssignableFrom(Collection.class)) {
                 return (preparedQuery, args) -> {
                     final DataSet dataSet = (DataSet) preparedQuery.query(Jdbc.ResultExtractor.toDataSet(entityClass));
-                    return (R) dataSet.toMergedEntities(entityClass, mergedByIds, null);
+                    final List<Object> entities = dataSet.toMergedEntities(entityClass, mergedByIds, null);
+
+                    if (returnType.isAssignableFrom(entities.getClass())) {
+                        return (R) entities;
+                    } else {
+                        final Collection<Object> c = N.newCollection(returnType);
+                        c.addAll(entities);
+
+                        return (R) c;
+                    }
                 };
             } else if (returnType.isAssignableFrom(u.Optional.class)) {
                 return (preparedQuery, args) -> {
@@ -2673,63 +2682,63 @@ final class DaoImpl {
                             && paramTypes[1].equals(Jdbc.ResultExtractor.class)) {
                         call = (proxy, args) -> {
                             final Condition cond = (Condition) args[0];
-                            final Jdbc.ResultExtractor resultExtrator = (Jdbc.ResultExtractor) args[1];
+                            final Jdbc.ResultExtractor resultExtractor = (Jdbc.ResultExtractor) args[1];
                             N.checkArgNotNull(cond, "cond");
-                            N.checkArgNotNull(resultExtrator, "resultExtrator");
+                            N.checkArgNotNull(resultExtractor, "resultExtractor");
 
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .settParameters(sp.parameters, collParamsSetter)
-                                    .query(resultExtrator);
+                                    .query(resultExtractor);
                         };
                     } else if (methodName.equals("query") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(Jdbc.ResultExtractor.class)) {
                         call = (proxy, args) -> {
                             final Collection<String> selectPropNames = (Collection<String>) args[0];
                             final Condition cond = (Condition) args[1];
-                            final Jdbc.ResultExtractor resultExtrator = (Jdbc.ResultExtractor) args[2];
+                            final Jdbc.ResultExtractor resultExtractor = (Jdbc.ResultExtractor) args[2];
                             N.checkArgNotNull(cond, "cond");
-                            N.checkArgNotNull(resultExtrator, "resultExtrator");
+                            N.checkArgNotNull(resultExtractor, "resultExtractor");
 
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .settParameters(sp.parameters, collParamsSetter)
-                                    .query(resultExtrator);
+                                    .query(resultExtractor);
                         };
                     } else if (methodName.equals("query") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.BiResultExtractor.class)) {
                         call = (proxy, args) -> {
                             final Condition cond = (Condition) args[0];
-                            final Jdbc.BiResultExtractor resultExtrator = (Jdbc.BiResultExtractor) args[1];
+                            final Jdbc.BiResultExtractor resultExtractor = (Jdbc.BiResultExtractor) args[1];
                             N.checkArgNotNull(cond, "cond");
-                            N.checkArgNotNull(resultExtrator, "resultExtrator");
+                            N.checkArgNotNull(resultExtractor, "resultExtractor");
 
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .settParameters(sp.parameters, collParamsSetter)
-                                    .query(resultExtrator);
+                                    .query(resultExtractor);
                         };
                     } else if (methodName.equals("query") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(Jdbc.BiResultExtractor.class)) {
                         call = (proxy, args) -> {
                             final Collection<String> selectPropNames = (Collection<String>) args[0];
                             final Condition cond = (Condition) args[1];
-                            final Jdbc.BiResultExtractor resultExtrator = (Jdbc.BiResultExtractor) args[2];
+                            final Jdbc.BiResultExtractor resultExtractor = (Jdbc.BiResultExtractor) args[2];
                             N.checkArgNotNull(cond, "cond");
-                            N.checkArgNotNull(resultExtrator, "resultExtrator");
+                            N.checkArgNotNull(resultExtractor, "resultExtractor");
 
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             return proxy.prepareQuery(sp.sql)
                                     .setFetchDirection(FetchDirection.FORWARD)
                                     .settParameters(sp.parameters, collParamsSetter)
-                                    .query(resultExtrator);
+                                    .query(resultExtractor);
                         };
                     } else if (methodName.equals("list") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {

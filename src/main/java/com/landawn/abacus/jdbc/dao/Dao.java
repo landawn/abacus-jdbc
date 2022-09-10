@@ -1260,46 +1260,46 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      *
      * @param cond
-     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtrator) throws SQLException;
+    <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException;
 
     /**
      *
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
      * @param cond
-     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtrator) throws SQLException;
+    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException;
 
     /**
      *
      * @param cond
-     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return
      * @throws SQLException
      */
-    <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtrator) throws SQLException;
+    <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException;
 
     /**
      *
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
      * @param cond
-     * @param resultExtrator Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtrator) throws SQLException;
+    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException;
 
     /**
      *
