@@ -21,66 +21,76 @@ package com.landawn.abacus.jdbc.dao;
  *
  */
 public enum OP {
-    exists,
-    findOnlyOne,
-    findFirst,
-    list,
+    exists(true),
+    findOnlyOne(true),
+    findFirst(true),
+    list(true),
 
     /**
      * @deprecated generally it's unnecessary to specify the {@code "op = OP.query"} in {@code Select/NamedSelect}.
      */
-    query,
+    query(true),
 
     /**
      *
      * @deprecated generally it's unnecessary to specify the {@code "op = OP.stream"} in {@code Select/NamedSelect}.
      */
-    stream,
+    stream(true),
 
     /**
      *
      */
-    queryForSingle,
+    queryForSingle(true),
 
     /**
      *
      */
-    queryForUnique,
+    queryForUnique(true),
 
     /**
      * Mostly it's for {@code @Call} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code listAll/listAllAndGetOutParameters}.
      */
-    listAll,
+    listAll(true),
 
     /**
      * Mostly it's for {@code @Call} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/queryAllAndGetOutParameters}.
      */
-    queryAll,
+    queryAll(true),
 
     /**
      * Mostly it's for {@code @Call} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code streamAll}.
      */
-    streamAll,
+    streamAll(true),
 
     /**
      * Mostly it's for {@code @Call} to execute the target procedure and get out parameters by {@code executeAndGetOutParameters}.
      */
-    executeAndGetOutParameters,
+    executeAndGetOutParameters(true),
 
     /**
      *
      */
-    update,
+    update(false),
 
     /**
      *
      */
-    largeUpdate,
+    largeUpdate(false),
 
     /* batchUpdate,*/
 
     /**
      *
      */
-    DEFAULT;
+    DEFAULT(false);
+
+    private final boolean isQuery;
+
+    OP(boolean isQuery) {
+        this.isQuery = isQuery;
+    }
+
+    public boolean isQuery() {
+        return isQuery;
+    }
 }

@@ -4810,7 +4810,7 @@ final class DaoImpl {
                     final Jdbc.BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter = createParametersSetter(queryInfo, fullClassMethodName,
                             method, paramTypes, paramLen, stmtParamLen, stmtParamIndexes, bindListParamFlags, stmtParamLen);
 
-                    if (sqlAnno.annotationType().equals(Select.class) || (isCall && !isUpdateReturnType)) {
+                    if (sqlAnno.annotationType().equals(Select.class) || (isCall && (op.isQuery() || !isUpdateReturnType))) {
                         final Throwables.BiFunction<AbstractPreparedQuery, Object[], Object, Exception> queryFunc = createQueryFunctionByMethod(entityClass,
                                 method, mappedByKey, mergedByIds, fetchColumnByEntityClass, hasRowMapperOrResultExtractor, hasRowFilter, op, isCall,
                                 fullClassMethodName, entityClass);
