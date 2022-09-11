@@ -48,4 +48,6 @@ public @interface MergedById {
     String value() default "";
 
     String ids() default "";
+
+    String prefixFieldMapping() default "";
 }

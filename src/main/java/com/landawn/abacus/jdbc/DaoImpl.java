@@ -131,6 +131,7 @@ import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.SQLMapper;
 import com.landawn.abacus.util.Splitter;
+import com.landawn.abacus.util.Splitter.MapSplitter;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
@@ -596,9 +597,9 @@ final class DaoImpl {
 
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Class<?> entityClass,
-            final Method method, final String mappedByKey, final List<String> mergedByIds, final boolean fetchColumnByEntityClass,
-            final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final OP op, final boolean isCall, final String fullClassMethodName,
-            final Class<?> targetEntityClass) {
+            final Method method, final String mappedByKey, final List<String> mergedByIds, final Map<String, String> prefixFieldMapping,
+            final boolean fetchColumnByEntityClass, final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final OP op, final boolean isCall,
+            final String fullClassMethodName, final Class<?> targetEntityClass) {
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
         final Class<?> firstReturnEleType = getFirstReturnEleType(method);
@@ -4776,6 +4777,9 @@ final class DaoImpl {
                                     .split(N.notNullOrEmpty(mergedByIdAnno.value()) ? mergedByIdAnno.value()
                                             : (N.notNullOrEmpty(mergedByIdAnno.ids()) ? mergedByIdAnno.ids() : Strings.join(idPropNameList, ",")));
 
+                    final Map<String, String> prefixFieldMapping = mergedByIdAnno == null || N.isNullOrEmpty(mergedByIdAnno.prefixFieldMapping()) ? null
+                            : MapSplitter.with(",", "=").trimResults().split(mergedByIdAnno.prefixFieldMapping());
+
                     if (mergedByIdAnno != null && N.isNullOrEmpty(mergedByIds)) {
                         throw new IllegalArgumentException("Merged id name(s) can't be null or empty in method: " + fullClassMethodName);
                     }
@@ -4812,8 +4816,8 @@ final class DaoImpl {
 
                     if (sqlAnno.annotationType().equals(Select.class) || (isCall && (op.isQuery() || !isUpdateReturnType))) {
                         final Throwables.BiFunction<AbstractPreparedQuery, Object[], Object, Exception> queryFunc = createQueryFunctionByMethod(entityClass,
-                                method, mappedByKey, mergedByIds, fetchColumnByEntityClass, hasRowMapperOrResultExtractor, hasRowFilter, op, isCall,
-                                fullClassMethodName, entityClass);
+                                method, mappedByKey, mergedByIds, prefixFieldMapping, fetchColumnByEntityClass, hasRowMapperOrResultExtractor, hasRowFilter, op,
+                                isCall, fullClassMethodName, entityClass);
 
                         // Getting ClassCastException. Not sure why query result is being casted Dao. It seems there is a bug in JDk compiler.
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
