@@ -67,6 +67,7 @@ import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.ObjectPool;
 import com.landawn.abacus.util.ParsedSql;
 import com.landawn.abacus.util.Seid;
+import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
@@ -459,7 +460,6 @@ public final class Jdbc {
             N.checkArgNotNull(supplier, "supplier");
 
             return rs -> {
-
                 final M result = supplier.get();
                 K key = null;
                 List<V> value = null;
@@ -517,7 +517,6 @@ public final class Jdbc {
             N.checkArgNotNull(supplier, "supplier");
 
             return rs -> {
-
                 final Supplier<A> downstreamSupplier = downstream.supplier();
                 final BiConsumer<A, ? super V> downstreamAccumulator = downstream.accumulator();
                 final Function<A, D> downstreamFinisher = downstream.finisher();
@@ -644,6 +643,12 @@ public final class Jdbc {
         @Stateful
         static ResultExtractor<DataSet> toDataSet(final Class<?> entityClass) {
             return toDataSet(RowExtractor.createBy(entityClass));
+        }
+
+        @SequentialOnly
+        @Stateful
+        static ResultExtractor<DataSet> toDataSet(final Class<?> entityClass, final Map<String, String> prefixAndFieldNameMap) {
+            return toDataSet(RowExtractor.createBy(entityClass, prefixAndFieldNameMap));
         }
 
         static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter) {
@@ -1099,8 +1104,8 @@ public final class Jdbc {
         @Stateful
         static RowMapper<DisposableObjArray> toDisposableObjArray() {
             return new RowMapper<>() {
-                private volatile DisposableObjArray disposable = null;
-                private int columnCount = 0;
+                private DisposableObjArray disposable = null;
+                private int columnCount = -1;
                 private Object[] output = null;
 
                 @Override
@@ -1133,8 +1138,8 @@ public final class Jdbc {
             N.checkArgNotNull(entityClass, "entityClass");
 
             return new RowMapper<>() {
-                private volatile DisposableObjArray disposable = null;
-                private int columnCount = 0;
+                private DisposableObjArray disposable = null;
+                private int columnCount = -1;
                 private Object[] output = null;
 
                 private Type<?>[] columnTypes = null;
@@ -1524,18 +1529,14 @@ public final class Jdbc {
                 // setDefaultColumnGetter();
 
                 return new RowMapper<>() {
-                    private volatile int rsColumnCount = -1;
-                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                    private ColumnGetter<?>[] rsColumnGetters = null;
+                    private int rsColumnCount = -1;
 
-                    @SuppressWarnings("hiding")
                     @Override
                     public Object[] apply(ResultSet rs) throws SQLException {
-                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
-
                         if (rsColumnGetters == null) {
                             rsColumnGetters = initColumnGetter(rs);
                             rsColumnCount = rsColumnGetters.length - 1;
-                            this.rsColumnGetters = rsColumnGetters;
                         }
 
                         final Object[] row = new Object[rsColumnCount];
@@ -1560,18 +1561,14 @@ public final class Jdbc {
                 // setDefaultColumnGetter();
 
                 return new RowMapper<>() {
-                    private volatile int rsColumnCount = -1;
-                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                    private ColumnGetter<?>[] rsColumnGetters = null;
+                    private int rsColumnCount = -1;
 
-                    @SuppressWarnings("hiding")
                     @Override
                     public List<Object> apply(ResultSet rs) throws SQLException {
-                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
-
                         if (rsColumnGetters == null) {
                             rsColumnGetters = initColumnGetter(rs);
                             rsColumnCount = rsColumnGetters.length - 1;
-                            this.rsColumnGetters = rsColumnGetters;
                         }
 
                         final List<Object> row = new ArrayList<>(rsColumnCount);
@@ -1596,20 +1593,16 @@ public final class Jdbc {
             @Stateful
             public <R> RowMapper<R> to(final Throwables.Function<DisposableObjArray, R, SQLException> finisher) {
                 return new RowMapper<>() {
-                    private volatile int rsColumnCount = -1;
-                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                    private ColumnGetter<?>[] rsColumnGetters = null;
+                    private int rsColumnCount = -1;
                     private Object[] outputRow = null;
                     private DisposableObjArray output;
 
-                    @SuppressWarnings("hiding")
                     @Override
                     public R apply(ResultSet rs) throws SQLException {
-                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
-
                         if (rsColumnGetters == null) {
                             rsColumnGetters = initColumnGetter(rs);
                             this.rsColumnCount = rsColumnGetters.length - 1;
-                            this.rsColumnGetters = rsColumnGetters;
                             this.outputRow = new Object[rsColumnCount];
                             this.output = DisposableObjArray.wrap(outputRow);
                         }
@@ -1817,15 +1810,15 @@ public final class Jdbc {
                     };
                 } else {
                     return new BiRowMapper<>() {
-                        private volatile String[] columnLabels = null;
+                        private String[] columnLabels = null;
+                        private int columnCount = -1;
 
-                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            final int columnCount = columnLabelList.size();
-                            String[] columnLabels = this.columnLabels;
 
                             if (columnLabels == null) {
+                                columnCount = columnLabelList.size();
+
                                 columnLabels = columnLabelList.toArray(new String[columnCount]);
 
                                 for (int i = 0; i < columnCount; i++) {
@@ -1835,8 +1828,6 @@ public final class Jdbc {
                                         columnLabels[i] = null;
                                     }
                                 }
-
-                                this.columnLabels = columnLabels;
                             }
 
                             final Object[] a = Array.newInstance(targetClass.getComponentType(), columnCount);
@@ -1873,11 +1864,9 @@ public final class Jdbc {
                     return new BiRowMapper<>() {
                         private String[] columnLabels = null;
 
-                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             final int columnCount = columnLabelList.size();
-                            String[] columnLabels = this.columnLabels;
 
                             if (columnLabels == null) {
                                 columnLabels = columnLabelList.toArray(new String[columnCount]);
@@ -1889,8 +1878,6 @@ public final class Jdbc {
                                         columnLabels[i] = null;
                                     }
                                 }
-
-                                this.columnLabels = columnLabels;
                             }
 
                             final Collection<Object> c = N.newCollection(targetClass, columnCount);
@@ -1912,16 +1899,13 @@ public final class Jdbc {
                         && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()))) {
                     return new BiRowMapper<>() {
                         private String[] columnLabels = null;
+                        private int columnCount = -1;
 
-                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            final int columnCount = columnLabelList.size();
-                            String[] columnLabels = this.columnLabels;
-
                             if (columnLabels == null) {
+                                columnCount = columnLabelList.size();
                                 columnLabels = columnLabelList.toArray(new String[columnCount]);
-                                this.columnLabels = columnLabels;
                             }
 
                             final Map<String, Object> m = N.newMap(targetClass, columnCount);
@@ -1936,14 +1920,12 @@ public final class Jdbc {
                 } else {
                     return new BiRowMapper<>() {
                         private String[] columnLabels = null;
+                        private int columnCount = -1;
 
-                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            final int columnCount = columnLabelList.size();
-                            String[] columnLabels = this.columnLabels;
-
                             if (columnLabels == null) {
+                                columnCount = columnLabelList.size();
                                 columnLabels = columnLabelList.toArray(new String[columnCount]);
 
                                 for (int i = 0; i < columnCount; i++) {
@@ -1953,8 +1935,6 @@ public final class Jdbc {
                                         columnLabels[i] = null;
                                     }
                                 }
-
-                                this.columnLabels = columnLabels;
                             }
 
                             final Map<String, Object> m = N.newMap(targetClass, columnCount);
@@ -1975,22 +1955,17 @@ public final class Jdbc {
                 final EntityInfo entityInfo = ParserUtil.getEntityInfo(targetClass);
 
                 return new BiRowMapper<>() {
-                    private volatile String[] columnLabels = null;
-                    private volatile PropInfo[] propInfos;
-                    private volatile Type<?>[] columnTypes = null;
+                    private String[] columnLabels = null;
+                    private PropInfo[] propInfos;
+                    private Type<?>[] columnTypes = null;
+                    private int columnCount = -1;
 
-                    @SuppressWarnings("hiding")
                     @Override
                     public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                        final int columnCount = columnLabelList.size();
-
-                        String[] columnLabels = this.columnLabels;
-                        PropInfo[] propInfos = this.propInfos;
-                        Type<?>[] columnTypes = this.columnTypes;
-
                         if (columnLabels == null) {
                             final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(targetClass);
 
+                            columnCount = columnLabelList.size();
                             columnLabels = columnLabelList.toArray(new String[columnCount]);
                             propInfos = new PropInfo[columnCount];
                             columnTypes = new Type[columnCount];
@@ -2014,13 +1989,14 @@ public final class Jdbc {
                                     }
 
                                     if (propInfos[i] == null) {
-                                        propInfos[i] = JdbcUtil.getSubPropInfo(targetClass, columnLabels[i]);
+                                        final String newColumnName = Jdbc.checkPrefix(entityInfo, columnLabels[i], null, columnLabelList);
+                                        propInfos[i] = JdbcUtil.getSubPropInfo(targetClass, newColumnName);
 
                                         if (propInfos[i] == null) {
-                                            String fieldName = column2FieldNameMap.get(columnLabels[i]);
+                                            String fieldName = column2FieldNameMap.get(newColumnName);
 
                                             if (N.isNullOrEmpty(fieldName)) {
-                                                fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
+                                                fieldName = column2FieldNameMap.get(newColumnName.toLowerCase());
                                             }
 
                                             if (N.notNullOrEmpty(fieldName)) {
@@ -2030,6 +2006,8 @@ public final class Jdbc {
                                                     columnLabels[i] = fieldName;
                                                 }
                                             }
+                                        } else {
+                                            columnLabels[i] = newColumnName;
                                         }
 
                                         if (propInfos[i] == null) {
@@ -2052,10 +2030,6 @@ public final class Jdbc {
                                     columnTypes[i] = null;
                                 }
                             }
-
-                            this.columnLabels = columnLabels;
-                            this.propInfos = propInfos;
-                            this.columnTypes = columnTypes;
                         }
 
                         final Object result = entityInfo.createEntityResult();
@@ -2080,7 +2054,7 @@ public final class Jdbc {
                         && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()))) {
                     return new BiRowMapper<>() {
                         private final Type<? extends T> targetType = N.typeOf(targetClass);
-                        private int columnCount = 0;
+                        private int columnCount = -1;
 
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
@@ -2097,6 +2071,131 @@ public final class Jdbc {
                             "'columnNameFilter' and 'columnNameConverter' are not supported to convert single column to target type: " + targetClass);
                 }
             }
+        }
+
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param <T>
+         * @param entityClass
+         * @param prefixAndFieldNameMap
+         * @return
+         */
+        @SequentialOnly
+        @Stateful
+        static <T> BiRowMapper<T> to(final Class<? extends T> entityClass, final Map<String, String> prefixAndFieldNameMap) {
+            return to(entityClass, prefixAndFieldNameMap, false);
+        }
+
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param <T>
+         * @param entityClass
+         * @param prefixAndFieldNameMap
+         * @param ignoreNonMatchedColumns
+         * @return
+         */
+        @SequentialOnly
+        @Stateful
+        static <T> BiRowMapper<T> to(final Class<? extends T> entityClass, final Map<String, String> prefixAndFieldNameMap,
+                final boolean ignoreNonMatchedColumns) {
+            if (N.isNullOrEmpty(prefixAndFieldNameMap)) {
+                return to(entityClass, ignoreNonMatchedColumns);
+            }
+
+            N.checkArgument(ClassUtil.isEntity(entityClass), "{} is not an entity class", entityClass);
+
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+
+            return new BiRowMapper<>() {
+                private String[] columnLabels = null;
+                private PropInfo[] propInfos;
+                private Type<?>[] columnTypes = null;
+                private int columnCount = -1;
+
+                @Override
+                public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+
+                    if (columnLabels == null) {
+                        final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
+
+                        columnCount = columnLabelList.size();
+                        columnLabels = columnLabelList.toArray(new String[columnCount]);
+                        propInfos = new PropInfo[columnCount];
+                        columnTypes = new Type[columnCount];
+
+                        for (int i = 0; i < columnCount; i++) {
+                            propInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
+
+                            if (propInfos[i] == null) {
+                                String fieldName = column2FieldNameMap.get(columnLabels[i]);
+
+                                if (N.isNullOrEmpty(fieldName)) {
+                                    fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
+                                }
+
+                                if (N.notNullOrEmpty(fieldName)) {
+                                    propInfos[i] = entityInfo.getPropInfo(fieldName);
+                                }
+                            }
+
+                            if (propInfos[i] == null) {
+                                final String newColumnName = Jdbc.checkPrefix(entityInfo, columnLabels[i], prefixAndFieldNameMap, columnLabelList);
+                                propInfos[i] = JdbcUtil.getSubPropInfo(entityClass, newColumnName);
+
+                                if (propInfos[i] == null) {
+                                    String fieldName = column2FieldNameMap.get(newColumnName);
+
+                                    if (N.isNullOrEmpty(fieldName)) {
+                                        fieldName = column2FieldNameMap.get(newColumnName.toLowerCase());
+                                    }
+
+                                    if (N.notNullOrEmpty(fieldName)) {
+                                        propInfos[i] = JdbcUtil.getSubPropInfo(entityClass, fieldName);
+
+                                        if (propInfos[i] != null) {
+                                            columnLabels[i] = fieldName;
+                                        }
+                                    }
+                                } else {
+                                    columnLabels[i] = newColumnName;
+                                }
+
+                                if (propInfos[i] == null) {
+                                    if (ignoreNonMatchedColumns) {
+                                        columnLabels[i] = null;
+                                    } else {
+                                        throw new IllegalArgumentException("No property in class: " + ClassUtil.getCanonicalClassName(entityClass)
+                                                + " mapping to column: " + columnLabels[i]);
+                                    }
+                                } else {
+                                    columnTypes[i] = propInfos[i].dbType;
+                                    propInfos[i] = null;
+                                }
+                            } else {
+                                columnTypes[i] = propInfos[i].dbType;
+                            }
+                        }
+                    }
+
+                    final Object result = entityInfo.createEntityResult();
+
+                    for (int i = 0; i < columnCount; i++) {
+                        if (columnLabels[i] == null) {
+                            continue;
+                        }
+
+                        if (propInfos[i] == null) {
+                            entityInfo.setPropValue(result, columnLabels[i], columnTypes[i].get(rs, i + 1));
+                        } else {
+                            propInfos[i].setPropValue(result, columnTypes[i].get(rs, i + 1));
+                        }
+                    }
+
+                    return entityInfo.finishEntityResult(result);
+                }
+            };
         }
 
         //        Map<Class<?>, Tuple2<? extends Supplier<?>, ? extends Function<?, ?>>> buildFuncMap = new ConcurrentHashMap<>();
@@ -2390,8 +2489,8 @@ public final class Jdbc {
         @Stateful
         static BiRowMapper<DisposableObjArray> toDisposableObjArray() {
             return new BiRowMapper<>() {
-                private volatile DisposableObjArray disposable = null;
-                private int columnCount = 0;
+                private DisposableObjArray disposable = null;
+                private int columnCount = -1;
                 private Object[] output = null;
 
                 @Override
@@ -2424,8 +2523,8 @@ public final class Jdbc {
             N.checkArgNotNull(entityClass, "entityClass");
 
             return new BiRowMapper<>() {
-                private volatile DisposableObjArray disposable = null;
-                private int columnCount = 0;
+                private DisposableObjArray disposable = null;
+                private int columnCount = -1;
                 private Object[] output = null;
 
                 private Type<?>[] columnTypes = null;
@@ -2660,18 +2759,14 @@ public final class Jdbc {
             public <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final boolean ignoreNonMatchedColumns) {
                 if (Object[].class.isAssignableFrom(targetClass)) {
                     return new BiRowMapper<>() {
-                        private volatile int rsColumnCount = -1;
-                        private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                        private ColumnGetter<?>[] rsColumnGetters = null;
+                        private int rsColumnCount = -1;
 
-                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
-
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
                                 rsColumnGetters = initColumnGetter(columnLabelList);
-                                this.rsColumnGetters = rsColumnGetters;
                             }
 
                             final Object[] a = Array.newInstance(targetClass.getComponentType(), rsColumnCount);
@@ -2685,18 +2780,14 @@ public final class Jdbc {
                     };
                 } else if (List.class.isAssignableFrom(targetClass)) {
                     return new BiRowMapper<>() {
-                        private int rsColumnCount = -1;
                         private ColumnGetter<?>[] rsColumnGetters = null;
+                        private int rsColumnCount = -1;
 
-                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
-
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
                                 rsColumnGetters = initColumnGetter(columnLabelList);
-                                this.rsColumnGetters = rsColumnGetters;
                             }
 
                             final Collection<Object> c = N.newCollection(targetClass, rsColumnCount);
@@ -2710,19 +2801,16 @@ public final class Jdbc {
                     };
                 } else if (Map.class.isAssignableFrom(targetClass)) {
                     return new BiRowMapper<>() {
-                        private int rsColumnCount = -1;
                         private ColumnGetter<?>[] rsColumnGetters = null;
+                        private int rsColumnCount = -1;
                         private String[] columnLabels = null;
 
-                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
 
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
                                 rsColumnGetters = initColumnGetter(columnLabelList);
-                                this.rsColumnGetters = rsColumnGetters;
 
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
                             }
@@ -2745,15 +2833,11 @@ public final class Jdbc {
                         private String[] columnLabels = null;
                         private PropInfo[] propInfos;
 
-                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
-
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
                                 rsColumnGetters = initColumnGetter(columnLabelList);
-                                this.rsColumnGetters = rsColumnGetters;
 
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
                                 final PropInfo[] propInfos = new PropInfo[rsColumnCount];
@@ -2807,14 +2891,11 @@ public final class Jdbc {
                     };
                 } else {
                     return new BiRowMapper<>() {
-                        private volatile int rsColumnCount = -1;
-                        private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                        private int rsColumnCount = -1;
+                        private ColumnGetter<?>[] rsColumnGetters = null;
 
-                        @SuppressWarnings("hiding")
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
-
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
                                 rsColumnGetters = initColumnGetter(columnLabelList);
@@ -2822,8 +2903,6 @@ public final class Jdbc {
                                 if (rsColumnGetters[0] == ColumnGetter.GET_OBJECT) {
                                     rsColumnGetters[0] = ColumnGetter.get(N.typeOf(targetClass));
                                 }
-
-                                this.rsColumnGetters = rsColumnGetters;
                             }
 
                             if (rsColumnCount != 1 && (rsColumnCount = columnLabelList.size()) != 1) {
@@ -2879,8 +2958,8 @@ public final class Jdbc {
             N.checkArgNotNull(consumer, "consumer");
 
             return new RowConsumer() {
-                private volatile DisposableObjArray disposable = null;
-                private int columnCount = 0;
+                private DisposableObjArray disposable = null;
+                private int columnCount = -1;
                 private Object[] output = null;
 
                 @Override
@@ -2915,8 +2994,8 @@ public final class Jdbc {
             N.checkArgNotNull(consumer, "consumer");
 
             return new RowConsumer() {
-                private volatile DisposableObjArray disposable = null;
-                private int columnCount = 0;
+                private DisposableObjArray disposable = null;
+                private int columnCount = -1;
                 private Object[] output = null;
 
                 private Type<?>[] columnTypes = null;
@@ -3010,8 +3089,8 @@ public final class Jdbc {
             N.checkArgNotNull(consumer, "consumer");
 
             return new BiRowConsumer() {
-                private volatile DisposableObjArray disposable = null;
-                private int columnCount = 0;
+                private DisposableObjArray disposable = null;
+                private int columnCount = -1;
                 private Object[] output = null;
 
                 @Override
@@ -3046,8 +3125,8 @@ public final class Jdbc {
             N.checkArgNotNull(consumer, "consumer");
 
             return new BiRowConsumer() {
-                private volatile DisposableObjArray disposable = null;
-                private int columnCount = 0;
+                private DisposableObjArray disposable = null;
+                private int columnCount = -1;
                 private Object[] output = null;
 
                 private Type<?>[] columnTypes = null;
@@ -3181,7 +3260,20 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static RowExtractor createBy(final Class<?> entityClassForFetch) {
-            return createBy(entityClassForFetch, null);
+            return createBy(entityClassForFetch, null, null);
+        }
+
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param entityClassForFetch
+         * @param prefixAndFieldNameMap
+         * @return
+         */
+        @SequentialOnly
+        @Stateful
+        static RowExtractor createBy(final Class<?> entityClassForFetch, final Map<String, String> prefixAndFieldNameMap) {
+            return createBy(entityClassForFetch, null, prefixAndFieldNameMap);
         }
 
         /**
@@ -3194,18 +3286,29 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static RowExtractor createBy(final Class<?> entityClassForFetch, final List<String> columnLabels) {
+            return createBy(entityClassForFetch, columnLabels, null);
+        }
+
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param entityClassForFetch
+         * @param columnLabels
+         * @return
+         */
+        @SequentialOnly
+        @Stateful
+        static RowExtractor createBy(final Class<?> entityClassForFetch, final List<String> columnLabels, final Map<String, String> prefixAndFieldNameMap) {
             N.checkArgument(ClassUtil.isEntity(entityClassForFetch), "entityClassForFetch");
 
             final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClassForFetch);
 
             return new RowExtractor() {
-                private volatile Type<?>[] columnTypes = null;
-                private volatile int columnCount = 0;
+                private Type<?>[] columnTypes = null;
+                private int columnCount = -1;
 
                 @Override
                 public void accept(ResultSet rs, Object[] outputRow) throws SQLException {
-                    Type<?>[] columnTypes = this.columnTypes;
-
                     if (columnTypes == null) {
                         final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClassForFetch);
                         final List<String> columnLabelList = N.isNullOrEmpty(columnLabels) ? JdbcUtil.getColumnLabelList(rs) : columnLabels;
@@ -3231,17 +3334,23 @@ public final class Jdbc {
                             }
 
                             if (propInfo == null) {
-                                propInfo = JdbcUtil.getSubPropInfo(entityClassForFetch, columnLabels[i]);
+                                final String newColumnName = Jdbc.checkPrefix(entityInfo, columnLabels[i], prefixAndFieldNameMap, columnLabelList);
+
+                                propInfo = JdbcUtil.getSubPropInfo(entityClassForFetch, newColumnName);
 
                                 if (propInfo == null) {
-                                    String fieldName = column2FieldNameMap.get(columnLabels[i]);
+                                    propInfo = JdbcUtil.getSubPropInfo(entityClassForFetch, columnLabels[i]);
 
-                                    if (N.isNullOrEmpty(fieldName)) {
-                                        fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
-                                    }
+                                    if (propInfo == null) {
+                                        String fieldName = column2FieldNameMap.get(columnLabels[i]);
 
-                                    if (N.notNullOrEmpty(fieldName)) {
-                                        propInfo = JdbcUtil.getSubPropInfo(entityClassForFetch, fieldName);
+                                        if (N.isNullOrEmpty(fieldName)) {
+                                            fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
+                                        }
+
+                                        if (N.notNullOrEmpty(fieldName)) {
+                                            propInfo = JdbcUtil.getSubPropInfo(entityClassForFetch, fieldName);
+                                        }
                                     }
                                 }
 
@@ -3254,8 +3363,6 @@ public final class Jdbc {
                                 columnTypes[i] = propInfo.dbType;
                             }
                         }
-
-                        this.columnTypes = columnTypes;
                     }
 
                     for (int i = 0; i < columnCount; i++) {
@@ -3386,18 +3493,14 @@ public final class Jdbc {
             @Stateful
             public RowExtractor build() {
                 return new RowExtractor() {
-                    private volatile int rsColumnCount = -1;
-                    private volatile ColumnGetter<?>[] rsColumnGetters = null;
+                    private ColumnGetter<?>[] rsColumnGetters = null;
+                    private int rsColumnCount = -1;
 
-                    @SuppressWarnings("hiding")
                     @Override
                     public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
-                        ColumnGetter<?>[] rsColumnGetters = this.rsColumnGetters;
-
                         if (rsColumnGetters == null) {
                             rsColumnGetters = initColumnGetter(outputRow.length);
                             rsColumnCount = rsColumnGetters.length - 1;
-                            this.rsColumnGetters = rsColumnGetters;
                         }
 
                         for (int i = 0; i < rsColumnCount; i++) {
@@ -4255,4 +4358,103 @@ public final class Jdbc {
             map.put(key, remappingFunction.apply(oldValue, value));
         }
     }
+
+    static String checkPrefix(final EntityInfo entityInfo, final String columnName, final Map<String, String> prefixAndFieldNameMap,
+            final List<String> columnLabelList) {
+
+        final int idx = columnName.indexOf('.');
+
+        if (idx <= 0) {
+            return columnName;
+        }
+
+        final String prefix = columnName.substring(0, idx);
+        PropInfo propInfo = entityInfo.getPropInfo(prefix);
+
+        if (propInfo != null) {
+            return columnName;
+        }
+
+        if (N.notNullOrEmpty(prefixAndFieldNameMap) && prefixAndFieldNameMap.containsKey(prefix)) {
+            propInfo = entityInfo.getPropInfo(prefixAndFieldNameMap.get(prefix));
+
+            if (propInfo != null) {
+                return propInfo.name + columnName.substring(idx);
+            }
+        }
+
+        propInfo = entityInfo.getPropInfo(prefix + "s"); // Trying to do something smart?
+        final int len = prefix.length() + 1;
+
+        if (propInfo != null && (propInfo.type.isEntity() || (propInfo.type.isCollection() && propInfo.type.getElementType().isEntity()))
+                && N.noneMatch(columnLabelList, it -> it.length() > len && it.charAt(len) == '.' && Strings.startsWithIgnoreCase(it, prefix + "s."))) {
+            // good
+        } else {
+            propInfo = entityInfo.getPropInfo(prefix + "es"); // Trying to do something smart?
+            final int len2 = prefix.length() + 2;
+
+            if (propInfo != null && (propInfo.type.isEntity() || (propInfo.type.isCollection() && propInfo.type.getElementType().isEntity()))
+                    && N.noneMatch(columnLabelList, it -> it.length() > len2 && it.charAt(len2) == '.' && Strings.startsWithIgnoreCase(it, prefix + "es."))) {
+                // good
+            } else {
+                // Sorry, have done all I can do.
+                propInfo = null;
+            }
+        }
+
+        if (propInfo != null) {
+            return propInfo.name + columnName.substring(idx);
+        }
+
+        return columnName;
+    }
+
+    //    // TODO it will be removed after below logic is handled in RowDataSet.
+    //    static List<String> checkMergedByIds(final EntityInfo entityInfo, final DataSet dataSet, final List<String> mergedByIds) {
+    //        if (dataSet.containsAllColumns(mergedByIds)) {
+    //            return mergedByIds;
+    //        }
+    //
+    //        final List<String> columnNameList = dataSet.columnNameList();
+    //        final List<String> tmp = new ArrayList<>(mergedByIds.size());
+    //        PropInfo propInfo = null;
+    //
+    //        outer: for (String idPropName : mergedByIds) {
+    //            if (columnNameList.contains(idPropName)) {
+    //                tmp.add(idPropName);
+    //            } else {
+    //                propInfo = entityInfo.getPropInfo(idPropName);
+    //
+    //                if (propInfo != null && propInfo.columnName.isPresent() && columnNameList.contains(propInfo.columnName.get())) {
+    //                    tmp.add(propInfo.columnName.get());
+    //                } else {
+    //                    for (String columnName : columnNameList) {
+    //                        if (columnName.equalsIgnoreCase(idPropName)) {
+    //                            tmp.add(columnName);
+    //
+    //                            continue outer;
+    //                        }
+    //                    }
+    //
+    //                    if (propInfo != null) {
+    //                        for (String columnName : columnNameList) {
+    //                            if (propInfo.equals(entityInfo.getPropInfo(columnName))) {
+    //                                tmp.add(columnName);
+    //
+    //                                continue outer;
+    //                            }
+    //                        }
+    //                    }
+    //
+    //                    return mergedByIds;
+    //                }
+    //            }
+    //        }
+    //
+    //        if (columnNameList.containsAll(tmp)) {
+    //            return tmp;
+    //        }
+    //
+    //        return mergedByIds;
+    //    }
 }

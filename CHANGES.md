@@ -1,3 +1,9 @@
+### 3.2.9
+
+* Add `PrefixFieldMapping`.
+* Improvements and bug fix.
+
+
 ### 3.2.8
 
 * Improvements and bug fix.

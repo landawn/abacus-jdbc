@@ -23,6 +23,7 @@ import com.landawn.abacus.jdbc.annotation.MappedByKey;
 import com.landawn.abacus.jdbc.annotation.MergedById;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.annotation.PerfLog;
+import com.landawn.abacus.jdbc.annotation.PrefixFieldMapping;
 import com.landawn.abacus.jdbc.annotation.Select;
 import com.landawn.abacus.jdbc.annotation.SqlField;
 import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
@@ -176,6 +177,15 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     @Select(sql = "select user.id as \"id\", first_name, last_name, device.id as \"devices.id\", device.manufacture as \"devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.id as \"address.id\", address.street as \"address.street\", address.city as \"address.city\" from user left join device on user.id = device.user_id left join address on user.id = address.user_id")
     @MergedById("id")
     Collection<User> listTomergedEntities() throws SQLException;
+
+    @Select(sql = "select user.id as \"id\", first_name, last_name, device.id as \"devices.id\", device.manufacture as \"devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.id as \"address.id\", address.street as \"address.street\", address.city as \"address.city\" from user left join device on user.id = device.user_id left join address on user.id = address.user_id")
+    @MergedById("ID, firstName")
+    Collection<User> listTomergedEntities_2() throws SQLException;
+
+    @Select(sql = "select user.id as \"id\", first_name, last_name, device.id as \"ds.id\", device.manufacture as \"ds.manufacture\", device.model as \"ds.model\", device.user_id as \"ds.user_id\", address.id as \"address.id\", address.street as \"address.street\", address.city as \"address.city\" from user left join device on user.id = device.user_id left join address on user.id = address.user_id")
+    @MergedById("ID, firstName")
+    @PrefixFieldMapping("ds = devices, as = address")
+    Collection<User> listTomergedEntities_3() throws SQLException;
 
     @Select(sql = "select user.id as \"id\", first_name, last_name, device.id as \"devices.id\", device.manufacture as \"devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.id as \"address.id\", address.street as \"address.street\", address.city as \"address.city\" from user left join device on user.id = device.user_id left join address on user.id = address.user_id")
     @MergedById("id")

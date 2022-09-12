@@ -136,7 +136,7 @@ public class DaoTest {
                 .parallel()
                 .map(Fn.ff(it -> userDao.gett(it)))
                 .onEach(it -> it.setCreateTime(null))
-                .sortedBy(it -> it.getId())
+                .sortedBy(User::getId)
                 .toList();
 
         assertEquals(users.get(0), dbUsers.get(0));
@@ -203,7 +203,7 @@ public class DaoTest {
         List<Long> ids = userDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
-        List<User> dbUsers = userDao.batchGet(ids).stream().map(it -> N.copy(it)).collect(Collectors.toList());
+        List<User> dbUsers = userDao.batchGet(ids).stream().map(N::copy).collect(Collectors.toList());
 
         dbUsers.forEach(it -> it.setFirstName(N.uuid()));
 
@@ -261,7 +261,7 @@ public class DaoTest {
         List<Long> ids = userDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
-        int[] intIds = Stream.of(ids).mapToInt(it -> it.intValue()).toArray();
+        int[] intIds = Stream.of(ids).mapToInt(Long::intValue).toArray();
         long[] longIds = N.toLongArray(ids);
         assertEquals(ids.size(), userDao.listByIds(intIds).size());
 
@@ -815,16 +815,16 @@ public class DaoTest {
             userDao.stream(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fnn.println());
         }
 
-        userDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null, Jdbc.RowMapper.builder().get(1, (rs, i) -> rs.getString(i)).toList()).forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null, Jdbc.RowMapper.builder().get(1, ResultSet::getString).toList()).forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
-                Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(List.class)).forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(List.class))
+                .forEach(Fn.println());
 
         userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
                 .forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
-                Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(User.class)).forEach(Fn.println());
+        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(User.class))
+                .forEach(Fn.println());
 
         userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.to(User.class)).forEach(Fn.println());
 
@@ -903,6 +903,12 @@ public class DaoTest {
         System.out.println(userFromDB);
 
         userDao.listTomergedEntities().forEach(Fn.println());
+
+        userDao.listTomergedEntities_2().forEach(Fn.println());
+
+        userDao.listTomergedEntities_3().forEach(Fn.println());
+
+        assertEquals(userDao.listTomergedEntities_2(), userDao.listTomergedEntities_3());
 
         userDao.findOneTomergedEntities().ifPresent(Fn.println());
 

@@ -27,7 +27,7 @@ import java.lang.annotation.Target;
  *
  *  @Select("SELECT id, first_name as \"firstName\", last_name as \"lastName\", devices.id as \"devices.id\", device.model as \"devices.model\" FROM user left join device on user.id =  device.user_id WHERE id in ({ids}")
  *  <br />
- *  MergedById
+ *  @MergedById
  *  <br />
  * List<User> listUser(@BindList("ids") List<Integer> ids) throws SQLException;
  *
@@ -40,14 +40,11 @@ import java.lang.annotation.Target;
 public @interface MergedById {
 
     /**
+     * <code> @MergedById("id, date") </code>
      *
      * @return
-     * @deprecated using ids="id1, id2" for explicit call.
+     * @deprecated
      */
     @Deprecated
     String value() default "";
-
-    String ids() default "";
-
-    String prefixFieldMapping() default "";
 }

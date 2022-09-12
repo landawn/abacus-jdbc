@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Haiyang Li.
+ * Copyright (c) 2022, Haiyang Li.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,40 +19,16 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.HashMap;
-import java.util.Map;
 
-/**
- * The result will be merged by {@code keyName} and mapped to {@code map}.
- *
- * For example:
- * <p>
- * <code>
- *
- *  @Select("SELECT id, first_name, last_name FROM user WHERE id in ({ids}")
- *  <br />
- *  @MappedByKey("id")
- *  <br />
- *  Map&lt;Long, User&gt; listUser(@BindList("ids") List<Integer> ids) throws SQLException;
- *
- * </code>
- * </p>
- *
- */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })
-public @interface MappedByKey {
+public @interface PrefixFieldMapping {
 
     /**
-     *
+     * <code> @PrefixFieldMapping("d=device, c=contact") </code>
      * @return
-     * @deprecated using keyName="id" for explicit call.
+     * @deprecated
      */
     @Deprecated
     String value() default "";
-
-    String keyName() default "";
-
-    @SuppressWarnings("rawtypes")
-    Class<? extends Map> mapClass() default HashMap.class;
 }

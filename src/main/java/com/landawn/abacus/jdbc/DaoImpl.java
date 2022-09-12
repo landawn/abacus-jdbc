@@ -51,6 +51,7 @@ import com.landawn.abacus.condition.Criteria;
 import com.landawn.abacus.condition.Limit;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
 import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
 import com.landawn.abacus.jdbc.annotation.Bind;
@@ -71,6 +72,7 @@ import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.annotation.OutParameter;
 import com.landawn.abacus.jdbc.annotation.OutParameterList;
 import com.landawn.abacus.jdbc.annotation.PerfLog;
+import com.landawn.abacus.jdbc.annotation.PrefixFieldMapping;
 import com.landawn.abacus.jdbc.annotation.RefreshCache;
 import com.landawn.abacus.jdbc.annotation.Select;
 import com.landawn.abacus.jdbc.annotation.SqlField;
@@ -552,12 +554,29 @@ final class DaoImpl {
                         || (methodName.startsWith("notExist") && (methodName.length() == 8 || Character.isUpperCase(methodName.charAt(8)))));
     }
 
+    private static boolean isFindFirst(final Method method, final OP op) {
+        if (op == OP.findFirst) {
+            return true;
+        }
+
+        return op == OP.DEFAULT && !(method.getName().startsWith("findOnlyOne") || method.getName().startsWith("queryForSingle")
+                || method.getName().startsWith("queryForUnique"));
+    }
+
     private static boolean isFindOnlyOne(final Method method, final OP op) {
         if (op == OP.findOnlyOne) {
             return true;
         }
 
-        return method.getName().startsWith("findOnlyOne");
+        return op == OP.DEFAULT && method.getName().startsWith("findOnlyOne");
+    }
+
+    private static boolean isQueryForUnique(final Method method, final OP op) {
+        if (op == OP.queryForUnique) {
+            return true;
+        }
+
+        return op == OP.DEFAULT && method.getName().startsWith("queryForUnique");
     }
 
     private static final ImmutableSet<Class<?>> singleReturnTypeSet = ImmutableSet.of(u.Nullable.class, u.Optional.class, u.OptionalBoolean.class,
@@ -597,12 +616,13 @@ final class DaoImpl {
 
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractPreparedQuery, Object[], R, Exception> createQueryFunctionByMethod(final Class<?> entityClass,
-            final Method method, final String mappedByKey, final List<String> mergedByIds, final Map<String, String> prefixFieldMapping,
+            final Method method, final String mappedByKey, final List<String> mergedByIds, final Map<String, String> prefixFieldMap,
             final boolean fetchColumnByEntityClass, final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final OP op, final boolean isCall,
-            final String fullClassMethodName, final Class<?> targetEntityClass) {
+            final String fullClassMethodName) {
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
         final Class<?> firstReturnEleType = getFirstReturnEleType(method);
+        final Class<?> secondReturnEleType = getSecondReturnEleType(method);
         final Class<?> firstReturnEleEleType = getFirstReturnEleEleType(method);
 
         final int paramLen = paramTypes.length;
@@ -628,7 +648,7 @@ final class DaoImpl {
         }
 
         //    if ((op == OP.queryForSingle || op == OP.queryForUnique)
-        //            && !(Optional.class.isAssignableFrom(returnType) || Nullable.class.isAssignableFrom(returnType))) {
+        //            && !(u.Optional.class.isAssignableFrom(returnType) || Nullable.class.isAssignableFrom(returnType))) {
         //        throw new UnsupportedOperationException(
         //                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         //    }
@@ -638,8 +658,13 @@ final class DaoImpl {
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         }
 
-        if ((DataSet.class.isAssignableFrom(returnType) && !(op == OP.query || op == OP.DEFAULT)) || (Optional.class.isAssignableFrom(returnType)
-                && !(op == OP.findFirst || op == OP.findOnlyOne || op == OP.queryForSingle || op == OP.queryForUnique || op == OP.DEFAULT))) {
+        if (DataSet.class.isAssignableFrom(returnType) && !(op == OP.query || op == OP.DEFAULT)) {
+            throw new UnsupportedOperationException(
+                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
+        }
+
+        if ((u.Optional.class.isAssignableFrom(returnType) || java.util.Optional.class.isAssignableFrom(returnType))
+                && !(op == OP.findFirst || op == OP.findOnlyOne || op == OP.queryForSingle || op == OP.queryForUnique || op == OP.DEFAULT)) {
             throw new UnsupportedOperationException(
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         }
@@ -895,14 +920,10 @@ final class DaoImpl {
         final Class<? extends Map> targetMapClass = N.isNullOrEmpty(mappedByKey) ? null : mappedBykeyAnno.mapClass();
 
         if (hasRowMapperOrExtractor) {
-            if (N.notNullOrEmpty(mappedByKey)) {
+            if (N.notNullOrEmpty(mappedByKey) || N.notNullOrEmpty(mergedByIds) || N.notNullOrEmpty(prefixFieldMap)) {
                 throw new UnsupportedOperationException(
-                        "RowMapper/ResultExtractor is not supported by method annotated with @MappedBykey: " + fullClassMethodName);
-            }
-
-            if (N.notNullOrEmpty(mergedByIds)) {
-                throw new UnsupportedOperationException(
-                        "RowMapper/ResultExtractor is not supported by method annotated with @MergedById: " + fullClassMethodName);
+                        "RowMapper/ResultExtractor is not supported by method annotated with @MappedBykey/@MergedById/@PrefixFieldMapping: "
+                                + fullClassMethodName);
             }
 
             if (!(op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll || op == OP.stream
@@ -910,7 +931,8 @@ final class DaoImpl {
                 throw new UnsupportedOperationException("RowMapper/ResultExtractor is not supported by OP: " + op + " in method: " + fullClassMethodName);
             }
 
-            if (hasRowFilter && (op == OP.findFirst || op == OP.findOnlyOne || op == OP.query || op == OP.queryAll || op == OP.DEFAULT)) {
+            if (hasRowFilter && (op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll
+                    || op == OP.stream || op == OP.streamAll || op == OP.DEFAULT)) {
                 throw new UnsupportedOperationException("RowFilter is not supported by OP: " + op + " in method: " + fullClassMethodName);
             }
 
@@ -931,7 +953,7 @@ final class DaoImpl {
                                     args) -> (R) preparedQuery.stream((Jdbc.RowMapper) args[paramLen - 1]).toCollection(Suppliers.ofCollection(returnType));
                         }
                     }
-                } else if (Optional.class.isAssignableFrom(returnType)) {
+                } else if (u.Optional.class.isAssignableFrom(returnType)) {
                     if (isFindOnlyOne(method, op)) {
                         if (hasRowFilter) {
                             return (preparedQuery,
@@ -942,7 +964,7 @@ final class DaoImpl {
                     } else {
                         if (hasRowFilter) {
                             return (preparedQuery,
-                                    args) -> (R) preparedQuery.findFirst((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1]);
+                                    args) -> (R) preparedQuery.stream((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1]).first();
                         } else {
                             return (preparedQuery, args) -> (R) preparedQuery.findFirst((Jdbc.RowMapper) args[paramLen - 1]);
                         }
@@ -979,7 +1001,8 @@ final class DaoImpl {
                     } else {
                         if (hasRowFilter) {
                             return (preparedQuery,
-                                    args) -> (R) preparedQuery.findFirst((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1])
+                                    args) -> (R) preparedQuery.stream((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1])
+                                            .first()
                                             .orElse(N.defaultValueOf(returnType));
                         } else {
                             return (preparedQuery,
@@ -1006,7 +1029,7 @@ final class DaoImpl {
                                     args) -> (R) preparedQuery.stream((Jdbc.BiRowMapper) args[paramLen - 1]).toCollection(Suppliers.ofCollection(returnType));
                         }
                     }
-                } else if (Optional.class.isAssignableFrom(returnType)) {
+                } else if (u.Optional.class.isAssignableFrom(returnType)) {
                     if (isFindOnlyOne(method, op)) {
                         if (hasRowFilter) {
                             return (preparedQuery,
@@ -1017,7 +1040,7 @@ final class DaoImpl {
                     } else {
                         if (hasRowFilter) {
                             return (preparedQuery,
-                                    args) -> (R) preparedQuery.findFirst((Jdbc.BiRowFilter) args[paramLen - 2], (Jdbc.BiRowMapper) args[paramLen - 1]);
+                                    args) -> (R) preparedQuery.stream((Jdbc.BiRowFilter) args[paramLen - 2], (Jdbc.BiRowMapper) args[paramLen - 1]).first();
                         } else {
                             return (preparedQuery, args) -> (R) preparedQuery.findFirst((Jdbc.BiRowMapper) args[paramLen - 1]);
                         }
@@ -1054,7 +1077,8 @@ final class DaoImpl {
                     } else {
                         if (hasRowFilter) {
                             return (preparedQuery,
-                                    args) -> (R) preparedQuery.findFirst((Jdbc.BiRowFilter) args[paramLen - 2], (Jdbc.BiRowMapper) args[paramLen - 1])
+                                    args) -> (R) preparedQuery.stream((Jdbc.BiRowFilter) args[paramLen - 2], (Jdbc.BiRowMapper) args[paramLen - 1])
+                                            .first()
                                             .orElse(N.defaultValueOf(returnType));
                         } else {
                             return (preparedQuery,
@@ -1086,42 +1110,51 @@ final class DaoImpl {
                     return (preparedQuery, args) -> (R) preparedQuery.query((Jdbc.BiResultExtractor) args[paramLen - 1]);
                 }
             }
+        } else if (N.notNullOrEmpty(mappedByKey)) {
+            final Class<?> targetEntityClass = secondReturnEleType == null || !ClassUtil.isEntity(secondReturnEleType) ? entityClass : secondReturnEleType;
+            final EntityInfo entityInfo = ParserUtil.getEntityInfo(targetEntityClass);
+            final PropInfo propInfo = entityInfo.getPropInfo(mappedByKey);
+            final Function<Object, Object> keyMapper = propInfo::getPropValue;
+            final List<String> mergedByKey = N.isNullOrEmpty(mergedByIds) ? N.asList(mappedByKey) : mergedByIds;
+
+            return (preparedQuery, args) -> {
+                final DataSet dataSet = (DataSet) preparedQuery.query(Jdbc.ResultExtractor.toDataSet(targetEntityClass, prefixFieldMap));
+                final List<Object> entities = dataSet.toMergedEntities(targetEntityClass, mergedByKey, null, prefixFieldMap);
+
+                return (R) Stream.of(entities).toMap(keyMapper, Fn.identity(), Suppliers.ofMap(targetMapClass));
+            };
         } else if (N.notNullOrEmpty(mergedByIds)) {
-            if (returnType.isAssignableFrom(Collection.class)) {
-                return (preparedQuery, args) -> {
-                    final DataSet dataSet = (DataSet) preparedQuery.query(Jdbc.ResultExtractor.toDataSet(entityClass));
-                    final List<Object> entities = dataSet.toMergedEntities(entityClass, mergedByIds, null);
+            if (returnType.isAssignableFrom(Collection.class) || returnType.isAssignableFrom(u.Optional.class)
+                    || returnType.isAssignableFrom(java.util.Optional.class)) {
+                final Class<?> targetEntityClass = firstReturnEleType == null || !ClassUtil.isEntity(firstReturnEleType) ? entityClass : firstReturnEleType;
+                ParserUtil.getEntityInfo(targetEntityClass);
+                final boolean isCollection = returnType.isAssignableFrom(Collection.class);
+                final boolean isJavaOption = returnType.isAssignableFrom(java.util.Optional.class);
 
-                    if (returnType.isAssignableFrom(entities.getClass())) {
-                        return (R) entities;
+                return (preparedQuery, args) -> {
+                    final DataSet dataSet = (DataSet) preparedQuery.query(Jdbc.ResultExtractor.toDataSet(targetEntityClass, prefixFieldMap));
+                    final List<Object> mergedEntities = dataSet.toMergedEntities(targetEntityClass, mergedByIds, null, prefixFieldMap);
+
+                    if (isCollection) {
+                        if (returnType.isAssignableFrom(mergedEntities.getClass())) {
+                            return (R) mergedEntities;
+                        } else {
+                            final Collection<Object> c = N.newCollection(returnType);
+                            c.addAll(mergedEntities);
+
+                            return (R) c;
+                        }
                     } else {
-                        final Collection<Object> c = N.newCollection(returnType);
-                        c.addAll(entities);
+                        if (isFindOnlyOne(method, op) && N.size(mergedEntities) > 1) {
+                            throw new DuplicatedResultException("More than one record found by the query defined or generated in method: " + method.getName());
+                        }
 
-                        return (R) c;
+                        if (isJavaOption) {
+                            return (R) java.util.Optional.ofNullable(N.firstOrNullIfEmpty(mergedEntities));
+                        } else {
+                            return (R) N.firstNonNull(mergedEntities);
+                        }
                     }
-                };
-            } else if (returnType.isAssignableFrom(u.Optional.class)) {
-                return (preparedQuery, args) -> {
-                    final DataSet dataSet = (DataSet) preparedQuery.query(Jdbc.ResultExtractor.toDataSet(entityClass));
-                    final List<?> mergedEntities = dataSet.toMergedEntities(entityClass, mergedByIds, null);
-
-                    if (op == OP.findOnlyOne && N.size(mergedEntities) > 1) {
-                        throw new DuplicatedResultException("More than one record found by the query defined or generated in method: " + method.getName());
-                    }
-
-                    return (R) N.firstNonNull(mergedEntities);
-                };
-            } else if (returnType.isAssignableFrom(java.util.Optional.class)) {
-                return (preparedQuery, args) -> {
-                    final DataSet dataSet = (DataSet) preparedQuery.query(Jdbc.ResultExtractor.toDataSet(entityClass));
-                    final List<?> mergedEntities = dataSet.toMergedEntities(entityClass, mergedByIds, null);
-
-                    if (op == OP.findOnlyOne && N.size(mergedEntities) > 1) {
-                        throw new DuplicatedResultException("More than one record found by the query defined or generated in method: " + method.getName());
-                    }
-
-                    return (R) java.util.Optional.ofNullable(N.firstOrNullIfEmpty(mergedEntities));
                 };
             } else {
                 throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + method.getName()
@@ -1134,70 +1167,61 @@ final class DaoImpl {
                 return (preparedQuery, args) -> (R) (Boolean) preparedQuery.exists();
             }
         } else if (isListQuery) {
-            if (N.notNullOrEmpty(mappedByKey)) {
-                final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass).getPropInfo(mappedByKey);
-                final Function<Object, Object> keyMapper = propInfo::getPropValue;
-
-                return (preparedQuery, args) -> (R) preparedQuery.stream(targetEntityClass).toMap(keyMapper, Fn.identity(), () -> N.newMap(targetMapClass));
-            } else if (returnType.equals(List.class)) {
-                return (preparedQuery, args) -> (R) preparedQuery.list(firstReturnEleType);
+            if (returnType.equals(List.class)) {
+                return (preparedQuery, args) -> (R) preparedQuery.list(BiRowMapper.to(firstReturnEleType, prefixFieldMap));
             } else {
-                return (preparedQuery, args) -> (R) preparedQuery.stream(firstReturnEleType).toCollection(Suppliers.ofCollection(returnType));
+                return (preparedQuery,
+                        args) -> (R) preparedQuery.stream(BiRowMapper.to(firstReturnEleType, prefixFieldMap)).toCollection(Suppliers.ofCollection(returnType));
             }
         } else if (DataSet.class.isAssignableFrom(returnType)) {
             if (fetchColumnByEntityClass) {
-                return (preparedQuery, args) -> (R) preparedQuery.query(Jdbc.ResultExtractor.toDataSet(entityClass));
+                return (preparedQuery, args) -> (R) preparedQuery.query(Jdbc.ResultExtractor.toDataSet(entityClass, prefixFieldMap));
             } else {
                 return (preparedQuery, args) -> (R) preparedQuery.query();
             }
         } else if (ExceptionalStream.class.isAssignableFrom(returnType) || Stream.class.isAssignableFrom(returnType)) {
             if (ExceptionalStream.class.isAssignableFrom(returnType)) {
-                return (preparedQuery, args) -> (R) preparedQuery.stream(firstReturnEleType);
+                return (preparedQuery, args) -> (R) preparedQuery.stream(BiRowMapper.to(firstReturnEleType, prefixFieldMap));
             } else {
-                return (preparedQuery, args) -> (R) preparedQuery.stream(firstReturnEleType).unchecked();
+                return (preparedQuery, args) -> (R) preparedQuery.stream(BiRowMapper.to(firstReturnEleType, prefixFieldMap)).unchecked();
             }
-        } else if (Optional.class.isAssignableFrom(returnType) || Nullable.class.isAssignableFrom(returnType)) {
+        } else if (u.Optional.class.isAssignableFrom(returnType) || java.util.Optional.class.isAssignableFrom(returnType)
+                || Nullable.class.isAssignableFrom(returnType)) {
             if (Nullable.class.isAssignableFrom(returnType)) {
-                if (op == OP.queryForUnique) {
+                if (isQueryForUnique(method, op)) {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueResult(firstReturnEleType);
                 } else {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForSingleResult(firstReturnEleType);
                 }
-            } else {
-                if (op == OP.findOnlyOne) {
-                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(Jdbc.BiRowMapper.to(firstReturnEleType));
-                } else if (op == OP.findFirst) {
-                    return (preparedQuery, args) -> (R) preparedQuery.findFirst(Jdbc.BiRowMapper.to(firstReturnEleType));
-                } else if (op == OP.queryForSingle) {
-                    return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(firstReturnEleType);
-                } else if (op == OP.queryForUnique) {
+            } else if (u.Optional.class.isAssignableFrom(returnType)) {
+                if (isFindFirst(method, op)) {
+                    return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(firstReturnEleType, prefixFieldMap));
+                } else if (isFindOnlyOne(method, op)) {
+                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(firstReturnEleType, prefixFieldMap));
+                } else if (isQueryForUnique(method, op)) {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueNonNull(firstReturnEleType);
                 } else {
-                    if (isFindOrListTargetClass(firstReturnEleType)) {
-                        if (isFindOnlyOne(method, op)) {
-                            return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(Jdbc.BiRowMapper.to(firstReturnEleType));
-                        } else {
-                            return (preparedQuery, args) -> (R) preparedQuery.findFirst(Jdbc.BiRowMapper.to(firstReturnEleType));
-                        }
-                    } else {
-                        return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(firstReturnEleType);
-                    }
+                    return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(firstReturnEleType);
                 }
+            } else if (java.util.Optional.class.isAssignableFrom(returnType)) {
+                if (isFindFirst(method, op)) {
+                    return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(firstReturnEleType, prefixFieldMap)).__();
+                } else if (isFindOnlyOne(method, op)) {
+                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(firstReturnEleType, prefixFieldMap)).__();
+                } else if (isQueryForUnique(method, op)) {
+                    return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueNonNull(firstReturnEleType).__();
+                } else {
+                    return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(firstReturnEleType).__();
+                }
+            } else {
+                throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + method.getName() + " is not supported at present");
             }
-        } else if (op == OP.findFirst) {
-            return (preparedQuery, args) -> (R) preparedQuery.findFirstOrNull(Jdbc.BiRowMapper.to(returnType));
-        } else if (op == OP.findOnlyOne) {
-            return (preparedQuery, args) -> (R) preparedQuery.findOnlyOneOrNull(Jdbc.BiRowMapper.to(returnType));
-        } else if (op == OP.queryForSingle) {
-            return createSingleQueryFunction(returnType);
-        } else if (op == OP.queryForUnique) {
-            return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueResult(returnType).orElse(N.defaultValueOf(returnType));
         } else {
             if (isFindOrListTargetClass(returnType)) {
                 if (isFindOnlyOne(method, op)) {
-                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(Jdbc.BiRowMapper.to(returnType)).orNull();
+                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(Jdbc.BiRowMapper.to(returnType, prefixFieldMap)).orNull();
                 } else {
-                    return (preparedQuery, args) -> (R) preparedQuery.findFirst(Jdbc.BiRowMapper.to(returnType)).orNull();
+                    return (preparedQuery, args) -> (R) preparedQuery.findFirst(Jdbc.BiRowMapper.to(returnType, prefixFieldMap)).orNull();
                 }
             } else {
                 return createSingleQueryFunction(returnType);
@@ -4564,7 +4588,7 @@ final class DaoImpl {
 
                     if (hasRowMapperOrResultExtractor
                             && (Jdbc.RowMapper.class.isAssignableFrom(lastParamType) || Jdbc.BiRowMapper.class.isAssignableFrom(lastParamType))
-                            && !(op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.listAll || op == OP.stream || op == OP.streamAll
+                            && !(op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.stream || op == OP.listAll || op == OP.streamAll
                                     || op == OP.DEFAULT)) {
                         throw new UnsupportedOperationException(
                                 "Parameter 'RowMapper/BiRowMapper' is not supported by OP = " + op + " in method: " + fullClassMethodName);
@@ -4665,8 +4689,8 @@ final class DaoImpl {
                                     return null;
                                 }
                             }).skipNull().first())
-                            .filter(Optional::isPresent)
-                            .map(Optional::get)
+                            .filter(u.Optional::isPresent)
+                            .map(u.Optional::get)
                             .toArray(it -> new Function[it]);
 
                     if (N.notNullOrEmpty(defines) && N.anyMatch(defines, it -> query.indexOf(it) < 0)) {
@@ -4753,7 +4777,7 @@ final class DaoImpl {
                         }
 
                         if (!(op == OP.DEFAULT || op == OP.list)) {
-                            throw new IllegalArgumentException("OP for method annotated by MappedByKey can't be: " + op + " in method: " + fullClassMethodName
+                            throw new IllegalArgumentException("OP for method annotated by @MappedByKey can't be: " + op + " in method: " + fullClassMethodName
                                     + ". It must be OP.DEFAULT or OP.list");
                         }
 
@@ -4764,7 +4788,7 @@ final class DaoImpl {
                                 && (firstReturnEleType != null && firstReturnEleType.isAssignableFrom(N.wrap(mappedByKeyMethod.getReturnType())))
                                 && (secondReturnEleType != null) && secondReturnEleType.isAssignableFrom(entityClass))) {
                             throw new IllegalArgumentException(
-                                    "The return type of method(" + fullClassMethodName + ") annotated by MappedByKey must be: Map<? super "
+                                    "The return type of method(" + fullClassMethodName + ") annotated by @MappedByKey must be: Map<? super "
                                             + ClassUtil.getSimpleClassName(N.wrap(mappedByKeyMethod.getReturnType())) + ", ? super "
                                             + ClassUtil.getSimpleClassName(entityClass) + ">. It can't be: " + method.getGenericReturnType());
                         }
@@ -4775,39 +4799,67 @@ final class DaoImpl {
                             : Splitter.with(',')
                                     .trimResults()
                                     .split(N.notNullOrEmpty(mergedByIdAnno.value()) ? mergedByIdAnno.value()
-                                            : (N.notNullOrEmpty(mergedByIdAnno.ids()) ? mergedByIdAnno.ids() : Strings.join(idPropNameList, ",")));
-
-                    final Map<String, String> prefixFieldMapping = mergedByIdAnno == null || N.isNullOrEmpty(mergedByIdAnno.prefixFieldMapping()) ? null
-                            : MapSplitter.with(",", "=").trimResults().split(mergedByIdAnno.prefixFieldMapping());
+                                            : (N.notNullOrEmpty(mappedByKey) ? mappedByKey : Strings.join(idPropNameList, ",")));
 
                     if (mergedByIdAnno != null && N.isNullOrEmpty(mergedByIds)) {
                         throw new IllegalArgumentException("Merged id name(s) can't be null or empty in method: " + fullClassMethodName);
                     }
 
                     if (N.notNullOrEmpty(mergedByIds)) {
-                        for (String mergedById : mergedByIds) {
-                            final Method mergedByIdMethod = ClassUtil.getPropGetMethod(entityClass, mergedById);
+                        if (N.notNullOrEmpty(mappedByKey)) {
+                            if (!(mergedByIds.size() == 1 && mappedByKey.equals(mergedByIds.get(0)))) {
+                                throw new IllegalArgumentException("The key/id annotated by @MappedByKey and @MergedById on method(" + fullClassMethodName
+                                        + ") must be same if both MappedByKey and MergedById are annotated. But they are: \"" + mappedByKey + "\", "
+                                        + mergedByIds);
+                            }
+                        } else {
+                            for (String mergedById : mergedByIds) {
+                                final Method mergedByIdMethod = ClassUtil.getPropGetMethod(entityClass, mergedById);
 
-                            if (mergedByIdMethod == null) {
-                                throw new IllegalArgumentException(
-                                        "No method found by merged id: " + mergedById + " in entity class: " + ClassUtil.getCanonicalClassName(entityClass));
+                                if (mergedByIdMethod == null) {
+                                    throw new IllegalArgumentException("No method found by merged id: " + mergedById + " in entity class: "
+                                            + ClassUtil.getCanonicalClassName(entityClass));
+                                }
+                            }
+
+                            if (!(op == OP.DEFAULT || op == OP.findFirst || op == OP.findOnlyOne || op == OP.list)) {
+                                throw new IllegalArgumentException("OP for method annotated by @MergedById can't be: " + op + " in method: "
+                                        + fullClassMethodName + ". It must be OP.DEFAULT, OP.findFirst, OP.findOnlyOne or OP.list");
+                            }
+
+                            final Class<?> firstReturnEleType = getFirstReturnEleType(method);
+
+                            if (!(((returnType.isAssignableFrom(Collection.class) && (op == OP.list || op == OP.DEFAULT))
+                                    || ((returnType.isAssignableFrom(u.Optional.class) || returnType.isAssignableFrom(java.util.Optional.class))
+                                            && (op == OP.findFirst || op == OP.findOnlyOne || op == OP.DEFAULT)))
+                                    && (firstReturnEleType != null && firstReturnEleType.isAssignableFrom(entityClass)))) {
+                                throw new IllegalArgumentException("The return type of method(" + fullClassMethodName
+                                        + ") annotated by @MergedById must be: Optional/List/Collection<? super " + ClassUtil.getSimpleClassName(entityClass)
+                                        + ">. It can't be: " + method.getGenericReturnType());
                             }
                         }
+                    }
 
-                        if (!(op == OP.DEFAULT || op == OP.findFirst || op == OP.findOnlyOne || op == OP.list)) {
-                            throw new IllegalArgumentException("OP for method annotated by MergedById can't be: " + op + " in method: " + fullClassMethodName
-                                    + ". It must be OP.DEFAULT, OP.findFirst, OP.findOnlyOne or OP.list");
+                    final PrefixFieldMapping prefixFieldMappingAnno = method.getAnnotation(PrefixFieldMapping.class);
+
+                    final Map<String, String> prefixFieldMap = prefixFieldMappingAnno == null || N.isNullOrEmpty(prefixFieldMappingAnno.value()) ? null
+                            : MapSplitter.with(",", "=").trimResults().split(prefixFieldMappingAnno.value());
+
+                    if (N.notNullOrEmpty(prefixFieldMap)) {
+                        if (!(op == OP.DEFAULT || op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.query || op == OP.stream)) {
+                            throw new IllegalArgumentException("OP for method annotated by @PrefixFieldMapping can't be: " + op + " in method: "
+                                    + fullClassMethodName + ". It must be OP.DEFAULT, OP.findFirst, OP.findOnlyOne, OP.list, OP.stream and OP.query");
                         }
 
                         final Class<?> firstReturnEleType = getFirstReturnEleType(method);
 
-                        if (!(((returnType.isAssignableFrom(List.class) && (op == OP.list || op == OP.DEFAULT))
-                                || ((returnType.isAssignableFrom(u.Optional.class) || returnType.isAssignableFrom(java.util.Optional.class))
-                                        && (op == OP.findFirst || op == OP.findOnlyOne || op == OP.DEFAULT)))
-                                && (firstReturnEleType != null && firstReturnEleType.isAssignableFrom(entityClass)))) {
-                            throw new IllegalArgumentException(
-                                    "The return type of method(" + fullClassMethodName + ") annotated by MergedById must be: Optional/List/Collection<? super "
-                                            + ClassUtil.getSimpleClassName(entityClass) + ">. It can't be: " + method.getGenericReturnType());
+                        if (!(N.notNullOrEmpty(mappedByKey) || N.notNullOrEmpty(mergedByIds) || returnType.isAssignableFrom(DataSet.class)
+                                || returnType.isAssignableFrom(entityClass)
+                                || (firstReturnEleType != null && firstReturnEleType.isAssignableFrom(entityClass)))) {
+                            throw new IllegalArgumentException("The return type of method(" + fullClassMethodName
+                                    + ") annotated by @PrefixFieldMapping must be: Optional/List/Collection<? super "
+                                    + ClassUtil.getSimpleClassName(entityClass) + ">/DataSet/" + ClassUtil.getSimpleClassName(entityClass) + ". It can't be: "
+                                    + method.getGenericReturnType());
                         }
                     }
 
@@ -4816,8 +4868,8 @@ final class DaoImpl {
 
                     if (sqlAnno.annotationType().equals(Select.class) || (isCall && (op.isQuery() || !isUpdateReturnType))) {
                         final Throwables.BiFunction<AbstractPreparedQuery, Object[], Object, Exception> queryFunc = createQueryFunctionByMethod(entityClass,
-                                method, mappedByKey, mergedByIds, prefixFieldMapping, fetchColumnByEntityClass, hasRowMapperOrResultExtractor, hasRowFilter, op,
-                                isCall, fullClassMethodName, entityClass);
+                                method, mappedByKey, mergedByIds, prefixFieldMap, fetchColumnByEntityClass, hasRowMapperOrResultExtractor, hasRowFilter, op,
+                                isCall, fullClassMethodName);
 
                         // Getting ClassCastException. Not sure why query result is being casted Dao. It seems there is a bug in JDk compiler.
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
@@ -4856,12 +4908,12 @@ final class DaoImpl {
 
                         final TriFunction<Optional<Object>, Object, Boolean, ?> insertResultConvertor = void.class.equals(returnType)
                                 ? (ret, entity, isEntity) -> null
-                                : (Optional.class.equals(returnType) ? (ret, entity, isEntity) -> ret
+                                : (u.Optional.class.equals(returnType) ? (ret, entity, isEntity) -> ret
                                         : (ret, entity, isEntity) -> ret.orElse(isEntity ? idGetter.apply(entity) : N.defaultValueOf(returnType)));
 
                         if (!isBatch) {
                             if (!(returnType.isAssignableFrom(void.class) || idClass == null || N.wrap(idClass).isAssignableFrom(N.wrap(returnType))
-                                    || returnType.isAssignableFrom(Optional.class))) {
+                                    || returnType.isAssignableFrom(u.Optional.class))) {
                                 throw new UnsupportedOperationException("The return type of insert operations(" + fullClassMethodName
                                         + ") only can be: void or 'ID' type. It can't be: " + returnType);
                             }
