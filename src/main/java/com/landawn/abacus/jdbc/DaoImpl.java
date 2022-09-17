@@ -1505,11 +1505,11 @@ final class DaoImpl {
     }
 
     @SuppressWarnings({ "rawtypes", "unused" })
-    private static AbstractPreparedQuery prepareQuery(final Dao proxy, final QueryInfo queryInfo, String fullClassMethodName, final Method method,
-            final Object[] args, final String[] defines, final int[] defineParamIndexes, final Function<Object, String>[] defineMappers,
-            final boolean returnGeneratedKeys, final String[] returnColumnNames, final List<OutParameter> outParameterList,
-            final Jdbc.BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter) throws SQLException {
-
+    private static AbstractPreparedQuery prepareQuery(final Dao proxy, final QueryInfo queryInfo, MergedById mergedByIdAnno, String fullClassMethodName,
+            final Method method, final Class<?> returnType, final Object[] args, final String[] defines, final int[] defineParamIndexes,
+            final Function<Object, String>[] defineMappers, final boolean returnGeneratedKeys, final String[] returnColumnNames,
+            final List<OutParameter> outParameterList, final Jdbc.BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter) throws SQLException {
+        final OP op = queryInfo.op;
         String query = queryInfo.sql;
         ParsedSql parsedSql = queryInfo.parsedSql;
 
@@ -1536,11 +1536,11 @@ final class DaoImpl {
             if (queryInfo.isCall && N.notNullOrEmpty(outParameterList)) {
                 final PreparedCallableQuery callableQuery = ((PreparedCallableQuery) preparedQuery);
 
-                for (OutParameter op : outParameterList) {
-                    if (N.isNullOrEmpty(op.name())) {
-                        callableQuery.registerOutParameter(op.position(), op.sqlType());
+                for (OutParameter outParameter : outParameterList) {
+                    if (N.isNullOrEmpty(outParameter.name())) {
+                        callableQuery.registerOutParameter(outParameter.position(), outParameter.sqlType());
                     } else {
-                        callableQuery.registerOutParameter(op.name(), op.sqlType());
+                        callableQuery.registerOutParameter(outParameter.name(), outParameter.sqlType());
                     }
                 }
             }
@@ -1551,6 +1551,15 @@ final class DaoImpl {
 
             if (queryInfo.fetchSize > 0) {
                 preparedQuery.setFetchSize(queryInfo.fetchSize);
+            } else if (queryInfo.isSelect) {
+                if (mergedByIdAnno != null) {
+                    // skip
+                } else if (op == OP.findOnlyOne || op == OP.queryForUnique) {
+                    preparedQuery.setFetchSize(2);
+                } else if (op == OP.findFirst || op == OP.queryForSingle || op == OP.exists || isExistsQuery(method, op, fullClassMethodName)
+                        || isSingleReturnType(returnType)) {
+                    preparedQuery.setFetchSize(1);
+                }
             }
 
             if (queryInfo.queryTimeout >= 0) {
@@ -3923,12 +3932,13 @@ final class DaoImpl {
                             return proxy.prepareNamedQuery(namedExistsByIdSQL).setFetchSize(1).settParameters(id, idParamSetter).exists();
                         };
                     } else if (methodName.equals("count") && paramLen == 1 && Collection.class.equals(paramTypes[0])) {
+                        final Collection<String> selectPropNames = N.asList(SQLBuilder.COUNT_ALL);
+                        final int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+                        final String sql_selectPart = selectSQLBuilderFunc.apply(selectPropNames, idCond).sql();
+                        final String sql_in_query = sql_selectPart.substring(0, sql_selectPart.lastIndexOf('=')) + "IN ";
+
                         call = (proxy, args) -> {
                             final Collection<Object> ids = (Collection<Object>) args[0];
-                            final Collection<String> selectPropNames = N.asList(SQLBuilder.COUNT_ALL);
-                            final int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
-
-                            N.checkArgPositive(batchSize, "batchSize");
 
                             if (N.isNullOrEmpty(ids)) {
                                 return 0;
@@ -3945,9 +3955,6 @@ final class DaoImpl {
                             int result = 0;
 
                             if (idPropNameList.size() == 1) {
-                                String sql_selectPart = selectSQLBuilderFunc.apply(selectPropNames, idCond).sql();
-                                sql_selectPart = sql_selectPart.substring(0, sql_selectPart.lastIndexOf('=')) + "IN ";
-
                                 if (idList.size() >= batchSize) {
                                     final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer(true);
 
@@ -3955,11 +3962,10 @@ final class DaoImpl {
                                         joiner.append('?');
                                     }
 
-                                    final String qery = sql_selectPart + joiner.toString();
+                                    final String qery = sql_in_query + joiner.toString();
 
                                     try (PreparedQuery preparedQuery = proxy.prepareQuery(qery)
                                             .setFetchDirection(FetchDirection.FORWARD)
-                                            .setFetchSize(batchSize)
                                             .closeAfterExecution(false)) {
                                         for (int i = 0, to = idList.size() - batchSize; i <= to; i += batchSize) {
                                             result += preparedQuery.settParameters(idList.subList(i, i + batchSize), collParamsSetter)
@@ -3977,10 +3983,9 @@ final class DaoImpl {
                                         joiner.append('?');
                                     }
 
-                                    final String qery = sql_selectPart + joiner.toString();
+                                    final String qery = sql_in_query + joiner.toString();
                                     result += proxy.prepareQuery(qery)
                                             .setFetchDirection(FetchDirection.FORWARD)
-                                            .setFetchSize(batchSize)
                                             .settParameters(idList.subList(idList.size() - remaining, idList.size()), collParamsSetter)
                                             .queryForInt()
                                             .orElseZero();
@@ -4898,8 +4903,8 @@ final class DaoImpl {
                             }
                         }
 
-                        call = (proxy, args) -> queryFunc.apply(prepareQuery(proxy, queryInfo, fullClassMethodName, method, args, defines, defineParamIndexes,
-                                defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter), args);
+                        call = (proxy, args) -> queryFunc.apply(prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
+                                defines, defineParamIndexes, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter), args);
                     } else if (sqlAnno.annotationType().equals(Insert.class)) {
                         if (isNoId && !returnType.isAssignableFrom(void.class)) {
                             throw new UnsupportedOperationException("The return type of insert operations(" + fullClassMethodName
@@ -4924,9 +4929,9 @@ final class DaoImpl {
                                         && ClassUtil.isEntity(args[stmtParamIndexes[0]].getClass());
                                 final Object entity = isEntity ? args[stmtParamIndexes[0]] : null;
 
-                                final Optional<Object> id = prepareQuery(proxy, queryInfo, fullClassMethodName, method, args, defines, defineParamIndexes,
-                                        defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter).insert(keyExtractor,
-                                                isDefaultIdTester);
+                                final Optional<Object> id = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
+                                        defines, defineParamIndexes, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter)
+                                                .insert(keyExtractor, isDefaultIdTester);
 
                                 if (isEntity && id.isPresent()) {
                                     idSetter.accept(id.get(), entity);
@@ -4963,12 +4968,12 @@ final class DaoImpl {
                                     AbstractPreparedQuery preparedQuery = null;
 
                                     if (isSingleParameter) {
-                                        preparedQuery = prepareQuery(proxy, queryInfo, fullClassMethodName, method, args, defines, defineParamIndexes,
-                                                defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter)
+                                        preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args, defines,
+                                                defineParamIndexes, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter)
                                                         .addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
                                     } else {
-                                        preparedQuery = prepareQuery(proxy, queryInfo, fullClassMethodName, method, args, defines, defineParamIndexes,
-                                                defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter)
+                                        preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args, defines,
+                                                defineParamIndexes, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter)
                                                         .addBatchParameters(batchParameters);
                                     }
 
@@ -4977,9 +4982,9 @@ final class DaoImpl {
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
-                                        try (AbstractPreparedQuery preparedQuery = prepareQuery(proxy, queryInfo, fullClassMethodName, method, args, defines,
-                                                defineParamIndexes, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter)
-                                                        .closeAfterExecution(false)) {
+                                        try (AbstractPreparedQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method,
+                                                returnType, args, defines, defineParamIndexes, defineMappers, returnGeneratedKeys, returnColumnNames,
+                                                outParameterList, parametersSetter).closeAfterExecution(false)) {
 
                                             if (isSingleParameter) {
                                                 ids = ExceptionalStream.of(batchParameters)
@@ -5047,8 +5052,9 @@ final class DaoImpl {
 
                         if (!isBatch) {
                             call = (proxy, args) -> {
-                                final AbstractPreparedQuery preparedQuery = prepareQuery(proxy, queryInfo, fullClassMethodName, method, args, defines,
-                                        defineParamIndexes, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter);
+                                final AbstractPreparedQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method,
+                                        returnType, args, defines, defineParamIndexes, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
+                                        parametersSetter);
 
                                 final long updatedRecordCount = isLargeUpdate ? preparedQuery.largeUpdate() : preparedQuery.update();
 
@@ -5078,12 +5084,12 @@ final class DaoImpl {
                                     AbstractPreparedQuery preparedQuery = null;
 
                                     if (isSingleParameter) {
-                                        preparedQuery = prepareQuery(proxy, queryInfo, fullClassMethodName, method, args, defines, defineParamIndexes,
-                                                defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter)
+                                        preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args, defines,
+                                                defineParamIndexes, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter)
                                                         .addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
                                     } else {
-                                        preparedQuery = prepareQuery(proxy, queryInfo, fullClassMethodName, method, args, defines, defineParamIndexes,
-                                                defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter)
+                                        preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args, defines,
+                                                defineParamIndexes, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter)
                                                         .addBatchParameters(batchParameters);
                                     }
 
@@ -5096,9 +5102,9 @@ final class DaoImpl {
                                     final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
-                                        try (AbstractPreparedQuery preparedQuery = prepareQuery(proxy, queryInfo, fullClassMethodName, method, args, defines,
-                                                defineParamIndexes, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter)
-                                                        .closeAfterExecution(false)) {
+                                        try (AbstractPreparedQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method,
+                                                returnType, args, defines, defineParamIndexes, defineMappers, returnGeneratedKeys, returnColumnNames,
+                                                outParameterList, parametersSetter).closeAfterExecution(false)) {
 
                                             if (isSingleParameter) {
                                                 updatedRecordCount = ExceptionalStream.of(batchParameters)
