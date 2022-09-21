@@ -1,7 +1,7 @@
 # abacus-jdbc
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc.svg)](https://maven-badges.herokuapp.com/maven-central/com.landawn/abacus-jdbc/)
-[![Javadocs](https://img.shields.io/badge/javadoc-3.2.9-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/3.2.9/index.html)
+[![Javadocs](https://img.shields.io/badge/javadoc-3.2.10-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/3.2.10/index.html)
 
 Hope it will bring you the programming experiences: coding with SQL/DB is just like coding with Collections.
 
@@ -191,7 +191,7 @@ userDao.deleteById(100L);
 * Gradle:
 ```gradle
 // JDK 1.8 or above:
-compile 'com.landawn:abacus-jdbc:3.2.9'
+compile 'com.landawn:abacus-jdbc:3.2.10'
 ```
 
 ## User Guide:
