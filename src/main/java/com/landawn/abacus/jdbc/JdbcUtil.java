@@ -1062,8 +1062,7 @@ public final class JdbcUtil {
      * @param checkDateType
      * @return
      * @throws SQLException
-     * @deprecate internal only
-     * @deprecate use {@link #getColumnValue(ResultSet, int, boolean)}
+     * @deprecated use {@link #getColumnValue(ResultSet, int, boolean)}
      */
     @Deprecated
     static Object getColumnValue(final ResultSet rs, final String columnLabel, final boolean checkDateType) throws SQLException {
@@ -1077,7 +1076,7 @@ public final class JdbcUtil {
      * @param checkDateType
      * @return
      * @throws SQLException
-     * @deprecate use {@link #getColumnValue(ResultSet, int, int)}
+     * @deprecated use {@link #getColumnValue(ResultSet, int, int)}
      */
     @Deprecated
     private static Object getColumnValue(final ResultSet rs, final String columnLabel, final int checkDateType) throws SQLException {
@@ -5011,12 +5010,7 @@ public final class JdbcUtil {
             final String msg = N.defaultIfNull(e.getMessage(), "").toLowerCase();
             return N.notNullOrEmpty(msg) && (msg.contains("not exist") || msg.contains("doesn't exist") || msg.contains("not found"));
         } else if (e instanceof UncheckedSQLException sqlException) {
-            if (sqlException.getSQLState() != null && sqlStateForTableNotExists.contains(sqlException.getSQLState())) {
-                return true;
-            }
-
-            final String msg = N.defaultIfNull(e.getMessage(), "").toLowerCase();
-            return N.notNullOrEmpty(msg) && (msg.contains("not exist") || msg.contains("doesn't exist") || msg.contains("not found"));
+            return isTableNotExistsException(sqlException.getCause());
         }
 
         return false;
