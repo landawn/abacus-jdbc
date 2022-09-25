@@ -1205,13 +1205,13 @@ final class DaoImpl {
                 }
             } else if (java.util.Optional.class.isAssignableFrom(returnType)) {
                 if (isFindFirst(method, op)) {
-                    return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(firstReturnEleType, prefixFieldMap)).__();
+                    return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(firstReturnEleType, prefixFieldMap)).toJdkOptional();
                 } else if (isFindOnlyOne(method, op)) {
-                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(firstReturnEleType, prefixFieldMap)).__();
+                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(firstReturnEleType, prefixFieldMap)).toJdkOptional();
                 } else if (isQueryForUnique(method, op)) {
-                    return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueNonNull(firstReturnEleType).__();
+                    return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueNonNull(firstReturnEleType).toJdkOptional();
                 } else {
-                    return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(firstReturnEleType).__();
+                    return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(firstReturnEleType).toJdkOptional();
                 }
             } else {
                 throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + method.getName() + " is not supported at present");
@@ -1219,9 +1219,9 @@ final class DaoImpl {
         } else {
             if (isFindOrListTargetClass(returnType)) {
                 if (isFindOnlyOne(method, op)) {
-                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(Jdbc.BiRowMapper.to(returnType, prefixFieldMap)).orNull();
+                    return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(Jdbc.BiRowMapper.to(returnType, prefixFieldMap)).orElseNull();
                 } else {
-                    return (preparedQuery, args) -> (R) preparedQuery.findFirst(Jdbc.BiRowMapper.to(returnType, prefixFieldMap)).orNull();
+                    return (preparedQuery, args) -> (R) preparedQuery.findFirst(Jdbc.BiRowMapper.to(returnType, prefixFieldMap)).orElseNull();
                 }
             } else {
                 return createSingleQueryFunction(returnType);
@@ -1323,7 +1323,7 @@ final class DaoImpl {
                         .select(Bind.class)
                         .map(Bind::value)
                         .first()
-                        .orNull();
+                        .orElseNull();
 
                 if (N.notNullOrEmpty(paramName)) {
                     parametersSetter = (preparedQuery, args) -> ((PreparedCallableQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
@@ -1347,7 +1347,7 @@ final class DaoImpl {
                         .select(Bind.class)
                         .map(Bind::value)
                         .first()
-                        .orNull();
+                        .orElseNull();
 
                 if (N.notNullOrEmpty(paramName)) {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
@@ -1796,7 +1796,7 @@ final class DaoImpl {
                 .filter(it -> N.notNullOrEmpty(it.getGenericInterfaces()) && it.getGenericInterfaces()[0] instanceof ParameterizedType)
                 .map(it -> ((ParameterizedType) it.getGenericInterfaces()[0]).getActualTypeArguments())
                 .first()
-                .orNull();
+                .orElseNull();
 
         if (N.notNullOrEmpty(typeArguments)) {
             if ((typeArguments.length >= 1 && typeArguments[0] instanceof Class) && !ClassUtil.isEntity((Class) typeArguments[0])) {
@@ -2000,9 +2000,13 @@ final class DaoImpl {
                 ? (pq, entity) -> pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity), idPropInfo.dbType)
                 : (pq, entity) -> pq.settParameters(entity, objParamsSetter);
 
-        final CacheResult daoClassCacheResultAnno = StreamEx.of(allInterfaces).flattMap(Class::getAnnotations).select(CacheResult.class).first().orNull();
+        final CacheResult daoClassCacheResultAnno = StreamEx.of(allInterfaces).flattMap(Class::getAnnotations).select(CacheResult.class).first().orElseNull();
 
-        final RefreshCache daoClassRefreshCacheAnno = StreamEx.of(allInterfaces).flattMap(Class::getAnnotations).select(RefreshCache.class).first().orNull();
+        final RefreshCache daoClassRefreshCacheAnno = StreamEx.of(allInterfaces)
+                .flattMap(Class::getAnnotations)
+                .select(RefreshCache.class)
+                .first()
+                .orElseNull();
 
         if (NoUpdateDao.class.isAssignableFrom(daoInterface) || UncheckedNoUpdateDao.class.isAssignableFrom(daoInterface)) {
             // OK
@@ -2040,7 +2044,7 @@ final class DaoImpl {
                 .flattMap(Class::getAnnotations)
                 .select(com.landawn.abacus.jdbc.annotation.Cache.class)
                 .first()
-                .orNull();
+                .orElseNull();
 
         final int capacity = daoClassCacheAnno == null ? 1000 : daoClassCacheAnno.capacity();
         final long evictDelay = daoClassCacheAnno == null ? 3000 : daoClassCacheAnno.evictDelay();
@@ -2089,7 +2093,7 @@ final class DaoImpl {
                     .first()
                     .orElse(fetchColumnByEntityClassForDataSetQuery);
 
-            final Sqls sqlsAnno = StreamEx.of(method.getAnnotations()).select(Sqls.class).onlyOne().orNull();
+            final Sqls sqlsAnno = StreamEx.of(method.getAnnotations()).select(Sqls.class).onlyOne().orElseNull();
             List<String> sqlList = null;
 
             if (sqlsAnno != null) {
@@ -2169,7 +2173,10 @@ final class DaoImpl {
             } else {
                 final boolean isStreamReturn = Stream.class.isAssignableFrom(returnType) || ExceptionalStream.class.isAssignableFrom(returnType);
                 final boolean throwsSQLException = StreamEx.of(method.getExceptionTypes()).anyMatch(e -> SQLException.class.equals(e));
-                final Annotation sqlAnno = StreamEx.of(method.getAnnotations()).filter(anno -> sqlAnnoMap.containsKey(anno.annotationType())).first().orNull();
+                final Annotation sqlAnno = StreamEx.of(method.getAnnotations())
+                        .filter(anno -> sqlAnnoMap.containsKey(anno.annotationType()))
+                        .first()
+                        .orElseNull();
 
                 if (declaringClass.equals(Dao.class) || declaringClass.equals(UncheckedDao.class)) {
                     if (methodName.equals("save") && paramLen == 1) {
@@ -4299,7 +4306,7 @@ final class DaoImpl {
                                     propJoinInfo.joinPropInfo.setPropValue(entity, c);
                                 }
                             } else {
-                                propJoinInfo.joinPropInfo.setPropValue(entity, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orNull());
+                                propJoinInfo.joinPropInfo.setPropValue(entity, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orElseNull());
                             }
 
                             return null;
@@ -4339,7 +4346,7 @@ final class DaoImpl {
                                         propJoinInfo.joinPropInfo.setPropValue(first, c);
                                     }
                                 } else {
-                                    propJoinInfo.joinPropInfo.setPropValue(first, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orNull());
+                                    propJoinInfo.joinPropInfo.setPropValue(first, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orElseNull());
                                 }
                             } else {
                                 final Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
@@ -4533,7 +4540,7 @@ final class DaoImpl {
 
                         if (isNamedQuery) {
                             final List<String> tmp = IntStreamEx.range(0, paramLen)
-                                    .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]).select(Bind.class).first().orNull())
+                                    .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]).select(Bind.class).first().orElseNull())
                                     .skipNull()
                                     .map(Bind::value)
                                     .filter(it -> !parsedSql.getNamedParameters().contains(it))
@@ -5178,7 +5185,7 @@ final class DaoImpl {
 
                 // ignore
             } else {
-                final Transactional transactionalAnno = StreamEx.of(method.getAnnotations()).select(Transactional.class).last().orNull();
+                final Transactional transactionalAnno = StreamEx.of(method.getAnnotations()).select(Transactional.class).last().orElseNull();
 
                 //    if (transactionalAnno != null && Modifier.isAbstract(m.getModifiers())) {
                 //        throw new UnsupportedOperationException(
@@ -5191,14 +5198,14 @@ final class DaoImpl {
                         .select(SqlLogEnabled.class)
                         .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
                         .first()
-                        .orNull();
+                        .orElseNull();
 
                 final PerfLog daoClassPerfLogAnno = StreamEx.of(allInterfaces)
                         .flattMap(Class::getAnnotations)
                         .select(PerfLog.class)
                         .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
                         .first()
-                        .orNull();
+                        .orElseNull();
 
                 final SqlLogEnabled sqlLogAnno = StreamEx.of(method.getAnnotations()).select(SqlLogEnabled.class).last().orElse(daoClassSqlLogAnno);
                 final PerfLog perfLogAnno = StreamEx.of(method.getAnnotations()).select(PerfLog.class).last().orElse(daoClassPerfLogAnno);
