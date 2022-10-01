@@ -171,7 +171,7 @@ final class DaoUtil {
             ret = f.gett();
 
             if (ret.isFailure()) {
-                throwUncheckedSQLException.accept(ret.getExceptionIfPresent());
+                throwUncheckedSQLException.accept(ret.getException());
             }
 
             result += ret.orElseIfFailure(0);
@@ -194,7 +194,7 @@ final class DaoUtil {
             ret = f.gett();
 
             if (ret.isFailure()) {
-                throwSQLExceptionAction.accept(ret.getExceptionIfPresent());
+                throwSQLExceptionAction.accept(ret.getException());
             }
 
             result += ret.orElseIfFailure(0);
