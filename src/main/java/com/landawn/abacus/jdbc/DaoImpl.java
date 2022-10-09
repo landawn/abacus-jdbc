@@ -4508,6 +4508,9 @@ final class DaoImpl {
 
                     final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
 
+                    final boolean isUpdateReturnType = returnType.equals(int.class) || returnType.equals(long.class) || returnType.equals(boolean.class)
+                            || returnType.equals(void.class);
+
                     final QueryInfo queryInfo = sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno, newSQLMapper);
                     final String query = N.checkArgNotNullOrEmpty(queryInfo.sql, "sql can't be null or empty");
                     final ParsedSql parsedSql = queryInfo.parsedSql;
@@ -4517,6 +4520,9 @@ final class DaoImpl {
                     final OP op = queryInfo.op;
                     final boolean isSingleParameter = queryInfo.isSingleParameter;
                     final boolean isCall = queryInfo.isCall;
+
+                    final boolean isQuery = sqlAnno.annotationType().equals(Select.class)
+                            || (isCall && !(op == OP.update || op == OP.largeUpdate) && (op != OP.DEFAULT || !isUpdateReturnType));
 
                     final boolean returnGeneratedKeys = !isNoId && sqlAnno.annotationType().equals(Insert.class);
 
@@ -4768,9 +4774,6 @@ final class DaoImpl {
                     //            || returnType.equals(Long.class) || returnType.equals(boolean.class) || returnType.equals(Boolean.class)
                     //            || returnType.equals(void.class);
 
-                    final boolean isUpdateReturnType = returnType.equals(int.class) || returnType.equals(long.class) || returnType.equals(boolean.class)
-                            || returnType.equals(void.class);
-
                     final MappedByKey mappedBykeyAnno = method.getAnnotation(MappedByKey.class);
                     final String mappedByKey = mappedBykeyAnno == null ? null
                             : N.notNullOrEmpty(mappedBykeyAnno.value()) ? mappedBykeyAnno.value()
@@ -4878,7 +4881,7 @@ final class DaoImpl {
                     final Jdbc.BiParametersSetter<AbstractPreparedQuery, Object[]> parametersSetter = createParametersSetter(queryInfo, fullClassMethodName,
                             method, paramTypes, paramLen, stmtParamLen, stmtParamIndexes, bindListParamFlags, stmtParamLen);
 
-                    if (sqlAnno.annotationType().equals(Select.class) || (isCall && (op.isQuery() || !isUpdateReturnType))) {
+                    if (isQuery) {
                         final Throwables.BiFunction<AbstractPreparedQuery, Object[], Object, Exception> queryFunc = createQueryFunctionByMethod(entityClass,
                                 method, mappedByKey, mergedByIds, prefixFieldMap, fetchColumnByEntityClass, hasRowMapperOrResultExtractor, hasRowFilter, op,
                                 isCall, fullClassMethodName);
