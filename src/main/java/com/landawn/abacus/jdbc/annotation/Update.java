@@ -82,5 +82,9 @@ public @interface Update {
     @Beta
     boolean hasDefineWithNamedParameter() default false;
 
+    /**
+     * It should only set with {@code OP.update} or {@code OP.largeUpdate}
+     * @return
+     */
     OP op() default OP.update;
 }
