@@ -579,9 +579,9 @@ final class DaoImpl {
         return op == OP.DEFAULT && method.getName().startsWith("queryForUnique");
     }
 
-    private static final ImmutableSet<Class<?>> singleReturnTypeSet = ImmutableSet.copyOf(N.asList(u.Nullable.class, u.Optional.class, u.OptionalBoolean.class,
+    private static final ImmutableSet<Class<?>> singleReturnTypeSet = ImmutableSet.of(u.Nullable.class, u.Optional.class, u.OptionalBoolean.class,
             u.OptionalChar.class, u.OptionalByte.class, u.OptionalShort.class, u.OptionalInt.class, u.OptionalLong.class, u.OptionalDouble.class,
-            java.util.Optional.class, java.util.OptionalInt.class, java.util.OptionalLong.class, java.util.OptionalDouble.class));
+            java.util.Optional.class, java.util.OptionalInt.class, java.util.OptionalLong.class, java.util.OptionalDouble.class);
 
     private static boolean isSingleReturnType(final Class<?> returnType) {
         return singleReturnTypeSet.contains(returnType) || N.isPrimitiveType(N.unwrap(returnType));
@@ -5559,7 +5559,7 @@ final class DaoImpl {
 
                 if (N.notNullOrEmpty(handlerList)) {
                     final Throwables.BiFunction<Dao, Object[], ?, Throwable> temp = call;
-                    final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, ImmutableList.copyOf(method.getParameterTypes()),
+                    final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, ImmutableList.of(method.getParameterTypes()),
                             method.getReturnType());
 
                     call = (proxy, args) -> {

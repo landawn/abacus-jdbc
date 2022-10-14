@@ -4252,7 +4252,7 @@ public final class SQLExecutor {
     //            Connection conn = getConnection();
     //
     //            try {
-    //                columnNameList = ImmutableList.of(JdbcUtil.getColumnNameList(conn, tableName));
+    //                columnNameList = ImmutableList.wrap(JdbcUtil.getColumnNameList(conn, tableName));
     //                _tableColumnNamePool.put(tableName, columnNameList);
     //            } catch (SQLException e) {
     //                throw new UncheckedSQLException(e);
@@ -4728,7 +4728,7 @@ public final class SQLExecutor {
     //        ImmutableList<String> labelList = N.notNullOrEmpty(sql) ? _sqlColumnLabelPool.get(sql) : null;
     //
     //        if (labelList == null) {
-    //            labelList = ImmutableList.of(JdbcUtil.getColumnLabelList(rs));
+    //            labelList = ImmutableList.wrap(JdbcUtil.getColumnLabelList(rs));
     //
     //            if (N.notNullOrEmpty(sql) && sql.length() <= CACHED_SQL_LENGTH) {
     //                if (_sqlColumnLabelPool.size() >= SQL_CACHE_SIZE) {
