@@ -24,7 +24,6 @@ import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.condition.Join;
 import com.landawn.abacus.condition.OrderBy;
 import com.landawn.abacus.parser.ParserUtil;
-import com.landawn.abacus.parser.ParserUtil.EntityInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.N;
@@ -91,13 +90,22 @@ public class QueryBean {
                 throw new IllegalArgumentException("'and'/'or' can't have values at the same time");
             }
 
-            final EntityInfo entityInfo = resultEntityClass == null ? null : ParserUtil.getEntityInfo(resultEntityClass);
-            final PropInfo propInfo = entityInfo == null ? null : entityInfo.getPropInfo(fieldName);
-            final Type<Object> propType = N.isNullOrEmpty(fieldType) ? (propInfo == null ? strType : propInfo.type) : Type.of(fieldType);
-
             final String param = caseInsensitive ? Strings.toLowerCase(parameter) : parameter;
             final String propName = caseInsensitive ? "LOWER(" + this.fieldName + ")" : this.fieldName;
-            final Object propVal = N.isNullOrEmpty(fieldType) || "String".equalsIgnoreCase(fieldType) ? param : propType.valueOf(param);
+
+            Type<Object> propType = strType;
+
+            if (N.notNullOrEmpty(fieldType)) {
+                propType = Type.of(fieldType);
+            } else if (resultEntityClass != null) {
+                final PropInfo propInfo = ParserUtil.getEntityInfo(resultEntityClass).getPropInfo(fieldName);
+
+                if (propInfo != null) {
+                    propType = propInfo.type;
+                }
+            }
+
+            final Object propVal = propType.valueOf(param);
 
             Condition cond = null;
 
