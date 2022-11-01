@@ -3849,7 +3849,7 @@ final class DaoImpl {
                                 return new ArrayList<>();
                             }
 
-                            final Object firstId = N.first(ids).get();
+                            final Object firstId = N.firstElement(ids).get();
                             final boolean isMap = firstId instanceof Map;
                             final boolean isEntity = firstId != null && ClassUtil.isEntity(firstId.getClass());
 
@@ -3951,7 +3951,7 @@ final class DaoImpl {
                                 return 0;
                             }
 
-                            final Object firstId = N.first(ids).get();
+                            final Object firstId = N.firstElement(ids).get();
                             final boolean isMap = firstId instanceof Map;
                             final boolean isEntity = firstId != null && ClassUtil.isEntity(firstId.getClass());
 
