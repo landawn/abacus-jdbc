@@ -90,7 +90,8 @@ final class CodeGenerationUtil {
             .build();
 
     @SuppressWarnings("deprecation")
-    private static final BiMap<String, String> eccClassNameMap = BiMap.from(N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short", "short",
+    private static final BiMap<String, String> eccClassNameMap = BiMap.copyOf(N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short",
+            "short",
             "Integer", "int", "Long", "long", "Float", "float", "Double", "double"));
 
     private CodeGenerationUtil() {
