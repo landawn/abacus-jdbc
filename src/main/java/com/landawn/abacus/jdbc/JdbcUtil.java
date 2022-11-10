@@ -1125,31 +1125,31 @@ public final class JdbcUtil {
 
     /**
      * Gets the column value.
-     *
-     * @param <T>
-     * @param targetClass
      * @param rs
      * @param columnIndex
+     * @param targetClass
+     *
+     * @param <T>
      * @return
      * @throws SQLException
      */
-    public static <T> T getColumnValue(final Class<? extends T> targetClass, final ResultSet rs, final int columnIndex) throws SQLException {
+    public static <T> T getColumnValue(final ResultSet rs, final int columnIndex, final Class<? extends T> targetClass) throws SQLException {
         return N.<T> typeOf(targetClass).get(rs, columnIndex);
     }
 
     /**
      * Gets the column value.
-     *
-     * @param <T>
-     * @param targetClass
      * @param rs
      * @param columnLabel
+     * @param targetClass
+     *
+     * @param <T>
      * @return
      * @throws SQLException
-     * @deprecated please consider using {@link #getColumnValue(Class, ResultSet, int)}
+     * @deprecated please consider using {@link #getColumnValue(ResultSet, int, Class)}
      */
     @Deprecated
-    public static <T> T getColumnValue(final Class<? extends T> targetClass, final ResultSet rs, final String columnLabel) throws SQLException {
+    public static <T> T getColumnValue(final ResultSet rs, final String columnLabel, final Class<? extends T> targetClass) throws SQLException {
         return N.<T> typeOf(targetClass).get(rs, columnLabel);
     }
 
