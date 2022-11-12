@@ -283,7 +283,7 @@ public final class JdbcUtil {
             config.setPassword(password);
 
             return new com.zaxxer.hikari.HikariDataSource(config);
-        } catch (Throwable e) {
+        } catch (Exception e) {
             throw N.toRuntimeException(e);
         }
     }
@@ -304,7 +304,7 @@ public final class JdbcUtil {
             cpds.setPassword(password);
 
             return cpds;
-        } catch (Throwable e) {
+        } catch (Exception e) {
             throw N.toRuntimeException(e);
         }
     }
