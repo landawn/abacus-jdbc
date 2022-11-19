@@ -29,7 +29,7 @@
 		<dependency>
 			<groupId>com.landawn</groupId>
 			<artifactId>abacus-common</artifactId>
-			<version>3.5.20</version>
+			<version>3.5.21</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -56,21 +56,21 @@
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-core</artifactId>
-			<version>[5.2.19,)</version>
+			<version>5.3.24</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-context</artifactId>
-			<version>5.2.2.RELEASE</version>
+			<version>5.3.24</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-jdbc</artifactId>
-			<version>5.2.2.RELEASE</version>
+			<version>5.3.24</version>
 			<scope>provided</scope>
 		</dependency>
 
