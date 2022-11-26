@@ -169,7 +169,7 @@ final class DaoImpl {
 
     private static final KryoParser kryoParser = ParserFactory.isKryoAvailable() ? ParserFactory.createKryoParser() : null;
 
-    private static final JSONSerializationConfig jsc_no_bracket = JSC.create().setStringQuotation(JdbcUtil.CHAR_ZERO).setBracketRootValue(false);
+    private static final JSONSerializationConfig jsc_no_bracket = JSC.create().setStringQuotation(JdbcUtil.CHAR_ZERO).bracketRootValue(false);
 
     @SuppressWarnings("rawtypes")
     private static final Map<String, Dao> daoPool = new ConcurrentHashMap<>();
