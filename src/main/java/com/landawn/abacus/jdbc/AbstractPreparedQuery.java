@@ -1816,6 +1816,28 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     @Beta
+    public This setDoubleForMultiPositions(final double parameterValue, final int... parameterIndices) throws SQLException {
+        checkParameterIndices(parameterIndices);
+
+        for (int parameterIndex : parameterIndices) {
+            setDouble(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
+
+    @Beta
+    public This setDoubleForMultiPositions(final Double parameterValue, final int... parameterIndices) throws SQLException {
+        checkParameterIndices(parameterIndices);
+
+        for (int parameterIndex : parameterIndices) {
+            setDouble(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
+
+    @Beta
     public This setStringForMultiPositions(final String parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
