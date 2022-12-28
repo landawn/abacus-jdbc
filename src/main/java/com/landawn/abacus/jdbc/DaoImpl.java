@@ -161,6 +161,8 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 @SuppressWarnings("deprecation")
 final class DaoImpl {
 
+    private static final String _1 = "1";
+
     private DaoImpl() {
         // singleton for utility class.
     }
@@ -1928,7 +1930,7 @@ final class DaoImpl {
 
         if (sbc.equals(PSC.class)) {
             sql_getById = isNoId ? null : NSC.selectFrom(entityClass).where(idCond).sql();
-            sql_existsById = isNoId ? null : NSC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
+            sql_existsById = isNoId ? null : NSC.select(_1).from(entityClass).where(idCond).sql();
             sql_insertWithId = entityClass == null ? null : NSC.insertInto(entityClass).sql();
             sql_insertWithoutId = entityClass == null ? null
                     : (noOtherInsertPropNameExceptIdPropNames ? sql_insertWithId : NSC.insertInto(entityClass, idPropNameSet).sql());
@@ -1936,7 +1938,7 @@ final class DaoImpl {
             sql_deleteById = isNoId ? null : NSC.deleteFrom(entityClass).where(idCond).sql();
         } else if (sbc.equals(PAC.class)) {
             sql_getById = isNoId ? null : NAC.selectFrom(entityClass).where(idCond).sql();
-            sql_existsById = isNoId ? null : NAC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
+            sql_existsById = isNoId ? null : NAC.select(_1).from(entityClass).where(idCond).sql();
             sql_updateById = isNoId ? null : NAC.update(entityClass, idPropNameSet).where(idCond).sql();
             sql_insertWithId = entityClass == null ? null : NAC.insertInto(entityClass).sql();
             sql_insertWithoutId = entityClass == null ? null
@@ -1944,7 +1946,7 @@ final class DaoImpl {
             sql_deleteById = isNoId ? null : NAC.deleteFrom(entityClass).where(idCond).sql();
         } else {
             sql_getById = isNoId ? null : NLC.selectFrom(entityClass).where(idCond).sql();
-            sql_existsById = isNoId ? null : NLC.select(SQLBuilder._1).from(entityClass).where(idCond).sql();
+            sql_existsById = isNoId ? null : NLC.select(_1).from(entityClass).where(idCond).sql();
             sql_insertWithId = entityClass == null ? null : NLC.insertInto(entityClass).sql();
             sql_insertWithoutId = entityClass == null ? null
                     : (noOtherInsertPropNameExceptIdPropNames ? sql_insertWithId : NLC.insertInto(entityClass, idPropNameSet).sql());
@@ -2327,7 +2329,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, "cond");
 
                             final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
-                            final SP sp = singleQuerySQLBuilderFunc.apply(SQLBuilder._1, limitedCond);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(_1, limitedCond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).exists();
                         };
                     } else if (methodName.equals("count") && paramLen == 1 && Condition.class.isAssignableFrom(paramTypes[0])) {
