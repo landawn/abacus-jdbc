@@ -30,7 +30,7 @@ import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.jdbc.annotation.Config;
 import com.landawn.abacus.parser.ParserUtil;
-import com.landawn.abacus.parser.ParserUtil.EntityInfo;
+import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.ClassUtil;
@@ -72,13 +72,13 @@ public final class JoinInfo {
     }
 
     final Class<?> entityClass;
-    final EntityInfo entityInfo;
+    final BeanInfo entityInfo;
     final PropInfo joinPropInfo;
     final PropInfo[] srcPropInfos;
     final PropInfo[] referencedPropInfos;
     final Type<?> referencedEntityType;
     final Class<?> referencedEntityClass;
-    final EntityInfo referencedEntityInfo;
+    final BeanInfo referencedBeanInfo;
     final Function<Object, Object> srcEntityKeyExtractor;
     final Function<Object, Object> referencedEntityKeyExtractor;
     final boolean isManyToManyJoin;
@@ -97,7 +97,7 @@ public final class JoinInfo {
     JoinInfo(final Class<?> entityClass, final String joinEntityPropName, final boolean allowJoiningByNullOrDefaultValue) {
         this.allowJoiningByNullOrDefaultValue = allowJoiningByNullOrDefaultValue;
         this.entityClass = entityClass;
-        this.entityInfo = ParserUtil.getEntityInfo(entityClass);
+        this.entityInfo = ParserUtil.getBeanInfo(entityClass);
         this.joinPropInfo = entityInfo.getPropInfo(joinEntityPropName);
 
         if (joinPropInfo == null) {
@@ -112,12 +112,12 @@ public final class JoinInfo {
         referencedEntityType = joinPropInfo.type.isMap() ? joinPropInfo.type.getParameterTypes()[1]
                 : (joinPropInfo.type.isCollection() ? joinPropInfo.type.getElementType() : joinPropInfo.type);
 
-        if (!referencedEntityType.isEntity()) {
+        if (!referencedEntityType.isBean()) {
             throw new IllegalArgumentException("Property '" + joinPropInfo.name + "' in class: " + entityClass + " is not an entity type");
         }
 
         referencedEntityClass = referencedEntityType.clazz();
-        referencedEntityInfo = ParserUtil.getEntityInfo(referencedEntityClass);
+        referencedBeanInfo = ParserUtil.getBeanInfo(referencedEntityClass);
 
         final JoinedBy joinedByAnno = joinPropInfo.getAnnotation(JoinedBy.class);
         final boolean cascadeDeleteDefinedInDB = true; // joinedByAnno.cascadeDeleteDefinedInDB(); // TODO should be defined/implemented on DB server side.
@@ -134,7 +134,7 @@ public final class JoinInfo {
                 .flattMap(it -> Strings.split(joinColumnPairs[0], '=', true))
                 .filter(it -> it.indexOf('.') > 0)
                 .map(it -> it.substring(0, it.indexOf('.')).trim())
-                .anyMatch(it -> !(it.equalsIgnoreCase(entityInfo.simpleClassName) || it.equalsIgnoreCase(referencedEntityInfo.simpleClassName)));
+                .anyMatch(it -> !(it.equalsIgnoreCase(entityInfo.simpleClassName) || it.equalsIgnoreCase(referencedBeanInfo.simpleClassName)));
 
         // Many to many joined by third table
         if (isManyToManyJoin) {
@@ -155,7 +155,7 @@ public final class JoinInfo {
                         + "' in class: " + entityClass + ". No property found with name: '" + left[0] + "' in the class: " + entityClass);
             }
 
-            if ((referencedPropInfos[0] = referencedEntityInfo.getPropInfo(right[1])) == null) {
+            if ((referencedPropInfos[0] = referencedBeanInfo.getPropInfo(right[1])) == null) {
                 throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
                         + "' in class: " + entityClass + ". No referenced property found with name: '" + right[1] + "' in the class: " + referencedEntityClass);
             }
@@ -354,7 +354,7 @@ public final class JoinInfo {
                             + "' in class: " + entityClass + ". No property found with name: '" + tmp[0] + "' in the class: " + entityClass);
                 }
 
-                if ((referencedPropInfos[i] = referencedEntityInfo.getPropInfo(tmp.length == 1 ? tmp[0] : tmp[1])) == null) {
+                if ((referencedPropInfos[i] = referencedBeanInfo.getPropInfo(tmp.length == 1 ? tmp[0] : tmp[1])) == null) {
                     throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
                             + "' in class: " + entityClass + ". No referenced property found with name: '" + (tmp.length == 1 ? tmp[0] : tmp[1])
                             + "' in the class: " + referencedEntityClass);
@@ -659,7 +659,7 @@ public final class JoinInfo {
         if (joinInfoMap == null) {
             final Config anno = daoClass.getAnnotation(Config.class);
             final boolean allowJoiningByNullOrDefaultValue = anno == null || !anno.allowJoiningByNullOrDefaultValue() ? false : true;
-            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+            final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
 
             joinInfoMap = new LinkedHashMap<>();
 

@@ -98,7 +98,7 @@ public class QueryBean {
             if (N.notNullOrEmpty(fieldType)) {
                 propType = Type.of(fieldType);
             } else if (resultEntityClass != null) {
-                final PropInfo propInfo = ParserUtil.getEntityInfo(resultEntityClass).getPropInfo(fieldName);
+                final PropInfo propInfo = ParserUtil.getBeanInfo(resultEntityClass).getPropInfo(fieldName);
 
                 if (propInfo != null) {
                     propType = propInfo.type;

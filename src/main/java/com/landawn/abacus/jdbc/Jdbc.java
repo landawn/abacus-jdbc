@@ -49,7 +49,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.parser.ParserUtil;
-import com.landawn.abacus.parser.ParserUtil.EntityInfo;
+import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Array;
@@ -157,7 +157,7 @@ public final class Jdbc {
         @Stateful
         static <T> BiParametersSetter<PreparedStatement, T[]> createForArray(final List<String> fieldNameList, final Class<?> entityClass) {
             N.checkArgNotNullOrEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
-            N.checkArgument(ClassUtil.isEntity(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
+            N.checkArgument(ClassUtil.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
 
             return new BiParametersSetter<>() {
                 private final int len = fieldNameList.size();
@@ -167,7 +167,7 @@ public final class Jdbc {
                 @Override
                 public void accept(PreparedStatement stmt, T[] params) throws SQLException {
                     if (fieldTypes == null) {
-                        final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+                        final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
                         fieldTypes = new Type[len];
 
                         for (int i = 0; i < len; i++) {
@@ -194,7 +194,7 @@ public final class Jdbc {
         @Stateful
         static <T> BiParametersSetter<PreparedStatement, List<T>> createForList(final List<String> fieldNameList, final Class<?> entityClass) {
             N.checkArgNotNullOrEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
-            N.checkArgument(ClassUtil.isEntity(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
+            N.checkArgument(ClassUtil.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
 
             return new BiParametersSetter<>() {
                 private final int len = fieldNameList.size();
@@ -204,7 +204,7 @@ public final class Jdbc {
                 @Override
                 public void accept(PreparedStatement stmt, List<T> params) throws SQLException {
                     if (fieldTypes == null) {
-                        final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+                        final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
                         fieldTypes = new Type[len];
 
                         for (int i = 0; i < len; i++) {
@@ -1152,7 +1152,7 @@ public final class Jdbc {
                         columnCount = columnLabels.size();
                         columnTypes = new Type[columnCount];
 
-                        final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+                        final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
                         final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
                         PropInfo propInfo = null;
 
@@ -1951,8 +1951,8 @@ public final class Jdbc {
                         }
                     };
                 }
-            } else if (ClassUtil.isEntity(targetClass)) {
-                final EntityInfo entityInfo = ParserUtil.getEntityInfo(targetClass);
+            } else if (ClassUtil.isBeanClass(targetClass)) {
+                final BeanInfo entityInfo = ParserUtil.getBeanInfo(targetClass);
 
                 return new BiRowMapper<>() {
                     private String[] columnLabels = null;
@@ -2032,7 +2032,7 @@ public final class Jdbc {
                             }
                         }
 
-                        final Object result = entityInfo.createEntityResult();
+                        final Object result = entityInfo.createBeanResult();
 
                         for (int i = 0; i < columnCount; i++) {
                             if (columnLabels[i] == null) {
@@ -2046,7 +2046,7 @@ public final class Jdbc {
                             }
                         }
 
-                        return entityInfo.finishEntityResult(result);
+                        return entityInfo.finishBeanResult(result);
                     }
                 };
             } else {
@@ -2104,9 +2104,9 @@ public final class Jdbc {
                 return to(entityClass, ignoreNonMatchedColumns);
             }
 
-            N.checkArgument(ClassUtil.isEntity(entityClass), "{} is not an entity class", entityClass);
+            N.checkArgument(ClassUtil.isBeanClass(entityClass), "{} is not an entity class", entityClass);
 
-            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+            final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
 
             return new BiRowMapper<>() {
                 private String[] columnLabels = null;
@@ -2179,7 +2179,7 @@ public final class Jdbc {
                         }
                     }
 
-                    final Object result = entityInfo.createEntityResult();
+                    final Object result = entityInfo.createBeanResult();
 
                     for (int i = 0; i < columnCount; i++) {
                         if (columnLabels[i] == null) {
@@ -2193,7 +2193,7 @@ public final class Jdbc {
                         }
                     }
 
-                    return entityInfo.finishEntityResult(result);
+                    return entityInfo.finishBeanResult(result);
                 }
             };
         }
@@ -2535,7 +2535,7 @@ public final class Jdbc {
                         columnCount = columnLabels.size();
                         columnTypes = new Type[columnCount];
 
-                        final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+                        final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
                         final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
                         PropInfo propInfo = null;
 
@@ -2824,9 +2824,9 @@ public final class Jdbc {
                             return (T) m;
                         }
                     };
-                } else if (ClassUtil.isEntity(targetClass)) {
+                } else if (ClassUtil.isBeanClass(targetClass)) {
                     return new BiRowMapper<>() {
-                        private final EntityInfo entityInfo = ParserUtil.getEntityInfo(targetClass);
+                        private final BeanInfo entityInfo = ParserUtil.getBeanInfo(targetClass);
 
                         private int rsColumnCount = -1;
                         private ColumnGetter<?>[] rsColumnGetters = null;
@@ -2876,7 +2876,7 @@ public final class Jdbc {
                                 this.propInfos = propInfos;
                             }
 
-                            final Object result = entityInfo.createEntityResult();
+                            final Object result = entityInfo.createBeanResult();
 
                             for (int i = 0; i < rsColumnCount; i++) {
                                 if (columnLabels[i] == null) {
@@ -2886,7 +2886,7 @@ public final class Jdbc {
                                 propInfos[i].setPropValue(result, rsColumnGetters[i].apply(rs, i + 1));
                             }
 
-                            return entityInfo.finishEntityResult(result);
+                            return entityInfo.finishBeanResult(result);
                         }
                     };
                 } else {
@@ -3008,7 +3008,7 @@ public final class Jdbc {
                         columnCount = columnLabels.size();
                         columnTypes = new Type[columnCount];
 
-                        final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+                        final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
                         final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
                         PropInfo propInfo = null;
 
@@ -3137,7 +3137,7 @@ public final class Jdbc {
                         columnCount = columnLabels.size();
                         columnTypes = new Type[columnCount];
 
-                        final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+                        final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
                         final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
                         PropInfo propInfo = null;
 
@@ -3299,9 +3299,9 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static RowExtractor createBy(final Class<?> entityClassForFetch, final List<String> columnLabels, final Map<String, String> prefixAndFieldNameMap) {
-            N.checkArgument(ClassUtil.isEntity(entityClassForFetch), "entityClassForFetch");
+            N.checkArgument(ClassUtil.isBeanClass(entityClassForFetch), "entityClassForFetch");
 
-            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClassForFetch);
+            final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClassForFetch);
 
             return new RowExtractor() {
                 private Type<?>[] columnTypes = null;
@@ -4359,7 +4359,7 @@ public final class Jdbc {
         }
     }
 
-    static String checkPrefix(final EntityInfo entityInfo, final String columnName, final Map<String, String> prefixAndFieldNameMap,
+    static String checkPrefix(final BeanInfo entityInfo, final String columnName, final Map<String, String> prefixAndFieldNameMap,
             final List<String> columnLabelList) {
 
         final int idx = columnName.indexOf('.');
@@ -4386,14 +4386,14 @@ public final class Jdbc {
         propInfo = entityInfo.getPropInfo(prefix + "s"); // Trying to do something smart?
         final int len = prefix.length() + 1;
 
-        if (propInfo != null && (propInfo.type.isEntity() || (propInfo.type.isCollection() && propInfo.type.getElementType().isEntity()))
+        if (propInfo != null && (propInfo.type.isBean() || (propInfo.type.isCollection() && propInfo.type.getElementType().isBean()))
                 && N.noneMatch(columnLabelList, it -> it.length() > len && it.charAt(len) == '.' && Strings.startsWithIgnoreCase(it, prefix + "s."))) {
             // good
         } else {
             propInfo = entityInfo.getPropInfo(prefix + "es"); // Trying to do something smart?
             final int len2 = prefix.length() + 2;
 
-            if (propInfo != null && (propInfo.type.isEntity() || (propInfo.type.isCollection() && propInfo.type.getElementType().isEntity()))
+            if (propInfo != null && (propInfo.type.isBean() || (propInfo.type.isCollection() && propInfo.type.getElementType().isBean()))
                     && N.noneMatch(columnLabelList, it -> it.length() > len2 && it.charAt(len2) == '.' && Strings.startsWithIgnoreCase(it, prefix + "es."))) {
                 // good
             } else {
@@ -4410,7 +4410,7 @@ public final class Jdbc {
     }
 
     //    // TODO it will be removed after below logic is handled in RowDataSet.
-    //    static List<String> checkMergedByIds(final EntityInfo entityInfo, final DataSet dataSet, final List<String> mergedByIds) {
+    //    static List<String> checkMergedByIds(final BeanInfo entityInfo, final DataSet dataSet, final List<String> mergedByIds) {
     //        if (dataSet.containsAllColumns(mergedByIds)) {
     //            return mergedByIds;
     //        }

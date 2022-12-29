@@ -30,7 +30,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JoinInfo;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
-import com.landawn.abacus.parser.ParserUtil.EntityInfo;
+import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
@@ -60,7 +60,7 @@ final class DaoUtil {
     }
 
     @SuppressWarnings("deprecation")
-    static <T, ID> ID extractId(final T entity, final List<String> idPropNameList, final EntityInfo entityInfo) {
+    static <T, ID> ID extractId(final T entity, final List<String> idPropNameList, final BeanInfo entityInfo) {
         if (idPropNameList.size() == 1) {
             return entityInfo.getPropInfo(idPropNameList.get(0)).getPropValue(entity);
         } else {
@@ -75,7 +75,7 @@ final class DaoUtil {
     }
 
     @SuppressWarnings("deprecation")
-    static <T, ID> Function<T, ID> createIdExtractor(final List<String> idPropNameList, final EntityInfo entityInfo) {
+    static <T, ID> Function<T, ID> createIdExtractor(final List<String> idPropNameList, final BeanInfo entityInfo) {
         if (idPropNameList.size() == 1) {
             final PropInfo idPropInfo = entityInfo.getPropInfo(idPropNameList.get(0));
 

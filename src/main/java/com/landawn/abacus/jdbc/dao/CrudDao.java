@@ -35,7 +35,7 @@ import com.landawn.abacus.jdbc.SQLExecutor;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
-import com.landawn.abacus.parser.ParserUtil.EntityInfo;
+import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.QueryUtil;
@@ -625,7 +625,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
         final Class<?> cls = entity.getClass();
         @SuppressWarnings("deprecation")
         final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
-        final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+        final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
         final T dbEntity = gett(DaoUtil.extractId(entity, idPropNameList, entityInfo));
 
         if (dbEntity == null) {
@@ -666,7 +666,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
         final Class<?> cls = first.getClass();
         @SuppressWarnings("deprecation")
         final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
-        final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+        final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);
         final List<ID> ids = N.map(entities, idExtractorFunc);
@@ -738,7 +738,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
 
         final Class<?> cls = entity.getClass();
         final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
-        final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+        final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final ID id = DaoUtil.extractId(entity, idPropNameList, entityInfo);
         final Collection<String> selectPropNames = DaoUtil.getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
@@ -814,7 +814,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
         final T first = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = first.getClass();
         final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
-        final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+        final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);
         final Map<ID, List<T>> idEntityMap = StreamEx.of(entities).groupTo(idExtractorFunc, Fn.identity());

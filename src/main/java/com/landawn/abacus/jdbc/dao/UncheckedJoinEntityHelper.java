@@ -657,7 +657,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames)
             throws UncheckedSQLException {
         final Class<?> cls = entity.getClass();
-        final PropInfo propInfo = ParserUtil.getEntityInfo(cls).getPropInfo(joinEntityPropName);
+        final PropInfo propInfo = ParserUtil.getBeanInfo(cls).getPropInfo(joinEntityPropName);
 
         if (propInfo.getPropValue(entity) == null) {
             loadJoinEntities(entity, joinEntityPropName, selectPropNames);
@@ -690,7 +690,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         }
 
         final Class<?> cls = N.firstOrNullIfEmpty(entities).getClass();
-        final PropInfo propInfo = ParserUtil.getEntityInfo(cls).getPropInfo(joinEntityPropName);
+        final PropInfo propInfo = ParserUtil.getBeanInfo(cls).getPropInfo(joinEntityPropName);
         final List<T> newEntities = N.filter(entities, entity -> propInfo.getPropValue(entity) == null);
 
         if (N.notNullOrEmpty(newEntities)) {

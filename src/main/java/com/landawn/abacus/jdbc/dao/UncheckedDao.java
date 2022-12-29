@@ -702,7 +702,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     @Override
     default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException {
         @SuppressWarnings("deprecation")
-        final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
+        final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
         final Jdbc.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
         return list(singleSelectPropName, cond, rowMapper);

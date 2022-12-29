@@ -1430,7 +1430,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws SQLException {
-        final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
+        final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
         final Jdbc.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
         return list(singleSelectPropName, cond, rowMapper);
@@ -1616,7 +1616,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @LazyEvaluation
     default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) {
-        final PropInfo propInfo = ParserUtil.getEntityInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
+        final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
         final Jdbc.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
         return stream(singleSelectPropName, cond, rowMapper);

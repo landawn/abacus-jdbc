@@ -67,7 +67,7 @@ import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.parser.ParserUtil;
-import com.landawn.abacus.parser.ParserUtil.EntityInfo;
+import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.AsyncExecutor;
@@ -1167,7 +1167,7 @@ public final class JdbcUtil {
     //
     //        if (result == null) {
     //            final Map<String, String> map = new HashMap<>();
-    //            final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+    //            final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
     //
     //            for (PropInfo propInfo : entityInfo.propInfoList) {
     //                if (propInfo.columnName.isPresent()) {
@@ -3643,9 +3643,9 @@ public final class JdbcUtil {
 
             parameterValues = new Object[parameterCount];
 
-            if (ClassUtil.isEntity(cls)) {
+            if (ClassUtil.isBeanClass(cls)) {
                 final Object entity = parameter_0;
-                final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+                final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
                 parameterTypes = new Type[parameterCount];
                 PropInfo propInfo = null;
 
@@ -3734,7 +3734,7 @@ public final class JdbcUtil {
 
         final Class<? extends Object> cls = parameters[0].getClass();
 
-        return ClassUtil.isEntity(cls) || ClassUtil.isRecordClass(cls) || Map.class.isAssignableFrom(cls) || EntityId.class.isAssignableFrom(cls);
+        return ClassUtil.isBeanClass(cls) || ClassUtil.isRecordClass(cls) || Map.class.isAssignableFrom(cls) || EntityId.class.isAssignableFrom(cls);
     }
 
     static final RowFilter INTERNAL_DUMMY_ROW_FILTER = RowFilter.ALWAYS_TRUE;
@@ -5358,15 +5358,15 @@ public final class JdbcUtil {
             return true;
         } else if (value instanceof EntityId) {
             return N.allMatch(((EntityId) value).entrySet(), it -> JdbcUtil.isDefaultIdPropValue(it.getValue()));
-        } else if (ClassUtil.isEntity(value.getClass())) {
+        } else if (ClassUtil.isBeanClass(value.getClass())) {
             final Class<?> entityClass = value.getClass();
             final List<String> idPropNameList = QueryUtil.getIdFieldNames(entityClass);
 
             if (N.isNullOrEmpty(idPropNameList)) {
                 return true;
             } else {
-                final EntityInfo idEntityInfo = ParserUtil.getEntityInfo(entityClass);
-                return N.allMatch(idPropNameList, idName -> JdbcUtil.isDefaultIdPropValue(idEntityInfo.getPropValue(value, idName)));
+                final BeanInfo idBeanInfo = ParserUtil.getBeanInfo(entityClass);
+                return N.allMatch(idPropNameList, idName -> JdbcUtil.isDefaultIdPropValue(idBeanInfo.getPropValue(value, idName)));
             }
         }
 
@@ -5767,7 +5767,7 @@ public final class JdbcUtil {
     private static final Map<Class<?>, Map<String, Optional<PropInfo>>> entityPropInfoQueueMap = new ConcurrentHashMap<>();
 
     static PropInfo getSubPropInfo(final Class<?> entityClass, String propName) {
-        final EntityInfo entityInfo = ParserUtil.getEntityInfo(entityClass);
+        final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
         Map<String, Optional<PropInfo>> propInfoQueueMap = entityPropInfoQueueMap.get(entityClass);
         Optional<PropInfo> propInfoHolder = null;
         PropInfo propInfo = null;
@@ -5784,11 +5784,11 @@ public final class JdbcUtil {
 
             if (strs.length > 1) {
                 Class<?> propClass = entityClass;
-                EntityInfo propEntityInfo = null;
+                BeanInfo propBeanInfo = null;
 
                 for (int i = 0, len = strs.length; i < len; i++) {
-                    propEntityInfo = ClassUtil.isEntity(propClass) ? ParserUtil.getEntityInfo(propClass) : null;
-                    propInfo = propEntityInfo == null ? null : propEntityInfo.getPropInfo(strs[i]);
+                    propBeanInfo = ClassUtil.isBeanClass(propClass) ? ParserUtil.getBeanInfo(propClass) : null;
+                    propInfo = propBeanInfo == null ? null : propBeanInfo.getPropInfo(strs[i]);
 
                     if (propInfo == null) {
                         if (i == 0) {
@@ -5837,7 +5837,7 @@ public final class JdbcUtil {
     @SuppressWarnings({ "rawtypes", "deprecation", "null" })
     static <ID> Tuple3<BiRowMapper<ID>, com.landawn.abacus.util.function.Function<Object, ID>, com.landawn.abacus.util.function.BiConsumer<ID, Object>> getIdGeneratorGetterSetter(
             final Class<? extends Dao> daoInterface, final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
-        if (entityClass == null || !ClassUtil.isEntity(entityClass)) {
+        if (entityClass == null || !ClassUtil.isBeanClass(entityClass)) {
             return (Tuple3) noIdGeneratorGetterSetter;
         }
 
@@ -5850,12 +5850,12 @@ public final class JdbcUtil {
             final List<String> idPropNameList = QueryUtil.getIdFieldNames(entityClass);
             final boolean isNoId = N.isNullOrEmpty(idPropNameList) || QueryUtil.isFakeId(idPropNameList);
             final String oneIdPropName = isNoId ? null : idPropNameList.get(0);
-            final EntityInfo entityInfo = isNoId ? null : ParserUtil.getEntityInfo(entityClass);
+            final BeanInfo entityInfo = isNoId ? null : ParserUtil.getBeanInfo(entityClass);
             final List<PropInfo> idPropInfoList = isNoId ? null : Stream.of(idPropNameList).map(entityInfo::getPropInfo).toList();
             final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
             final boolean isOneId = isNoId ? false : idPropNameList.size() == 1;
             final boolean isEntityId = idType != null && EntityId.class.isAssignableFrom(idType);
-            final EntityInfo idEntityInfo = idType != null && ClassUtil.isEntity(idType) ? ParserUtil.getEntityInfo(idType) : null;
+            final BeanInfo idBeanInfo = idType != null && ClassUtil.isBeanClass(idType) ? ParserUtil.getBeanInfo(idType) : null;
 
             final com.landawn.abacus.util.function.Function<Object, ID> idGetter = isNoId ? noIdGeneratorGetterSetter._2 //
                     : (isOneId ? idPropInfo::getPropValue //
@@ -5868,13 +5868,13 @@ public final class JdbcUtil {
 
                                 return (ID) ret;
                             } : entity -> {
-                                final Object ret = idEntityInfo.createEntityResult();
+                                final Object ret = idBeanInfo.createBeanResult();
 
                                 for (PropInfo propInfo : idPropInfoList) {
                                     ClassUtil.setPropValue(ret, propInfo.name, propInfo.getPropValue(entity));
                                 }
 
-                                return (ID) idEntityInfo.finishEntityResult(ret);
+                                return (ID) idBeanInfo.finishBeanResult(ret);
                             }));
 
             final com.landawn.abacus.util.function.BiConsumer<ID, Object> idSetter = isNoId ? noIdGeneratorGetterSetter._3 //
@@ -5894,7 +5894,7 @@ public final class JdbcUtil {
                                     logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
                                 }
                             } : (id, entity) -> {
-                                if (id != null && ClassUtil.isEntity(id.getClass())) {
+                                if (id != null && ClassUtil.isBeanClass(id.getClass())) {
                                     final Object entityId = id;
 
                                     for (PropInfo propInfo : idPropInfoList) {
@@ -5943,16 +5943,16 @@ public final class JdbcUtil {
                                                 return id;
                                             } else {
                                                 final List<Tuple2<String, PropInfo>> tpList = StreamEx.of(columnLabels)
-                                                        .filter(it -> idEntityInfo.getPropInfo(it) != null)
-                                                        .map(it -> Tuple.of(it, idEntityInfo.getPropInfo(it)))
+                                                        .filter(it -> idBeanInfo.getPropInfo(it) != null)
+                                                        .map(it -> Tuple.of(it, idBeanInfo.getPropInfo(it)))
                                                         .toList();
-                                                final Object id = idEntityInfo.createEntityResult();
+                                                final Object id = idBeanInfo.createBeanResult();
 
                                                 for (Tuple2<String, PropInfo> tp : tpList) {
                                                     tp._2.setPropValue(id, tp._2.dbType.get(rs, tp._1));
                                                 }
 
-                                                return idEntityInfo.finishEntityResult(id);
+                                                return idBeanInfo.finishBeanResult(id);
                                             }
                                         }));
 
@@ -5991,7 +5991,7 @@ public final class JdbcUtil {
     //            java.lang.reflect.Type[] typeArguments = parameterizedType.getActualTypeArguments();
     //
     //            if (typeArguments.length >= 1 && typeArguments[0] instanceof Class) {
-    //                if (!ClassUtil.isEntity((Class) typeArguments[0])) {
+    //                if (!ClassUtil.isBeanClass((Class) typeArguments[0])) {
     //                    throw new IllegalArgumentException(
     //                            "Entity Type parameter of Dao interface must be: Object.class or entity class with getter/setter methods. Can't be: "
     //                                    + typeArguments[0]);

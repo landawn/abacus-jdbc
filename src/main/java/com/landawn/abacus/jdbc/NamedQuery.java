@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.landawn.abacus.parser.ParserUtil;
-import com.landawn.abacus.parser.ParserUtil.EntityInfo;
+import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.ClassUtil;
@@ -2696,8 +2696,8 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
 
         final Class<?> cls = parameters.getClass();
 
-        if (ClassUtil.isEntity(cls)) {
-            final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+        if (ClassUtil.isBeanClass(cls)) {
+            final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
             PropInfo propInfo = null;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -2750,8 +2750,8 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
         }
 
         final Class<?> cls = entity.getClass();
-        if (ClassUtil.isEntity(cls)) {
-            final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+        if (ClassUtil.isBeanClass(cls)) {
+            final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
             PropInfo propInfo = null;
             Object propValue = null;
             Type<Object> dbType = null;
@@ -2853,8 +2853,8 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
             } else {
                 final Class<?> cls = first.getClass();
 
-                if (ClassUtil.isEntity(cls)) {
-                    final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+                if (ClassUtil.isBeanClass(cls)) {
+                    final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
                     final PropInfo[] propInfos = new PropInfo[parameterCount];
 
                     for (int i = 0; i < parameterCount; i++) {

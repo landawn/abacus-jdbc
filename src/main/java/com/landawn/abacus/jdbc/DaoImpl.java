@@ -99,7 +99,7 @@ import com.landawn.abacus.parser.JSONSerializationConfig.JSC;
 import com.landawn.abacus.parser.KryoParser;
 import com.landawn.abacus.parser.ParserFactory;
 import com.landawn.abacus.parser.ParserUtil;
-import com.landawn.abacus.parser.ParserUtil.EntityInfo;
+import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Array;
@@ -1113,8 +1113,8 @@ final class DaoImpl {
                 }
             }
         } else if (N.notNullOrEmpty(mappedByKey)) {
-            final Class<?> targetEntityClass = secondReturnEleType == null || !ClassUtil.isEntity(secondReturnEleType) ? entityClass : secondReturnEleType;
-            final EntityInfo entityInfo = ParserUtil.getEntityInfo(targetEntityClass);
+            final Class<?> targetEntityClass = secondReturnEleType == null || !ClassUtil.isBeanClass(secondReturnEleType) ? entityClass : secondReturnEleType;
+            final BeanInfo entityInfo = ParserUtil.getBeanInfo(targetEntityClass);
             final PropInfo propInfo = entityInfo.getPropInfo(mappedByKey);
             final Function<Object, Object> keyMapper = propInfo::getPropValue;
             final List<String> mergedByKey = N.isNullOrEmpty(mergedByIds) ? N.asList(mappedByKey) : mergedByIds;
@@ -1128,8 +1128,8 @@ final class DaoImpl {
         } else if (N.notNullOrEmpty(mergedByIds)) {
             if (returnType.isAssignableFrom(Collection.class) || returnType.isAssignableFrom(u.Optional.class)
                     || returnType.isAssignableFrom(java.util.Optional.class)) {
-                final Class<?> targetEntityClass = firstReturnEleType == null || !ClassUtil.isEntity(firstReturnEleType) ? entityClass : firstReturnEleType;
-                ParserUtil.getEntityInfo(targetEntityClass);
+                final Class<?> targetEntityClass = firstReturnEleType == null || !ClassUtil.isBeanClass(firstReturnEleType) ? entityClass : firstReturnEleType;
+                ParserUtil.getBeanInfo(targetEntityClass);
                 final boolean isCollection = returnType.isAssignableFrom(Collection.class);
                 final boolean isJavaOption = returnType.isAssignableFrom(java.util.Optional.class);
 
@@ -1232,7 +1232,7 @@ final class DaoImpl {
     }
 
     private static boolean isFindOrListTargetClass(final Class<?> cls) {
-        return ClassUtil.isEntity(cls) || Map.class.isAssignableFrom(cls) || List.class.isAssignableFrom(cls) || Object[].class.isAssignableFrom(cls)
+        return ClassUtil.isBeanClass(cls) || Map.class.isAssignableFrom(cls) || List.class.isAssignableFrom(cls) || Object[].class.isAssignableFrom(cls)
                 || ClassUtil.isRecordClass(cls);
     }
 
@@ -1334,7 +1334,7 @@ final class DaoImpl {
                 } else if (Map.class.isAssignableFrom(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> ((PreparedCallableQuery) preparedQuery)
                             .setParameters((Map<String, ?>) args[stmtParamIndexes[0]]);
-                } else if (ClassUtil.isEntity(paramTypeOne) || EntityId.class.isAssignableFrom(paramTypeOne) || ClassUtil.isRecordClass(paramTypeOne)) {
+                } else if (ClassUtil.isBeanClass(paramTypeOne) || EntityId.class.isAssignableFrom(paramTypeOne) || ClassUtil.isRecordClass(paramTypeOne)) {
                     throw new UnsupportedOperationException("In method: " + fullClassMethodName
                             + ", parameters for call(procedure) have to be binded with names through annotation @Bind, or Map. Entity/EntityId type parameter are not supported");
                 } else if (Collection.class.isAssignableFrom(paramTypeOne)) {
@@ -1355,7 +1355,7 @@ final class DaoImpl {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
                 } else if (queryInfo.isSingleParameter) {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
-                } else if (ClassUtil.isEntity(paramTypeOne) || ClassUtil.isRecordClass(paramTypeOne)) {
+                } else if (ClassUtil.isBeanClass(paramTypeOne) || ClassUtil.isRecordClass(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[stmtParamIndexes[0]]);
                 } else if (Map.class.isAssignableFrom(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters((Map<String, ?>) args[stmtParamIndexes[0]]);
@@ -1642,7 +1642,7 @@ final class DaoImpl {
 
                 final Type<?> type = N.typeOf(it.getClass());
 
-                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isEntity() || type.isEntityId()) {
+                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isBean() || type.isEntityId()) {
                     return it;
                 } else {
                     return it.toString();
@@ -1801,7 +1801,7 @@ final class DaoImpl {
                 .orElseNull();
 
         if (N.notNullOrEmpty(typeArguments)) {
-            if ((typeArguments.length >= 1 && typeArguments[0] instanceof Class) && !ClassUtil.isEntity((Class) typeArguments[0])) {
+            if ((typeArguments.length >= 1 && typeArguments[0] instanceof Class) && !ClassUtil.isBeanClass((Class) typeArguments[0])) {
                 throw new IllegalArgumentException(
                         "Entity Type parameter of Dao interface must be: Object.class or entity class with getter/setter methods. Can't be: "
                                 + typeArguments[0]);
@@ -1829,7 +1829,7 @@ final class DaoImpl {
                                 + " is not assignable from the id property type in the entity class: "
                                 + ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType());
                     }
-                } else if (idFieldNames.size() > 1 && !(EntityId.class.equals(typeArguments[1]) || ClassUtil.isEntity((Class) typeArguments[1])
+                } else if (idFieldNames.size() > 1 && !(EntityId.class.equals(typeArguments[1]) || ClassUtil.isBeanClass((Class) typeArguments[1])
                         || ClassUtil.isRecordClass((Class) typeArguments[1]))) {
                     throw new IllegalArgumentException(
                             "To support multiple ids, the 'ID' type type must be EntityId/Entity/Record. It can't be: " + typeArguments[1]);
@@ -1849,7 +1849,7 @@ final class DaoImpl {
         final Class<Object> entityClass = N.isNullOrEmpty(typeArguments) ? null : (Class) typeArguments[0];
         final Class<?> idClass = isCrudDao ? (isCrudDaoL ? Long.class : (Class) typeArguments[1]) : null;
         final boolean isEntityId = idClass != null && EntityId.class.isAssignableFrom(idClass);
-        final EntityInfo idEntityInfo = idClass != null && ClassUtil.isEntity(idClass) ? ParserUtil.getEntityInfo(idClass) : null;
+        final BeanInfo idBeanInfo = idClass != null && ClassUtil.isBeanClass(idClass) ? ParserUtil.getBeanInfo(idClass) : null;
 
         final Class<? extends SQLBuilder> sbc = N.isNullOrEmpty(typeArguments) ? PSC.class
                 : (typeArguments.length >= 2 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[1]) ? (Class) typeArguments[1]
@@ -1909,14 +1909,15 @@ final class DaoImpl {
         final boolean isNoId = entityClass == null || N.isNullOrEmpty(idPropNameList) || QueryUtil.isFakeId(idPropNameList);
         final Set<String> idPropNameSet = N.newHashSet(idPropNameList);
         final String oneIdPropName = isNoId ? null : idPropNameList.get(0);
-        final EntityInfo entityInfo = entityClass == null ? null : ParserUtil.getEntityInfo(entityClass);
+        final BeanInfo entityInfo = entityClass == null ? null : ParserUtil.getBeanInfo(entityClass);
         final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
         final boolean isOneId = isNoId ? false : idPropNameList.size() == 1;
         final Condition idCond = isNoId ? null : isOneId ? CF.eq(oneIdPropName) : CF.and(StreamEx.of(idPropNameList).map(CF::eq).toList());
         final Function<Object, Condition> id2CondFunc = isNoId || idClass == null ? null
                 : (isEntityId ? id -> CF.id2Cond((EntityId) id)
                         : Map.class.isAssignableFrom(idClass) ? id -> CF.eqAnd((Map<String, ?>) id)
-                                : ClassUtil.isEntity(idClass) || ClassUtil.isRecordClass(idClass) ? ConditionFactory::eqAnd : id -> CF.eq(oneIdPropName, id));
+                                : ClassUtil.isBeanClass(idClass) || ClassUtil.isRecordClass(idClass) ? ConditionFactory::eqAnd
+                                        : id -> CF.eq(oneIdPropName, id));
 
         String sql_getById = null;
         String sql_existsById = null;
@@ -1978,7 +1979,7 @@ final class DaoImpl {
         final Predicate<Object> isDefaultIdTester = isNoId ? id -> true
                 : (isOneId ? JdbcUtil::isDefaultIdPropValue
                         : (isEntityId ? id -> Stream.of(((EntityId) id).entrySet()).allMatch(it -> JdbcUtil.isDefaultIdPropValue(it.getValue()))
-                                : id -> Stream.of(idPropNameList).allMatch(idName -> JdbcUtil.isDefaultIdPropValue(idEntityInfo.getPropValue(id, idName)))));
+                                : id -> Stream.of(idPropNameList).allMatch(idName -> JdbcUtil.isDefaultIdPropValue(idBeanInfo.getPropValue(id, idName)))));
 
         final Jdbc.BiParametersSetter<NamedQuery, Object> idParamSetter = isOneId ? (pq, id) -> pq.setObject(oneIdPropName, id, idPropInfo.dbType)
                 : (isEntityId ? (pq, id) -> {
@@ -1993,7 +1994,7 @@ final class DaoImpl {
                     PropInfo propInfo = null;
 
                     for (String idName : idPropNameList) {
-                        propInfo = idEntityInfo.getPropInfo(idName);
+                        propInfo = idBeanInfo.getPropInfo(idName);
                         pq.setObject(idName, propInfo.getPropValue(id), propInfo.dbType);
                     }
                 });
@@ -2067,7 +2068,7 @@ final class DaoImpl {
         //    final Map<String, String> sqlCache = new ConcurrentHashMap<>(0);
         //    final Map<String, ImmutableList<String>> sqlsCache = new ConcurrentHashMap<>(0);
 
-        final Map<String, JoinInfo> joinEntityInfo = (JoinEntityHelper.class.isAssignableFrom(daoInterface)
+        final Map<String, JoinInfo> joinBeanInfo = (JoinEntityHelper.class.isAssignableFrom(daoInterface)
                 || UncheckedJoinEntityHelper.class.isAssignableFrom(daoInterface)) ? JoinInfo.getEntityJoinInfo(daoInterface, entityClass) : null;
 
         for (Method method : sqlMethods) {
@@ -3853,7 +3854,7 @@ final class DaoImpl {
 
                             final Object firstId = N.firstElement(ids).get();
                             final boolean isMap = firstId instanceof Map;
-                            final boolean isEntity = firstId != null && ClassUtil.isEntity(firstId.getClass());
+                            final boolean isEntity = firstId != null && ClassUtil.isBeanClass(firstId.getClass());
 
                             N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId),
                                     "Input 'ids' can not be EntityIds/Maps or entities for single id ");
@@ -3955,7 +3956,7 @@ final class DaoImpl {
 
                             final Object firstId = N.firstElement(ids).get();
                             final boolean isMap = firstId instanceof Map;
-                            final boolean isEntity = firstId != null && ClassUtil.isEntity(firstId.getClass());
+                            final boolean isEntity = firstId != null && ClassUtil.isBeanClass(firstId.getClass());
 
                             N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId),
                                     "Input 'ids' can not be EntityIds/Maps or entities for single id ");
@@ -4288,7 +4289,7 @@ final class DaoImpl {
                             N.checkArgNotNull(entity, "entity");
                             N.checkArgNotNullOrEmpty(joinEntityPropName, "joinEntityPropName");
 
-                            final JoinInfo propJoinInfo = joinEntityInfo.get(joinEntityPropName);
+                            final JoinInfo propJoinInfo = joinBeanInfo.get(joinEntityPropName);
                             final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getSelectSQLBuilderAndParamSetter(sbc);
 
@@ -4729,9 +4730,9 @@ final class DaoImpl {
 
                     final int stmtParamLen = stmtParamIndexes.length;
 
-                    if (stmtParamLen == 1 && (ClassUtil.isEntity(paramTypes[stmtParamIndexes[0]]) || Map.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])
-                            || EntityId.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) || ClassUtil.isRecordClass(paramTypes[stmtParamIndexes[0]]))
-                            && !isNamedQuery) {
+                    if (stmtParamLen == 1 && (ClassUtil.isBeanClass(paramTypes[stmtParamIndexes[0]])
+                            || Map.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) || EntityId.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])
+                            || ClassUtil.isRecordClass(paramTypes[stmtParamIndexes[0]])) && !isNamedQuery) {
                         throw new UnsupportedOperationException(
                                 "Using named query: @NamedSelect/NamedUpdate/NamedInsert/NamedDelete when parameter type is Entity/Map/EntityId in method: "
                                         + fullClassMethodName);
@@ -4938,7 +4939,7 @@ final class DaoImpl {
                             call = (proxy, args) -> {
                                 final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                                 final boolean isEntity = stmtParamLen == 1 && args[stmtParamIndexes[0]] != null
-                                        && ClassUtil.isEntity(args[stmtParamIndexes[0]].getClass());
+                                        && ClassUtil.isBeanClass(args[stmtParamIndexes[0]].getClass());
                                 final Object entity = isEntity ? args[stmtParamIndexes[0]] : null;
 
                                 final Optional<Object> id = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
@@ -5018,7 +5019,7 @@ final class DaoImpl {
                                     }
                                 }
 
-                                final boolean isEntity = ClassUtil.isEntity(N.firstOrNullIfEmpty(batchParameters).getClass());
+                                final boolean isEntity = ClassUtil.isBeanClass(N.firstOrNullIfEmpty(batchParameters).getClass());
 
                                 if (JdbcUtil.isAllNullIds(ids)) {
                                     ids = new ArrayList<>();

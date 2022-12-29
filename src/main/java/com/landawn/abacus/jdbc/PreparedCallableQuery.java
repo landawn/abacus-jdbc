@@ -32,7 +32,7 @@ import java.util.Map;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.parser.ParserUtil;
-import com.landawn.abacus.parser.ParserUtil.EntityInfo;
+import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.DataSet;
@@ -837,7 +837,7 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
         checkArgNotNull(parameterNames, "parameterNames");
 
         final Class<?> cls = entity.getClass();
-        final EntityInfo entityInfo = ParserUtil.getEntityInfo(cls);
+        final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
         PropInfo propInfo = null;
 
         for (String parameterName : parameterNames) {

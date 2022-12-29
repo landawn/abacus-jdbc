@@ -696,7 +696,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      */
     default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException {
         final Class<?> cls = entity.getClass();
-        final PropInfo propInfo = ParserUtil.getEntityInfo(cls).getPropInfo(joinEntityPropName);
+        final PropInfo propInfo = ParserUtil.getBeanInfo(cls).getPropInfo(joinEntityPropName);
 
         if (propInfo.getPropValue(entity) == null) {
             loadJoinEntities(entity, joinEntityPropName, selectPropNames);
@@ -727,7 +727,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         }
 
         final Class<?> cls = N.firstOrNullIfEmpty(entities).getClass();
-        final PropInfo propInfo = ParserUtil.getEntityInfo(cls).getPropInfo(joinEntityPropName);
+        final PropInfo propInfo = ParserUtil.getBeanInfo(cls).getPropInfo(joinEntityPropName);
         final List<T> newEntities = N.filter(entities, entity -> propInfo.getPropValue(entity) == null);
 
         if (N.notNullOrEmpty(newEntities)) {
