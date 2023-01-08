@@ -447,13 +447,15 @@ public final class SQLTransaction implements Transaction, Closeable {
      * @throws E
      */
     public <E extends Throwable> void runNotInMe(Throwables.Runnable<E> cmd) throws E {
-        threadTransactionMap.remove(_id);
+        synchronized (_id) {
+            threadTransactionMap.remove(_id);
 
-        try {
-            cmd.run();
-        } finally {
-            if (threadTransactionMap.put(_id, this) != null) {
-                throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.runNotInMe'.");
+            try {
+                cmd.run();
+            } finally {
+                if (threadTransactionMap.put(_id, this) != null) {
+                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.runNotInMe'.");
+                }
             }
         }
     }
@@ -468,13 +470,15 @@ public final class SQLTransaction implements Transaction, Closeable {
      * @throws E
      */
     public <R, E extends Throwable> R callNotInMe(Throwables.Callable<R, E> cmd) throws E {
-        threadTransactionMap.remove(_id);
+        synchronized (_id) {
+            threadTransactionMap.remove(_id);
 
-        try {
-            return cmd.call();
-        } finally {
-            if (threadTransactionMap.put(_id, this) != null) {
-                throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.callNotInMe'.");
+            try {
+                return cmd.call();
+            } finally {
+                if (threadTransactionMap.put(_id, this) != null) {
+                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.callNotInMe'.");
+                }
             }
         }
     }
