@@ -101,6 +101,7 @@ import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.u.Optional;
+import com.landawn.abacus.util.function.TriConsumer;
 import com.landawn.abacus.util.stream.EntryStream;
 import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
@@ -158,7 +159,7 @@ public final class JdbcUtil {
         return sql;
     };
 
-    static Function<Statement, String> sqlExtractor = DEFAULT_SQL_EXTRACTOR;
+    static Function<Statement, String> _sqlExtractor = DEFAULT_SQL_EXTRACTOR;
 
     // TODO is it right to do it?
     // static final KeyedObjectPool<Statement, PoolableWrapper<String>> stmtPoolForSql = PoolFactory.createKeyedObjectPool(1000, 3000);
@@ -3498,36 +3499,6 @@ public final class JdbcUtil {
         }
     }
 
-    static int[] executeBatch(Statement stmt) throws SQLException {
-        final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
-
-        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled()) {
-            final long startTime = System.currentTimeMillis();
-
-            try {
-                return stmt.executeBatch();
-            } finally {
-                logSqlPerf(stmt, sqlLogConfig, startTime);
-
-                try {
-                    stmt.clearBatch();
-                } catch (SQLException e) {
-                    logger.error("Failed to clear batch parameters after executeBatch", e);
-                }
-            }
-        } else {
-            try {
-                return stmt.executeBatch();
-            } finally {
-                try {
-                    stmt.clearBatch();
-                } catch (SQLException e) {
-                    logger.error("Failed to clear batch parameters after executeBatch", e);
-                }
-            }
-        }
-    }
-
     static long executeLargeUpdate(PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
@@ -3553,6 +3524,36 @@ public final class JdbcUtil {
                     stmt.clearBatch();
                 } catch (SQLException e) {
                     logger.error("Failed to clear batch parameters after executeLargeUpdate", e);
+                }
+            }
+        }
+    }
+
+    static int[] executeBatch(Statement stmt) throws SQLException {
+        final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
+
+        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled()) {
+            final long startTime = System.currentTimeMillis();
+
+            try {
+                return stmt.executeBatch();
+            } finally {
+                logSqlPerf(stmt, sqlLogConfig, startTime);
+
+                try {
+                    stmt.clearBatch();
+                } catch (SQLException e) {
+                    logger.error("Failed to clear batch parameters after executeBatch", e);
+                }
+            }
+        } else {
+            try {
+                return stmt.executeBatch();
+            } finally {
+                try {
+                    stmt.clearBatch();
+                } catch (SQLException e) {
+                    logger.error("Failed to clear batch parameters after executeBatch", e);
                 }
             }
         }
@@ -5130,6 +5131,20 @@ public final class JdbcUtil {
     //        return stmt;
     //    }
 
+    public static Function<Statement, String> getSqlExtractor() {
+        return _sqlExtractor;
+    }
+
+    public static void setSqlExtractor(final Function<Statement, String> sqlExtractor) {
+        _sqlExtractor = sqlExtractor;
+    }
+
+    private static TriConsumer<String, Long, Long> _sqlLogHandler = null;
+
+    public static void setSqlLogHandler(final TriConsumer<String, Long, Long> sqlLogHandler) {
+        _sqlLogHandler = sqlLogHandler;
+    }
+
     public static final long DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG = 3000L;
 
     public static final long DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG = 1000L;
@@ -5180,17 +5195,28 @@ public final class JdbcUtil {
             return;
         }
 
-        final long elapsedTime = System.currentTimeMillis() - startTime;
+        final long endTime = System.currentTimeMillis();
+        final long elapsedTime = endTime - startTime;
+        String sql = null;
 
         if (elapsedTime >= sqlLogConfig.minExecutionTimeForSqlPerfLog) {
-            final Function<Statement, String> sqlExtractor = N.defaultIfNull(JdbcUtil.sqlExtractor, JdbcUtil.DEFAULT_SQL_EXTRACTOR);
-            final String sql = sqlExtractor.apply(stmt);
+            final Function<Statement, String> sqlExtractor = N.defaultIfNull(JdbcUtil._sqlExtractor, JdbcUtil.DEFAULT_SQL_EXTRACTOR);
+            sql = sqlExtractor.apply(stmt);
 
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
                 sqlLogger.info(Strings.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", sql));
             } else {
                 sqlLogger.info(Strings.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", sql.substring(0, sqlLogConfig.maxSqlLogLength)));
             }
+        }
+
+        if (_sqlLogHandler != null) {
+            if (sql == null) {
+                final Function<Statement, String> sqlExtractor = N.defaultIfNull(JdbcUtil._sqlExtractor, JdbcUtil.DEFAULT_SQL_EXTRACTOR);
+                sql = sqlExtractor.apply(stmt);
+            }
+
+            _sqlLogHandler.accept(sql, startTime, endTime);
         }
     }
 
@@ -5416,14 +5442,6 @@ public final class JdbcUtil {
 
     public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
         return QueryUtil.getUpdatePropNames(entityClass, excludedPropNames);
-    }
-
-    public static Function<Statement, String> getSqlExtractor() {
-        return sqlExtractor;
-    }
-
-    public static void setSqlExtractor(final Function<Statement, String> sqlExtractor) {
-        JdbcUtil.sqlExtractor = sqlExtractor;
     }
 
     @Beta
