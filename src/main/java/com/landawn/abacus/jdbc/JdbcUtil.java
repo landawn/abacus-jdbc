@@ -5141,6 +5141,10 @@ public final class JdbcUtil {
 
     private static TriConsumer<String, Long, Long> _sqlLogHandler = null;
 
+    /**
+     *
+     * @param sqlLogHandler 1st parameter is sql, 2nd parameter is start time of sql execution, 3rd parameter is end time of sql execution.
+     */
     public static void setSqlLogHandler(final TriConsumer<String, Long, Long> sqlLogHandler) {
         _sqlLogHandler = sqlLogHandler;
     }
