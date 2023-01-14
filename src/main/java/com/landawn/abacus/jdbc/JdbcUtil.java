@@ -3458,13 +3458,13 @@ public final class JdbcUtil {
     static ResultSet executeQuery(PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
-        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled()) {
+        if (isToHandleSqlLog(sqlLogConfig)) {
             final long startTime = System.currentTimeMillis();
 
             try {
                 return stmt.executeQuery();
             } finally {
-                logSqlPerf(stmt, sqlLogConfig, startTime);
+                handleSqlLog(stmt, sqlLogConfig, startTime);
 
                 clearParameters(stmt);
             }
@@ -3480,13 +3480,13 @@ public final class JdbcUtil {
     static int executeUpdate(PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
-        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled()) {
+        if (isToHandleSqlLog(sqlLogConfig)) {
             final long startTime = System.currentTimeMillis();
 
             try {
                 return stmt.executeUpdate();
             } finally {
-                logSqlPerf(stmt, sqlLogConfig, startTime);
+                handleSqlLog(stmt, sqlLogConfig, startTime);
 
                 clearParameters(stmt);
             }
@@ -3502,13 +3502,13 @@ public final class JdbcUtil {
     static long executeLargeUpdate(PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
-        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled()) {
+        if (isToHandleSqlLog(sqlLogConfig)) {
             final long startTime = System.currentTimeMillis();
 
             try {
                 return stmt.executeLargeUpdate();
             } finally {
-                logSqlPerf(stmt, sqlLogConfig, startTime);
+                handleSqlLog(stmt, sqlLogConfig, startTime);
 
                 try {
                     stmt.clearBatch();
@@ -3532,13 +3532,13 @@ public final class JdbcUtil {
     static int[] executeBatch(Statement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
-        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled()) {
+        if (isToHandleSqlLog(sqlLogConfig)) {
             final long startTime = System.currentTimeMillis();
 
             try {
                 return stmt.executeBatch();
             } finally {
-                logSqlPerf(stmt, sqlLogConfig, startTime);
+                handleSqlLog(stmt, sqlLogConfig, startTime);
 
                 try {
                     stmt.clearBatch();
@@ -3562,13 +3562,13 @@ public final class JdbcUtil {
     static long[] executeLargeBatch(Statement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
-        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled()) {
+        if (isToHandleSqlLog(sqlLogConfig)) {
             final long startTime = System.currentTimeMillis();
 
             try {
                 return stmt.executeLargeBatch();
             } finally {
-                logSqlPerf(stmt, sqlLogConfig, startTime);
+                handleSqlLog(stmt, sqlLogConfig, startTime);
 
                 try {
                     stmt.clearBatch();
@@ -3592,13 +3592,13 @@ public final class JdbcUtil {
     static boolean execute(PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
-        if (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled()) {
+        if (isToHandleSqlLog(sqlLogConfig)) {
             final long startTime = System.currentTimeMillis();
 
             try {
                 return stmt.execute();
             } finally {
-                logSqlPerf(stmt, sqlLogConfig, startTime);
+                handleSqlLog(stmt, sqlLogConfig, startTime);
 
                 clearParameters(stmt);
             }
@@ -3609,6 +3609,10 @@ public final class JdbcUtil {
                 clearParameters(stmt);
             }
         }
+    }
+
+    private static boolean isToHandleSqlLog(final SqlLogConfig sqlLogConfig) {
+        return _sqlLogHandler != null || (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled());
     }
 
     static void clearParameters(final PreparedStatement stmt) {
@@ -5194,16 +5198,12 @@ public final class JdbcUtil {
         return minExecutionTimeForSqlPerfLog_TL.get().minExecutionTimeForSqlPerfLog;
     }
 
-    static void logSqlPerf(final Statement stmt, final SqlLogConfig sqlLogConfig, final long startTime) {
-        if (!isSqlPerfLogAllowed || !sqlLogger.isInfoEnabled()) {
-            return;
-        }
-
+    static void handleSqlLog(final Statement stmt, final SqlLogConfig sqlLogConfig, final long startTime) {
         final long endTime = System.currentTimeMillis();
         final long elapsedTime = endTime - startTime;
         String sql = null;
 
-        if (elapsedTime >= sqlLogConfig.minExecutionTimeForSqlPerfLog) {
+        if (isSqlPerfLogAllowed && sqlLogger.isInfoEnabled() && elapsedTime >= sqlLogConfig.minExecutionTimeForSqlPerfLog) {
             final Function<Statement, String> sqlExtractor = N.defaultIfNull(JdbcUtil._sqlExtractor, JdbcUtil.DEFAULT_SQL_EXTRACTOR);
             sql = sqlExtractor.apply(stmt);
 
