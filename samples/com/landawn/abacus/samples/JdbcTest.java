@@ -395,5 +395,11 @@ public class JdbcTest {
 
         sql = JdbcUtil.generateNamedInsertSql(dataSource, "user");
         N.println(sql);
+
+        sql = JdbcUtil.generateUpdateSql(dataSource, "user");
+        N.println(sql);
+
+        sql = JdbcUtil.generateNamedUpdateSql(dataSource, "user");
+        N.println(sql);
     }
 }

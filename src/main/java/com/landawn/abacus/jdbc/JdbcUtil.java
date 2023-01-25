@@ -6263,6 +6263,50 @@ public final class JdbcUtil {
         }
     }
 
+    public static String generateUpdateSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateUpdateSql(conn, tableName);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    public static String generateUpdateSql(final Connection conn, final String tableName) {
+        String query = "select * from " + tableName + " where 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+
+            return "update " + tableName + " set " + Stream.of(columnLabelList).map(it -> it + " = ?").join(", ");
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    public static String generateNamedUpdateSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateNamedUpdateSql(conn, tableName);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    public static String generateNamedUpdateSql(final Connection conn, final String tableName) {
+        String query = "select * from " + tableName + " where 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+
+            return "update " + tableName + " set " + Stream.of(columnLabelList).map(it -> it + " = :" + Strings.toCamelCase(it)).join(", ");
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
     public static boolean isNullOrDefault(final Object value) {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
     }
