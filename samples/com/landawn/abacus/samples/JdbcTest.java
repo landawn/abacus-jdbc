@@ -384,4 +384,16 @@ public class JdbcTest {
         str = JdbcUtil.generateEntityClass(dataSource, "UserQueryAllResult", "select * from user", ecc);
         System.out.println(str);
     }
+
+    @Test
+    public void test_generateSql() {
+        String sql = JdbcUtil.generateSelectSql(dataSource, "user");
+        N.println(sql);
+
+        sql = JdbcUtil.generateInsertSql(dataSource, "user");
+        N.println(sql);
+
+        sql = JdbcUtil.generateNamedInsertSql(dataSource, "user");
+        N.println(sql);
+    }
 }

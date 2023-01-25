@@ -6194,6 +6194,75 @@ public final class JdbcUtil {
         return CodeGenerationUtil.generateEntityClass(conn, entityName, query, config);
     }
 
+    public static String generateSelectSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateSelectSql(conn, tableName);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    public static String generateSelectSql(final Connection conn, final String tableName) {
+        String query = "select * from " + tableName + " where 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+
+            return Strings.join(columnLabelList, ", ", "select ", " from " + tableName);
+
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    public static String generateInsertSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateInsertSql(conn, tableName);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    public static String generateInsertSql(final Connection conn, final String tableName) {
+        String query = "select * from " + tableName + " where 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+
+            return Strings.join(columnLabelList, ", ", "insert into " + tableName + "(",
+                    ") values (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    public static String generateNamedInsertSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateNamedInsertSql(conn, tableName);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    public static String generateNamedInsertSql(final Connection conn, final String tableName) {
+        String query = "select * from " + tableName + " where 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+
+            return Strings.join(columnLabelList, ", ", "insert into " + tableName + "(",
+                    Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") values (", ")"));
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
     public static boolean isNullOrDefault(final Object value) {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
     }
