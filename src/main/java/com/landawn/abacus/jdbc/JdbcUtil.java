@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc;
 
+import java.nio.charset.Charset;
 import java.sql.Blob;
 import java.sql.CallableStatement;
 import java.sql.Clob;
@@ -6305,6 +6306,14 @@ public final class JdbcUtil {
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         }
+    }
+
+    public static String blob2String(final Blob blob) throws SQLException {
+        return new String(blob.getBytes(1, (int) blob.length()));
+    }
+
+    public static String blob2String(final Blob blob, final Charset charset) throws SQLException {
+        return new String(blob.getBytes(1, (int) blob.length()), charset);
     }
 
     public static boolean isNullOrDefault(final Object value) {
