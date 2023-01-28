@@ -15,6 +15,8 @@
  */
 package com.landawn.abacus.jdbc;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -146,6 +148,16 @@ public final class JdbcUtil {
     public static final int DEFAULT_FETCH_SIZE_FOR_BIG_RESULT = 1000;
 
     public static final Function<Statement, String> DEFAULT_SQL_EXTRACTOR = stmt -> {
+        if (stmt.getClass().getName().startsWith("oracle.jdbc")) {
+            if (stmt instanceof oracle.jdbc.internal.OraclePreparedStatement) {
+                try {
+                    return ((oracle.jdbc.internal.OraclePreparedStatement) stmt).getOriginalSql();
+                } catch (SQLException e) {
+                    // ignore.
+                }
+            }
+        }
+
         String sql = stmt.toString();
 
         if (sql.startsWith("Hikari")) {
@@ -6310,10 +6322,15 @@ public final class JdbcUtil {
 
     public static String blob2String(final Blob blob) throws SQLException {
         return new String(blob.getBytes(1, (int) blob.length()));
+
     }
 
     public static String blob2String(final Blob blob, final Charset charset) throws SQLException {
         return new String(blob.getBytes(1, (int) blob.length()), charset);
+    }
+
+    public static long writeBlobToFile(final Blob blob, final File output) throws SQLException, IOException {
+        return IOUtil.write(output, blob.getBinaryStream());
     }
 
     public static boolean isNullOrDefault(final Object value) {
