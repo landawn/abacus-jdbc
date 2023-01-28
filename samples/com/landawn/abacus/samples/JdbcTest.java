@@ -161,7 +161,7 @@ public class JdbcTest {
 
     @Test
     public void test_perf_log() throws SQLException {
-        JdbcUtil.setMinExecutionTimeForSqlPerfLog(1);
+        // JdbcUtil.setMinExecutionTimeForSqlPerfLog(1);
 
         List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())

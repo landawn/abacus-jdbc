@@ -45,7 +45,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javax.sql.DataSource;
@@ -147,32 +146,29 @@ public final class JdbcUtil {
 
     public static final int DEFAULT_FETCH_SIZE_FOR_BIG_RESULT = 1000;
 
-    public static final Function<Statement, String> DEFAULT_SQL_EXTRACTOR = stmt -> {
-        if (stmt.getClass().getName().startsWith("oracle.jdbc")) {
-            if (stmt instanceof oracle.jdbc.internal.OraclePreparedStatement) {
+    public static final Throwables.Function<Statement, String, SQLException> DEFAULT_SQL_EXTRACTOR = stmt -> {
+        Statement stmtToUse = stmt;
+        String clsName = stmtToUse.getClass().getName();
+
+        if ((clsName.startsWith("com.zaxxer.hikari") || clsName.startsWith("com.mchange.v2.c3p0")) && stmt.isWrapperFor(Statement.class)) {
+            stmtToUse = stmt.unwrap(Statement.class);
+            clsName = stmtToUse.getClass().getName();
+        }
+
+        if (clsName.startsWith("oracle.jdbc")) {
+            if (stmtToUse instanceof oracle.jdbc.internal.OraclePreparedStatement) {
                 try {
-                    return ((oracle.jdbc.internal.OraclePreparedStatement) stmt).getOriginalSql();
+                    return ((oracle.jdbc.internal.OraclePreparedStatement) stmtToUse).getOriginalSql();
                 } catch (SQLException e) {
                     // ignore.
                 }
             }
         }
 
-        String sql = stmt.toString();
-
-        if (sql.startsWith("Hikari")) {
-            String delimitor = "wrapping ";
-            int idx = sql.indexOf(delimitor);
-
-            if (idx > 0) {
-                sql = sql.substring(idx + delimitor.length());
-            }
-        }
-
-        return sql;
+        return stmtToUse.toString();
     };
 
-    static Function<Statement, String> _sqlExtractor = DEFAULT_SQL_EXTRACTOR;
+    static Throwables.Function<Statement, String, SQLException> _sqlExtractor = DEFAULT_SQL_EXTRACTOR;
 
     // TODO is it right to do it?
     // static final KeyedObjectPool<Statement, PoolableWrapper<String>> stmtPoolForSql = PoolFactory.createKeyedObjectPool(1000, 3000);
@@ -5148,11 +5144,11 @@ public final class JdbcUtil {
     //        return stmt;
     //    }
 
-    public static Function<Statement, String> getSqlExtractor() {
+    public static Throwables.Function<Statement, String, SQLException> getSqlExtractor() {
         return _sqlExtractor;
     }
 
-    public static void setSqlExtractor(final Function<Statement, String> sqlExtractor) {
+    public static void setSqlExtractor(final Throwables.Function<Statement, String, SQLException> sqlExtractor) {
         _sqlExtractor = sqlExtractor;
     }
 
@@ -5215,13 +5211,13 @@ public final class JdbcUtil {
         return minExecutionTimeForSqlPerfLog_TL.get().minExecutionTimeForSqlPerfLog;
     }
 
-    static void handleSqlLog(final Statement stmt, final SqlLogConfig sqlLogConfig, final long startTime) {
+    static void handleSqlLog(final Statement stmt, final SqlLogConfig sqlLogConfig, final long startTime) throws SQLException {
         final long endTime = System.currentTimeMillis();
         final long elapsedTime = endTime - startTime;
         String sql = null;
 
         if (isSqlPerfLogAllowed && sqlLogger.isInfoEnabled() && elapsedTime >= sqlLogConfig.minExecutionTimeForSqlPerfLog) {
-            final Function<Statement, String> sqlExtractor = N.defaultIfNull(JdbcUtil._sqlExtractor, JdbcUtil.DEFAULT_SQL_EXTRACTOR);
+            final Throwables.Function<Statement, String, SQLException> sqlExtractor = N.defaultIfNull(JdbcUtil._sqlExtractor, JdbcUtil.DEFAULT_SQL_EXTRACTOR);
             sql = sqlExtractor.apply(stmt);
 
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
@@ -5233,7 +5229,8 @@ public final class JdbcUtil {
 
         if (_sqlLogHandler != null) {
             if (sql == null) {
-                final Function<Statement, String> sqlExtractor = N.defaultIfNull(JdbcUtil._sqlExtractor, JdbcUtil.DEFAULT_SQL_EXTRACTOR);
+                final Throwables.Function<Statement, String, SQLException> sqlExtractor = N.defaultIfNull(JdbcUtil._sqlExtractor,
+                        JdbcUtil.DEFAULT_SQL_EXTRACTOR);
                 sql = sqlExtractor.apply(stmt);
             }
 
