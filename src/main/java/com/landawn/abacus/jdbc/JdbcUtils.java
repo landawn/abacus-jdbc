@@ -2799,6 +2799,34 @@ public final class JdbcUtils {
     /**
     *
     * @param sourceDataSource
+    * @param targetDataSource
+    * @param tableName
+    * @return
+    * @throws UncheckedSQLException the unchecked SQL exception
+    */
+    public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String tableName)
+            throws UncheckedSQLException {
+        String selectSql = null;
+        String insertSql = null;
+        Connection conn = null;
+
+        try {
+            conn = sourceDataSource.getConnection();
+
+            selectSql = JdbcUtil.generateSelectSql(sourceDataSource, tableName);
+            insertSql = JdbcUtil.generateInsertSql(sourceDataSource, tableName);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        } finally {
+            JdbcUtil.releaseConnection(conn, sourceDataSource);
+        }
+
+        return copy(sourceDataSource, selectSql, targetDataSource, insertSql);
+    }
+
+    /**
+    *
+    * @param sourceDataSource
     * @param selectSql
     * @param targetDataSource
     * @param insertSql
@@ -2841,6 +2869,21 @@ public final class JdbcUtils {
                 JdbcUtil.releaseConnection(targetConn, targetDataSource);
             }
         }
+    }
+
+    /**
+     *
+     * @param sourceConn
+     * @param targetConn
+     * @param tableName
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    public static long copy(final Connection sourceConn, final Connection targetConn, final String tableName) throws UncheckedSQLException {
+        final String selectSql = JdbcUtil.generateSelectSql(sourceConn, tableName);
+        final String insertSql = JdbcUtil.generateInsertSql(sourceConn, tableName);
+
+        return copy(sourceConn, selectSql, targetConn, insertSql);
     }
 
     /**

@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -37,8 +38,10 @@ import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
+import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.Tuple;
+import com.landawn.abacus.util.stream.IntStream;
 
 /**
  * CRUD: insert -> read -> update -> delete a record in DB table.
@@ -155,6 +158,30 @@ public class JdbcTest {
     //    public void crud_by_Jdbc_00() throws SQLException {
     //        NSC.selectFrom(User.class).where(CF.gt("id", 1)).toNamedQuery(dataSource).list().forEach(Fn.println());
     //    }
+
+    @Test
+    public void test_perf_log() throws SQLException {
+        JdbcUtil.setMinExecutionTimeForSqlPerfLog(1);
+
+        List<User> users = IntStream.range(1, 1000)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                .toList();
+
+        Connection conn = null;
+        PreparedStatement stmt = null;
+
+        try {
+            final String sql = NSC.insertInto(User.class).sql();
+            JdbcUtil.prepareNamedQuery(dataSource, sql).addBatchParameters(users).batchInsert();
+        } finally {
+            JdbcUtil.closeQuietly(stmt, conn);
+        }
+
+        assertEquals(users.size(), userDao.batchUpdate(users));
+
+        assertEquals(users.size(), userDao.batchDelete(users));
+
+    }
 
     @Test
     public void crud_by_Jdbc() throws SQLException {
