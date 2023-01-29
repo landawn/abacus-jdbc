@@ -3084,10 +3084,10 @@ public final class JdbcUtils {
         int result = 0;
 
         try {
-            insertStmt = JdbcUtil.prepareStatement(targetConn, insertSql);
-
             selectStmt = JdbcUtil.prepareStatement(sourceConn, selectSql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
             selectStmt.setFetchSize(fetchSize);
+
+            insertStmt = JdbcUtil.prepareStatement(targetConn, insertSql);
 
             copy(selectStmt, offset, count, insertStmt, batchSize, batchIntervalInMillis, inParallel, stmtSetter);
         } catch (SQLException e) {
@@ -3286,10 +3286,10 @@ public final class JdbcUtils {
         int result = 0;
 
         try {
-            insertStmt = JdbcUtil.prepareStatement(targetConn, insertSql);
-
             selectStmt = JdbcUtil.prepareStatement(sourceConn, selectSql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
             selectStmt.setFetchSize(fetchSize);
+
+            insertStmt = JdbcUtil.prepareStatement(targetConn, insertSql);
 
             copy2(selectStmt, offset, count, insertStmt, batchSize, batchIntervalInMillis, stmtSetter);
         } catch (SQLException e) {
