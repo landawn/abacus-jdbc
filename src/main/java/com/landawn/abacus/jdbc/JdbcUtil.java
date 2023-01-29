@@ -181,7 +181,7 @@ public final class JdbcUtil {
             N.max(128, IOUtil.CPU_CORES * 16), // maxThreadPoolSize
             180L, TimeUnit.SECONDS);
 
-    static final BiParametersSetter<? super PreparedStatement, ? super Object[]> DEFAULT_STMT_SETTER = (stmt, parameters) -> {
+    static final BiParametersSetter<? super PreparedQuery, ? super Object[]> DEFAULT_STMT_SETTER = (stmt, parameters) -> {
         for (int i = 0, len = parameters.length; i < len; i++) {
             stmt.setObject(i + 1, parameters[i]);
         }
