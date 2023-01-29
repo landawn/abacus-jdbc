@@ -169,13 +169,13 @@ public final class JdbcUtils {
      *         String sql = RE.insert(columnNameList).into(tableName).sql();
      * </code></pre>
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final Collection<String> selectColumnNames, final int offset, final int count, final Connection conn,
-            final String insertSQL, final int batchSize, final int batchInterval) throws UncheckedSQLException {
-        return importData(dataset, selectColumnNames, offset, count, Fn.alwaysTrue(), conn, insertSQL, batchSize, batchInterval);
+            final String insertSQL, final int batchSize, final long batchIntervalInMillis) throws UncheckedSQLException {
+        return importData(dataset, selectColumnNames, offset, count, Fn.alwaysTrue(), conn, insertSQL, batchSize, batchIntervalInMillis);
     }
 
     /**
@@ -195,20 +195,20 @@ public final class JdbcUtils {
      *         String sql = RE.insert(columnNameList).into(tableName).sql();
      * </code></pre>
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
     public static <E extends Exception> int importData(final DataSet dataset, final Collection<String> selectColumnNames, final int offset, final int count,
-            final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval)
-            throws UncheckedSQLException, E {
+            final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize,
+            final long batchIntervalInMillis) throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
             stmt = JdbcUtil.prepareStatement(conn, insertSQL);
 
-            return importData(dataset, selectColumnNames, offset, count, filter, stmt, batchSize, batchInterval);
+            return importData(dataset, selectColumnNames, offset, count, filter, stmt, batchSize, batchIntervalInMillis);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
@@ -274,15 +274,15 @@ public final class JdbcUtils {
      *         String sql = RE.insert(columnNameList).into(tableName).sql();
      * </code></pre>
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeMap
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @SuppressWarnings("rawtypes")
     public static int importData(final DataSet dataset, final int offset, final int count, final Connection conn, final String insertSQL, final int batchSize,
-            final int batchInterval, final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException {
-        return importData(dataset, offset, count, Fn.alwaysTrue(), conn, insertSQL, batchSize, batchInterval, columnTypeMap);
+            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException {
+        return importData(dataset, offset, count, Fn.alwaysTrue(), conn, insertSQL, batchSize, batchIntervalInMillis, columnTypeMap);
     }
 
     /**
@@ -301,7 +301,7 @@ public final class JdbcUtils {
      *         String sql = RE.insert(columnNameList).into(tableName).sql();
      * </code></pre>
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeMap
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -309,14 +309,14 @@ public final class JdbcUtils {
      */
     @SuppressWarnings("rawtypes")
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
-            final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
-            final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, E {
+            final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize,
+            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
             stmt = JdbcUtil.prepareStatement(conn, insertSQL);
 
-            return importData(dataset, offset, count, filter, stmt, batchSize, batchInterval, columnTypeMap);
+            return importData(dataset, offset, count, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
@@ -380,15 +380,15 @@ public final class JdbcUtils {
      *         String sql = RE.insert(columnNameList).into(tableName).sql();
      * </code></pre>
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final int offset, final int count, final Connection conn, final String insertSQL, final int batchSize,
-            final int batchInterval, final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter)
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter)
             throws UncheckedSQLException {
-        return importData(dataset, offset, count, Fn.alwaysTrue(), conn, insertSQL, batchSize, batchInterval, stmtSetter);
+        return importData(dataset, offset, count, Fn.alwaysTrue(), conn, insertSQL, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -407,21 +407,22 @@ public final class JdbcUtils {
      *         String sql = RE.insert(columnNameList).into(tableName).sql();
      * </code></pre>
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
-            final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
-            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter) throws UncheckedSQLException, E {
+            final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize,
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter)
+            throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
             stmt = JdbcUtil.prepareStatement(conn, insertSQL);
 
-            return importData(dataset, offset, count, filter, stmt, batchSize, batchInterval, stmtSetter);
+            return importData(dataset, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
@@ -479,13 +480,13 @@ public final class JdbcUtils {
      * @param count
      * @param stmt the column order in the sql must be consistent with the column order in the DataSet.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final Collection<String> selectColumnNames, final int offset, final int count,
-            final PreparedStatement stmt, final int batchSize, final int batchInterval) throws UncheckedSQLException {
-        return importData(dataset, selectColumnNames, offset, count, Fn.alwaysTrue(), stmt, batchSize, batchInterval);
+            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis) throws UncheckedSQLException {
+        return importData(dataset, selectColumnNames, offset, count, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis);
     }
 
     /**
@@ -499,13 +500,13 @@ public final class JdbcUtils {
      * @param filter
      * @param stmt the column order in the sql must be consistent with the column order in the DataSet.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
     public static <E extends Exception> int importData(final DataSet dataset, final Collection<String> selectColumnNames, final int offset, final int count,
-            final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval)
+            final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis)
             throws UncheckedSQLException, E {
         final Type<?> objType = N.typeOf(Object.class);
         final Map<String, Type<?>> columnTypeMap = new HashMap<>();
@@ -514,7 +515,7 @@ public final class JdbcUtils {
             columnTypeMap.put(propName, objType);
         }
 
-        return importData(dataset, offset, count, filter, stmt, batchSize, batchInterval, columnTypeMap);
+        return importData(dataset, offset, count, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
     }
 
     /**
@@ -557,15 +558,15 @@ public final class JdbcUtils {
      * @param count
      * @param stmt the column order in the sql must be consistent with the column order in the DataSet.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeMap
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @SuppressWarnings("rawtypes")
     public static int importData(final DataSet dataset, final int offset, final int count, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException {
-        return importData(dataset, offset, count, Fn.alwaysTrue(), stmt, batchSize, batchInterval, columnTypeMap);
+            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException {
+        return importData(dataset, offset, count, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeMap);
     }
 
     /**
@@ -578,7 +579,7 @@ public final class JdbcUtils {
      * @param filter
      * @param stmt the column order in the sql must be consistent with the column order in the DataSet.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeMap
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -586,11 +587,11 @@ public final class JdbcUtils {
      */
     @SuppressWarnings({ "rawtypes", "null" })
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
-            final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
+            final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
-        N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
-                batchInterval);
+        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
+                batchSize, batchIntervalInMillis);
 
         int result = 0;
 
@@ -644,8 +645,8 @@ public final class JdbcUtils {
                 if ((++result % batchSize) == 0) {
                     JdbcUtil.executeBatch(stmt);
 
-                    if (batchInterval > 0) {
-                        N.sleep(batchInterval);
+                    if (batchIntervalInMillis > 0) {
+                        N.sleep(batchIntervalInMillis);
                     }
                 }
             }
@@ -697,15 +698,15 @@ public final class JdbcUtils {
      * @param count
      * @param stmt the column order in the sql must be consistent with the column order in the DataSet.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static int importData(final DataSet dataset, final int offset, final int count, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter)
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter)
             throws UncheckedSQLException {
-        return importData(dataset, offset, count, Fn.alwaysTrue(), stmt, batchSize, batchInterval, stmtSetter);
+        return importData(dataset, offset, count, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -718,18 +719,18 @@ public final class JdbcUtils {
      * @param filter
      * @param stmt the column order in the sql must be consistent with the column order in the DataSet.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
-            final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
+            final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter) throws UncheckedSQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
-        N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
-                batchInterval);
+        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
+                batchSize, batchIntervalInMillis);
 
         final int columnCount = dataset.columnNameList().size();
         final Object[] row = new Object[columnCount];
@@ -754,8 +755,8 @@ public final class JdbcUtils {
                 if ((++result % batchSize) == 0) {
                     JdbcUtil.executeBatch(stmt);
 
-                    if (batchInterval > 0) {
-                        N.sleep(batchInterval);
+                    if (batchIntervalInMillis > 0) {
+                        N.sleep(batchIntervalInMillis);
                     }
                 }
             }
@@ -795,20 +796,20 @@ public final class JdbcUtils {
      * @param conn
      * @param insertSQL
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param func
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
     public static <E extends Exception> long importData(final File file, final long offset, final long count, final Connection conn, final String insertSQL,
-            final int batchSize, final int batchInterval, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
+            final int batchSize, final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
             stmt = JdbcUtil.prepareStatement(conn, insertSQL);
 
-            return importData(file, offset, count, stmt, batchSize, batchInterval, func);
+            return importData(file, offset, count, stmt, batchSize, batchIntervalInMillis, func);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
@@ -840,20 +841,20 @@ public final class JdbcUtils {
      * @param count
      * @param stmt
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param func convert line to the parameters for record insert. Returns a <code>null</code> array to skip the line.
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
     public static <E extends Exception> long importData(final File file, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
+            final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
         Reader reader = null;
 
         try {
             reader = new FileReader(file);
 
-            return importData(reader, offset, count, stmt, batchSize, batchInterval, func);
+            return importData(reader, offset, count, stmt, batchSize, batchIntervalInMillis, func);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } finally {
@@ -886,21 +887,21 @@ public final class JdbcUtils {
      * @param conn
      * @param insertSQL
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param func
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
     public static <E extends Exception> long importData(final InputStream is, final long offset, final long count, final Connection conn,
-            final String insertSQL, final int batchSize, final int batchInterval, final Throwables.Function<String, Object[], E> func)
+            final String insertSQL, final int batchSize, final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func)
             throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
             stmt = JdbcUtil.prepareStatement(conn, insertSQL);
 
-            return importData(is, offset, count, stmt, batchSize, batchInterval, func);
+            return importData(is, offset, count, stmt, batchSize, batchIntervalInMillis, func);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
@@ -931,17 +932,17 @@ public final class JdbcUtils {
      * @param count
      * @param stmt
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param func convert line to the parameters for record insert. Returns a <code>null</code> array to skip the line.
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
     public static <E extends Exception> long importData(final InputStream is, final long offset, final long count, final PreparedStatement stmt,
-            final int batchSize, final int batchInterval, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
+            final int batchSize, final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
         final Reader reader = new InputStreamReader(is);
 
-        return importData(reader, offset, count, stmt, batchSize, batchInterval, func);
+        return importData(reader, offset, count, stmt, batchSize, batchIntervalInMillis, func);
     }
 
     /**
@@ -969,20 +970,20 @@ public final class JdbcUtils {
      * @param conn
      * @param insertSQL
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param func
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
     public static <E extends Exception> long importData(final Reader reader, final long offset, final long count, final Connection conn, final String insertSQL,
-            final int batchSize, final int batchInterval, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
+            final int batchSize, final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
             stmt = JdbcUtil.prepareStatement(conn, insertSQL);
 
-            return importData(reader, offset, count, stmt, batchSize, batchInterval, func);
+            return importData(reader, offset, count, stmt, batchSize, batchIntervalInMillis, func);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
@@ -1013,17 +1014,17 @@ public final class JdbcUtils {
      * @param count
      * @param stmt
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param func convert line to the parameters for record insert. Returns a <code>null</code> array to skip the line.
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
     public static <E extends Exception> long importData(final Reader reader, long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
+            final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
-        N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
-                batchInterval);
+        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
+                batchSize, batchIntervalInMillis);
 
         long result = 0;
         final BufferedReader br = Objectory.createBufferedReader(reader);
@@ -1052,8 +1053,8 @@ public final class JdbcUtils {
                 if ((++result % batchSize) == 0) {
                     JdbcUtil.executeBatch(stmt);
 
-                    if (batchInterval > 0) {
-                        N.sleep(batchInterval);
+                    if (batchIntervalInMillis > 0) {
+                        N.sleep(batchIntervalInMillis);
                     }
                 }
             }
@@ -1099,21 +1100,21 @@ public final class JdbcUtils {
      * @param conn
      * @param insertSQL
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param func
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, final long offset, final long count, final Connection conn,
-            final String insertSQL, final int batchSize, final int batchInterval, final Throwables.Function<? super T, Object[], E> func)
+            final String insertSQL, final int batchSize, final long batchIntervalInMillis, final Throwables.Function<? super T, Object[], E> func)
             throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
             stmt = JdbcUtil.prepareStatement(conn, insertSQL);
 
-            return importData(iter, offset, count, stmt, batchSize, batchInterval, func);
+            return importData(iter, offset, count, stmt, batchSize, batchIntervalInMillis, func);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
@@ -1146,17 +1147,17 @@ public final class JdbcUtils {
      * @param count
      * @param stmt
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param func convert element to the parameters for record insert. Returns a <code>null</code> array to skip the line.
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, long offset, final long count, final PreparedStatement stmt,
-            final int batchSize, final int batchInterval, final Throwables.Function<? super T, Object[], E> func) throws UncheckedSQLException, E {
+            final int batchSize, final long batchIntervalInMillis, final Throwables.Function<? super T, Object[], E> func) throws UncheckedSQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
-        N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
-                batchInterval);
+        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
+                batchSize, batchIntervalInMillis);
 
         long result = 0;
 
@@ -1183,8 +1184,8 @@ public final class JdbcUtils {
                 if ((++result % batchSize) == 0) {
                     JdbcUtil.executeBatch(stmt);
 
-                    if (batchInterval > 0) {
-                        N.sleep(batchInterval);
+                    if (batchIntervalInMillis > 0) {
+                        N.sleep(batchIntervalInMillis);
                     }
                 }
             }
@@ -1222,13 +1223,13 @@ public final class JdbcUtils {
      * @param conn
      * @param insertSQL
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      */
     public static <T> long importData(final Iterator<T> iter, final long offset, final long count, final Connection conn, final String insertSQL,
-            final int batchSize, final int batchInterval, final Throwables.BiConsumer<? super PreparedStatement, ? super T, SQLException> stmtSetter) {
-        return importData(iter, offset, count, Fn.alwaysTrue(), conn, insertSQL, batchSize, batchInterval, stmtSetter);
+            final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedStatement, ? super T, SQLException> stmtSetter) {
+        return importData(iter, offset, count, Fn.alwaysTrue(), conn, insertSQL, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -1242,21 +1243,22 @@ public final class JdbcUtils {
      * @param conn
      * @param insertSQL
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, final long offset, final long count,
-            final Throwables.Predicate<? super T, E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
-            final Throwables.BiConsumer<? super PreparedStatement, ? super T, SQLException> stmtSetter) throws UncheckedSQLException, E {
+            final Throwables.Predicate<? super T, E> filter, final Connection conn, final String insertSQL, final int batchSize,
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedStatement, ? super T, SQLException> stmtSetter)
+            throws UncheckedSQLException, E {
         PreparedStatement stmt = null;
 
         try {
             stmt = JdbcUtil.prepareStatement(conn, insertSQL);
 
-            return importData(iter, offset, count, filter, stmt, batchSize, batchInterval, stmtSetter);
+            return importData(iter, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
@@ -1285,13 +1287,13 @@ public final class JdbcUtils {
      * @param count
      * @param stmt
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      */
     public static <T> long importData(final Iterator<T> iter, long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final Throwables.BiConsumer<? super PreparedStatement, ? super T, SQLException> stmtSetter) {
-        return importData(iter, offset, count, Fn.alwaysTrue(), stmt, batchSize, batchInterval, stmtSetter);
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedStatement, ? super T, SQLException> stmtSetter) {
+        return importData(iter, offset, count, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -1305,18 +1307,18 @@ public final class JdbcUtils {
      * @param filter
      * @param stmt
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws E the e
      */
     public static <T, E extends Exception> long importData(final Iterator<T> iter, long offset, final long count,
-            final Throwables.Predicate<? super T, E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
+            final Throwables.Predicate<? super T, E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedStatement, ? super T, SQLException> stmtSetter) throws UncheckedSQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
-        N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
-                batchInterval);
+        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
+                batchSize, batchIntervalInMillis);
 
         long result = 0;
 
@@ -1339,8 +1341,8 @@ public final class JdbcUtils {
                 if ((++result % batchSize) == 0) {
                     JdbcUtil.executeBatch(stmt);
 
-                    if (batchInterval > 0) {
-                        N.sleep(batchInterval);
+                    if (batchIntervalInMillis > 0) {
+                        N.sleep(batchIntervalInMillis);
                     }
                 }
             }
@@ -1380,7 +1382,7 @@ public final class JdbcUtils {
      * @param conn
      * @param insertSQL
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeList
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -1388,8 +1390,9 @@ public final class JdbcUtils {
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public static long importCSV(final File file, final long offset, final long count, final boolean skipTitle, final Connection conn, final String insertSQL,
-            final int batchSize, final int batchInterval, final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), conn, insertSQL, batchSize, batchInterval, columnTypeList);
+            final int batchSize, final long batchIntervalInMillis, final List<? extends Type> columnTypeList)
+            throws UncheckedSQLException, UncheckedIOException {
+        return importCSV(file, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), conn, insertSQL, batchSize, batchIntervalInMillis, columnTypeList);
     }
 
     /**
@@ -1404,7 +1407,7 @@ public final class JdbcUtils {
      * @param conn
      * @param insertSQL the column order in the sql must be consistent with the column order in the CSV file.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeList set the column type to null to skip the column in CSV.
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -1413,14 +1416,14 @@ public final class JdbcUtils {
      */
     @SuppressWarnings("rawtypes")
     public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final boolean skipTitle,
-            final Throwables.Predicate<String[], E> filter, final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
-            final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException, E {
+            final Throwables.Predicate<String[], E> filter, final Connection conn, final String insertSQL, final int batchSize,
+            final long batchIntervalInMillis, final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException, E {
         PreparedStatement stmt = null;
 
         try {
             stmt = JdbcUtil.prepareStatement(conn, insertSQL);
 
-            return importCSV(file, offset, count, skipTitle, filter, stmt, batchSize, batchInterval, columnTypeList);
+            return importCSV(file, offset, count, skipTitle, filter, stmt, batchSize, batchIntervalInMillis, columnTypeList);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
@@ -1451,7 +1454,7 @@ public final class JdbcUtils {
      * @param skipTitle
      * @param stmt
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeList
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -1459,8 +1462,8 @@ public final class JdbcUtils {
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public static long importCSV(final File file, long offset, final long count, final boolean skipTitle, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, columnTypeList);
+            final long batchIntervalInMillis, final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException {
+        return importCSV(file, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeList);
     }
 
     /**
@@ -1474,7 +1477,7 @@ public final class JdbcUtils {
      * @param filter
      * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeList set the column type to null to skip the column in CSV.
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -1483,14 +1486,14 @@ public final class JdbcUtils {
      */
     @SuppressWarnings("rawtypes")
     public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final boolean skipTitle,
-            final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
+            final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException, E {
         Reader reader = null;
 
         try {
             reader = new FileReader(file);
 
-            return importCSV(reader, offset, count, skipTitle, filter, stmt, batchSize, batchInterval, columnTypeList);
+            return importCSV(reader, offset, count, skipTitle, filter, stmt, batchSize, batchIntervalInMillis, columnTypeList);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } finally {
@@ -1521,7 +1524,7 @@ public final class JdbcUtils {
      * @param skipTitle
      * @param stmt
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeList
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -1529,8 +1532,9 @@ public final class JdbcUtils {
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public static long importCSV(final InputStream is, long offset, final long count, final boolean skipTitle, final PreparedStatement stmt,
-            final int batchSize, final int batchInterval, final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(is, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, columnTypeList);
+            final int batchSize, final long batchIntervalInMillis, final List<? extends Type> columnTypeList)
+            throws UncheckedSQLException, UncheckedIOException {
+        return importCSV(is, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeList);
     }
 
     /**
@@ -1544,7 +1548,7 @@ public final class JdbcUtils {
      * @param filter
      * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeList set the column type to null to skip the column in CSV.
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -1553,11 +1557,11 @@ public final class JdbcUtils {
      */
     @SuppressWarnings("rawtypes")
     public static <E extends Exception> long importCSV(final InputStream is, final long offset, final long count, final boolean skipTitle,
-            final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
+            final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException, E {
         final Reader reader = new InputStreamReader(is);
 
-        return importCSV(reader, offset, count, skipTitle, filter, stmt, batchSize, batchInterval, columnTypeList);
+        return importCSV(reader, offset, count, skipTitle, filter, stmt, batchSize, batchIntervalInMillis, columnTypeList);
     }
 
     /**
@@ -1583,7 +1587,7 @@ public final class JdbcUtils {
      * @param skipTitle
      * @param stmt
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeList
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -1591,8 +1595,8 @@ public final class JdbcUtils {
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public static long importCSV(final Reader reader, long offset, final long count, final boolean skipTitle, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(reader, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, columnTypeList);
+            final long batchIntervalInMillis, final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException {
+        return importCSV(reader, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeList);
     }
 
     /**
@@ -1606,7 +1610,7 @@ public final class JdbcUtils {
      * @param filter
      * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeList set the column type to null to skip the column in CSV.
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -1615,11 +1619,11 @@ public final class JdbcUtils {
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count, final boolean skipTitle,
-            final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final int batchInterval,
+            final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
-        N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
-                batchInterval);
+        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
+                batchSize, batchIntervalInMillis);
 
         final BiConsumer<String[], String> lineParser = CSVUtil.getCurrentLineParser();
         long result = 0;
@@ -1663,8 +1667,8 @@ public final class JdbcUtils {
                 if ((result % batchSize) == 0) {
                     JdbcUtil.executeBatch(stmt);
 
-                    if (batchInterval > 0) {
-                        N.sleep(batchInterval);
+                    if (batchIntervalInMillis > 0) {
+                        N.sleep(batchIntervalInMillis);
                     }
                 }
 
@@ -1710,7 +1714,7 @@ public final class JdbcUtils {
      * @param conn
      * @param insertSQL
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeMap
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -1718,8 +1722,8 @@ public final class JdbcUtils {
      */
     @SuppressWarnings("rawtypes")
     public static long importCSV(final File file, final long offset, final long count, final Connection conn, final String insertSQL, final int batchSize,
-            final int batchInterval, final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), conn, insertSQL, batchSize, batchInterval, columnTypeMap);
+            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, UncheckedIOException {
+        return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), conn, insertSQL, batchSize, batchIntervalInMillis, columnTypeMap);
     }
 
     /**
@@ -1732,7 +1736,7 @@ public final class JdbcUtils {
      * @param conn
      * @param insertSQL the column order in the sql must be consistent with the column order in the CSV file.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeMap
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -1741,14 +1745,14 @@ public final class JdbcUtils {
      */
     @SuppressWarnings("rawtypes")
     public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
-            final Connection conn, final String insertSQL, final int batchSize, final int batchInterval, final Map<String, ? extends Type> columnTypeMap)
-            throws UncheckedSQLException, UncheckedIOException, E {
+            final Connection conn, final String insertSQL, final int batchSize, final long batchIntervalInMillis,
+            final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, UncheckedIOException, E {
         PreparedStatement stmt = null;
 
         try {
             stmt = JdbcUtil.prepareStatement(conn, insertSQL);
 
-            return importCSV(file, offset, count, filter, stmt, batchSize, batchInterval, columnTypeMap);
+            return importCSV(file, offset, count, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
@@ -1778,7 +1782,7 @@ public final class JdbcUtils {
      * @param count
      * @param stmt
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeMap
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -1786,8 +1790,8 @@ public final class JdbcUtils {
      */
     @SuppressWarnings("rawtypes")
     public static long importCSV(final File file, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, columnTypeMap);
+            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, UncheckedIOException {
+        return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeMap);
     }
 
     /**
@@ -1800,7 +1804,7 @@ public final class JdbcUtils {
      * @param filter
      * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeMap
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -1809,14 +1813,14 @@ public final class JdbcUtils {
      */
     @SuppressWarnings("rawtypes")
     public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
-            final PreparedStatement stmt, final int batchSize, final int batchInterval, final Map<String, ? extends Type> columnTypeMap)
+            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException, E {
         Reader reader = null;
 
         try {
             reader = new FileReader(file);
 
-            return importCSV(reader, offset, count, filter, stmt, batchSize, batchInterval, columnTypeMap);
+            return importCSV(reader, offset, count, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } finally {
@@ -1846,7 +1850,7 @@ public final class JdbcUtils {
      * @param count
      * @param stmt
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeMap
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -1854,8 +1858,8 @@ public final class JdbcUtils {
      */
     @SuppressWarnings("rawtypes")
     public static long importCSV(final InputStream is, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(is, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, columnTypeMap);
+            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, UncheckedIOException {
+        return importCSV(is, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeMap);
     }
 
     /**
@@ -1868,7 +1872,7 @@ public final class JdbcUtils {
      * @param filter
      * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeMap
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -1877,10 +1881,10 @@ public final class JdbcUtils {
      */
     @SuppressWarnings("rawtypes")
     public static <E extends Exception> long importCSV(final InputStream is, long offset, final long count, final Throwables.Predicate<String[], E> filter,
-            final PreparedStatement stmt, final int batchSize, final int batchInterval, final Map<String, ? extends Type> columnTypeMap)
+            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException, E {
         final Reader reader = new InputStreamReader(is);
-        return importCSV(reader, offset, count, filter, stmt, batchSize, batchInterval, columnTypeMap);
+        return importCSV(reader, offset, count, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
     }
 
     /**
@@ -1905,16 +1909,16 @@ public final class JdbcUtils {
      * @param count
      * @param stmt
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeMap
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static long importCSV(final Reader reader, long offset, final long count, final PreparedStatement stmt, final int batchSize, final int batchInterval,
-            final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(reader, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, columnTypeMap);
+    public static long importCSV(final Reader reader, long offset, final long count, final PreparedStatement stmt, final int batchSize,
+            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, UncheckedIOException {
+        return importCSV(reader, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeMap);
     }
 
     /**
@@ -1927,7 +1931,7 @@ public final class JdbcUtils {
      * @param filter
      * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param columnTypeMap
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -1936,11 +1940,11 @@ public final class JdbcUtils {
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count, final Throwables.Predicate<String[], E> filter,
-            final PreparedStatement stmt, final int batchSize, final int batchInterval, final Map<String, ? extends Type> columnTypeMap)
+            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
-        N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
-                batchInterval);
+        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
+                batchSize, batchIntervalInMillis);
 
         final Function<String, String[]> headerParser = CSVUtil.getCurrentHeaderParser();
         final BiConsumer<String[], String> lineParser = CSVUtil.getCurrentLineParser();
@@ -2005,8 +2009,8 @@ public final class JdbcUtils {
                 if ((result % batchSize) == 0) {
                     JdbcUtil.executeBatch(stmt);
 
-                    if (batchInterval > 0) {
-                        N.sleep(batchInterval);
+                    if (batchIntervalInMillis > 0) {
+                        N.sleep(batchIntervalInMillis);
                     }
                 }
 
@@ -2052,16 +2056,16 @@ public final class JdbcUtils {
      * @param conn
      * @param insertSQL
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
     public static long importCSV(final File file, final long offset, final long count, final Connection conn, final String insertSQL, final int batchSize,
-            final int batchInterval, final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), conn, insertSQL, batchSize, batchInterval, stmtSetter);
+        return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), conn, insertSQL, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -2074,7 +2078,7 @@ public final class JdbcUtils {
      * @param conn
      * @param insertSQL the column order in the sql should be consistent with the column order in the CSV file.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -2082,7 +2086,7 @@ public final class JdbcUtils {
      * @throws E the e
      */
     public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
-            final Connection conn, final String insertSQL, final int batchSize, final int batchInterval,
+            final Connection conn, final String insertSQL, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException, E {
         PreparedStatement stmt = null;
@@ -2090,7 +2094,7 @@ public final class JdbcUtils {
         try {
             stmt = JdbcUtil.prepareStatement(conn, insertSQL);
 
-            return importCSV(file, offset, count, filter, stmt, batchSize, batchInterval, stmtSetter);
+            return importCSV(file, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
@@ -2120,16 +2124,16 @@ public final class JdbcUtils {
      * @param count
      * @param stmt
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
     public static long importCSV(final File file, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, stmtSetter);
+        return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -2142,7 +2146,7 @@ public final class JdbcUtils {
      * @param filter
      * @param stmt the column order in the sql should be consistent with the column order in the CSV file.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -2150,7 +2154,7 @@ public final class JdbcUtils {
      * @throws E the e
      */
     public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
-            final PreparedStatement stmt, final int batchSize, final int batchInterval,
+            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException, E {
         Reader reader = null;
@@ -2158,7 +2162,7 @@ public final class JdbcUtils {
         try {
             reader = new FileReader(file);
 
-            return importCSV(reader, offset, count, filter, stmt, batchSize, batchInterval, stmtSetter);
+            return importCSV(reader, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } finally {
@@ -2188,16 +2192,16 @@ public final class JdbcUtils {
      * @param count
      * @param stmt
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
     public static long importCSV(final InputStream is, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final int batchInterval, final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(is, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, stmtSetter);
+        return importCSV(is, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -2210,7 +2214,7 @@ public final class JdbcUtils {
      * @param filter
      * @param stmt the column order in the sql should be consistent with the column order in the CSV file.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -2218,11 +2222,11 @@ public final class JdbcUtils {
      * @throws E the e
      */
     public static <E extends Exception> long importCSV(final InputStream is, long offset, final long count, final Throwables.Predicate<String[], E> filter,
-            final PreparedStatement stmt, final int batchSize, final int batchInterval,
+            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException, E {
         final Reader reader = new InputStreamReader(is);
-        return importCSV(reader, offset, count, filter, stmt, batchSize, batchInterval, stmtSetter);
+        return importCSV(reader, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -2247,17 +2251,17 @@ public final class JdbcUtils {
      * @param count
      * @param stmt
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws UncheckedIOException the unchecked IO exception
      */
     @SuppressWarnings({ "unchecked" })
-    public static long importCSV(final Reader reader, long offset, final long count, final PreparedStatement stmt, final int batchSize, final int batchInterval,
-            final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
+    public static long importCSV(final Reader reader, long offset, final long count, final PreparedStatement stmt, final int batchSize,
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException {
-        return importCSV(reader, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchInterval, stmtSetter);
+        return importCSV(reader, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -2270,7 +2274,7 @@ public final class JdbcUtils {
      * @param filter
      * @param stmt the column order in the sql should be consistent with the column order in the CSV file.
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -2279,12 +2283,12 @@ public final class JdbcUtils {
      */
     @SuppressWarnings({ "unchecked" })
     public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count, final Throwables.Predicate<String[], E> filter,
-            final PreparedStatement stmt, final int batchSize, final int batchInterval,
+            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedStatement, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
-        N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
-                batchInterval);
+        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
+                batchSize, batchIntervalInMillis);
 
         final Function<String, String[]> headerParser = CSVUtil.getCurrentHeaderParser();
         final BiConsumer<String[], String> lineParser = CSVUtil.getCurrentLineParser();
@@ -2314,8 +2318,8 @@ public final class JdbcUtils {
                 if ((++result % batchSize) == 0) {
                     JdbcUtil.executeBatch(stmt);
 
-                    if (batchInterval > 0) {
-                        N.sleep(batchInterval);
+                    if (batchIntervalInMillis > 0) {
+                        N.sleep(batchIntervalInMillis);
                     }
                 }
 
@@ -2820,7 +2824,7 @@ public final class JdbcUtils {
     */
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
             final String targetTableName) throws UncheckedSQLException {
-        return copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, false);
+        return copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, JdbcUtil.DEFAULT_BATCH_SIZE, false);
     }
 
     /**
@@ -2855,7 +2859,7 @@ public final class JdbcUtils {
             JdbcUtil.releaseConnection(conn, sourceDataSource);
         }
 
-        return copy(sourceDataSource, selectSql, batchSize, targetDataSource, insertSql, batchSize, inParallel);
+        return copy(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, batchSize, inParallel);
     }
 
     /**
@@ -2869,7 +2873,7 @@ public final class JdbcUtils {
     */
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource,
             final String insertSql) throws UncheckedSQLException {
-        return copy(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, false);
+        return copy(sourceDataSource, selectSql, targetDataSource, insertSql, JdbcUtil.DEFAULT_STMT_SETTER);
     }
 
     /**
@@ -2886,6 +2890,42 @@ public final class JdbcUtils {
     */
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
             final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize, final boolean inParallel) throws UncheckedSQLException {
+        return copy(sourceDataSource, selectSql, fetchSize, targetDataSource, insertSql, batchSize, inParallel, JdbcUtil.DEFAULT_STMT_SETTER);
+    }
+
+    /**
+    *
+    * @param sourceDataSource
+    * @param selectSql
+    * @param targetDataSource
+    * @param insertSql
+    * @param stmtSetter
+    * @return
+    * @throws UncheckedSQLException the unchecked SQL exception
+    */
+    public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource,
+            final String insertSql, final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter)
+            throws UncheckedSQLException {
+        return copy(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, false,
+                stmtSetter);
+    }
+
+    /**
+    *
+    * @param sourceDataSource
+    * @param selectSql
+    * @param fetchSize
+    * @param targetDataSource
+    * @param insertSql
+    * @param batchSize
+    * @param inParallel
+    * @param stmtSetter
+    * @return
+    * @throws UncheckedSQLException
+    */
+    public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
+            final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize, final boolean inParallel,
+            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter) throws UncheckedSQLException {
         Connection sourceConn = null;
         Connection targetConn = null;
 
@@ -2893,7 +2933,7 @@ public final class JdbcUtils {
             sourceConn = JdbcUtil.getConnection(sourceDataSource);
             targetConn = JdbcUtil.getConnection(targetDataSource);
 
-            return copy(sourceConn, selectSql, fetchSize, targetConn, insertSql, batchSize, inParallel);
+            return copy(sourceConn, selectSql, fetchSize, targetConn, insertSql, batchSize, inParallel, stmtSetter);
         } finally {
             if (sourceConn != null) {
                 JdbcUtil.releaseConnection(sourceConn, sourceDataSource);
@@ -2928,7 +2968,7 @@ public final class JdbcUtils {
     */
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName)
             throws UncheckedSQLException {
-        return copy(sourceConn, targetConn, sourceTableName, targetTableName, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, false);
+        return copy(sourceConn, targetConn, sourceTableName, targetTableName, JdbcUtil.DEFAULT_BATCH_SIZE, false);
     }
 
     /**
@@ -2951,7 +2991,7 @@ public final class JdbcUtils {
             insertSql = Strings.replaceOnceIgnoreCase(insertSql, sourceTableName, targetTableName);
         }
 
-        return copy(sourceConn, selectSql, batchSize, targetConn, insertSql, batchSize, inParallel);
+        return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetConn, insertSql, batchSize, inParallel);
     }
 
     /**
@@ -2982,7 +3022,41 @@ public final class JdbcUtils {
      */
     public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql,
             final int batchSize, final boolean inParallel) throws UncheckedSQLException {
-        return copy(sourceConn, selectSql, fetchSize, 0, Long.MAX_VALUE, targetConn, insertSql, JdbcUtil.DEFAULT_STMT_SETTER, batchSize, 0, inParallel);
+        return copy(sourceConn, selectSql, fetchSize, targetConn, insertSql, batchSize, inParallel, JdbcUtil.DEFAULT_STMT_SETTER);
+    }
+
+    /**
+     *
+     * @param sourceConn
+     * @param selectSql
+     * @param targetConn
+     * @param insertSql
+     * @param stmtSetter
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    public static long copy(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql,
+            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter) throws UncheckedSQLException {
+        return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetConn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, false, stmtSetter);
+    }
+
+    /**
+     *
+     * @param sourceConn
+     * @param selectSql
+     * @param fetchSize
+     * @param targetConn
+     * @param insertSql
+     * @param batchSize
+     * @param inParallel do the read and write in separated threads.
+     * @param stmtSetter
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql,
+            final int batchSize, final boolean inParallel, final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter)
+            throws UncheckedSQLException {
+        return copy(sourceConn, selectSql, fetchSize, 0, Long.MAX_VALUE, targetConn, insertSql, batchSize, 0, inParallel, stmtSetter);
     }
 
     /**
@@ -2994,17 +3068,16 @@ public final class JdbcUtils {
      * @param count
      * @param targetConn
      * @param insertSql
-     * @param stmtSetter
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param inParallel do the read and write in separated threads.
+     * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final long offset, final long count,
-            final Connection targetConn, final String insertSql,
-            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter, final int batchSize, final int batchInterval,
-            final boolean inParallel) throws UncheckedSQLException {
+            final Connection targetConn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final boolean inParallel,
+            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter) throws UncheckedSQLException {
         PreparedStatement selectStmt = null;
         PreparedStatement insertStmt = null;
 
@@ -3016,7 +3089,7 @@ public final class JdbcUtils {
             selectStmt = JdbcUtil.prepareStatement(sourceConn, selectSql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
             selectStmt.setFetchSize(fetchSize);
 
-            copy(selectStmt, offset, count, insertStmt, stmtSetter, batchSize, batchInterval, inParallel);
+            copy(selectStmt, offset, count, insertStmt, batchSize, batchIntervalInMillis, inParallel, stmtSetter);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
@@ -3037,7 +3110,7 @@ public final class JdbcUtils {
      */
     public static long copy(final PreparedStatement selectStmt, final PreparedStatement insertStmt,
             final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter) throws UncheckedSQLException {
-        return copy(selectStmt, 0, Long.MAX_VALUE, insertStmt, stmtSetter, JdbcUtil.DEFAULT_BATCH_SIZE, 0, false);
+        return copy(selectStmt, 0, Long.MAX_VALUE, insertStmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, false, stmtSetter);
     }
 
     /**
@@ -3046,19 +3119,19 @@ public final class JdbcUtils {
      * @param offset
      * @param count
      * @param insertStmt
-     * @param stmtSetter
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
      * @param inParallel do the read and write in separated threads.
+     * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
-    public static long copy(final PreparedStatement selectStmt, final long offset, final long count, final PreparedStatement insertStmt,
-            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter, final int batchSize, final int batchInterval,
-            final boolean inParallel) throws UncheckedSQLException {
+    public static long copy(final PreparedStatement selectStmt, final long offset, final long count, final PreparedStatement insertStmt, final int batchSize,
+            final long batchIntervalInMillis, final boolean inParallel,
+            final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> stmtSetter) throws UncheckedSQLException {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
-        N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
-                batchInterval);
+        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
+                batchSize, batchIntervalInMillis);
 
         @SuppressWarnings("rawtypes")
         final Throwables.BiConsumer<? super PreparedStatement, ? super Object[], SQLException> setter = (Throwables.BiConsumer) (stmtSetter == null
@@ -3076,8 +3149,8 @@ public final class JdbcUtils {
                 if ((result.longValue() % batchSize) == 0) {
                     JdbcUtil.executeBatch(insertStmt);
 
-                    if (batchInterval > 0) {
-                        N.sleep(batchInterval);
+                    if (batchIntervalInMillis > 0) {
+                        N.sleep(batchIntervalInMillis);
                     }
                 }
             } catch (SQLException e) {
@@ -3107,6 +3180,57 @@ public final class JdbcUtils {
     }
 
     /**
+    *
+    * @param sourceDataSource
+    * @param selectSql
+    * @param targetDataSource
+    * @param insertSql
+    * @param stmtSetter
+    * @return
+    * @throws UncheckedSQLException the unchecked SQL exception
+    */
+    public static long copy2(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource,
+            final String insertSql, final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> stmtSetter)
+            throws UncheckedSQLException {
+        return copy2(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE,
+                stmtSetter);
+    }
+
+    /**
+    *
+    * @param sourceDataSource
+    * @param selectSql
+    * @param fetchSize
+    * @param targetDataSource
+    * @param insertSql
+    * @param batchSize
+    * @param stmtSetter
+    * @return
+    * @throws UncheckedSQLException
+    */
+    public static long copy2(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
+            final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize,
+            final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> stmtSetter) throws UncheckedSQLException {
+        Connection sourceConn = null;
+        Connection targetConn = null;
+
+        try {
+            sourceConn = JdbcUtil.getConnection(sourceDataSource);
+            targetConn = JdbcUtil.getConnection(targetDataSource);
+
+            return copy2(sourceConn, selectSql, fetchSize, targetConn, insertSql, batchSize, stmtSetter);
+        } finally {
+            if (sourceConn != null) {
+                JdbcUtil.releaseConnection(sourceConn, sourceDataSource);
+            }
+
+            if (targetConn != null) {
+                JdbcUtil.releaseConnection(targetConn, targetDataSource);
+            }
+        }
+    }
+
+    /**
      *
      * @param sourceConn
      * @param selectSql
@@ -3115,29 +3239,27 @@ public final class JdbcUtils {
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
-    public static long copy2(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql)
-            throws UncheckedSQLException {
-        final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> stmtSetter = createStmtSetterForCopy2();
-
-        return copy2(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, 0, Long.MAX_VALUE, targetConn, insertSql, stmtSetter,
-                JdbcUtil.DEFAULT_BATCH_SIZE, 0);
+    public static long copy2(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql,
+            final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> stmtSetter) throws UncheckedSQLException {
+        return copy2(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetConn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, stmtSetter);
     }
 
-    private static Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> createStmtSetterForCopy2() {
-        return new Throwables.BiConsumer<PreparedStatement, ResultSet, SQLException>() {
-            private int columnCount = -1;
-
-            @Override
-            public void accept(PreparedStatement stmt, ResultSet rs) throws SQLException {
-                if (columnCount < 0) {
-                    columnCount = rs.getMetaData().getColumnCount();
-                }
-
-                for (int i = 1; i <= columnCount; i++) {
-                    stmt.setObject(i, rs.getObject(i));
-                }
-            }
-        };
+    /**
+     *
+     * @param sourceConn
+     * @param selectSql
+     * @param fetchSize
+     * @param targetConn
+     * @param insertSql
+     * @param batchSize
+     * @param stmtSetter
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    public static long copy2(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql,
+            final int batchSize, final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> stmtSetter)
+            throws UncheckedSQLException {
+        return copy2(sourceConn, selectSql, fetchSize, 0, Long.MAX_VALUE, targetConn, insertSql, batchSize, 0, stmtSetter);
     }
 
     /**
@@ -3149,16 +3271,15 @@ public final class JdbcUtils {
      * @param count
      * @param targetConn
      * @param insertSql
-     * @param stmtSetter
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
+     * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static long copy2(final Connection sourceConn, final String selectSql, final int fetchSize, final long offset, final long count,
-            final Connection targetConn, final String insertSql,
-            final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> stmtSetter, final int batchSize, final int batchInterval)
-            throws UncheckedSQLException {
+            final Connection targetConn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
+            final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> stmtSetter) throws UncheckedSQLException {
         PreparedStatement selectStmt = null;
         PreparedStatement insertStmt = null;
 
@@ -3170,7 +3291,7 @@ public final class JdbcUtils {
             selectStmt = JdbcUtil.prepareStatement(sourceConn, selectSql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
             selectStmt.setFetchSize(fetchSize);
 
-            copy2(selectStmt, offset, count, insertStmt, stmtSetter, batchSize, batchInterval);
+            copy2(selectStmt, offset, count, insertStmt, batchSize, batchIntervalInMillis, stmtSetter);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
@@ -3191,7 +3312,7 @@ public final class JdbcUtils {
      */
     public static long copy2(final PreparedStatement selectStmt, final PreparedStatement insertStmt,
             final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> stmtSetter) throws UncheckedSQLException {
-        return copy2(selectStmt, 0, Long.MAX_VALUE, insertStmt, stmtSetter, JdbcUtil.DEFAULT_BATCH_SIZE, 0);
+        return copy2(selectStmt, 0, Long.MAX_VALUE, insertStmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
@@ -3200,18 +3321,18 @@ public final class JdbcUtils {
      * @param offset
      * @param count
      * @param insertStmt
-     * @param stmtSetter
      * @param batchSize
-     * @param batchInterval
+     * @param batchIntervalInMillis
+     * @param stmtSetter
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
-    public static long copy2(final PreparedStatement selectStmt, final long offset, final long count, final PreparedStatement insertStmt,
-            final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> stmtSetter, final int batchSize, final int batchInterval)
+    public static long copy2(final PreparedStatement selectStmt, final long offset, final long count, final PreparedStatement insertStmt, final int batchSize,
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> stmtSetter)
             throws UncheckedSQLException {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
-        N.checkArgument(batchSize > 0 && batchInterval >= 0, "'batchSize'=%s must be greater than 0 and 'batchInterval'=%s can't be negative", batchSize,
-                batchInterval);
+        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
+                batchSize, batchIntervalInMillis);
 
         final Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> setter = stmtSetter == null ? createStmtSetterForCopy2()
                 : stmtSetter;
@@ -3236,8 +3357,8 @@ public final class JdbcUtils {
                 if (cnt % batchSize == 0) {
                     JdbcUtil.executeBatch(insertStmt);
 
-                    if (batchInterval > 0) {
-                        N.sleep(batchInterval);
+                    if (batchIntervalInMillis > 0) {
+                        N.sleep(batchIntervalInMillis);
                     }
                 }
             }
@@ -3254,6 +3375,23 @@ public final class JdbcUtils {
         } finally {
             JdbcUtil.closeQuietly(rs);
         }
+    }
+
+    private static Throwables.BiConsumer<? super PreparedStatement, ? super ResultSet, SQLException> createStmtSetterForCopy2() {
+        return new Throwables.BiConsumer<PreparedStatement, ResultSet, SQLException>() {
+            private int columnCount = -1;
+
+            @Override
+            public void accept(PreparedStatement stmt, ResultSet rs) throws SQLException {
+                if (columnCount < 0) {
+                    columnCount = rs.getMetaData().getColumnCount();
+                }
+
+                for (int i = 1; i <= columnCount; i++) {
+                    stmt.setObject(i, rs.getObject(i));
+                }
+            }
+        };
     }
 
     /**
