@@ -1,3 +1,8 @@
+### 3.2.20
+
+* Improvements and bug fix.
+
+
 ### 3.2.19
 
 * Improvements and bug fix.

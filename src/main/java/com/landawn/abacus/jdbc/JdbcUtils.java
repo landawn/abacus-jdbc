@@ -2851,7 +2851,7 @@ public final class JdbcUtils {
             insertSql = JdbcUtil.generateInsertSql(conn, sourceTableName);
 
             if (!sourceTableName.equals(targetTableName)) {
-                insertSql = Strings.replaceOnceIgnoreCase(insertSql, sourceTableName, targetTableName);
+                insertSql = Strings.replaceFirstIgnoreCase(insertSql, sourceTableName, targetTableName);
             }
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
@@ -2988,7 +2988,7 @@ public final class JdbcUtils {
         String insertSql = JdbcUtil.generateInsertSql(sourceConn, sourceTableName);
 
         if (!sourceTableName.equals(targetTableName)) {
-            insertSql = Strings.replaceOnceIgnoreCase(insertSql, sourceTableName, targetTableName);
+            insertSql = Strings.replaceFirstIgnoreCase(insertSql, sourceTableName, targetTableName);
         }
 
         return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetConn, insertSql, batchSize, inParallel);
