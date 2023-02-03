@@ -1050,41 +1050,41 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
-    public This setParameter(final Jdbc.ParametersSetter<? super Stmt> paramSetter) throws SQLException {
-        checkArgNotNull(paramSetter, "paramsSetter");
-
-        boolean noException = false;
-
-        try {
-            paramSetter.accept(stmt);
-
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
-        }
-
-        return (This) this;
-    }
-
-    public <T> This setParameter(final T parameter, final Jdbc.BiParametersSetter<? super Stmt, ? super T> paramSetter) throws SQLException {
-        checkArgNotNull(paramSetter, "paramsSetter");
-
-        boolean noException = false;
-
-        try {
-            paramSetter.accept(stmt, parameter);
-
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
-        }
-
-        return (This) this;
-    }
+    //    public This setParameter(final Jdbc.ParametersSetter<? super Stmt> paramSetter) throws SQLException {
+    //        checkArgNotNull(paramSetter, "paramsSetter");
+    //
+    //        boolean noException = false;
+    //
+    //        try {
+    //            paramSetter.accept(stmt);
+    //
+    //            noException = true;
+    //        } finally {
+    //            if (!noException) {
+    //                close();
+    //            }
+    //        }
+    //
+    //        return (This) this;
+    //    }
+    //
+    //    public <T> This setParameter(final T parameter, final Jdbc.BiParametersSetter<? super Stmt, ? super T> paramSetter) throws SQLException {
+    //        checkArgNotNull(paramSetter, "paramsSetter");
+    //
+    //        boolean noException = false;
+    //
+    //        try {
+    //            paramSetter.accept(stmt, parameter);
+    //
+    //            noException = true;
+    //        } finally {
+    //            if (!noException) {
+    //                close();
+    //            }
+    //        }
+    //
+    //        return (This) this;
+    //    }
 
     /**
      * Sets the parameters.
