@@ -2811,16 +2811,31 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @param <V> the value type
-     * @param targetClass
+     * @param targetType
      * @return
      * @throws SQLException
      */
-    public <V> Nullable<V> queryForSingleResult(Class<V> targetClass) throws SQLException {
-        checkArgNotNull(targetClass, "targetClass");
+    public <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetType) throws SQLException {
+        checkArgNotNull(targetType, "targetType");
+        assertNotClosed();
+
+        return queryForSingleResult(Type.of(targetType));
+    }
+
+    /**
+     * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
+     *
+     * @param <V>
+     * @param targetType
+     * @return
+     * @throws SQLException
+     */
+    public <V> Nullable<V> queryForSingleResult(final Type<? extends V> targetType) throws SQLException {
+        checkArgNotNull(targetType, "targetType");
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Nullable.of(N.convert(JdbcUtil.getColumnValue(rs, 1), targetClass)) : Nullable.<V> empty();
+            return rs.next() ? Nullable.of(targetType.get(rs, 1)) : Nullable.<V> empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -2830,16 +2845,31 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
      *
      * @param <V> the value type
-     * @param targetClass
+     * @param targetType
      * @return
      * @throws SQLException
      */
-    public <V> Optional<V> queryForSingleNonNull(Class<V> targetClass) throws SQLException {
-        checkArgNotNull(targetClass, "targetClass");
+    public <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetType) throws SQLException {
+        checkArgNotNull(targetType, "targetType");
+        assertNotClosed();
+
+        return queryForSingleNonNull(Type.of(targetType));
+    }
+
+    /**
+     * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
+     *
+     * @param <V>
+     * @param targetType
+     * @return
+     * @throws SQLException
+     */
+    public <V> Optional<V> queryForSingleNonNull(final Type<? extends V> targetType) throws SQLException {
+        checkArgNotNull(targetType, "targetType");
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Optional.of(N.convert(JdbcUtil.getColumnValue(rs, 1), targetClass)) : Optional.<V> empty();
+            return rs.next() ? Optional.of(targetType.get(rs, 1)) : Optional.<V> empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -2850,21 +2880,38 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * And throws {@code DuplicatedResultException} if more than one record found.
      *
      * @param <V> the value type
-     * @param targetClass
+     * @param targetType
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
      */
-    public <V> Nullable<V> queryForUniqueResult(Class<V> targetClass) throws DuplicatedResultException, SQLException {
-        checkArgNotNull(targetClass, "targetClass");
+    public <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetType) throws DuplicatedResultException, SQLException {
+        checkArgNotNull(targetType, "targetType");
+        assertNotClosed();
+
+        return queryForUniqueResult(Type.of(targetType));
+    }
+
+    /**
+     * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
+     * And throws {@code DuplicatedResultException} if more than one record found.
+     *
+     * @param <V>
+     * @param targetType
+     * @return
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+     * @throws SQLException
+     */
+    public <V> Nullable<V> queryForUniqueResult(final Type<? extends V> targetType) throws DuplicatedResultException, SQLException {
+        checkArgNotNull(targetType, "targetType");
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            final Nullable<V> result = rs.next() ? Nullable.of(N.convert(JdbcUtil.getColumnValue(rs, 1), targetClass)) : Nullable.<V> empty();
+            final Nullable<V> result = rs.next() ? Nullable.of(targetType.get(rs, 1)) : Nullable.<V> empty();
 
             if (result.isPresent() && rs.next()) {
                 throw new DuplicatedResultException(
-                        "At least two results found: " + Strings.concat(result.get(), ", ", N.convert(JdbcUtil.getColumnValue(rs, 1), targetClass)));
+                        "At least two results found: " + Strings.concat(result.get(), ", ", N.convert(JdbcUtil.getColumnValue(rs, 1), targetType)));
             }
 
             return result;
@@ -2878,21 +2925,38 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * And throws {@code DuplicatedResultException} if more than one record found.
      *
      * @param <V> the value type
-     * @param targetClass
+     * @param targetType
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
      */
-    public <V> Optional<V> queryForUniqueNonNull(Class<V> targetClass) throws DuplicatedResultException, SQLException {
-        checkArgNotNull(targetClass, "targetClass");
+    public <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetType) throws DuplicatedResultException, SQLException {
+        checkArgNotNull(targetType, "targetType");
+        assertNotClosed();
+
+        return queryForUniqueNonNull(Type.of(targetType));
+    }
+
+    /**
+     * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
+     * And throws {@code DuplicatedResultException} if more than one record found.
+     *
+     * @param <V> the value type
+     * @param targetType
+     * @return
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+     * @throws SQLException
+     */
+    public <V> Optional<V> queryForUniqueNonNull(final Type<? extends V> targetType) throws DuplicatedResultException, SQLException {
+        checkArgNotNull(targetType, "targetType");
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            final Optional<V> result = rs.next() ? Optional.of(N.convert(JdbcUtil.getColumnValue(rs, 1), targetClass)) : Optional.<V> empty();
+            final Optional<V> result = rs.next() ? Optional.of(targetType.get(rs, 1)) : Optional.<V> empty();
 
             if (result.isPresent() && rs.next()) {
                 throw new DuplicatedResultException(
-                        "At least two results found: " + Strings.concat(result.get(), ", ", N.convert(JdbcUtil.getColumnValue(rs, 1), targetClass)));
+                        "At least two results found: " + Strings.concat(result.get(), ", ", N.convert(JdbcUtil.getColumnValue(rs, 1), targetType)));
             }
 
             return result;
@@ -2904,15 +2968,15 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      *
      * @param <T>
-     * @param targetClass
+     * @param targetType
      * @param rs
      * @return
      * @throws SQLException
      */
-    private static <T> T getRow(final Class<? extends T> targetClass, ResultSet rs) throws SQLException {
+    private static <T> T getRow(final Class<? extends T> targetType, ResultSet rs) throws SQLException {
         final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
-        return Jdbc.BiRowMapper.to(targetClass).apply(rs, columnLabels);
+        return Jdbc.BiRowMapper.to(targetType).apply(rs, columnLabels);
     }
 
     /**
@@ -2971,15 +3035,15 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      *
      * @param <T>
-     * @param targetClass
+     * @param targetType
      * @return
      * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException
      * @deprecated replaced by {@code findOnlyOne}.
      */
     @Deprecated
-    public <T> Optional<T> get(final Class<? extends T> targetClass) throws DuplicatedResultException, SQLException {
-        return Optional.ofNullable(gett(targetClass));
+    public <T> Optional<T> get(final Class<? extends T> targetType) throws DuplicatedResultException, SQLException {
+        return Optional.ofNullable(gett(targetType));
     }
 
     /**
@@ -3015,15 +3079,15 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      *
      * @param <T>
-     * @param targetClass
+     * @param targetType
      * @return
      * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException
      * @deprecated replaced by {@code findOnlyOneOrNull}.
      */
     @Deprecated
-    public <T> T gett(final Class<? extends T> targetClass) throws DuplicatedResultException, SQLException {
-        return findOnlyOneOrNull(targetClass);
+    public <T> T gett(final Class<? extends T> targetType) throws DuplicatedResultException, SQLException {
+        return findOnlyOneOrNull(targetType);
     }
 
     /**
@@ -3069,14 +3133,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      *
      * @param <T>
-     * @param targetClass
+     * @param targetType
      * @return
      * @throws DuplicatedResultException If More than one record found by the query
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      * @throws SQLException
      */
-    public <T> Optional<T> findOnlyOne(final Class<? extends T> targetClass) throws DuplicatedResultException, SQLException {
-        return Optional.ofNullable(findOnlyOneOrNull(targetClass));
+    public <T> Optional<T> findOnlyOne(final Class<? extends T> targetType) throws DuplicatedResultException, SQLException {
+        return Optional.ofNullable(findOnlyOneOrNull(targetType));
     }
 
     /**
@@ -3118,18 +3182,18 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      *
      * @param <T>
-     * @param targetClass
+     * @param targetType
      * @return
      * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException
      */
-    public <T> T findOnlyOneOrNull(final Class<? extends T> targetClass) throws DuplicatedResultException, SQLException {
-        checkArgNotNull(targetClass, "targetClass");
+    public <T> T findOnlyOneOrNull(final Class<? extends T> targetType) throws DuplicatedResultException, SQLException {
+        checkArgNotNull(targetType, "targetType");
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
             if (rs.next()) {
-                final T result = Objects.requireNonNull(getRow(targetClass, rs));
+                final T result = Objects.requireNonNull(getRow(targetType, rs));
 
                 if (rs.next()) {
                     throw new DuplicatedResultException("More than one record found by the query");
@@ -3218,12 +3282,12 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      *
      * @param <T>
-     * @param targetClass
+     * @param targetType
      * @return
      * @throws SQLException
      */
-    public <T> Optional<T> findFirst(final Class<? extends T> targetClass) throws SQLException {
-        return Optional.ofNullable(findFirstOrNull(targetClass));
+    public <T> Optional<T> findFirst(final Class<? extends T> targetType) throws SQLException {
+        return Optional.ofNullable(findFirstOrNull(targetType));
     }
 
     /**
@@ -3292,17 +3356,17 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      *
      * @param <T>
-     * @param targetClass
+     * @param targetType
      * @return
      * @throws SQLException
      */
-    public <T> T findFirstOrNull(final Class<? extends T> targetClass) throws SQLException {
-        checkArgNotNull(targetClass, "targetClass");
+    public <T> T findFirstOrNull(final Class<? extends T> targetType) throws SQLException {
+        checkArgNotNull(targetType, "targetType");
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
             if (rs.next()) {
-                return Objects.requireNonNull(getRow(targetClass, rs));
+                return Objects.requireNonNull(getRow(targetType, rs));
             }
 
             return null;
@@ -3429,26 +3493,26 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      *
      * @param <T>
-     * @param targetClass
+     * @param targetType
      * @return
      * @throws SQLException
      */
-    public <T> List<T> list(final Class<? extends T> targetClass) throws SQLException {
-        return list(Jdbc.BiRowMapper.to(targetClass));
+    public <T> List<T> list(final Class<? extends T> targetType) throws SQLException {
+        return list(Jdbc.BiRowMapper.to(targetType));
     }
 
     /**
      *
      * @param <T>
-     * @param targetClass
+     * @param targetType
      * @param maxResult
      * @return
      * @throws SQLException
      * @deprecated the result size should be limited in database server side by sql scripts.
      */
     @Deprecated
-    public <T> List<T> list(final Class<? extends T> targetClass, int maxResult) throws SQLException {
-        return list(Jdbc.BiRowMapper.to(targetClass), maxResult);
+    public <T> List<T> list(final Class<? extends T> targetType, int maxResult) throws SQLException {
+        return list(Jdbc.BiRowMapper.to(targetType), maxResult);
     }
 
     /**
@@ -3624,7 +3688,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
-     * @param targetClass
+     * @param targetType
      * @return
      * @see {@link #query(ResultExtractor)}
      * @see {@link #query(BiResultExtractor)}
@@ -3632,8 +3696,8 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @see Jdbc.BiResultExtractor
      */
     @LazyEvaluation
-    public <T> ExceptionalStream<T, SQLException> stream(final Class<? extends T> targetClass) {
-        return stream(Jdbc.BiRowMapper.to(targetClass));
+    public <T> ExceptionalStream<T, SQLException> stream(final Class<? extends T> targetType) {
+        return stream(Jdbc.BiRowMapper.to(targetType));
     }
 
     // Will it cause confusion if it's called in transaction?

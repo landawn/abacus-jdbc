@@ -1685,14 +1685,14 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     /**
      *
      * @param <T>
-     * @param targetClass
+     * @param targetType
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Class<? extends T> targetClass) throws SQLException {
-        checkArgNotNull(targetClass, "targetClass");
+    public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Class<? extends T> targetType) throws SQLException {
+        checkArgNotNull(targetType, "targetType");
 
-        return listAndGetOutParameters(Jdbc.BiRowMapper.to(targetClass));
+        return listAndGetOutParameters(Jdbc.BiRowMapper.to(targetType));
     }
 
     /**
@@ -1836,14 +1836,14 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     /**
      *
      * @param <T>
-     * @param targetClass
+     * @param targetType
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      * @throws SQLException
      */
-    public <T> List<T> listAll(final Class<? extends T> targetClass) throws SQLException {
-        checkArgNotNull(targetClass, "targetClass");
+    public <T> List<T> listAll(final Class<? extends T> targetType) throws SQLException {
+        checkArgNotNull(targetType, "targetType");
 
-        return listAll(Jdbc.BiRowMapper.to(targetClass));
+        return listAll(Jdbc.BiRowMapper.to(targetType));
     }
 
     /**
@@ -1933,14 +1933,14 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     /**
      *
      * @param <T>
-     * @param targetClass
+     * @param targetType
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAllAndGetOutParameters(final Class<? extends T> targetClass) throws SQLException {
-        checkArgNotNull(targetClass, "targetClass");
+    public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAllAndGetOutParameters(final Class<? extends T> targetType) throws SQLException {
+        checkArgNotNull(targetType, "targetType");
 
-        return listAllAndGetOutParameters(Jdbc.BiRowMapper.to(targetClass));
+        return listAllAndGetOutParameters(Jdbc.BiRowMapper.to(targetType));
     }
 
     /**
@@ -2040,14 +2040,14 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     /**
      *
      * @param <T>
-     * @param targetClass
+     * @param targetType
      * @return the {@code ExceptionalStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      * @throws SQLException
      */
-    public <T> ExceptionalStream<T, SQLException> streamAll(final Class<? extends T> targetClass) {
-        checkArgNotNull(targetClass, "targetClass");
+    public <T> ExceptionalStream<T, SQLException> streamAll(final Class<? extends T> targetType) {
+        checkArgNotNull(targetType, "targetType");
 
-        return streamAll(Jdbc.BiRowMapper.to(targetClass));
+        return streamAll(Jdbc.BiRowMapper.to(targetType));
     }
 
     /**
