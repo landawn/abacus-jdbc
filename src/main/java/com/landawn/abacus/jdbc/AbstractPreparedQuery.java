@@ -2792,6 +2792,22 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
+     * Query for byte[].
+     *
+     * @return
+     * @throws SQLException
+     */
+    public Nullable<byte[]> queryForBytes() throws SQLException {
+        assertNotClosed();
+
+        try (ResultSet rs = executeQuery()) {
+            return rs.next() ? Nullable.of(rs.getBytes(1)) : Nullable.<byte[]> empty();
+        } finally {
+            closeAfterExecutionIfAllowed();
+        }
+    }
+
+    /**
      * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @param <V> the value type

@@ -337,6 +337,19 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
 
     /**
+     * Query for byte[].
+     *
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
+     * @see IDFactory
+     * @see IDFactory.CF
+     */
+    @Override
+    Nullable<byte[]> queryForBytes(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+
+    /**
      * Query for single result.
      *
      * @param <V> the value type

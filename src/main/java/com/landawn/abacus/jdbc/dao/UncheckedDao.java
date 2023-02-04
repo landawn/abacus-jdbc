@@ -464,6 +464,17 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
+     * Query for byte[].
+     *
+     * @param singleSelectPropName
+     * @param cond
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    @Override
+    Nullable<byte[]> queryForBytes(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+
+    /**
      * Query for single result.
      *
      * @param <V> the value type

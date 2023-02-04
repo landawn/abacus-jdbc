@@ -320,6 +320,18 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final ID id) throws SQLException;
 
     /**
+     * Query for byte[].
+     *
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws SQLException
+     * @see IDFactory
+     * @see IDFactory.CF
+     */
+    Nullable<byte[]> queryForBytes(final String singleSelectPropName, final ID id) throws SQLException;
+
+    /**
      * Query for single result.
      *
      * @param <V> the value type

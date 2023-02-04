@@ -1177,6 +1177,18 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
+     * Query for byte[].
+     *
+     * @param singleSelectPropName
+     * @param cond
+     * @return
+     * @throws SQLException
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     */
+    Nullable<byte[]> queryForBytes(final String singleSelectPropName, final Condition cond) throws SQLException;
+
+    /**
      * Query for single result.
      *
      * @param <V> the value type

@@ -105,6 +105,11 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     @Override
+    default Nullable<byte[]> queryForBytes(final String singleSelectPropName, final long id) throws UncheckedSQLException {
+        return queryForBytes(singleSelectPropName, Long.valueOf(id));
+    }
+
+    @Override
     default <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
             throws UncheckedSQLException {
         return queryForSingleResult(targetValueClass, singleSelectPropName, Long.valueOf(id));
