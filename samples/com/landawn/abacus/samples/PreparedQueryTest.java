@@ -5,6 +5,7 @@ import static com.landawn.abacus.samples.JdbcTest.userDao;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,7 @@ import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.samples.entity.User;
+import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.NSC;
@@ -22,6 +24,29 @@ import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.stream.IntStream;
 
 public class PreparedQueryTest {
+
+    @Test
+    public void test_queryForSingleResult() throws SQLException {
+
+        String firstName = N.toJSON(N.asList("a", "b", "c"));
+
+        User user = User.builder().firstName(firstName).lastName("Gump").email("123@email.com").build();
+
+        Long id = userDao.insert(user);
+
+        List<String> firstNameV = JdbcUtil.prepareQuery(dataSource, "select first_name from user where id = ?") //
+                .setLong(1, id)
+                .queryForSingleResult(Type.ofList(String.class))
+                .orElseNull();
+
+        N.println(firstNameV);
+
+        String sql = PSC.deleteFrom(User.class).where("id >= ?").sql();
+        JdbcUtil.prepareQuery(dataSource, sql) //
+                .setLong(1, id)
+                .update();
+
+    }
 
     @Test
     public void test_alias() throws SQLException {
@@ -116,43 +141,32 @@ public class PreparedQueryTest {
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .findOnlyOne(Jdbc.RowMapper.builder()
-                        .get(1, (rs, columnIndex) -> rs.getLong(columnIndex))
-                        .get(3, (rs, columnIndex) -> rs.getString(columnIndex))
-                        .get(6, (rs, columnIndex) -> rs.getDate(columnIndex))
-                        .toList())
+                .findOnlyOne(Jdbc.RowMapper.builder().get(1, ResultSet::getLong).get(3, ResultSet::getString).get(6, ResultSet::getDate).toList())
                 .ifPresent(System.out::println);
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .findOnlyOne(Jdbc.RowMapper.builder().getInt(1).get(3, (rs, columnIndex) -> rs.getString(columnIndex)).getTime(6).toArray())
+                .findOnlyOne(Jdbc.RowMapper.builder().getInt(1).get(3, ResultSet::getString).getTime(6).toArray())
                 .ifPresent(System.out::println);
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
                 .findOnlyOne(Jdbc.BiRowMapper.builder()
-                        .get("id", (rs, columnIndex) -> rs.getLong(columnIndex))
-                        .get("firstName", (rs, columnIndex) -> rs.getString(columnIndex))
+                        .get("id", ResultSet::getLong)
+                        .get("firstName", ResultSet::getString)
                         .getTimestamp("createTime")
                         .to(User.class))
                 .ifPresent(System.out::println);
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .findOnlyOne(Jdbc.BiRowMapper.builder()
-                        .getLong("id")
-                        .get("firstName", (rs, columnIndex) -> rs.getString(columnIndex))
-                        .getTime("createTime")
-                        .to(List.class))
+                .findOnlyOne(Jdbc.BiRowMapper.builder().getLong("id").get("firstName", ResultSet::getString).getTime("createTime").to(List.class))
                 .ifPresent(System.out::println);
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .findOnlyOne(Jdbc.BiRowMapper.builder()
-                        .get("id", (rs, columnIndex) -> rs.getLong(columnIndex))
-                        .get("firstName", (rs, columnIndex) -> rs.getString(columnIndex))
-                        .getDate("createTime")
-                        .to(Map.class))
+                .findOnlyOne(
+                        Jdbc.BiRowMapper.builder().get("id", ResultSet::getLong).get("firstName", ResultSet::getString).getDate("createTime").to(Map.class))
                 .ifPresent(System.out::println);
 
         JdbcUtil.prepareQuery(dataSource, "select id from user").queryForBigInteger().ifPresent(Fn.println());
