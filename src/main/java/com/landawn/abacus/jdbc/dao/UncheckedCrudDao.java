@@ -362,7 +362,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @see IDFactory.CF
      */
     @Override
-    <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+    <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
+            throws UncheckedSQLException;
 
     /**
      * Query for single non null.
@@ -378,7 +379,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @see IDFactory.CF
      */
     @Override
-    <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final ID id) throws UncheckedSQLException;
+    <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
+            throws UncheckedSQLException;
 
     /**
      * Query for unique result.
@@ -394,7 +396,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @see IDFactory.CF
      */
     @Override
-    <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final ID id)
+    <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
             throws DuplicatedResultException, UncheckedSQLException;
 
     /**
@@ -410,7 +412,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @see IDFactory.CF
      */
     @Override
-    <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final ID id)
+    <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
             throws DuplicatedResultException, UncheckedSQLException;
 
     /**

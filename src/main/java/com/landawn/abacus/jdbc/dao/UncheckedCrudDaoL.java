@@ -110,25 +110,25 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     @Override
-    default <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+    default <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
             throws UncheckedSQLException {
         return queryForSingleResult(targetValueClass, singleSelectPropName, Long.valueOf(id));
     }
 
     @Override
-    default <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+    default <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
             throws UncheckedSQLException {
         return queryForSingleNonNull(targetValueClass, singleSelectPropName, Long.valueOf(id));
     }
 
     @Override
-    default <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+    default <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
             throws DuplicatedResultException, UncheckedSQLException {
         return queryForUniqueResult(targetValueClass, singleSelectPropName, Long.valueOf(id));
     }
 
     @Override
-    default <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+    default <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
             throws DuplicatedResultException, UncheckedSQLException {
         return queryForUniqueNonNull(targetValueClass, singleSelectPropName, Long.valueOf(id));
     }

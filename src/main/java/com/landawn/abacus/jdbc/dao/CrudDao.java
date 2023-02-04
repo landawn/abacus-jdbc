@@ -343,7 +343,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @see IDFactory
      * @see IDFactory.CF
      */
-    <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final ID id) throws SQLException;
+    <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id) throws SQLException;
 
     /**
      * Query for single non null.
@@ -358,7 +358,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @see IDFactory
      * @see IDFactory.CF
      */
-    <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final ID id) throws SQLException;
+    <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id) throws SQLException;
 
     /**
      * Query for unique result.
@@ -373,7 +373,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @see IDFactory
      * @see IDFactory.CF
      */
-    <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final ID id)
+    <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
             throws DuplicatedResultException, SQLException;
 
     /**
@@ -388,7 +388,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @see IDFactory
      * @see IDFactory.CF
      */
-    <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final ID id)
+    <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
             throws DuplicatedResultException, SQLException;
 
     /**

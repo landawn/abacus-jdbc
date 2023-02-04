@@ -905,7 +905,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<R> rowMapper) throws SQLException, NullPointerException;
+    <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException, NullPointerException;
 
     /**
      * @param cond
@@ -916,7 +916,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<R> rowMapper) throws SQLException, NullPointerException;
+    <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException, NullPointerException;
 
     /**
      *
@@ -940,7 +940,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<R> rowMapper)
+    <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws SQLException, NullPointerException;
 
     /**
@@ -954,7 +954,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<R> rowMapper)
+    <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
             throws SQLException, NullPointerException;
 
     /**
@@ -978,7 +978,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<R> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException;
+    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
+            throws DuplicatedResultException, SQLException, NullPointerException;
 
     /**
      * @param cond
@@ -990,7 +991,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<R> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException;
+    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
+            throws DuplicatedResultException, SQLException, NullPointerException;
 
     /**
      *
@@ -1014,7 +1016,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      */
-    <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<R> rowMapper)
+    <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws DuplicatedResultException, SQLException, NullPointerException;
 
     /**
@@ -1029,7 +1031,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<R> rowMapper)
+    <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
             throws DuplicatedResultException, SQLException, NullPointerException;
 
     /**
@@ -1200,7 +1202,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond) throws SQLException;
+    <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
+            throws SQLException;
 
     /**
      * Query for single non null.
@@ -1215,7 +1218,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond) throws SQLException;
+    <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
+            throws SQLException;
 
     /**
      * Query for unique result.
@@ -1230,7 +1234,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
+    <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
             throws DuplicatedResultException, SQLException;
 
     /**
@@ -1245,7 +1249,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
+    <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
             throws DuplicatedResultException, SQLException;
 
     /**
@@ -1332,7 +1336,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> List<R> list(final Condition cond, final Jdbc.RowMapper<R> rowMapper) throws SQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
      *
@@ -1343,19 +1347,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<R> rowMapper) throws SQLException;
-
-    /**
-     *
-     * @param cond
-     * @param rowFilter
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     */
-    <R> List<R> list(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<R> rowMapper) throws SQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
      *
@@ -1367,7 +1359,19 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> List<R> list(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<R> rowMapper) throws SQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
+
+    /**
+     *
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     * @throws SQLException
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     */
+    <R> List<R> list(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
      *
@@ -1390,7 +1394,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<R> rowMapper) throws SQLException;
+    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
      *
@@ -1402,21 +1406,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<R> rowMapper) throws SQLException;
-
-    /**
-     *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowFilter
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     */
-    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<R> rowMapper)
-            throws SQLException;
+    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
      *
@@ -1429,8 +1419,22 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<R> rowMapper)
-            throws SQLException;
+    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter,
+            final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
+
+    /**
+     *
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     * @throws SQLException
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     */
+    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
+            final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
      *
@@ -1443,7 +1447,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws SQLException {
         final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
-        final Jdbc.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
+        final Jdbc.RowMapper<? extends R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
         return list(singleSelectPropName, cond, rowMapper);
     }
@@ -1458,7 +1462,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<R> rowMapper) throws SQLException {
+    default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException {
         return list(N.asList(singleSelectPropName), cond, rowMapper);
     }
 
@@ -1473,8 +1477,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<R> rowMapper)
-            throws SQLException {
+    default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
+            final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException {
         return list(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
     }
 
@@ -1501,7 +1505,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final Jdbc.RowMapper<R> rowMapper);
+    <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1514,7 +1518,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final Jdbc.BiRowMapper<R> rowMapper);
+    <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper);
 
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
@@ -1527,7 +1531,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<R> rowMapper);
+    <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper);
 
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
@@ -1540,7 +1544,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<R> rowMapper);
+    <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1567,7 +1571,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<R> rowMapper);
+    <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1581,7 +1585,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<R> rowMapper);
+    <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond,
+            final Jdbc.BiRowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1597,7 +1602,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @LazyEvaluation
     <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, Jdbc.RowFilter rowFilter,
-            final Jdbc.RowMapper<R> rowMapper);
+            final Jdbc.RowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1614,7 +1619,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @LazyEvaluation
     <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
-            final Jdbc.BiRowMapper<R> rowMapper);
+            final Jdbc.BiRowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1629,7 +1634,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     @LazyEvaluation
     default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) {
         final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
-        final Jdbc.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
+        final Jdbc.RowMapper<? extends R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
         return stream(singleSelectPropName, cond, rowMapper);
     }
@@ -1646,7 +1651,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<R> rowMapper) {
+    default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond,
+            final Jdbc.RowMapper<? extends R> rowMapper) {
         return stream(N.asList(singleSelectPropName), cond, rowMapper);
     }
 
@@ -1663,7 +1669,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @LazyEvaluation
     default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
-            final Jdbc.RowMapper<R> rowMapper) {
+            final Jdbc.RowMapper<? extends R> rowMapper) {
         return stream(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
     }
 

@@ -97,20 +97,22 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
         return queryForBytes(singleSelectPropName, Long.valueOf(id));
     }
 
-    default <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final long id) throws SQLException {
+    default <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
+            throws SQLException {
         return queryForSingleResult(targetValueClass, singleSelectPropName, Long.valueOf(id));
     }
 
-    default <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final long id) throws SQLException {
+    default <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
+            throws SQLException {
         return queryForSingleNonNull(targetValueClass, singleSelectPropName, Long.valueOf(id));
     }
 
-    default <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+    default <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
             throws DuplicatedResultException, SQLException {
         return queryForUniqueResult(targetValueClass, singleSelectPropName, Long.valueOf(id));
     }
 
-    default <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final long id)
+    default <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
             throws DuplicatedResultException, SQLException {
         return queryForUniqueNonNull(targetValueClass, singleSelectPropName, Long.valueOf(id));
     }

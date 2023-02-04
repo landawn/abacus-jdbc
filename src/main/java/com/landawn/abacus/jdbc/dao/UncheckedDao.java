@@ -221,7 +221,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<R> rowMapper) throws UncheckedSQLException;
+    <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
 
     /**
      * @param cond
@@ -230,7 +230,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<R> rowMapper) throws UncheckedSQLException;
+    <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws UncheckedSQLException;
 
     /**
      *
@@ -251,7 +251,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<R> rowMapper) throws UncheckedSQLException;
+    <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
+            throws UncheckedSQLException;
 
     /**
      *
@@ -262,7 +263,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<R> rowMapper) throws UncheckedSQLException;
+    <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
+            throws UncheckedSQLException;
 
     /**
      *
@@ -282,7 +284,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<R> rowMapper) throws DuplicatedResultException, UncheckedSQLException;
+    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicatedResultException, UncheckedSQLException;
 
     /**
      * @param cond
@@ -292,7 +294,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<R> rowMapper) throws DuplicatedResultException, UncheckedSQLException;
+    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicatedResultException, UncheckedSQLException;
 
     /**
      *
@@ -315,7 +317,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<R> rowMapper)
+    <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws DuplicatedResultException, UncheckedSQLException;
 
     /**
@@ -328,7 +330,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<R> rowMapper)
+    <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
             throws DuplicatedResultException, UncheckedSQLException;
 
     /**
@@ -485,7 +487,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <V> Nullable<V> queryForSingleResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+    <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
+            throws UncheckedSQLException;
 
     /**
      * Query for single non null.
@@ -499,7 +502,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <V> Optional<V> queryForSingleNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
+    <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
             throws UncheckedSQLException;
 
     /**
@@ -514,7 +517,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <V> Nullable<V> queryForUniqueResult(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
+    <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
             throws DuplicatedResultException, UncheckedSQLException;
 
     /**
@@ -528,7 +531,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <V> Optional<V> queryForUniqueNonNull(final Class<V> targetValueClass, final String singleSelectPropName, final Condition cond)
+    <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
             throws DuplicatedResultException, UncheckedSQLException;
 
     /**
@@ -611,7 +614,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> List<R> list(final Condition cond, final Jdbc.RowMapper<R> rowMapper) throws UncheckedSQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
 
     /**
      *
@@ -621,18 +624,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<R> rowMapper) throws UncheckedSQLException;
-
-    /**
-     *
-     * @param cond
-     * @param rowFilter
-     * @param rowMapper
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     */
-    @Override
-    <R> List<R> list(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<R> rowMapper) throws UncheckedSQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws UncheckedSQLException;
 
     /**
      *
@@ -643,7 +635,18 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> List<R> list(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<R> rowMapper) throws UncheckedSQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
+
+    /**
+     *
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    @Override
+    <R> List<R> list(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper) throws UncheckedSQLException;
 
     /**
      *
@@ -664,7 +667,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<R> rowMapper) throws UncheckedSQLException;
+    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
 
     /**
      *
@@ -675,19 +678,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<R> rowMapper) throws UncheckedSQLException;
-
-    /**
-     *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowFilter
-     * @param rowMapper
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     */
-    @Override
-    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<R> rowMapper)
+    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
             throws UncheckedSQLException;
 
     /**
@@ -700,8 +691,21 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<R> rowMapper)
-            throws UncheckedSQLException;
+    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter,
+            final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
+
+    /**
+     *
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    @Override
+    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
+            final Jdbc.BiRowMapper<? extends R> rowMapper) throws UncheckedSQLException;
 
     /**
      *
@@ -714,7 +718,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException {
         @SuppressWarnings("deprecation")
         final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
-        final Jdbc.RowMapper<R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
+        final Jdbc.RowMapper<? extends R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
         return list(singleSelectPropName, cond, rowMapper);
     }
@@ -728,7 +732,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<R> rowMapper) throws UncheckedSQLException {
+    default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
+            throws UncheckedSQLException {
         return list(N.asList(singleSelectPropName), cond, rowMapper);
     }
 
@@ -742,8 +747,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<R> rowMapper)
-            throws UncheckedSQLException {
+    default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
+            final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException {
         return list(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
     }
 
