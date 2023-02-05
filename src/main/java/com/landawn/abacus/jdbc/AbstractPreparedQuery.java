@@ -2709,6 +2709,8 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         }
     }
 
+    private static final Type<BigInteger> BIG_INTEGER_TYPE = Type.of(BigInteger.class);
+
     /**
      * Query big integer.
      *
@@ -2720,7 +2722,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Nullable.of(rs.getObject(1, BigInteger.class)) : Nullable.<BigInteger> empty();
+            return rs.next() ? Nullable.of(BIG_INTEGER_TYPE.get(rs, 1)) : Nullable.<BigInteger> empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
