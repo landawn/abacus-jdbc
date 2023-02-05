@@ -25,7 +25,6 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.Driver;
 import java.sql.DriverManager;
-import java.sql.NClob;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -1023,8 +1022,6 @@ public final class JdbcUtil {
             obj = blob.getBytes(1, (int) blob.length());
         } else if (obj instanceof Clob clob) {
             obj = clob.getSubString(1, (int) clob.length());
-        } else if (obj instanceof NClob nclob) {
-            obj = nclob.getSubString(1, (int) nclob.length());
         } else if (checkDateType == 1 || (checkDateType == 0 && checkDateType_TL.get())) {
             final String className = obj.getClass().getName();
 
@@ -1102,8 +1099,6 @@ public final class JdbcUtil {
             obj = blob.getBytes(1, (int) blob.length());
         } else if (obj instanceof Clob clob) {
             obj = clob.getSubString(1, (int) clob.length());
-        } else if (obj instanceof NClob nclob) {
-            obj = nclob.getSubString(1, (int) nclob.length());
         } else if (checkDateType == 1 || (checkDateType == 0 && checkDateType_TL.get())) {
             final String className = obj.getClass().getName();
 
@@ -4890,8 +4885,6 @@ public final class JdbcUtil {
                 value = blob.getBytes(1, (int) blob.length());
             } else if (value instanceof Clob clob) {
                 value = clob.getSubString(1, (int) clob.length());
-            } else if (value instanceof NClob nclob) {
-                value = nclob.getSubString(1, (int) nclob.length());
             }
 
             outParamValues.put(key, value);
