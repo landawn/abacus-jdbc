@@ -4147,6 +4147,9 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return !anyMatch(rowFilter);
     }
 
+    // TODO should set big fetch size for operation: query, list, stream, forEach, anyMatch/allMatch/noneMatch if it's not set for performance improvement?
+    // May not? because there is fetchSize method to call? It's set for those methods in Dao because there is no fetch size method in Dao class. Make sense?
+
     /**
      *
      * @param rowConsumer

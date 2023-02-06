@@ -3148,7 +3148,7 @@ final class DaoImpl {
 
                             return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
                         };
-                    } else if (methodName.equals("forEach") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.RowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Condition cond = (Condition) args[0];
@@ -3164,7 +3164,7 @@ final class DaoImpl {
                                     .forEach(rowConsumer);
                             return null;
                         };
-                    } else if (methodName.equals("forEach") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.BiRowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Condition cond = (Condition) args[0];
@@ -3180,7 +3180,7 @@ final class DaoImpl {
                                     .forEach(rowConsumer);
                             return null;
                         };
-                    } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.RowFilter.class) && paramTypes[2].equals(Jdbc.RowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Condition cond = (Condition) args[0];
@@ -3198,7 +3198,7 @@ final class DaoImpl {
                                     .forEach(rowFilter, rowConsumer);
                             return null;
                         };
-                    } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.BiRowFilter.class) && paramTypes[2].equals(Jdbc.BiRowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Condition cond = (Condition) args[0];
@@ -3216,8 +3216,8 @@ final class DaoImpl {
                                     .forEach(rowFilter, rowConsumer);
                             return null;
                         };
-                    } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
-                            && paramTypes[2].equals(Jdbc.RowConsumer.class)) {
+                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 3 && paramTypes[0].equals(Collection.class)
+                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Collection<String> selectPropNames = (Collection<String>) args[0];
                             final Condition cond = (Condition) args[1];
@@ -3233,8 +3233,8 @@ final class DaoImpl {
                                     .forEach(rowConsumer);
                             return null;
                         };
-                    } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
-                            && paramTypes[2].equals(Jdbc.BiRowConsumer.class)) {
+                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 3 && paramTypes[0].equals(Collection.class)
+                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.BiRowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Collection<String> selectPropNames = (Collection<String>) args[0];
                             final Condition cond = (Condition) args[1];
@@ -3250,8 +3250,9 @@ final class DaoImpl {
                                     .forEach(rowConsumer);
                             return null;
                         };
-                    } else if (methodName.equals("forEach") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
-                            && paramTypes[2].equals(Jdbc.RowFilter.class) && paramTypes[3].equals(Jdbc.RowConsumer.class)) {
+                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 4 && paramTypes[0].equals(Collection.class)
+                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowFilter.class)
+                            && paramTypes[3].equals(Jdbc.RowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Collection<String> selectPropNames = (Collection<String>) args[0];
                             final Condition cond = (Condition) args[1];
@@ -3269,8 +3270,9 @@ final class DaoImpl {
                                     .forEach(rowFilter, rowConsumer);
                             return null;
                         };
-                    } else if (methodName.equals("forEach") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
-                            && paramTypes[2].equals(Jdbc.BiRowFilter.class) && paramTypes[3].equals(Jdbc.BiRowConsumer.class)) {
+                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 4 && paramTypes[0].equals(Collection.class)
+                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.BiRowFilter.class)
+                            && paramTypes[3].equals(Jdbc.BiRowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Collection<String> selectPropNames = (Collection<String>) args[0];
                             final Condition cond = (Condition) args[1];
@@ -4548,7 +4550,6 @@ final class DaoImpl {
                     final QueryInfo queryInfo = sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno, newSQLMapper);
                     final String query = N.checkArgNotNullOrEmpty(queryInfo.sql, "sql can't be null or empty");
                     final ParsedSql parsedSql = queryInfo.parsedSql;
-                    final int fetchSize = queryInfo.fetchSize;
                     final boolean isBatch = queryInfo.isBatch;
                     final int tmpBatchSize = queryInfo.batchSize;
                     final OP op = queryInfo.op;
@@ -4923,29 +4924,29 @@ final class DaoImpl {
                         // Getting ClassCastException. Not sure why query result is being casted Dao. It seems there is a bug in JDk compiler.
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
 
-                        if (fetchSize <= 0) {
-                            if (mergedByIdAnno != null) {
-                                // skip
-                            } else if (op == OP.findOnlyOne || op == OP.queryForUnique) {
-                                // skip.
-                            } else if (op == OP.exists || isExistsQuery(method, op, fullClassMethodName) || op == OP.findFirst || op == OP.queryForSingle
-                                    || isSingleReturnType(returnType)) {
-                                // skip
-                            } else if (op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll || op == OP.stream || op == OP.streamAll
-                                    || isListQuery(method, returnType, op, fullClassMethodName)) {
-                                // skip.
-                            } else if (lastParamType != null && (Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)
-                                    || Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType))) {
-                                // skip.
-                            } else if (Stream.class.isAssignableFrom(returnType) || ExceptionalStream.class.isAssignableFrom(returnType)
-                                    || DataSet.class.isAssignableFrom(returnType)) {
-                                // skip.
-                            } else if (isCall) {
-                                // skip.
-                            } else {
-                                // skip.
-                            }
-                        }
+                        //    if (fetchSize <= 0) {
+                        //        if (mergedByIdAnno != null) {
+                        //            // skip
+                        //        } else if (op == OP.findOnlyOne || op == OP.queryForUnique) {
+                        //            // skip.
+                        //        } else if (op == OP.exists || isExistsQuery(method, op, fullClassMethodName) || op == OP.findFirst || op == OP.queryForSingle
+                        //                || isSingleReturnType(returnType)) {
+                        //            // skip
+                        //        } else if (op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll || op == OP.stream || op == OP.streamAll
+                        //                || isListQuery(method, returnType, op, fullClassMethodName)) {
+                        //            // skip.
+                        //        } else if (lastParamType != null && (Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)
+                        //                || Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType))) {
+                        //            // skip.
+                        //        } else if (Stream.class.isAssignableFrom(returnType) || ExceptionalStream.class.isAssignableFrom(returnType)
+                        //                || DataSet.class.isAssignableFrom(returnType)) {
+                        //            // skip.
+                        //        } else if (isCall) {
+                        //            // skip.
+                        //        } else {
+                        //            // skip.
+                        //        }
+                        //    }
 
                         call = (proxy, args) -> queryFunc.apply(prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
                                 defines, defineParamIndexes, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter), args);
