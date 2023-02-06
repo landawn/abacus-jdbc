@@ -145,7 +145,7 @@ public final class JdbcUtil {
 
     public static final int DEFAULT_FETCH_SIZE_FOR_BIG_RESULT = 1000;
 
-    public static final int DEFAULT_FETCH_SIZE_FOR_STREAM = DEFAULT_BATCH_SIZE;
+    public static final int DEFAULT_FETCH_SIZE_FOR_STREAM = 100;
 
     public static final Throwables.Function<Statement, String, SQLException> DEFAULT_SQL_EXTRACTOR = stmt -> {
         Statement stmtToUse = stmt;
@@ -1783,12 +1783,23 @@ public final class JdbcUtil {
     }
 
     @SuppressWarnings("rawtypes")
-    static final Throwables.Consumer<AbstractPreparedQuery, ? extends SQLException> stmtSetterForBigQueryResult = stmt -> stmt.setFetchDirectionToForward()
-            .setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+    static final Throwables.Consumer<AbstractPreparedQuery, ? extends SQLException> stmtSetterForBigQueryResult = stmt -> {
+        // stmt.setFetchDirectionToForward().setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        stmt.setFetchDirectionToForward();
+
+        if (stmt.getFetchSize() < JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT) {
+            stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        }
+    };
 
     @SuppressWarnings("rawtypes")
-    static final Throwables.Consumer<AbstractPreparedQuery, ? extends SQLException> stmtSetterForStream = stmt -> stmt.setFetchDirectionToForward()
-            .setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_STREAM);
+    static final Throwables.Consumer<AbstractPreparedQuery, ? extends SQLException> stmtSetterForStream = stmt -> {
+        stmt.setFetchDirectionToForward();
+
+        if (stmt.getFetchSize() < JdbcUtil.DEFAULT_FETCH_SIZE_FOR_STREAM) {
+            stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_STREAM);
+        }
+    };
 
     /**
      * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction} or in {@code Spring} with the same {@code DataSource} in the same thread,

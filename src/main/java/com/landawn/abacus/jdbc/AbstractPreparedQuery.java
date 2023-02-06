@@ -2559,6 +2559,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    int getFetchSize() throws SQLException {
+        return stmt.getFetchSize();
+    }
+
+    int getFetchDirection() throws SQLException {
+        return stmt.getFetchDirection();
+    }
+
     /**
      * Query for boolean.
      *
