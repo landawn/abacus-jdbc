@@ -953,8 +953,18 @@ public final class JdbcUtil {
     public static int getColumnIndex(final ResultSetMetaData rsmd, final String columnName) throws SQLException {
         final int columnCount = rsmd.getColumnCount();
 
+        String columnLabel = null;
+
         for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
-            if (getColumnLabel(rsmd, columnIndex).equalsIgnoreCase(columnName)) {
+            columnLabel = rsmd.getColumnLabel(columnIndex);
+
+            if (columnLabel != null && columnLabel.equalsIgnoreCase(columnName)) {
+                return columnIndex;
+            }
+
+            columnLabel = rsmd.getColumnName(columnIndex);
+
+            if (columnLabel != null && columnLabel.equalsIgnoreCase(columnName)) {
                 return columnIndex;
             }
         }
@@ -989,7 +999,7 @@ public final class JdbcUtil {
      * @throws SQLException
      */
     public static Object getColumnValue(final ResultSet rs, final int columnIndex) throws SQLException {
-        return getColumnValue(rs, columnIndex, 0);
+        return getColumnValue(rs, columnIndex, 1);
     }
 
     /**
@@ -1052,6 +1062,100 @@ public final class JdbcUtil {
      * Gets the column value.
      *
      * @param rs
+     * @param columnIndex starts with 1, not 0.
+     * @return
+     * @throws SQLException
+     */
+    public static <T> List<T> getAllColumnValues(final ResultSet rs, final int columnIndex) throws SQLException {
+        // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
+
+        final List<Object> result = new ArrayList<>();
+        Object val = null;
+
+        while (rs.next()) {
+            val = result.get(columnIndex);
+
+            if (val == null) {
+                result.add(val);
+            } else if (val instanceof String || val instanceof Number || val instanceof java.sql.Timestamp || val instanceof Boolean) {
+                result.add(val);
+
+                while (rs.next()) {
+                    result.add(result.get(columnIndex));
+                }
+            } else if (val instanceof Blob blob) {
+                result.add(blob.getBytes(1, (int) blob.length()));
+
+                while (rs.next()) {
+                    blob = (Blob) result.get(columnIndex);
+                    result.add(blob.getBytes(1, (int) blob.length()));
+                }
+            } else if (val instanceof Clob clob) {
+                result.add(clob.getSubString(1, (int) clob.length()));
+
+                while (rs.next()) {
+                    clob = (Clob) result.get(columnIndex);
+                    result.add(clob.getSubString(1, (int) clob.length()));
+                }
+            } else {
+                final String className = val.getClass().getName();
+
+                if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
+                    result.add(oracleTimestampToJavaTimestamp.apply(val));
+
+                    while (rs.next()) {
+                        result.add(oracleTimestampToJavaTimestamp.apply(result.get(columnIndex)));
+                    }
+                } else if (className.startsWith("oracle.sql.DATE")) {
+                    final ResultSetMetaData metaData = rs.getMetaData();
+                    final String metaDataClassName = metaData.getColumnClassName(columnIndex);
+
+                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
+                        result.add(oracleTimestampToJavaTimestamp.apply(val));
+
+                        while (rs.next()) {
+                            result.add(oracleTimestampToJavaTimestamp.apply(result.get(columnIndex)));
+                        }
+                    } else {
+                        result.add(oracleTimestampToJavaDate.apply(val));
+
+                        while (rs.next()) {
+                            result.add(oracleTimestampToJavaDate.apply(result.get(columnIndex)));
+                        }
+                    }
+                } else if ((val instanceof java.sql.Date)) {
+                    final ResultSetMetaData metaData = rs.getMetaData();
+
+                    if ("java.sql.Timestamp".equals(metaData.getColumnClassName(columnIndex))) {
+                        result.add(rs.getTimestamp(columnIndex));
+
+                        while (rs.next()) {
+                            result.add(rs.getTimestamp(columnIndex));
+                        }
+                    } else {
+                        result.add(val);
+
+                        while (rs.next()) {
+                            result.add(result.get(columnIndex));
+                        }
+                    }
+                } else {
+                    result.add(val);
+
+                    while (rs.next()) {
+                        result.add(result.get(columnIndex));
+                    }
+                }
+            }
+        }
+
+        return (List<T>) result;
+    }
+
+    /**
+     * Gets the column value.
+     *
+     * @param rs
      * @param columnLabel
      * @return
      * @throws SQLException
@@ -1059,7 +1163,7 @@ public final class JdbcUtil {
      */
     @Deprecated
     public static Object getColumnValue(final ResultSet rs, final String columnLabel) throws SQLException {
-        return getColumnValue(rs, columnLabel, 0);
+        return getColumnValue(rs, columnLabel, 1);
     }
 
     /**
@@ -1126,6 +1230,24 @@ public final class JdbcUtil {
         }
 
         return obj;
+    }
+
+    /**
+     * Gets the column value.
+     *
+     * @param rs
+     * @param columnLabel
+     * @return
+     * @throws SQLException
+     */
+    public static <T> List<T> getAllColumnValues(final ResultSet rs, final String columnLabel) throws SQLException {
+        final int columnIndex = JdbcUtil.getColumnIndex(rs, columnLabel);
+
+        if (columnIndex < 1) {
+            throw new IllegalArgumentException("No column found by name: " + columnLabel + " in result set: " + JdbcUtil.getColumnLabelList(rs));
+        }
+
+        return getAllColumnValues(rs, columnIndex);
     }
 
     /**
