@@ -168,14 +168,14 @@
 		<dependency>
 			<groupId>org.jdbi</groupId>
 			<artifactId>jdbi3-core</artifactId>
-			<version>3.12.2</version>
+			<version>3.37.0</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.jdbi</groupId>
 			<artifactId>jdbi3-sqlobject</artifactId>
-			<version>3.12.2</version>
+			<version>3.37.0</version>
 			<scope>provided</scope>
 		</dependency>
 
