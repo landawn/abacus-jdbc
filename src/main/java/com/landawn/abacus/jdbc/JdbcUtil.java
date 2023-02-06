@@ -145,6 +145,8 @@ public final class JdbcUtil {
 
     public static final int DEFAULT_FETCH_SIZE_FOR_BIG_RESULT = 1000;
 
+    public static final int DEFAULT_FETCH_SIZE_FOR_STREAM = DEFAULT_BATCH_SIZE;
+
     public static final Throwables.Function<Statement, String, SQLException> DEFAULT_SQL_EXTRACTOR = stmt -> {
         Statement stmtToUse = stmt;
         String clsName = stmtToUse.getClass().getName();
@@ -1780,6 +1782,14 @@ public final class JdbcUtil {
         return SQLOperation.UNKNOWN;
     }
 
+    @SuppressWarnings("rawtypes")
+    static final Throwables.Consumer<AbstractPreparedQuery, ? extends SQLException> stmtSetterForBigQueryResult = stmt -> stmt.setFetchDirectionToForward()
+            .setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+
+    @SuppressWarnings("rawtypes")
+    static final Throwables.Consumer<AbstractPreparedQuery, ? extends SQLException> stmtSetterForStream = stmt -> stmt.setFetchDirectionToForward()
+            .setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_STREAM);
+
     /**
      * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction} or in {@code Spring} with the same {@code DataSource} in the same thread,
      * the {@code Connection} started the Transaction will be used here.
@@ -2086,7 +2096,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static PreparedQuery prepareQueryForBigResult(final javax.sql.DataSource ds, final String sql) throws SQLException {
-        return prepareQuery(ds, sql).setFetchDirectionToForward().setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        return prepareQuery(ds, sql).configStmt(stmtSetterForBigQueryResult);
     }
 
     /**
@@ -2100,7 +2110,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static PreparedQuery prepareQueryForBigResult(final Connection conn, final String sql) throws SQLException {
-        return prepareQuery(conn, sql).setFetchDirectionToForward().setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        return prepareQuery(conn, sql).configStmt(stmtSetterForBigQueryResult);
     }
 
     /**
@@ -2736,7 +2746,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static NamedQuery prepareNamedQueryForBigResult(final javax.sql.DataSource ds, final String sql) throws SQLException {
-        return prepareNamedQuery(ds, sql).setFetchDirectionToForward().setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        return prepareNamedQuery(ds, sql).configStmt(stmtSetterForBigQueryResult);
     }
 
     /**
@@ -2750,7 +2760,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static NamedQuery prepareNamedQueryForBigResult(final Connection conn, final String sql) throws SQLException {
-        return prepareNamedQuery(conn, sql).setFetchDirectionToForward().setFetchSize(DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        return prepareNamedQuery(conn, sql).configStmt(stmtSetterForBigQueryResult);
     }
 
     /**

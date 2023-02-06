@@ -461,10 +461,9 @@ final class DaoImpl {
      * @param method
      * @return true, if is list query
      */
-    private static boolean isListQuery(final Method method, final OP op, final String fullClassMethodName) {
+    private static boolean isListQuery(final Method method, final Class<?> returnType, final OP op, final String fullClassMethodName) {
         final String methodName = method.getName();
         final Class<?>[] paramTypes = method.getParameterTypes();
-        final Class<?> returnType = method.getReturnType();
         final int paramLen = paramTypes.length;
 
         if (op == OP.list || op == OP.listAll) {
@@ -629,7 +628,7 @@ final class DaoImpl {
 
         final int paramLen = paramTypes.length;
         final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
-        final boolean isListQuery = isListQuery(method, op, fullClassMethodName);
+        final boolean isListQuery = isListQuery(method, returnType, op, fullClassMethodName);
         final boolean isExists = isExistsQuery(method, op, fullClassMethodName);
 
         if ((op == OP.stream && !(Stream.class.isAssignableFrom(returnType) || ExceptionalStream.class.isAssignableFrom(returnType)))
@@ -1555,12 +1554,20 @@ final class DaoImpl {
                 preparedQuery.setFetchSize(queryInfo.fetchSize);
             } else if (queryInfo.isSelect) {
                 if (mergedByIdAnno != null) {
-                    // skip
+                    preparedQuery.configStmt(JdbcUtil.stmtSetterForBigQueryResult); // ?
                 } else if (op == OP.findOnlyOne || op == OP.queryForUnique) {
                     preparedQuery.setFetchSize(2);
                 } else if (op == OP.findFirst || op == OP.queryForSingle || op == OP.exists || isExistsQuery(method, op, fullClassMethodName)
                         || isSingleReturnType(returnType)) {
                     preparedQuery.setFetchSize(1);
+                } else if (op == OP.stream || op == OP.streamAll
+                        || (Stream.class.isAssignableFrom(returnType) || ExceptionalStream.class.isAssignableFrom(returnType))) {
+                    preparedQuery.configStmt(JdbcUtil.stmtSetterForStream);
+                } else if (op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll
+                        || isListQuery(method, returnType, op, fullClassMethodName)) {
+                    preparedQuery.configStmt(JdbcUtil.stmtSetterForBigQueryResult);
+                } else if (op == OP.DEFAULT && (DataSet.class.isAssignableFrom(returnType))) {
+                    preparedQuery.configStmt(JdbcUtil.stmtSetterForBigQueryResult);
                 }
             }
 
@@ -2704,12 +2711,12 @@ final class DaoImpl {
 
                             if (fetchColumnByEntityClass) {
                                 return proxy.prepareQuery(sp.sql)
-                                        .setFetchDirection(FetchDirection.FORWARD)
+                                        .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                         .settParameters(sp.parameters, collParamsSetter)
                                         .query(Jdbc.ResultExtractor.toDataSet(entityClass));
                             } else {
                                 return proxy.prepareQuery(sp.sql)
-                                        .setFetchDirection(FetchDirection.FORWARD)
+                                        .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                         .settParameters(sp.parameters, collParamsSetter)
                                         .query();
                             }
@@ -2724,12 +2731,12 @@ final class DaoImpl {
 
                             if (fetchColumnByEntityClass) {
                                 return proxy.prepareQuery(sp.sql)
-                                        .setFetchDirection(FetchDirection.FORWARD)
+                                        .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                         .settParameters(sp.parameters, collParamsSetter)
                                         .query(Jdbc.ResultExtractor.toDataSet(entityClass));
                             } else {
                                 return proxy.prepareQuery(sp.sql)
-                                        .setFetchDirection(FetchDirection.FORWARD)
+                                        .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                         .settParameters(sp.parameters, collParamsSetter)
                                         .query();
                             }
@@ -2745,7 +2752,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .query(resultExtractor);
                         };
@@ -2761,7 +2768,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             return proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .query(resultExtractor);
                         };
@@ -2776,7 +2783,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .query(resultExtractor);
                         };
@@ -2792,7 +2799,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             return proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .query(resultExtractor);
                         };
@@ -2804,7 +2811,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .list(entityClass);
                         };
@@ -2819,7 +2826,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .list(rowMapper);
                         };
@@ -2834,7 +2841,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .list(rowMapper);
                         };
@@ -2851,7 +2858,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .list(rowFilter, rowMapper);
                         };
@@ -2868,7 +2875,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .list(rowFilter, rowMapper);
                         };
@@ -2881,7 +2888,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             return proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .list(entityClass);
                         };
@@ -2897,7 +2904,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             return proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .list(rowMapper);
                         };
@@ -2913,7 +2920,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             return proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .list(rowMapper);
                         };
@@ -2931,7 +2938,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             return proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .list(rowFilter, rowMapper);
                         };
@@ -2949,7 +2956,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             return proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .list(rowFilter, rowMapper);
                         };
@@ -2962,7 +2969,7 @@ final class DaoImpl {
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForStream)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(entityClass);
 
@@ -2980,7 +2987,7 @@ final class DaoImpl {
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForStream)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowMapper);
 
@@ -2998,7 +3005,7 @@ final class DaoImpl {
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForStream)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowMapper);
 
@@ -3018,7 +3025,7 @@ final class DaoImpl {
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForStream)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowFilter, rowMapper);
 
@@ -3038,7 +3045,7 @@ final class DaoImpl {
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForStream)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowFilter, rowMapper);
 
@@ -3055,7 +3062,7 @@ final class DaoImpl {
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForStream)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(entityClass);
 
@@ -3074,7 +3081,7 @@ final class DaoImpl {
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForStream)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowMapper);
 
@@ -3093,7 +3100,7 @@ final class DaoImpl {
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForStream)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowMapper);
 
@@ -3114,7 +3121,7 @@ final class DaoImpl {
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForStream)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowFilter, rowMapper);
 
@@ -3135,7 +3142,7 @@ final class DaoImpl {
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
                             final Throwables.Supplier<ExceptionalStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForStream)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowFilter, rowMapper);
 
@@ -3152,7 +3159,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .forEach(rowConsumer);
                             return null;
@@ -3168,7 +3175,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .forEach(rowConsumer);
                             return null;
@@ -3186,7 +3193,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .forEach(rowFilter, rowConsumer);
                             return null;
@@ -3204,7 +3211,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
                             proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .forEach(rowFilter, rowConsumer);
                             return null;
@@ -3221,7 +3228,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .forEach(rowConsumer);
                             return null;
@@ -3238,7 +3245,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .forEach(rowConsumer);
                             return null;
@@ -3257,7 +3264,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
                             proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .forEach(rowFilter, rowConsumer);
                             return null;
@@ -3277,7 +3284,7 @@ final class DaoImpl {
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
                             proxy.prepareQuery(sp.sql)
-                                    .setFetchDirection(FetchDirection.FORWARD)
+                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .forEach(rowFilter, rowConsumer);
                             return null;
@@ -3815,7 +3822,7 @@ final class DaoImpl {
 
                             final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
-                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForUniqueResult(targetType);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(2).settParameters(id, idParamSetter).queryForUniqueResult(targetType);
                         };
                     } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 2 && paramTypes[0].equals(String.class)
                             && !paramTypes[1].equals(Condition.class)) {
@@ -3829,7 +3836,7 @@ final class DaoImpl {
 
                             final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
-                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForUniqueNonNull(targetType);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(2).settParameters(id, idParamSetter).queryForUniqueNonNull(targetType);
                         };
                     } else if (methodName.equals("gett")) {
                         if (paramLen == 1) {
@@ -4925,7 +4932,7 @@ final class DaoImpl {
                                     || isSingleReturnType(returnType)) {
                                 // skip
                             } else if (op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll || op == OP.stream || op == OP.streamAll
-                                    || isListQuery(method, op, fullClassMethodName)) {
+                                    || isListQuery(method, returnType, op, fullClassMethodName)) {
                                 // skip.
                             } else if (lastParamType != null && (Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)
                                     || Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType))) {
