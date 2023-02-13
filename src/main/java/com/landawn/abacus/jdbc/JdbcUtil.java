@@ -5561,43 +5561,6 @@ public final class JdbcUtil {
         return N.notNullOrEmpty(ids) && ids.stream().allMatch(isDefaultIdTester);
     }
 
-    public static Collection<String> getInsertPropNames(final Object entity) {
-        return getInsertPropNames(entity, null);
-    }
-
-    public static Collection<String> getInsertPropNames(final Object entity, final Set<String> excludedPropNames) {
-        return QueryUtil.getInsertPropNames(entity, excludedPropNames);
-    }
-
-    public static Collection<String> getInsertPropNames(final Class<?> entityClass) {
-        return getInsertPropNames(entityClass, null);
-    }
-
-    public static Collection<String> getInsertPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
-        return QueryUtil.getInsertPropNames(entityClass, excludedPropNames);
-    }
-
-    public static Collection<String> getSelectPropNames(final Class<?> entityClass) {
-        return getSelectPropNames(entityClass, null);
-    }
-
-    public static Collection<String> getSelectPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
-        return getSelectPropNames(entityClass, false, excludedPropNames);
-    }
-
-    public static Collection<String> getSelectPropNames(final Class<?> entityClass, final boolean includeSubEntityProperties,
-            final Set<String> excludedPropNames) {
-        return QueryUtil.getSelectPropNames(entityClass, includeSubEntityProperties, excludedPropNames);
-    }
-
-    public static Collection<String> getUpdatePropNames(final Class<?> entityClass) {
-        return getUpdatePropNames(entityClass, null);
-    }
-
-    public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
-        return QueryUtil.getUpdatePropNames(entityClass, excludedPropNames);
-    }
-
     @Beta
     public static void run(final Throwables.Runnable<Exception> sqlAction) {
         N.checkArgNotNull(sqlAction, "sqlAction");
@@ -6451,6 +6414,71 @@ public final class JdbcUtil {
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         }
+    }
+
+    //    /**
+    //     *
+    //     * @param ds
+    //     * @param targetEntityOrDaoClass
+    //     */
+    //    public static void removeCachedDao(final javax.sql.DataSource ds, final Class<?> targetEntityOrDaoClass) {
+    //        N.checkArgNotNull(ds, "dataSource");
+    //        N.checkArgNotNull(targetEntityOrDaoClass, "targetEntityOrDaoClass");
+    //
+    //        @SuppressWarnings("rawtypes")
+    //        final Class<?> targetEntityClass = Dao.class.isAssignableFrom(targetEntityOrDaoClass)
+    //                ? getTargetEntityClass((Class<? extends Dao>) targetEntityOrDaoClass)
+    //                : targetEntityOrDaoClass;
+    //
+    //        synchronized (dsEntityDaoPool) {
+    //            @SuppressWarnings("rawtypes")
+    //            Map<Class<?>, Dao> entityDaoPool = dsEntityDaoPool.get(ds);
+    //
+    //            if (entityDaoPool != null) {
+    //                entityDaoPool.remove(targetEntityClass);
+    //
+    //                if (N.isNullOrEmpty(entityDaoPool)) {
+    //                    dsEntityDaoPool.remove(ds);
+    //                }
+    //            }
+    //        }
+    //    }
+
+    public static Collection<String> getInsertPropNames(final Object entity) {
+        return getInsertPropNames(entity, null);
+    }
+
+    public static Collection<String> getInsertPropNames(final Object entity, final Set<String> excludedPropNames) {
+        return QueryUtil.getInsertPropNames(entity, excludedPropNames);
+    }
+
+    public static Collection<String> getInsertPropNames(final Class<?> entityClass) {
+        return getInsertPropNames(entityClass, null);
+    }
+
+    public static Collection<String> getInsertPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
+        return QueryUtil.getInsertPropNames(entityClass, excludedPropNames);
+    }
+
+    public static Collection<String> getSelectPropNames(final Class<?> entityClass) {
+        return getSelectPropNames(entityClass, null);
+    }
+
+    public static Collection<String> getSelectPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
+        return getSelectPropNames(entityClass, false, excludedPropNames);
+    }
+
+    public static Collection<String> getSelectPropNames(final Class<?> entityClass, final boolean includeSubEntityProperties,
+            final Set<String> excludedPropNames) {
+        return QueryUtil.getSelectPropNames(entityClass, includeSubEntityProperties, excludedPropNames);
+    }
+
+    public static Collection<String> getUpdatePropNames(final Class<?> entityClass) {
+        return getUpdatePropNames(entityClass, null);
+    }
+
+    public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
+        return QueryUtil.getUpdatePropNames(entityClass, excludedPropNames);
     }
 
     public static String blob2String(final Blob blob) throws SQLException {
