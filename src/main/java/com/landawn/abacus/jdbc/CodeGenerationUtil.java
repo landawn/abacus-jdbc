@@ -179,8 +179,8 @@ final class CodeGenerationUtil {
         final boolean isJavaPersistenceColumn = "javax.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass));
         final boolean isJavaPersistenceId = "javax.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass));
 
-        final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = Maps.newMap(N.nullToEmpty(configToUse.getCustomizedFields()), tp -> tp._1);
-        final Map<String, Tuple2<String, String>> customizedFieldDbTypeMap = Maps.newMap(N.nullToEmpty(configToUse.getCustomizedFieldDbTypes()), tp -> tp._1);
+        final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = Maps.create(N.nullToEmpty(configToUse.getCustomizedFields()), tp -> tp._1);
+        final Map<String, Tuple2<String, String>> customizedFieldDbTypeMap = Maps.create(N.nullToEmpty(configToUse.getCustomizedFieldDbTypes()), tp -> tp._1);
 
         try {
             String finalClassName = N.isNullOrEmpty(className) ? Strings.capitalize(Strings.toCamelCase(entityName)) : className;
