@@ -2424,14 +2424,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * Sets the fetch size.
      *
-     * @param rows
+     * @param fetchSize the number of rows to fetch
      * @return
      * @throws SQLException
      */
-    public This setFetchSize(int rows) throws SQLException {
+    public This setFetchSize(int fetchSize) throws SQLException {
         defaultFetchSize = stmt.getFetchSize();
 
-        stmt.setFetchSize(rows);
+        stmt.setFetchSize(fetchSize);
 
         return (This) this;
     }

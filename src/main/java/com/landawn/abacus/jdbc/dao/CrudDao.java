@@ -511,7 +511,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     @Beta
-    int count(final Collection<ID> ids) throws SQLException;
+    int count(final Collection<? extends ID> ids) throws SQLException;
 
     /**
      *

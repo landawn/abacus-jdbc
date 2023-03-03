@@ -544,7 +544,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Beta
     @Override
-    int count(final Collection<ID> ids) throws UncheckedSQLException;
+    int count(final Collection<? extends ID> ids) throws UncheckedSQLException;
 
     /**
      *
