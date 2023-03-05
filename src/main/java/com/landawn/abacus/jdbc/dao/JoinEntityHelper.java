@@ -108,7 +108,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @return
      * @throws SQLException
      */
-    default Optional<T> findFirst(final Collection<String> selectPropNames, final Collection<? extends Class<?>> joinEntitiesToLoad, final Condition cond)
+    default Optional<T> findFirst(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
             throws SQLException {
         final Optional<T> result = DaoUtil.getDao(this).findFirst(selectPropNames, cond);
 
@@ -168,7 +168,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
      */
-    default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<? extends Class<?>> joinEntitiesToLoad, final Condition cond)
+    default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
             throws DuplicatedResultException, SQLException {
         final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
 
@@ -233,8 +233,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @throws SQLException
      */
     @Beta
-    default List<T> list(final Collection<String> selectPropNames, final Collection<? extends Class<?>> joinEntitiesToLoad, final Condition cond)
-            throws SQLException {
+    default List<T> list(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond) throws SQLException {
         final List<T> result = DaoUtil.getDao(this).list(selectPropNames, cond);
 
         if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {
@@ -301,7 +300,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @return
      */
     @Beta
-    default ExceptionalStream<T, SQLException> stream(final Collection<String> selectPropNames, final Collection<? extends Class<?>> joinEntitiesToLoad,
+    default ExceptionalStream<T, SQLException> stream(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad,
             final Condition cond) {
         return DaoUtil.getDao(this)
                 .stream(selectPropNames, cond)

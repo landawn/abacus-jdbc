@@ -85,11 +85,11 @@ public final class DBLock {
     DBLock(final DataSource ds, final String tableName) {
         this.ds = ds;
         // ...
-        removeExpiredLockSQL = "DELETE FROM " + tableName + " WHERE target = ? AND (expiry_time < ? OR update_time < ?)";
+        removeExpiredLockSQL = "DELETE FROM " + tableName + " WHERE target = ? AND (expiry_time < ? OR update_time < ?)"; //NOSONAR
         // ...
         lockSQL = "INSERT INTO " + tableName + " (host_name, target, code, status, expiry_time, update_time, create_time) VALUES (?, ?, ?, ?, ?, ?, ?)";
         // ..
-        unlockSQL = "DELETE FROM " + tableName + " WHERE target = ? AND code = ?";
+        unlockSQL = "DELETE FROM " + tableName + " WHERE target = ? AND code = ?"; //NOSONAR
         // ..
         refreshSQL = "UPDATE " + tableName + " SET update_time = ? WHERE target = ? AND code = ?";
 

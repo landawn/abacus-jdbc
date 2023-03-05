@@ -77,7 +77,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    default Optional<T> findFirst(final Collection<String> selectPropNames, final Collection<? extends Class<?>> joinEntitiesToLoad, final Condition cond)
+    default Optional<T> findFirst(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
             throws UncheckedSQLException {
         final Optional<T> result = DaoUtil.getDao(this).findFirst(selectPropNames, cond);
 
@@ -141,7 +141,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
-    default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<? extends Class<?>> joinEntitiesToLoad, final Condition cond)
+    default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
             throws DuplicatedResultException, UncheckedSQLException {
         final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
 
@@ -209,7 +209,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      */
     @Beta
     @Override
-    default List<T> list(final Collection<String> selectPropNames, final Collection<? extends Class<?>> joinEntitiesToLoad, final Condition cond)
+    default List<T> list(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
             throws UncheckedSQLException {
         final List<T> result = DaoUtil.getDao(this).list(selectPropNames, cond);
 

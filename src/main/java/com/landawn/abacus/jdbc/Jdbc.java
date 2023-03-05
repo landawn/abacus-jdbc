@@ -79,6 +79,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+@SuppressWarnings("java:S1192")
 public final class Jdbc {
 
     static final ObjectPool<Type<?>, ColumnGetter<?>> COLUMN_GETTER_POOL = new ObjectPool<>(1024);
@@ -1503,11 +1504,11 @@ public final class Jdbc {
             //        }
             //    }
 
-            ColumnGetter<?>[] initColumnGetter(ResultSet rs) throws SQLException {
+            ColumnGetter<?>[] initColumnGetter(ResultSet rs) throws SQLException { //NOSONAR
                 return initColumnGetter(rs.getMetaData().getColumnCount());
             }
 
-            ColumnGetter<?>[] initColumnGetter(final int columnCount) {
+            ColumnGetter<?>[] initColumnGetter(final int columnCount) { //NOSONAR
                 final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[columnCount];
                 final ColumnGetter<?> defaultColumnGetter = columnGetterMap.get(0);
 
@@ -2707,7 +2708,7 @@ public final class Jdbc {
             //        return this;
             //    }
 
-            ColumnGetter<?>[] initColumnGetter(final List<String> columnLabelList) {
+            ColumnGetter<?>[] initColumnGetter(final List<String> columnLabelList) { //NOSONAR
                 final int rsColumnCount = columnLabelList.size();
                 final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[rsColumnCount];
 
@@ -2840,14 +2841,14 @@ public final class Jdbc {
                                 rsColumnGetters = initColumnGetter(columnLabelList);
 
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
-                                final PropInfo[] propInfos = new PropInfo[rsColumnCount];
+                                final PropInfo[] localPropInfos = new PropInfo[rsColumnCount];
 
                                 final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(targetClass);
 
                                 for (int i = 0; i < rsColumnCount; i++) {
-                                    propInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
+                                    localPropInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
 
-                                    if (propInfos[i] == null) {
+                                    if (localPropInfos[i] == null) {
                                         String fieldName = column2FieldNameMap.get(columnLabels[i]);
 
                                         if (N.isNullOrEmpty(fieldName)) {
@@ -2855,11 +2856,11 @@ public final class Jdbc {
                                         }
 
                                         if (N.notNullOrEmpty(fieldName)) {
-                                            propInfos[i] = entityInfo.getPropInfo(fieldName);
+                                            localPropInfos[i] = entityInfo.getPropInfo(fieldName);
                                         }
                                     }
 
-                                    if (propInfos[i] == null) {
+                                    if (localPropInfos[i] == null) {
                                         if (ignoreNonMatchedColumns) {
                                             columnLabels[i] = null;
                                         } else {
@@ -2868,12 +2869,12 @@ public final class Jdbc {
                                         }
                                     } else {
                                         if (rsColumnGetters[i] == ColumnGetter.GET_OBJECT) {
-                                            rsColumnGetters[i] = ColumnGetter.get(propInfos[i].dbType);
+                                            rsColumnGetters[i] = ColumnGetter.get(localPropInfos[i].dbType);
                                         }
                                     }
                                 }
 
-                                this.propInfos = propInfos;
+                                this.propInfos = localPropInfos;
                             }
 
                             final Object result = entityInfo.createBeanResult();
@@ -3469,11 +3470,11 @@ public final class Jdbc {
                 return this;
             }
 
-            ColumnGetter<?>[] initColumnGetter(ResultSet rs) throws SQLException {
+            ColumnGetter<?>[] initColumnGetter(ResultSet rs) throws SQLException { //NOSONAR
                 return initColumnGetter(rs.getMetaData().getColumnCount());
             }
 
-            ColumnGetter<?>[] initColumnGetter(final int columnCount) {
+            ColumnGetter<?>[] initColumnGetter(final int columnCount) { //NOSONAR
                 final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[columnCount];
                 final ColumnGetter<?> defaultColumnGetter = columnGetterMap.get(0);
 
@@ -4233,7 +4234,7 @@ public final class Jdbc {
             return true;
         }
 
-        public static Handler<?> get(final String qualifier) {
+        public static Handler<?> get(final String qualifier) { //NOSONAR
             N.checkArgNotNullOrEmpty(qualifier, "qualifier");
 
             Handler<?> result = handlerPool.get(qualifier);
@@ -4251,7 +4252,7 @@ public final class Jdbc {
             return result;
         }
 
-        public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) {
+        public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) { //NOSONAR
             N.checkArgNotNull(handlerClass, "handlerClass");
 
             final String qualifier = ClassUtil.getCanonicalClassName(handlerClass);
@@ -4277,7 +4278,7 @@ public final class Jdbc {
             return result;
         }
 
-        public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) {
+        public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) { //NOSONAR
             N.checkArgNotNull(handlerClass, "handlerClass");
 
             Handler<?> result = get(handlerClass);

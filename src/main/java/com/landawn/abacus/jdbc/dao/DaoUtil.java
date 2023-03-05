@@ -114,7 +114,7 @@ final class DaoUtil {
         if (dao instanceof CrudDao) {
             return (TD) dao;
         } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't extends interface JoinEntityHelper");
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't extends interface JoinEntityHelper"); //NOSONAR
         }
     }
 
@@ -145,7 +145,7 @@ final class DaoUtil {
     static final Throwables.Consumer<? super Exception, UncheckedSQLException> throwUncheckedSQLException = e -> {
         if (e instanceof SQLException) {
             throw new UncheckedSQLException((SQLException) e);
-        } else if (e.getCause() != null && e.getCause() instanceof SQLException) {
+        } else if (e.getCause() instanceof SQLException) {
             throw new UncheckedSQLException((SQLException) e.getCause());
         } else {
             throw N.toRuntimeException(e);
@@ -155,7 +155,7 @@ final class DaoUtil {
     static final Throwables.Consumer<? super Exception, SQLException> throwSQLExceptionAction = e -> {
         if (e instanceof SQLException) {
             throw (SQLException) e;
-        } else if (e.getCause() != null && e.getCause() instanceof SQLException) {
+        } else if (e.getCause() instanceof SQLException) {
             throw (SQLException) e.getCause();
         } else {
             throw N.toRuntimeException(e);

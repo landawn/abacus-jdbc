@@ -158,7 +158,7 @@ import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 @Internal
-@SuppressWarnings("deprecation")
+@SuppressWarnings({ "deprecation", "java:S1192" })
 final class DaoImpl {
 
     private static final String _1 = "1";
@@ -1274,7 +1274,7 @@ final class DaoImpl {
         final java.lang.reflect.Type firstActualTypeArgument = parameterizedReturnType == null
                 || N.isNullOrEmpty(parameterizedReturnType.getActualTypeArguments()) ? null : parameterizedReturnType.getActualTypeArguments()[0];
 
-        if (firstActualTypeArgument == null || !(firstActualTypeArgument instanceof ParameterizedType)
+        if (!(firstActualTypeArgument instanceof ParameterizedType)
                 || N.isNullOrEmpty(((ParameterizedType) firstActualTypeArgument).getActualTypeArguments())) {
             return null;
         }
@@ -1314,7 +1314,7 @@ final class DaoImpl {
                             + fullClassMethodName);
         }
 
-        if (parametersSetter != null || stmtParamLen == 0 || queryInfo.isBatch) {
+        if (parametersSetter != null || stmtParamLen == 0 || queryInfo.isBatch) { //NOSONAR
             // ignore
         } else if (stmtParamLen == 1) {
             final Class<?> paramTypeOne = paramTypes[stmtParamIndexes[0]];
@@ -1597,7 +1597,7 @@ final class DaoImpl {
         if (cond instanceof Criteria criteria && ((Criteria) cond).getLimit() != null) {
             final Limit limit = criteria.getLimit();
 
-            switch (dbVersion) {
+            switch (dbVersion) { //NOSONAR
                 case ORACLE, SQL_SERVER, DB2:
 
                     if (limit.getCount() > 0 && limit.getOffset() > 0) {
@@ -1618,7 +1618,7 @@ final class DaoImpl {
 
         final Criteria result = CF.criteria().where(cond);
 
-        switch (dbVersion) {
+        switch (dbVersion) { //NOSONAR
             case ORACLE, SQL_SERVER, DB2:
                 result.limit("FETCH FIRST " + count + " ROWS ONLY");
                 break;
@@ -4959,7 +4959,7 @@ final class DaoImpl {
                         final TriFunction<Optional<Object>, Object, Boolean, ?> insertResultConvertor = void.class.equals(returnType)
                                 ? (ret, entity, isEntity) -> null
                                 : (u.Optional.class.equals(returnType) ? (ret, entity, isEntity) -> ret
-                                        : (ret, entity, isEntity) -> ret.orElse(isEntity ? idGetter.apply(entity) : N.defaultValueOf(returnType)));
+                                        : (ret, entity, isEntity) -> ret.orElse(isEntity ? idGetter.apply(entity) : N.defaultValueOf(returnType))); //NOSONAR
 
                         if (!isBatch) {
                             if (!(returnType.isAssignableFrom(void.class) || idClass == null || N.wrap(idClass).isAssignableFrom(N.wrap(returnType))

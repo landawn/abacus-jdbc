@@ -590,8 +590,8 @@ public final class JdbcUtils {
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
             final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Map<String, ? extends Type> columnTypeMap) throws UncheckedSQLException, E {
-        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
-        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
+        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count); //NOSONAR
+        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative", //NOSONAR
                 batchSize, batchIntervalInMillis);
 
         int result = 0;
@@ -852,16 +852,11 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> long importData(final File file, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func) throws UncheckedSQLException, E {
-        Reader reader = null;
 
-        try {
-            reader = new FileReader(file);
-
+        try (Reader reader = new FileReader(file)) {
             return importData(reader, offset, count, stmt, batchSize, batchIntervalInMillis, func);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
-        } finally {
-            IOUtil.close(reader);
         }
     }
 
@@ -1492,16 +1487,11 @@ public final class JdbcUtils {
     public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final boolean skipTitle,
             final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final List<? extends Type> columnTypeList) throws UncheckedSQLException, UncheckedIOException, E {
-        Reader reader = null;
 
-        try {
-            reader = new FileReader(file);
-
+        try (Reader reader = new FileReader(file)) {
             return importCSV(reader, offset, count, skipTitle, filter, stmt, batchSize, batchIntervalInMillis, columnTypeList);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
-        } finally {
-            IOUtil.close(reader);
         }
     }
 
@@ -1819,16 +1809,11 @@ public final class JdbcUtils {
     public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
             final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
             throws UncheckedSQLException, UncheckedIOException, E {
-        Reader reader = null;
 
-        try {
-            reader = new FileReader(file);
-
+        try (Reader reader = new FileReader(file)) {
             return importCSV(reader, offset, count, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
-        } finally {
-            IOUtil.close(reader);
         }
     }
 
@@ -2159,16 +2144,10 @@ public final class JdbcUtils {
             final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter)
             throws UncheckedSQLException, UncheckedIOException, E {
-        Reader reader = null;
-
-        try {
-            reader = new FileReader(file);
-
+        try (Reader reader = new FileReader(file)) {
             return importCSV(reader, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
-        } finally {
-            IOUtil.close(reader);
         }
     }
 
@@ -2532,14 +2511,11 @@ public final class JdbcUtils {
      */
     public static long exportCSV(final File out, final ResultSet rs, final Collection<String> selectColumnNames, final long offset, final long count,
             final boolean writeTitle, final boolean quoted) throws UncheckedSQLException, UncheckedIOException {
-        OutputStream os = null;
 
-        try {
+        try (OutputStream os = new FileOutputStream(out)) {
             if (!out.exists()) {
-                out.createNewFile();
+                out.createNewFile(); //NOSONAR
             }
-
-            os = new FileOutputStream(out);
 
             long result = exportCSV(os, rs, selectColumnNames, offset, count, writeTitle, quoted);
 
@@ -2548,8 +2524,6 @@ public final class JdbcUtils {
             return result;
         } catch (IOException e) {
             throw new UncheckedIOException(e);
-        } finally {
-            IOUtil.close(os);
         }
     }
 

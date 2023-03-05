@@ -53,6 +53,7 @@ import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 @Internal
+@SuppressWarnings("java:S1192")
 public final class JoinInfo {
 
     static final Map<Class<? extends SQLBuilder>, Tuple4<Function<Collection<String>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>>> sqlBuilderFuncMap = new HashMap<>();
@@ -132,7 +133,7 @@ public final class JoinInfo {
 
         this.isManyToManyJoin = StreamEx.of(joinColumnPairs)
                 .flattMap(it -> Strings.split(joinColumnPairs[0], '=', true))
-                .filter(it -> it.indexOf('.') > 0)
+                .filter(it -> it.indexOf('.') > 0) //NOSONAR
                 .map(it -> it.substring(0, it.indexOf('.')).trim())
                 .anyMatch(it -> !(it.equalsIgnoreCase(entityInfo.simpleClassName) || it.equalsIgnoreCase(referencedBeanInfo.simpleClassName)));
 
@@ -549,7 +550,7 @@ public final class JoinInfo {
         return tp;
     }
 
-    public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSQLBuilderAndParamSetter(
+    public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSQLBuilderAndParamSetter( //NOSONAR
             final Class<? extends SQLBuilder> sbc) {
         final Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchSelectSQLBuilderAndParamSetterPool
                 .get(sbc);
@@ -581,7 +582,7 @@ public final class JoinInfo {
         return tp;
     }
 
-    public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSQLBuilderAndParamSetter(
+    public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSQLBuilderAndParamSetter( //NOSONAR
             final Class<? extends SQLBuilder> sbc) {
         final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchDeleteSQLBuilderAndParamSetterForPool
                 .get(sbc);

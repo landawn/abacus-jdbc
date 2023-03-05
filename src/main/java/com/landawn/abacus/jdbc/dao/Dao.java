@@ -1782,7 +1782,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @Beta
-    default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
+    default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
         forEach(selectPropNames, cond, Jdbc.RowConsumer.oneOff(targetEntityClass(), rowConsumer));
     }
 
@@ -1796,7 +1796,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @Beta
-    default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
+    default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
         forEach(cond, Jdbc.RowConsumer.oneOff(targetEntityClass(), rowConsumer));
     }
 

@@ -75,9 +75,9 @@ public final class DBSequence {
             throw new IllegalArgumentException("startVal must be greater than 0");
         }
 
-        querySQL = "SELECT next_val FROM " + tableName + " WHERE seq_name = ?";
-        updateSQL = "UPDATE " + tableName + " SET next_val = ?, update_time = ? WHERE next_val = ? AND seq_name = ?";
-        resetSQL = "UPDATE " + tableName + " SET next_val = ?, update_time = ? WHERE seq_name = ?";
+        querySQL = "SELECT next_val FROM " + tableName + " WHERE seq_name = ?"; //NOSONAR
+        updateSQL = "UPDATE " + tableName + " SET next_val = ?, update_time = ? WHERE next_val = ? AND seq_name = ?"; //NOSONAR
+        resetSQL = "UPDATE " + tableName + " SET next_val = ?, update_time = ? WHERE seq_name = ?"; //NOSONAR
         lowSeqId = new AtomicLong(startVal);
         highSeqId = new AtomicLong(startVal);
 
@@ -86,9 +86,9 @@ public final class DBSequence {
 
         final Connection conn = JdbcUtil.getConnection(ds);
 
-        try {
+        try { //NOSONAR
             if (!JdbcUtil.doesTableExist(conn, tableName)) {
-                try {
+                try { //NOSONAR
                     JdbcUtil.createTableIfNotExists(conn, tableName, schema);
                 } catch (Exception e) {
                     if (logger.isWarnEnabled()) {
@@ -104,7 +104,7 @@ public final class DBSequence {
             Timestamp now = DateUtil.currentTimestamp();
 
             if (JdbcUtil.prepareQuery(conn, "SELECT 1 FROM " + tableName + " WHERE seq_name = ?").setString(1, seqName).queryForInt().orElse(0) < 1) {
-                try {
+                try { //NOSONAR
                     JdbcUtil.executeUpdate(conn, "INSERT INTO " + tableName + "(seq_name, next_val, update_time, create_time) VALUES (?, ?, ?, ?)", seqName,
                             startVal, now, now);
                 } catch (Exception e) {
@@ -131,7 +131,7 @@ public final class DBSequence {
     }
 
     public long nextVal() {
-        synchronized (seqName) {
+        synchronized (seqName) { //NOSONAR
             try {
                 while (lowSeqId.get() >= highSeqId.get()) {
                     lowSeqId.set(JdbcUtil.prepareQuery(ds, querySQL).setString(1, seqName).queryForLong().orElse(0));

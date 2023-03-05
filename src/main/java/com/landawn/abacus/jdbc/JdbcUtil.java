@@ -131,6 +131,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @since 0.8
  * @author Haiyang Li
  */
+@SuppressWarnings("java:S1192")
 public final class JdbcUtil {
 
     static final Logger logger = LoggerFactory.getLogger(JdbcUtil.class);
@@ -157,7 +158,7 @@ public final class JdbcUtil {
         }
 
         if (clsName.startsWith("oracle.jdbc")) {
-            if (stmtToUse instanceof oracle.jdbc.internal.OraclePreparedStatement) {
+            if (stmtToUse instanceof oracle.jdbc.internal.OraclePreparedStatement) { //NOSONAR
                 try {
                     return ((oracle.jdbc.internal.OraclePreparedStatement) stmtToUse).getOriginalSql();
                 } catch (SQLException e) {
@@ -169,7 +170,7 @@ public final class JdbcUtil {
         return stmtToUse.toString();
     };
 
-    static Throwables.Function<Statement, String, SQLException> _sqlExtractor = DEFAULT_SQL_EXTRACTOR;
+    static Throwables.Function<Statement, String, SQLException> _sqlExtractor = DEFAULT_SQL_EXTRACTOR; //NOSONAR
 
     // TODO is it right to do it?
     // static final KeyedObjectPool<Statement, PoolableWrapper<String>> stmtPoolForSql = PoolFactory.createKeyedObjectPool(1000, 3000);
@@ -429,7 +430,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static Connection getConnection(final javax.sql.DataSource ds) throws UncheckedSQLException {
-        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
+        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             try {
                 return org.springframework.jdbc.datasource.DataSourceUtils.getConnection(ds);
             } catch (NoClassDefFoundError e) {
@@ -463,7 +464,7 @@ public final class JdbcUtil {
             return;
         }
 
-        if (isInSpring && ds != null && !isSpringTransactionalDisabled_TL.get()) {
+        if (isInSpring && ds != null && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             try {
                 org.springframework.jdbc.datasource.DataSourceUtils.releaseConnection(conn, ds);
             } catch (NoClassDefFoundError e) {
@@ -598,7 +599,7 @@ public final class JdbcUtil {
                     stmt.close();
                 }
             } catch (SQLException e) {
-                throw new UncheckedSQLException(e);
+                throw new UncheckedSQLException(e); //NOSONAR
             }
         }
     }
@@ -622,7 +623,7 @@ public final class JdbcUtil {
                     conn.close();
                 }
             } catch (SQLException e) {
-                throw new UncheckedSQLException(e);
+                throw new UncheckedSQLException(e); //NOSONAR
             }
         }
     }
@@ -647,14 +648,14 @@ public final class JdbcUtil {
                     stmt.close();
                 }
             } catch (SQLException e) {
-                throw new UncheckedSQLException(e);
+                throw new UncheckedSQLException(e); //NOSONAR
             } finally {
                 try {
                     if (conn != null) {
                         conn.close();
                     }
                 } catch (SQLException e) {
-                    throw new UncheckedSQLException(e);
+                    throw new UncheckedSQLException(e); //NOSONAR
                 }
             }
         }
@@ -1328,7 +1329,7 @@ public final class JdbcUtil {
             return true;
         }
 
-        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
+        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             Connection conn = null;
 
             try {
@@ -1472,9 +1473,9 @@ public final class JdbcUtil {
             Connection conn = null;
             boolean noException = false;
 
-            try {
+            try { //NOSONAR
                 conn = getConnection(dataSource);
-                tran = new SQLTransaction(dataSource, conn, isolationLevel, CreatedBy.JDBC_UTIL, true);
+                tran = new SQLTransaction(dataSource, conn, isolationLevel, CreatedBy.JDBC_UTIL, true); //NOSONAR
                 tran.incrementAndGetRef(isolationLevel, isForUpdateOnly);
 
                 noException = true;
@@ -1612,7 +1613,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(dataSource, "dataSource");
         N.checkArgNotNull(cmd, "cmd");
 
-        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
+        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             JdbcUtil.disableSpringTransactional(true);
 
             final SQLTransaction tran = SQLTransaction.getTransaction(dataSource, CreatedBy.JDBC_UTIL);
@@ -1652,7 +1653,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(dataSource, "dataSource");
         N.checkArgNotNull(cmd, "cmd");
 
-        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
+        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             JdbcUtil.disableSpringTransactional(true);
 
             final SQLTransaction tran = SQLTransaction.getTransaction(dataSource, CreatedBy.JDBC_UTIL);
@@ -1690,7 +1691,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(dataSource, "dataSource");
         N.checkArgNotNull(cmd, "cmd");
 
-        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
+        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             JdbcUtil.disableSpringTransactional(true);
 
             final SQLTransaction tran = SQLTransaction.getTransaction(dataSource, CreatedBy.JDBC_UTIL);
@@ -1729,7 +1730,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(dataSource, "dataSource");
         N.checkArgNotNull(cmd, "cmd");
 
-        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) {
+        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             JdbcUtil.disableSpringTransactional(true);
 
             final SQLTransaction tran = SQLTransaction.getTransaction(dataSource, CreatedBy.JDBC_UTIL);
@@ -4627,7 +4628,7 @@ public final class JdbcUtil {
                 });
     }
 
-    static ExceptionalIterator<ResultSet, SQLException> iterateAllResultSets(final Statement stmt) throws SQLException {
+    static ExceptionalIterator<ResultSet, SQLException> iterateAllResultSets(final Statement stmt) throws SQLException { //NOSONAR
         return new ExceptionalIterator<>() {
             private final Holder<ResultSet> resultSetHolder = new Holder<>();
             private int updateCount = stmt.getUpdateCount();
@@ -5288,7 +5289,7 @@ public final class JdbcUtil {
         _sqlExtractor = sqlExtractor;
     }
 
-    private static TriConsumer<String, Long, Long> _sqlLogHandler = null;
+    private static TriConsumer<String, Long, Long> _sqlLogHandler = null; //NOSONAR
 
     public static TriConsumer<String, Long, Long> getSqlLogHandler() {
         return _sqlLogHandler;
@@ -5399,7 +5400,7 @@ public final class JdbcUtil {
     public static void doNotUseSpringTransactional(boolean b) {
         // synchronized (isSpringTransactionalDisabled_TL) {
         if (isInSpring) {
-            if (logger.isWarnEnabled() && isSpringTransactionalDisabled_TL.get() != b) {
+            if (logger.isWarnEnabled() && isSpringTransactionalDisabled_TL.get() != b) { //NOSONAR
                 if (b) {
                     logger.warn("Disable Spring Transactional");
                 } else {

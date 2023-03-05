@@ -94,6 +94,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  * @param <Stmt>
  * @param <This>
  */
+@SuppressWarnings("java:S1192")
 public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extends AbstractPreparedQuery<Stmt, This>> implements Closeable {
 
     static final Logger logger = LoggerFactory.getLogger(AbstractPreparedQuery.class);
@@ -4281,7 +4282,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @see {@link RowConsumer#oneOff(Consumer)}
      */
     @Beta
-    public void foreach(final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
+    public void foreach(final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
         checkArgNotNull(rowConsumer, "rowConsumer");
 
         forEach(Jdbc.RowConsumer.oneOff(rowConsumer));
@@ -4295,7 +4296,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @see {@link RowConsumer#oneOff(Class, Consumer)}
      */
     @Beta
-    public void foreach(final Class<?> entityClass, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
+    public void foreach(final Class<?> entityClass, final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
         checkArgNotNull(rowConsumer, "rowConsumer");
 
         forEach(Jdbc.RowConsumer.oneOff(entityClass, rowConsumer));

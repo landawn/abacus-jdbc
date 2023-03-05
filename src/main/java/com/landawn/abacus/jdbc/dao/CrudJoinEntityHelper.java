@@ -255,8 +255,8 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * @throws SQLException
      */
     @Beta
-    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames,
-            final Collection<? extends Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
+            throws DuplicatedResultException, SQLException {
         return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
     }
 
@@ -316,7 +316,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
-            final Collection<? extends Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
+            final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
         if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {

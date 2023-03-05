@@ -34,7 +34,7 @@ public @interface Handler {
     String qualifier() default "";
 
     @SuppressWarnings("rawtypes")
-    Class<? extends Jdbc.Handler<? extends Dao>> type() default EmptyHandler.class;
+    Class<? extends Jdbc.Handler<? extends Dao>> type() default EmptyHandler.class; //NOSONAR
 
     /**
      * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.

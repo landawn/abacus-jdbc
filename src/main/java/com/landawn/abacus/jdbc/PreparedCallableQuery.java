@@ -74,6 +74,7 @@ import com.landawn.abacus.util.Tuple.Tuple4;
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html">http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html</a>
  */
+@SuppressWarnings("java:S1192")
 public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableStatement, PreparedCallableQuery> {
 
     final CallableStatement cstmt;
@@ -1148,7 +1149,7 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */
     @Override
-    public <R> R executeThenApply(final Throwables.Function<? super CallableStatement, ? extends R, SQLException> getter) throws SQLException {
+    public <R> R executeThenApply(final Throwables.Function<? super CallableStatement, ? extends R, SQLException> getter) throws SQLException { //NOSONAR
         return super.executeThenApply(getter);
     }
 
@@ -1164,7 +1165,7 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */
     @Override
-    public <R> R executeThenApply(final Throwables.BiFunction<Boolean, ? super CallableStatement, ? extends R, SQLException> getter) throws SQLException {
+    public <R> R executeThenApply(final Throwables.BiFunction<Boolean, ? super CallableStatement, ? extends R, SQLException> getter) throws SQLException { //NOSONAR
         return super.executeThenApply(getter);
     }
 
@@ -1204,7 +1205,7 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */
     @Override
-    public void executeThenAccept(final Throwables.Consumer<? super CallableStatement, SQLException> consumer) throws SQLException {
+    public void executeThenAccept(final Throwables.Consumer<? super CallableStatement, SQLException> consumer) throws SQLException { //NOSONAR
         super.executeThenAccept(consumer);
     }
 
@@ -1218,7 +1219,7 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */
     @Override
-    public void executeThenAccept(final Throwables.BiConsumer<Boolean, ? super CallableStatement, SQLException> consumer) throws SQLException {
+    public void executeThenAccept(final Throwables.BiConsumer<Boolean, ? super CallableStatement, SQLException> consumer) throws SQLException { //NOSONAR
         super.executeThenAccept(consumer);
     }
 

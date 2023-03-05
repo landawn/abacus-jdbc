@@ -406,7 +406,7 @@ public class QueryBean {
         after(">", generalSqlConverter, generalParameterizedSqlConverter), // same greater_than
         not_before(">=", generalSqlConverter, generalParameterizedSqlConverter), // same greater_than_or_equals
         starts_with("LIKE", sqlConverterForStartsWith, generalParameterizedSqlConverter),
-        not_starts_with("NOT LIKE", sqlConverterForStartsWith, generalParameterizedSqlConverter),
+        not_starts_with("NOT LIKE", sqlConverterForStartsWith, generalParameterizedSqlConverter), //NOSONAR
         ends_with("LIKE", sqlConverterForEndsWith, generalParameterizedSqlConverter),
         not_ends_with("NOT LIKE", sqlConverterForEndsWith, generalParameterizedSqlConverter),
         contains("LIKE", sqlConverterForLike, generalParameterizedSqlConverter),

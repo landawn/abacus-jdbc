@@ -43,33 +43,33 @@ public final class SQLTransaction implements Transaction, Closeable {
     private static final Map<String, SQLTransaction> threadTransactionMap = new ConcurrentHashMap<>();
     // private static final Map<String, SQLTransaction> attachedThreadTransactionMap = new ConcurrentHashMap<>();
 
-    private final String _id;
+    private final String _id; //NOSONAR
 
-    private final String _timedId;
+    private final String _timedId; //NOSONAR
 
-    private final javax.sql.DataSource _ds;
+    private final javax.sql.DataSource _ds; //NOSONAR
 
-    private final Connection _conn;
+    private final Connection _conn; //NOSONAR
 
-    private final boolean _closeConnection;
+    private final boolean _closeConnection; //NOSONAR
 
-    private final boolean _originalAutoCommit;
+    private final boolean _originalAutoCommit; //NOSONAR
 
-    private final int _originalIsolationLevel;
+    private final int _originalIsolationLevel; //NOSONAR
 
-    private Transaction.Status _status = Status.ACTIVE;
+    private Transaction.Status _status = Status.ACTIVE; //NOSONAR
 
-    private final AtomicInteger _refCount = new AtomicInteger();
+    private final AtomicInteger _refCount = new AtomicInteger(); //NOSONAR
 
-    private final Stack<IsolationLevel> _isolationLevelStack = new Stack<>();
+    private final Stack<IsolationLevel> _isolationLevelStack = new Stack<>(); //NOSONAR
 
-    private final Stack<Boolean> _isForUpdateOnlyStack = new Stack<>();
+    private final Stack<Boolean> _isForUpdateOnlyStack = new Stack<>(); //NOSONAR
 
-    private IsolationLevel _isolationLevel;
+    private IsolationLevel _isolationLevel; //NOSONAR
 
-    private boolean _isForUpdateOnly;
+    private boolean _isForUpdateOnly; //NOSONAR
 
-    private boolean _isMarkedByCommitPreviously = false;
+    private boolean _isMarkedByCommitPreviously = false; //NOSONAR
 
     SQLTransaction(final javax.sql.DataSource ds, final Connection conn, final IsolationLevel isolationLevel, final CreatedBy creator,
             final boolean closeConnection) throws SQLException {
@@ -180,7 +180,7 @@ public final class SQLTransaction implements Transaction, Closeable {
         }
 
         if (_status != Status.ACTIVE) {
-            throw new IllegalArgumentException("Transaction(id=" + _timedId + ") is already: " + _status + ". It can not be committed");
+            throw new IllegalArgumentException("Transaction(id=" + _timedId + ") is already: " + _status + ". It can not be committed"); //NOSONAR
         }
 
         logger.info("Committing transaction(id={})", _timedId);
@@ -447,14 +447,14 @@ public final class SQLTransaction implements Transaction, Closeable {
      * @throws E
      */
     public <E extends Throwable> void runNotInMe(Throwables.Runnable<E> cmd) throws E {
-        synchronized (_id) {
+        synchronized (_id) { //NOSONAR
             threadTransactionMap.remove(_id);
 
             try {
                 cmd.run();
             } finally {
                 if (threadTransactionMap.put(_id, this) != null) {
-                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.runNotInMe'.");
+                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.runNotInMe'."); //NOSONAR
                 }
             }
         }
@@ -470,14 +470,14 @@ public final class SQLTransaction implements Transaction, Closeable {
      * @throws E
      */
     public <R, E extends Throwable> R callNotInMe(Throwables.Callable<R, E> cmd) throws E {
-        synchronized (_id) {
+        synchronized (_id) { //NOSONAR
             threadTransactionMap.remove(_id);
 
             try {
                 return cmd.call();
             } finally {
                 if (threadTransactionMap.put(_id, this) != null) {
-                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.callNotInMe'.");
+                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.callNotInMe'."); //NOSONAR
                 }
             }
         }

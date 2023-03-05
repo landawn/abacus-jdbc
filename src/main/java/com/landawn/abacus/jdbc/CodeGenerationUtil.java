@@ -221,12 +221,12 @@ final class CodeGenerationUtil {
             String headPart = "";
 
             for (Tuple2<String, String> tp : additionalFields) {
-                if (tp._1.indexOf('<') > 0) {
+                if (tp._1.indexOf('<') > 0) { //NOSONAR
                     String clsName = tp._1.substring(0, tp._1.indexOf('<'));
 
-                    try {
+                    try { //NOSONAR
                         if (ClassUtil.forClass("java.util." + clsName) != null) {
-                            headPart += "\n" + "import java.util." + clsName + ";";
+                            headPart += "\n" + "import java.util." + clsName + ";"; //NOSONAR
                         }
                     } catch (Exception e) {
                         // ignore.
@@ -372,7 +372,7 @@ final class CodeGenerationUtil {
                 sb.append("\n");
 
                 if (idFields.remove(fieldName) || idFields.remove(columnName)) {
-                    sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append("\n");
+                    sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append("\n"); //NOSONAR
                 }
 
                 if (readOnlyFields.remove(fieldName) || readOnlyFields.remove(columnName)) {

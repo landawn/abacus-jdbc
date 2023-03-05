@@ -271,8 +271,8 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      */
     @Beta
     @Override
-    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames,
-            final Collection<? extends Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
+            throws DuplicatedResultException, UncheckedSQLException {
         return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
     }
 
@@ -335,7 +335,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
-            final Collection<? extends Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
+            final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
         if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {
