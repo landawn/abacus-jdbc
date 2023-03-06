@@ -948,10 +948,10 @@ final class DaoImpl {
                     } else {
                         if (hasRowFilter) {
                             return (preparedQuery, args) -> (R) preparedQuery.stream((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1])
-                                    .toCollection(Suppliers.ofCollection(returnType));
+                                    .toCollection(Suppliers.ofCollection((Class<Collection>) returnType));
                         } else {
-                            return (preparedQuery,
-                                    args) -> (R) preparedQuery.stream((Jdbc.RowMapper) args[paramLen - 1]).toCollection(Suppliers.ofCollection(returnType));
+                            return (preparedQuery, args) -> (R) preparedQuery.stream((Jdbc.RowMapper) args[paramLen - 1])
+                                    .toCollection(Suppliers.ofCollection((Class<Collection>) returnType));
                         }
                     }
                 } else if (u.Optional.class.isAssignableFrom(returnType)) {
@@ -1024,10 +1024,10 @@ final class DaoImpl {
                         if (hasRowFilter) {
                             return (preparedQuery,
                                     args) -> (R) preparedQuery.stream((Jdbc.BiRowFilter) args[paramLen - 2], (Jdbc.BiRowMapper) args[paramLen - 1])
-                                            .toCollection(Suppliers.ofCollection(returnType));
+                                            .toCollection(Suppliers.ofCollection((Class<Collection>) returnType));
                         } else {
-                            return (preparedQuery,
-                                    args) -> (R) preparedQuery.stream((Jdbc.BiRowMapper) args[paramLen - 1]).toCollection(Suppliers.ofCollection(returnType));
+                            return (preparedQuery, args) -> (R) preparedQuery.stream((Jdbc.BiRowMapper) args[paramLen - 1])
+                                    .toCollection(Suppliers.ofCollection((Class<Collection>) returnType));
                         }
                     }
                 } else if (u.Optional.class.isAssignableFrom(returnType)) {
@@ -1140,7 +1140,7 @@ final class DaoImpl {
                         if (returnType.isAssignableFrom(mergedEntities.getClass())) {
                             return (R) mergedEntities;
                         } else {
-                            final Collection<Object> c = N.newCollection(returnType);
+                            final Collection<Object> c = N.newCollection((Class<Collection>) returnType);
                             c.addAll(mergedEntities);
 
                             return (R) c;
@@ -1171,8 +1171,8 @@ final class DaoImpl {
             if (returnType.equals(List.class)) {
                 return (preparedQuery, args) -> (R) preparedQuery.list(BiRowMapper.to(firstReturnEleType, prefixFieldMap));
             } else {
-                return (preparedQuery,
-                        args) -> (R) preparedQuery.stream(BiRowMapper.to(firstReturnEleType, prefixFieldMap)).toCollection(Suppliers.ofCollection(returnType));
+                return (preparedQuery, args) -> (R) preparedQuery.stream(BiRowMapper.to(firstReturnEleType, prefixFieldMap))
+                        .toCollection(Suppliers.ofCollection((Class<Collection>) returnType));
             }
         } else if (DataSet.class.isAssignableFrom(returnType)) {
             if (fetchColumnByEntityClass) {
@@ -4337,7 +4337,7 @@ final class DaoImpl {
                                 if (propJoinInfo.joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
                                     propJoinInfo.joinPropInfo.setPropValue(entity, propEntities);
                                 } else {
-                                    final Collection<Object> c = N.newCollection(propJoinInfo.joinPropInfo.clazz);
+                                    final Collection<Object> c = N.newCollection((Class) propJoinInfo.joinPropInfo.clazz);
                                     c.addAll(propEntities);
                                     propJoinInfo.joinPropInfo.setPropValue(entity, c);
                                 }
@@ -4377,7 +4377,7 @@ final class DaoImpl {
                                     if (propJoinInfo.joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
                                         propJoinInfo.joinPropInfo.setPropValue(first, propEntities);
                                     } else {
-                                        final Collection<Object> c = N.newCollection(propJoinInfo.joinPropInfo.clazz);
+                                        final Collection<Object> c = N.newCollection((Class) propJoinInfo.joinPropInfo.clazz);
                                         c.addAll(propEntities);
                                         propJoinInfo.joinPropInfo.setPropValue(first, c);
                                     }

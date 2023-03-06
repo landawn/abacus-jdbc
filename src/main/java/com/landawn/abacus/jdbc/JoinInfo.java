@@ -619,7 +619,8 @@ public final class JoinInfo {
                     if (isListProp || joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
                         joinPropInfo.setPropValue(entity, propEntities);
                     } else {
-                        final Collection<Object> c = N.newCollection(joinPropInfo.clazz);
+                        @SuppressWarnings("rawtypes")
+                        final Collection<Object> c = N.newCollection((Class) joinPropInfo.clazz);
                         c.addAll(propEntities);
                         joinPropInfo.setPropValue(entity, c);
                     }

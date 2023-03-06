@@ -1852,7 +1852,8 @@ public final class Jdbc {
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             final int columnCount = columnLabelList.size();
-                            final Collection<Object> c = N.newCollection(targetClass, columnCount);
+                            @SuppressWarnings("rawtypes")
+                            final Collection<Object> c = N.newCollection((Class<Collection>) targetClass, columnCount);
 
                             for (int i = 0; i < columnCount; i++) {
                                 c.add(JdbcUtil.getColumnValue(rs, i + 1));
@@ -1881,7 +1882,8 @@ public final class Jdbc {
                                 }
                             }
 
-                            final Collection<Object> c = N.newCollection(targetClass, columnCount);
+                            @SuppressWarnings("rawtypes")
+                            final Collection<Object> c = N.newCollection((Class<Collection>) targetClass, columnCount);
 
                             for (int i = 0; i < columnCount; i++) {
                                 if (columnLabels[i] == null) {
@@ -1909,7 +1911,8 @@ public final class Jdbc {
                                 columnLabels = columnLabelList.toArray(new String[columnCount]);
                             }
 
-                            final Map<String, Object> m = N.newMap(targetClass, columnCount);
+                            @SuppressWarnings("rawtypes")
+                            final Map<String, Object> m = N.newMap((Class<Map>) targetClass, columnCount);
 
                             for (int i = 0; i < columnCount; i++) {
                                 m.put(columnLabels[i], JdbcUtil.getColumnValue(rs, i + 1));
@@ -1938,7 +1941,8 @@ public final class Jdbc {
                                 }
                             }
 
-                            final Map<String, Object> m = N.newMap(targetClass, columnCount);
+                            @SuppressWarnings("rawtypes")
+                            final Map<String, Object> m = N.newMap((Class<Map>) targetClass, columnCount);
 
                             for (int i = 0; i < columnCount; i++) {
                                 if (columnLabels[i] == null) {
@@ -2791,7 +2795,8 @@ public final class Jdbc {
                                 rsColumnGetters = initColumnGetter(columnLabelList);
                             }
 
-                            final Collection<Object> c = N.newCollection(targetClass, rsColumnCount);
+                            @SuppressWarnings("rawtypes")
+                            final Collection<Object> c = N.newCollection((Class<Collection>) targetClass, rsColumnCount);
 
                             for (int i = 0; i < rsColumnCount; i++) {
                                 c.add(rsColumnGetters[i].apply(rs, i + 1));
@@ -2816,7 +2821,8 @@ public final class Jdbc {
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
                             }
 
-                            final Map<String, Object> m = N.newMap(targetClass, rsColumnCount);
+                            @SuppressWarnings("rawtypes")
+                            final Map<String, Object> m = N.newMap((Class<Map>) targetClass, rsColumnCount);
 
                             for (int i = 0; i < rsColumnCount; i++) {
                                 m.put(columnLabels[i], rsColumnGetters[i].apply(rs, i + 1));
