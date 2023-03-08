@@ -27,7 +27,7 @@ import com.landawn.abacus.jdbc.Propagation;
  *
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
+@Target(ElementType.METHOD) // Should be used on method only, not for ElementType.TYPE/CLASS
 public @interface Transactional {
     Propagation propagation() default Propagation.REQUIRED;
 
