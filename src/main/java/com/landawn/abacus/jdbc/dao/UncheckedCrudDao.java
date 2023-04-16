@@ -369,12 +369,12 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Query for single non null.
      *
      * @param <V> the value type
-     * @param targetValueClass
-     * @param singleSelectPropName
-     * @param id
-     * @return
+     * @param targetValueClass 
+     * @param singleSelectPropName 
+     * @param id 
+     * @return 
+     * @throws UncheckedSQLException 
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code idition}).
-     * @throws UncheckedSQLException
      * @see IDFactory
      * @see IDFactory.CF
      */
@@ -403,11 +403,12 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Query for unique non null.
      *
      * @param <V> the value type
-     * @param targetValueClass
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws UncheckedSQLException
+     * @param targetValueClass 
+     * @param singleSelectPropName 
+     * @param id 
+     * @return 
+     * @throws DuplicatedResultException 
+     * @throws UncheckedSQLException 
      * @see IDFactory
      * @see IDFactory.CF
      */
@@ -527,7 +528,11 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     boolean exists(final ID id) throws UncheckedSQLException;
 
     /**
-     * @param id
+     * 
+     *
+     * @param id 
+     * @return 
+     * @throws UncheckedSQLException 
      * @see AbstractPreparedQuery#notExists()
      */
     @Beta

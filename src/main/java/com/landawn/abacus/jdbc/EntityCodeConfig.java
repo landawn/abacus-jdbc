@@ -54,9 +54,53 @@ import lombok.NoArgsConstructor;
  * </pre>
  *
  */
+
+/**
+ * 
+ *
+ * @return 
+ */
 @Builder
+
+/**
+ * 
+ *
+ * @return 
+ */
 @Data
+
+/**
+ * 
+ */
 @NoArgsConstructor
+
+/**
+ * 
+ *
+ * @param srcDir 
+ * @param packageName 
+ * @param className 
+ * @param fieldNameConverter 
+ * @param fieldTypeConverter 
+ * @param customizedFields 
+ * @param customizedFieldDbTypes 
+ * @param useBoxedType 
+ * @param mapBigIntegerToLong 
+ * @param mapBigDecimalToDouble 
+ * @param readOnlyFields 
+ * @param nonUpdatableFields 
+ * @param idFields 
+ * @param idField 
+ * @param excludedFields 
+ * @param additionalFieldsOrLines 
+ * @param tableAnnotationClass 
+ * @param columnAnnotationClass 
+ * @param idAnnotationClass 
+ * @param chainAccessor 
+ * @param generateBuilder 
+ * @param generateCopyMethod 
+ * @param jsonXmlConfig 
+ */
 @AllArgsConstructor
 public final class EntityCodeConfig {
 
@@ -114,9 +158,36 @@ public final class EntityCodeConfig {
      *
      * @see com.landawn.abacus.annotation.JsonXmlConfig
      */
+
+    /**
+     * 
+     *
+     * @return 
+     */
     @Builder
+
+    /**
+     * 
+     *
+     * @return 
+     */
     @Data
+
+    /**
+     * 
+     */
     @NoArgsConstructor
+
+    /**
+     * 
+     *
+     * @param namingPolicy 
+     * @param ignoredFields 
+     * @param dateFormat 
+     * @param timeZone 
+     * @param numberFormat 
+     * @param enumerated 
+     */
     @AllArgsConstructor
     public static class JsonXmlConfig {
         private NamingPolicy namingPolicy;

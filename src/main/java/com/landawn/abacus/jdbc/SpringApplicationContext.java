@@ -27,10 +27,23 @@ final class SpringApplicationContext {
     SpringApplicationContext() {
     }
 
+    /**
+     * 
+     *
+     * @param name 
+     * @return 
+     */
     public Object getBean(String name) {
         return appContext == null ? null : appContext.getBean(name);
     }
 
+    /**
+     * 
+     *
+     * @param <T> 
+     * @param requiredType 
+     * @return 
+     */
     public <T> T getBean(Class<T> requiredType) {
         return appContext == null ? null : appContext.getBean(requiredType);
     }

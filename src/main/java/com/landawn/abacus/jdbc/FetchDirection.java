@@ -51,6 +51,11 @@ public enum FetchDirection {
         }
     }
 
+    /**
+     * 
+     *
+     * @return 
+     */
     public int intValue() {
         return intValue;
     }

@@ -68,11 +68,13 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
     }
 
     /**
+     * 
      *
-     * @param propName
-     * @param propValue
-     * @param id
-     * @return
+     * @param propName 
+     * @param propValue 
+     * @param id 
+     * @return 
+     * @throws UnsupportedOperationException 
      * @throws UncheckedSQLException the unchecked SQL exception
      * @deprecated unsupported Operation
      */

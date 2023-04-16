@@ -93,20 +93,40 @@ public final class SQLTransaction implements Transaction, Closeable {
         }
     }
 
+    /**
+     * 
+     *
+     * @return 
+     */
     @Override
     public String id() {
         return _timedId;
     }
 
+    /**
+     * 
+     *
+     * @return 
+     */
     public Connection connection() {
         return _conn;
     }
 
+    /**
+     * 
+     *
+     * @return 
+     */
     @Override
     public IsolationLevel isolationLevel() {
         return _isolationLevel;
     }
 
+    /**
+     * 
+     *
+     * @return 
+     */
     @Override
     public Transaction.Status status() {
         return _status;
@@ -493,6 +513,11 @@ public final class SQLTransaction implements Transaction, Closeable {
         rollbackIfNotCommitted();
     }
 
+    /**
+     * 
+     *
+     * @return 
+     */
     @Override
     public int hashCode() {
         return _timedId.hashCode();
@@ -508,6 +533,11 @@ public final class SQLTransaction implements Transaction, Closeable {
         return obj instanceof SQLTransaction && _timedId.equals(((SQLTransaction) obj)._timedId);
     }
 
+    /**
+     * 
+     *
+     * @return 
+     */
     @Override
     public String toString() {
         return "SQLTransaction={id=" + _timedId + "}";

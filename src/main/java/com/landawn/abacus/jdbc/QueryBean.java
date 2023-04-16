@@ -45,8 +45,30 @@ import lombok.NoArgsConstructor;
  * @see <a href="https://github.com/troyzhxu/bean-searcher">bean-searcher in github</a>
  * @see <a href="https://gitee.com/troyzhxu/bean-searcher">bean-searcher in gitee</a>
  */
+
+/**
+ * 
+ *
+ * @return 
+ */
 @Data
+
+/**
+ * 
+ */
 @NoArgsConstructor
+
+/**
+ * 
+ *
+ * @param select 
+ * @param where 
+ * @param having 
+ * @param orderBy 
+ * @param distinct 
+ * @param offset 
+ * @param limit 
+ */
 @AllArgsConstructor
 public class QueryBean {
 
@@ -63,13 +85,40 @@ public class QueryBean {
     private Integer offset;
     private Integer limit;
 
+    /**
+     * 
+     *
+     * @param resultEntityClass 
+     * @return 
+     */
     public List<Join> getJoinConditions(@SuppressWarnings("unused") final Class<?> resultEntityClass) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * 
+     *
+     * @return 
+     */
     @Data
+
+    /**
+     * 
+     */
     @NoArgsConstructor
+
+    /**
+     * 
+     *
+     * @param fieldName 
+     * @param fieldType 
+     * @param operator 
+     * @param parameter 
+     * @param caseInsensitive 
+     * @param and 
+     * @param or 
+     */
     @AllArgsConstructor
     public static final class FilterField {
         private String fieldName;
@@ -81,10 +130,21 @@ public class QueryBean {
         private List<FilterField> and;
         private List<FilterField> or;
 
+        /**
+         * 
+         *
+         * @return 
+         */
         public Condition toCondition() {
             return toCondition(null);
         }
 
+        /**
+         * 
+         *
+         * @param resultEntityClass 
+         * @return 
+         */
         public Condition toCondition(final Class<?> resultEntityClass) {
             if (N.notNullOrEmpty(and) && N.notNullOrEmpty(or)) {
                 throw new IllegalArgumentException("'and'/'or' can't have values at the same time");
@@ -201,14 +261,36 @@ public class QueryBean {
         }
     }
 
+    /**
+     * 
+     *
+     * @return 
+     */
     @Data
+
+    /**
+     * 
+     */
     @NoArgsConstructor
+
+    /**
+     * 
+     *
+     * @param fieldName 
+     * @param fieldNames 
+     * @param sortDirection 
+     */
     @AllArgsConstructor
     public static final class OrderByField {
         private String fieldName;
         private List<String> fieldNames;
         private SortDirection sortDirection;
 
+        /**
+         * 
+         *
+         * @return 
+         */
         public OrderBy toOrderBy() {
             if (N.notNullOrEmpty(fieldNames)) {
                 return CF.orderBy(fieldNames, sortDirection);
@@ -427,38 +509,95 @@ public class QueryBean {
             this.parameterizedSqlConverter = parameterizedSqlConverter;
         }
 
+        /**
+         * 
+         *
+         * @return 
+         */
         public String sqlOperator() {
             return sqlOperator;
         }
 
+        /**
+         * 
+         *
+         * @param parameter 
+         * @return 
+         */
         public String toSql(final Object parameter) {
             return sqlConverter.apply(null, null, this, parameter);
         }
 
+        /**
+         * 
+         *
+         * @param columnName 
+         * @param parameter 
+         * @return 
+         */
         public String toSql(final String columnName, final Object parameter) {
             return sqlConverter.apply(null, columnName, this, parameter);
         }
 
+        /**
+         * 
+         *
+         * @param sqlBuilder 
+         * @param parameter 
+         */
         public void appendSql(final StringBuilder sqlBuilder, final Object parameter) {
             sqlConverter.apply(sqlBuilder, null, this, parameter);
         }
 
+        /**
+         * 
+         *
+         * @param sqlBuilder 
+         * @param columnName 
+         * @param parameter 
+         */
         public void appendSql(final StringBuilder sqlBuilder, final String columnName, final Object parameter) {
             sqlConverter.apply(sqlBuilder, columnName, this, parameter);
         }
 
+        /**
+         * 
+         *
+         * @param parameter 
+         * @return 
+         */
         public String toParameterizedSql(Object parameter) {
             return parameterizedSqlConverter.apply(null, null, this, parameter);
         }
 
+        /**
+         * 
+         *
+         * @param columnName 
+         * @param parameter 
+         * @return 
+         */
         public String toParameterizedSql(String columnName, Object parameter) {
             return parameterizedSqlConverter.apply(null, columnName, this, parameter);
         }
 
+        /**
+         * 
+         *
+         * @param sqlBuilder 
+         * @param parameter 
+         */
         public void appendParameterizedSql(final StringBuilder sqlBuilder, final Object parameter) {
             parameterizedSqlConverter.apply(sqlBuilder, null, this, parameter);
         }
 
+        /**
+         * 
+         *
+         * @param sqlBuilder 
+         * @param columnName 
+         * @param parameter 
+         */
         public void appendParameterizedSql(final StringBuilder sqlBuilder, final String columnName, final Object parameter) {
             parameterizedSqlConverter.apply(sqlBuilder, columnName, this, parameter);
         }

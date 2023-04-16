@@ -26,12 +26,14 @@ public interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateC
         extends NoUpdateCrudDao<T, Long, SB, TD>, CrudDaoL<T, SB, TD> {
 
     /**
+     * 
      *
-     * @param propName
-     * @param propValue
-     * @param id
-     * @throws UnsupportedOperationException
-     * @throws SQLException
+     * @param propName 
+     * @param propValue 
+     * @param id 
+     * @return 
+     * @throws UnsupportedOperationException 
+     * @throws SQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -41,11 +43,13 @@ public interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateC
     }
 
     /**
+     * 
      *
-     * @param updateProps
-     * @param id
-     * @throws UnsupportedOperationException
-     * @throws SQLException
+     * @param updateProps 
+     * @param id 
+     * @return 
+     * @throws UnsupportedOperationException 
+     * @throws SQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -55,9 +59,12 @@ public interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateC
     }
 
     /**
-     * @param id
-     * @throws UnsupportedOperationException
-     * @throws SQLException
+     * 
+     *
+     * @param id 
+     * @return 
+     * @throws UnsupportedOperationException 
+     * @throws SQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated

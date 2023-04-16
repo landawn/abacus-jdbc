@@ -68,6 +68,11 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  */
 public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
 
+    /**
+     * 
+     *
+     * @return 
+     */
     @NonDBOperation
     default Jdbc.BiRowMapper<ID> idExtractor() {
         return null;
@@ -349,12 +354,12 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Query for single non null.
      *
      * @param <V> the value type
-     * @param targetValueClass
-     * @param singleSelectPropName
-     * @param id
-     * @return
+     * @param targetValueClass 
+     * @param singleSelectPropName 
+     * @param id 
+     * @return 
+     * @throws SQLException 
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code idition}).
-     * @throws SQLException
      * @see IDFactory
      * @see IDFactory.CF
      */
@@ -380,11 +385,12 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Query for unique non null.
      *
      * @param <V> the value type
-     * @param targetValueClass
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param targetValueClass 
+     * @param singleSelectPropName 
+     * @param id 
+     * @return 
+     * @throws DuplicatedResultException 
+     * @throws SQLException 
      * @see IDFactory
      * @see IDFactory.CF
      */

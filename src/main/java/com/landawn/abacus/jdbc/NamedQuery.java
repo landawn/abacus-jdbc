@@ -509,13 +509,14 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
     }
 
     /**
+     * 
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException
-     * @deprecated generally {@code char} should be saved as {@code String} in db.
+     * @param parameterName 
+     * @param x 
+     * @return 
+     * @throws SQLException 
      * @see #setString(String, char)
+     * @deprecated generally {@code char} should be saved as {@code String} in db.
      */
     @Deprecated
     public NamedQuery setInt(String parameterName, char x) throws SQLException {
@@ -523,13 +524,14 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
     }
 
     /**
+     * 
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException
-     * @deprecated generally {@code char} should be saved as {@code String} in db.
+     * @param parameterName 
+     * @param x 
+     * @return 
+     * @throws SQLException 
      * @see #setString(String, Character)
+     * @deprecated generally {@code char} should be saved as {@code String} in db.
      */
     @Deprecated
     public NamedQuery setInt(String parameterName, Character x) throws SQLException {
@@ -866,14 +868,38 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
         return this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterName 
+     * @param x 
+     * @return 
+     * @throws SQLException 
+     */
     public NamedQuery setString(String parameterName, CharSequence x) throws SQLException {
         return setString(parameterName, x == null ? (String) null : x.toString()); //NOSONAR
     }
 
+    /**
+     * 
+     *
+     * @param parameterName 
+     * @param x 
+     * @return 
+     * @throws SQLException 
+     */
     public NamedQuery setString(String parameterName, char x) throws SQLException {
         return setString(parameterName, String.valueOf(x));
     }
 
+    /**
+     * 
+     *
+     * @param parameterName 
+     * @param x 
+     * @return 
+     * @throws SQLException 
+     */
     public NamedQuery setString(String parameterName, Character x) throws SQLException {
         return setString(parameterName, x == null ? (String) null : x.toString()); //NOSONAR
     }
@@ -2826,6 +2852,14 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
         return this;
     }
 
+    /**
+     * 
+     *
+     * @param <T> 
+     * @param batchParameters 
+     * @return 
+     * @throws SQLException 
+     */
     @Override
     @SuppressWarnings("rawtypes")
     public <T> NamedQuery addBatchParameters(final Collection<? extends T> batchParameters) throws SQLException {

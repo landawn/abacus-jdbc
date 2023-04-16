@@ -26,12 +26,14 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends 
         extends UncheckedNoUpdateCrudDao<T, Long, SB, TD>, UncheckedCrudDaoL<T, SB, TD> {
 
     /**
+     * 
      *
-     * @param propName
-     * @param propValue
-     * @param id
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @param propName 
+     * @param propValue 
+     * @param id 
+     * @return 
+     * @throws UnsupportedOperationException 
+     * @throws UncheckedSQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -41,11 +43,13 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
+     * 
      *
-     * @param updateProps
-     * @param id
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @param updateProps 
+     * @param id 
+     * @return 
+     * @throws UnsupportedOperationException 
+     * @throws UncheckedSQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -55,9 +59,12 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * @param id
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * 
+     *
+     * @param id 
+     * @return 
+     * @throws UnsupportedOperationException 
+     * @throws UncheckedSQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated

@@ -539,6 +539,12 @@ public final class JoinInfo {
         }
     }
 
+    /**
+     * 
+     *
+     * @param sbc 
+     * @return 
+     */
     public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSQLBuilderAndParamSetter(
             final Class<? extends SQLBuilder> sbc) {
         final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = selectSQLBuilderAndParamSetterPool.get(sbc);
@@ -550,6 +556,12 @@ public final class JoinInfo {
         return tp;
     }
 
+    /**
+     * 
+     *
+     * @param sbc 
+     * @return 
+     */
     public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSQLBuilderAndParamSetter( //NOSONAR
             final Class<? extends SQLBuilder> sbc) {
         final Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchSelectSQLBuilderAndParamSetterPool
@@ -572,6 +584,12 @@ public final class JoinInfo {
     //        return tp;
     //    }
 
+    /**
+     * 
+     *
+     * @param sbc 
+     * @return 
+     */
     public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlAndParamSetter(final Class<? extends SQLBuilder> sbc) {
         final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(sbc);
 
@@ -582,6 +600,12 @@ public final class JoinInfo {
         return tp;
     }
 
+    /**
+     * 
+     *
+     * @param sbc 
+     * @return 
+     */
     public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSQLBuilderAndParamSetter( //NOSONAR
             final Class<? extends SQLBuilder> sbc) {
         final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchDeleteSQLBuilderAndParamSetterForPool
@@ -595,16 +619,22 @@ public final class JoinInfo {
     }
 
     /**
-     * For one-to-one or one-to-many join
+     * For one-to-one or one-to-many join.
      *
-     * @param entities
-     * @param joinPropEntities
+     * @param entities 
+     * @param joinPropEntities 
      */
     public void setJoinPropEntities(final Collection<?> entities, final Collection<?> joinPropEntities) {
         final Map<Object, List<Object>> groupedPropEntities = Stream.of((Collection<Object>) joinPropEntities).groupTo(referencedEntityKeyExtractor);
         setJoinPropEntities(entities, groupedPropEntities);
     }
 
+    /**
+     * 
+     *
+     * @param entities 
+     * @param groupedPropEntities 
+     */
     public void setJoinPropEntities(final Collection<?> entities, final Map<Object, List<Object>> groupedPropEntities) {
         final boolean isCollectionProp = joinPropInfo.type.isCollection();
         final boolean isListProp = joinPropInfo.clazz.isAssignableFrom(List.class);
@@ -631,6 +661,11 @@ public final class JoinInfo {
         }
     }
 
+    /**
+     * 
+     *
+     * @return 
+     */
     public boolean isManyToManyJoin() {
         return isManyToManyJoin;
     }
@@ -648,6 +683,13 @@ public final class JoinInfo {
 
     private static final Map<Class<?>, Map<Class<?>, Map<String, JoinInfo>>> daoEntityJoinInfoPool = new ConcurrentHashMap<>();
 
+    /**
+     * 
+     *
+     * @param daoClass 
+     * @param entityClass 
+     * @return 
+     */
     public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass) {
         Map<Class<?>, Map<String, JoinInfo>> entityJoinInfoMap = daoEntityJoinInfoPool.get(daoClass);
 
@@ -679,6 +721,14 @@ public final class JoinInfo {
         return joinInfoMap;
     }
 
+    /**
+     * 
+     *
+     * @param daoClass 
+     * @param entityClass 
+     * @param joinEntityPropName 
+     * @return 
+     */
     public static JoinInfo getPropJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String joinEntityPropName) {
         final JoinInfo joinInfo = getEntityJoinInfo(daoClass, entityClass).get(joinEntityPropName);
 
@@ -692,6 +742,14 @@ public final class JoinInfo {
 
     private static final Map<Class<?>, Map<Class<?>, List<String>>> joinEntityPropNamesByTypePool = new ConcurrentHashMap<>();
 
+    /**
+     * 
+     *
+     * @param daoClass 
+     * @param entityClass 
+     * @param joinPropEntityClass 
+     * @return 
+     */
     public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass, final Class<?> joinPropEntityClass) {
         Map<Class<?>, List<String>> joinEntityPropNamesByTypeMap = joinEntityPropNamesByTypePool.get(entityClass);
 

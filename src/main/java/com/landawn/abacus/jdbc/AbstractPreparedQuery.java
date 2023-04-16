@@ -355,13 +355,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
+     * 
      *
      * @param parameterIndex starts from 1, not 0.
-     * @param x
-     * @return
-     * @throws SQLException
-     * @deprecated generally {@code char} should be saved as {@code String} in db.
+     * @param x 
+     * @return 
+     * @throws SQLException 
      * @see #setString(int, char)
+     * @deprecated generally {@code char} should be saved as {@code String} in db.
      */
     @Deprecated
     @Beta
@@ -372,13 +373,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
+     * 
      *
-     * @param parameterIndex
-     * @param x
-     * @return
-     * @throws SQLException
-     * @deprecated generally {@code char} should be saved as {@code String} in db.
+     * @param parameterIndex 
+     * @param x 
+     * @return 
+     * @throws SQLException 
      * @see #setString(int, Character)
+     * @deprecated generally {@code char} should be saved as {@code String} in db.
      */
     @Deprecated
     @Beta
@@ -530,6 +532,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterIndex 
+     * @param x 
+     * @return 
+     * @throws SQLException 
+     */
     public This setString(int parameterIndex, char x) throws SQLException {
         stmt.setString(parameterIndex, String.valueOf(x));
 
@@ -1045,6 +1055,15 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterIndex 
+     * @param x 
+     * @param type 
+     * @return 
+     * @throws SQLException 
+     */
     public This setObject(int parameterIndex, Object x, Type<Object> type) throws SQLException {
         type.set(stmt, parameterIndex, x);
 
@@ -1449,10 +1468,11 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * Sets the parameters.
      *
+     * @param <T> 
      * @param parameters it should be an array of concrete types. For example: {@code String[]}, {@code Date[]}.
-     * @return
+     * @return 
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
-     * @throws SQLException
+     * @throws SQLException 
      */
     public <T> This setParameters(final T[] parameters) throws IllegalArgumentException, SQLException {
         return settParameters(1, parameters);
@@ -1461,11 +1481,10 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * Sets the parameters.
      *
-     * @param startParameterIndex
-     * @param parameters
-     * @return
+     * @param parameters 
+     * @return 
      * @throws IllegalArgumentException if specified {@code parameters}.
-     * @throws SQLException
+     * @throws SQLException 
      */
     public This setParameters(final Collection<?> parameters) throws IllegalArgumentException, SQLException {
         return settParameters(1, parameters);
@@ -1474,13 +1493,12 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * Sets the parameters.
      *
-     * @param <T>
-     * @param startParameterIndex
-     * @param parameters
-     * @param type
-     * @return
+     * @param <T> 
+     * @param parameters 
+     * @param type 
+     * @return 
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
-     * @throws SQLException
+     * @throws SQLException 
      */
     public <T> This setParameters(final Collection<? extends T> parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
         return settParameters(1, parameters, type);
@@ -1652,12 +1670,11 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      * Sets the parameters.
      *
-     * @param startParameterIndex
-     * @param parameters
-     * @param type
-     * @return
+     * @param startParameterIndex 
+     * @param parameters 
+     * @return 
      * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
-     * @throws SQLException
+     * @throws SQLException 
      */
     public This settParameters(int startParameterIndex, final Collection<?> parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
@@ -1789,6 +1806,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterValue 
+     * @param parameterIndices 
+     * @return 
+     * @throws SQLException 
+     */
     @Beta
     public This setIntForMultiPositions(final int parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
@@ -1801,11 +1826,12 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Note: The reason for giving name: {@code setIntegerForMultiPositions}, not {@code setIntForMultiPositions} is because of error: <i>The method setIntForMultiPositions(int, int[]) is ambiguous for the type</i>
-     * @param parameterValue
-     * @param parameterIndices
-     * @return
-     * @throws SQLException
+     * Note: The reason for giving name: {@code setIntegerForMultiPositions}, not {@code setIntForMultiPositions} is because of error: <i>The method setIntForMultiPositions(int, int[]) is ambiguous for the type</i>.
+     *
+     * @param parameterValue 
+     * @param parameterIndices 
+     * @return 
+     * @throws SQLException 
      */
     @Beta
     public This setIntegerForMultiPositions(final Integer parameterValue, final int... parameterIndices) throws SQLException {
@@ -1818,6 +1844,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterValue 
+     * @param parameterIndices 
+     * @return 
+     * @throws SQLException 
+     */
     @Beta
     public This setLongForMultiPositions(final long parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
@@ -1829,6 +1863,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterValue 
+     * @param parameterIndices 
+     * @return 
+     * @throws SQLException 
+     */
     @Beta
     public This setLongForMultiPositions(final Long parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
@@ -1840,6 +1882,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterValue 
+     * @param parameterIndices 
+     * @return 
+     * @throws SQLException 
+     */
     @Beta
     public This setDoubleForMultiPositions(final double parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
@@ -1851,6 +1901,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterValue 
+     * @param parameterIndices 
+     * @return 
+     * @throws SQLException 
+     */
     @Beta
     public This setDoubleForMultiPositions(final Double parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
@@ -1862,6 +1920,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterValue 
+     * @param parameterIndices 
+     * @return 
+     * @throws SQLException 
+     */
     @Beta
     public This setStringForMultiPositions(final String parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
@@ -1873,6 +1939,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterValue 
+     * @param parameterIndices 
+     * @return 
+     * @throws SQLException 
+     */
     @Beta
     public This setDateForMultiPositions(final java.sql.Date parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
@@ -1884,6 +1958,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterValue 
+     * @param parameterIndices 
+     * @return 
+     * @throws SQLException 
+     */
     @Beta
     public This setDateForMultiPositions(final java.util.Date parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
@@ -1895,6 +1977,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterValue 
+     * @param parameterIndices 
+     * @return 
+     * @throws SQLException 
+     */
     @Beta
     public This setTimeForMultiPositions(final java.sql.Time parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
@@ -1906,6 +1996,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterValue 
+     * @param parameterIndices 
+     * @return 
+     * @throws SQLException 
+     */
     @Beta
     public This setTimeForMultiPositions(final java.util.Date parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
@@ -1917,6 +2015,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterValue 
+     * @param parameterIndices 
+     * @return 
+     * @throws SQLException 
+     */
     @Beta
     public This setTimestampForMultiPositions(final java.sql.Timestamp parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
@@ -1928,6 +2034,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterValue 
+     * @param parameterIndices 
+     * @return 
+     * @throws SQLException 
+     */
     @Beta
     public This setTimestampForMultiPositions(final java.util.Date parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
@@ -1939,6 +2053,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    /**
+     * 
+     *
+     * @param parameterValue 
+     * @param parameterIndices 
+     * @return 
+     * @throws SQLException 
+     */
     @Beta
     public This setObjectForMultiPositions(final Object parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
@@ -3142,13 +3264,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param targetType
-     * @return
+     * @param <T> 
+     * @param targetType 
+     * @return 
      * @throws DuplicatedResultException If More than one record found by the query
+     * @throws SQLException 
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
-     * @throws SQLException
      */
     public <T> Optional<T> findOnlyOne(final Class<? extends T> targetType) throws DuplicatedResultException, SQLException {
         return Optional.ofNullable(findOnlyOneOrNull(targetType));
@@ -4505,9 +4628,12 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
+     * 
      *
-     * @return
-     * @throws SQLException
+     * @param <T> 
+     * @param autoGeneratedKeyExtractor 
+     * @return 
+     * @throws SQLException 
      */
     public <T> Tuple2<Integer, List<T>> updateAndReturnGeneratedKeys(final Jdbc.RowMapper<T> autoGeneratedKeyExtractor) throws SQLException {
         assertNotClosed();
@@ -4530,9 +4656,12 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
+     * 
      *
-     * @return
-     * @throws SQLException
+     * @param <T> 
+     * @param autoGeneratedKeyExtractor 
+     * @return 
+     * @throws SQLException 
      */
     public <T> Tuple2<Integer, List<T>> updateAndReturnGeneratedKeys(final Jdbc.BiRowMapper<T> autoGeneratedKeyExtractor) throws SQLException {
         assertNotClosed();
@@ -4583,9 +4712,12 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
+     * 
      *
-     * @return
-     * @throws SQLException
+     * @param <T> 
+     * @param autoGeneratedKeyExtractor 
+     * @return 
+     * @throws SQLException 
      */
     public <T> Tuple2<int[], List<T>> batchUpdateAndReturnGeneratedKeys(final Jdbc.RowMapper<T> autoGeneratedKeyExtractor) throws SQLException {
         assertNotClosed();
@@ -4608,9 +4740,12 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
+     * 
      *
-     * @return
-     * @throws SQLException
+     * @param <T> 
+     * @param autoGeneratedKeyExtractor 
+     * @return 
+     * @throws SQLException 
      */
     public <T> Tuple2<int[], List<T>> batchUpdateAndReturnGeneratedKeys(final Jdbc.BiRowMapper<T> autoGeneratedKeyExtractor) throws SQLException {
         assertNotClosed();

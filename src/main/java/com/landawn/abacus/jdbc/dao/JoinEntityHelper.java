@@ -483,10 +483,11 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param joinEntityPropName
-     * @throws SQLException
+     * @param entities 
+     * @param joinEntityPropNames 
+     * @throws SQLException 
      */
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
@@ -499,11 +500,12 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param joinEntityPropName
-     * @param inParallel
-     * @throws SQLException
+     * @param entities 
+     * @param joinEntityPropNames 
+     * @param inParallel 
+     * @throws SQLException 
      */
     @Beta
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
@@ -515,11 +517,12 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param joinEntityPropName
-     * @param executor
-     * @throws SQLException
+     * @param entities 
+     * @param joinEntityPropNames 
+     * @param executor 
+     * @throws SQLException 
      */
     @Beta
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
@@ -787,10 +790,11 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param joinEntityPropName
-     * @throws SQLException
+     * @param entities 
+     * @param joinEntityPropNames 
+     * @throws SQLException 
      */
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
@@ -803,11 +807,12 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param joinEntityPropName
-     * @param inParallel
-     * @throws SQLException
+     * @param entities 
+     * @param joinEntityPropNames 
+     * @param inParallel 
+     * @throws SQLException 
      */
     @Beta
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
@@ -820,11 +825,12 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param joinEntityPropName
-     * @param executor
-     * @throws SQLException
+     * @param entities 
+     * @param joinEntityPropNames 
+     * @param executor 
+     * @throws SQLException 
      */
     @Beta
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
@@ -996,22 +1002,22 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
+     * 
      *
-     * @param entity
-     * @param joinEntityPropName
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param entity 
+     * @param joinEntityPropName 
      * @return the total count of updated/deleted records.
-     * @throws SQLException
+     * @throws SQLException 
      */
     int deleteJoinEntities(final T entity, final String joinEntityPropName) throws SQLException;
 
     /**
+     * 
      *
-     * @param entities
-     * @param joinEntityPropName
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param entities 
+     * @param joinEntityPropName 
      * @return the total count of updated/deleted records.
-     * @throws SQLException
+     * @throws SQLException 
      */
     int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws SQLException;
 
@@ -1090,11 +1096,12 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param joinEntityPropName
+     * @param entities 
+     * @param joinEntityPropNames 
      * @return the total count of updated/deleted records.
-     * @throws SQLException
+     * @throws SQLException 
      */
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isNullOrEmpty(entities) || N.isNullOrEmpty(joinEntityPropNames)) {
@@ -1122,12 +1129,13 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param joinEntityPropName
-     * @param inParallel
+     * @param entities 
+     * @param joinEntityPropNames 
+     * @param inParallel 
      * @return the total count of updated/deleted records.
-     * @throws SQLException
+     * @throws SQLException 
      * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
      */
     @Deprecated
@@ -1141,12 +1149,13 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param joinEntityPropName
-     * @param executor
+     * @param entities 
+     * @param joinEntityPropNames 
+     * @param executor 
      * @return the total count of updated/deleted records.
-     * @throws SQLException
+     * @throws SQLException 
      * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
      */
     @Deprecated

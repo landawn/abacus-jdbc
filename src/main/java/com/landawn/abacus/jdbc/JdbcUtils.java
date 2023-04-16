@@ -3207,12 +3207,14 @@ public final class JdbcUtils {
     }
 
     /**
+     * 
      *
-     * @param sourceConn
-     * @param selectSql
-     * @param targetConn
-     * @param insertSql
-     * @return
+     * @param sourceConn 
+     * @param selectSql 
+     * @param targetConn 
+     * @param insertSql 
+     * @param stmtSetter 
+     * @return 
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     public static long copy2(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql,

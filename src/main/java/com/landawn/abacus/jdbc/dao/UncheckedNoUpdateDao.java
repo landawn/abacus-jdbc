@@ -37,11 +37,13 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
         extends UncheckedDao<T, SB, TD>, NoUpdateDao<T, SB, TD> {
 
     /**
+     * 
      *
-     * @param propName
-     * @param propValue
-     * @param cond
-     * @return
+     * @param propName 
+     * @param propValue 
+     * @param cond 
+     * @return 
+     * @throws UnsupportedOperationException 
      * @throws UncheckedSQLException the unchecked SQL exception
      * @deprecated unsupported Operation
      */
@@ -81,12 +83,14 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
-     * @param entity
-     * @param cond
-     * @param propNamesToUpdate
-     * @return
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * 
+     *
+     * @param entity 
+     * @param propNamesToUpdate 
+     * @param cond 
+     * @return 
+     * @throws UnsupportedOperationException 
+     * @throws UncheckedSQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated

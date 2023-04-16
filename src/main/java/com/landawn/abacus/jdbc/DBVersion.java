@@ -67,10 +67,20 @@ public enum DBVersion {
     SQL_SERVER,
     OTHERS;
 
+    /**
+     * 
+     *
+     * @return 
+     */
     public boolean isMySQL() {
         return Strings.startsWithIgnoreCase(name(), "mysql");
     }
 
+    /**
+     * 
+     *
+     * @return 
+     */
     public boolean isPostgreSQL() {
         return Strings.startsWithIgnoreCase(name(), "postgresql");
     }

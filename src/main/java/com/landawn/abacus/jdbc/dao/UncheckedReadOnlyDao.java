@@ -33,11 +33,11 @@ public interface UncheckedReadOnlyDao<T, SB extends SQLBuilder, TD extends Unche
         extends UncheckedNoUpdateDao<T, SB, TD>, ReadOnlyDao<T, SB, TD> {
 
     /**
+     * 
      *
-     * @param entityToSave
-     * @return
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @param entityToSave 
+     * @throws UnsupportedOperationException 
+     * @throws UncheckedSQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -47,12 +47,12 @@ public interface UncheckedReadOnlyDao<T, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
+     * 
      *
-     * @param entityToSave
-     * @param propNamesToSave
-     * @return
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @param entityToSave 
+     * @param propNamesToSave 
+     * @throws UnsupportedOperationException 
+     * @throws UncheckedSQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -62,12 +62,12 @@ public interface UncheckedReadOnlyDao<T, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
+     * 
      *
-     * @param namedInsertSQL
-     * @param entityToSave
-     * @return
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @param namedInsertSQL 
+     * @param entityToSave 
+     * @throws UnsupportedOperationException 
+     * @throws UncheckedSQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -79,10 +79,9 @@ public interface UncheckedReadOnlyDao<T, SB extends SQLBuilder, TD extends Unche
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param entitiesToSave
-     * @return
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @param entitiesToSave 
+     * @throws UnsupportedOperationException 
+     * @throws UncheckedSQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -94,11 +93,10 @@ public interface UncheckedReadOnlyDao<T, SB extends SQLBuilder, TD extends Unche
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param entitiesToSave
-     * @param batchSize
-     * @return
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @param entitiesToSave 
+     * @param batchSize 
+     * @throws UnsupportedOperationException 
+     * @throws UncheckedSQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -110,11 +108,10 @@ public interface UncheckedReadOnlyDao<T, SB extends SQLBuilder, TD extends Unche
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param entitiesToSave
-     * @param propNamesToSave
-     * @return
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @param entitiesToSave 
+     * @param propNamesToSave 
+     * @throws UnsupportedOperationException 
+     * @throws UncheckedSQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -127,12 +124,11 @@ public interface UncheckedReadOnlyDao<T, SB extends SQLBuilder, TD extends Unche
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param entitiesToSave
-     * @param propNamesToSave
-     * @param batchSize
-     * @return
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @param entitiesToSave 
+     * @param propNamesToSave 
+     * @param batchSize 
+     * @throws UnsupportedOperationException 
+     * @throws UncheckedSQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -145,11 +141,10 @@ public interface UncheckedReadOnlyDao<T, SB extends SQLBuilder, TD extends Unche
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param namedInsertSQL
-     * @param entitiesToSave
-     * @return
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @param namedInsertSQL 
+     * @param entitiesToSave 
+     * @throws UnsupportedOperationException 
+     * @throws UncheckedSQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -162,12 +157,11 @@ public interface UncheckedReadOnlyDao<T, SB extends SQLBuilder, TD extends Unche
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param namedInsertSQL
-     * @param entitiesToSave
-     * @param batchSize
-     * @return
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @param namedInsertSQL 
+     * @param entitiesToSave 
+     * @param batchSize 
+     * @throws UnsupportedOperationException 
+     * @throws UncheckedSQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated

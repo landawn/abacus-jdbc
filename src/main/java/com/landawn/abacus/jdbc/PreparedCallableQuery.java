@@ -1226,9 +1226,7 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     /**
      * Execute then apply.
      *
-     * @param <R>
      * @param consumer the first parameter is {@code isFirstResultSet}, the second one is {@code outParametes} and third one is the executed {@code CallableStatement}.
-     * @return
      * @throws SQLException the SQL exception
      * @see JdbcUtil#getOutParameters(CallableStatement, int)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
@@ -2039,11 +2037,11 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param targetType
+     * @param <T> 
+     * @param targetType 
      * @return the {@code ExceptionalStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
-     * @throws SQLException
      */
     public <T> ExceptionalStream<T, SQLException> streamAll(final Class<? extends T> targetType) {
         checkArgNotNull(targetType, "targetType");
@@ -2052,11 +2050,11 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param rowMapper
+     * @param <T> 
+     * @param rowMapper 
      * @return the {@code ExceptionalStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
-     * @throws SQLException
      */
     public <T> ExceptionalStream<T, SQLException> streamAll(final Jdbc.RowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowMapper, "rowMapper");
@@ -2070,12 +2068,12 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param rowFilter
-     * @param rowMapper
+     * @param <T> 
+     * @param rowFilter 
+     * @param rowMapper 
      * @return the {@code ExceptionalStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
-     * @throws SQLException
      */
     public <T> ExceptionalStream<T, SQLException> streamAll(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowFilter, "rowFilter");
@@ -2090,11 +2088,11 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param rowMapper
+     * @param <T> 
+     * @param rowMapper 
      * @return the {@code ExceptionalStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
-     * @throws SQLException
      */
     public <T> ExceptionalStream<T, SQLException> streamAll(final Jdbc.BiRowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowMapper, "rowMapper");
@@ -2108,12 +2106,12 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param rowFilter
-     * @param rowMapper
+     * @param <T> 
+     * @param rowFilter 
+     * @param rowMapper 
      * @return the {@code ExceptionalStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
-     * @throws SQLException
      */
     public <T> ExceptionalStream<T, SQLException> streamAll(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowFilter, "rowFilter");

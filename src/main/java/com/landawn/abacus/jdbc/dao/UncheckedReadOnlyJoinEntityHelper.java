@@ -25,12 +25,13 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
         extends UncheckedJoinEntityHelper<T, SB, TD>, ReadOnlyJoinEntityHelper<T, SB, TD> {
 
     /**
+     * 
      *
-     * @param entity
-     * @param joinEntityClass
+     * @param entity 
+     * @param joinEntityClass 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -40,12 +41,13 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param joinEntityClass
+     * @param entities 
+     * @param joinEntityClass 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -55,13 +57,13 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * 
      *
-     * @param entity
-     * @param joinEntityPropName
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param entity 
+     * @param joinEntityPropName 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -71,13 +73,13 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param joinEntityPropName
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param entities 
+     * @param joinEntityPropName 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -87,12 +89,13 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * 
      *
-     * @param entity
-     * @param joinEntityPropNames
+     * @param entity 
+     * @param joinEntityPropNames 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -102,13 +105,14 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * 
      *
-     * @param entity
-     * @param joinEntityPropNames
-     * @param inParallel
+     * @param entity 
+     * @param joinEntityPropNames 
+     * @param inParallel 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -119,13 +123,14 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * 
      *
-     * @param entity
-     * @param joinEntityPropNames
-     * @param executor
+     * @param entity 
+     * @param joinEntityPropNames 
+     * @param executor 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -136,12 +141,13 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param joinEntityPropName
+     * @param entities 
+     * @param joinEntityPropNames 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -152,13 +158,14 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param joinEntityPropName
-     * @param inParallel
+     * @param entities 
+     * @param joinEntityPropNames 
+     * @param inParallel 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -169,13 +176,14 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param joinEntityPropName
-     * @param executor
+     * @param entities 
+     * @param joinEntityPropNames 
+     * @param executor 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -186,11 +194,12 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * 
      *
-     * @param entity
+     * @param entity 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -200,12 +209,13 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * 
      *
-     * @param entity
-     * @param inParallel
+     * @param entity 
+     * @param inParallel 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -215,12 +225,13 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * 
      *
-     * @param entity
-     * @param executor
+     * @param entity 
+     * @param executor 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -230,11 +241,12 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * 
      *
-     * @param entities
+     * @param entities 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -244,12 +256,13 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param inParallel
+     * @param entities 
+     * @param inParallel 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -259,12 +272,13 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * 
      *
-     * @param entities
-     * @param executor
+     * @param entities 
+     * @param executor 
      * @return the total count of updated/deleted records.
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated

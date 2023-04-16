@@ -130,6 +130,11 @@ public final class DBSequence {
         }
     }
 
+    /**
+     * 
+     *
+     * @return 
+     */
     public long nextVal() {
         synchronized (seqName) { //NOSONAR
             try {

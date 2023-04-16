@@ -68,12 +68,14 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
     }
 
     /**
+     * 
      *
-     * @param propName
-     * @param propValue
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param propName 
+     * @param propValue 
+     * @param id 
+     * @return 
+     * @throws UnsupportedOperationException 
+     * @throws SQLException 
      * @deprecated unsupported Operation
      */
     @Override

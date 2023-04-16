@@ -101,12 +101,13 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * 
      *
-     * @param query
-     * @param returnColumnIndexes
-     * @return
+     * @param query 
+     * @param returnColumnNames 
+     * @return 
      * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
-     * @throws SQLException
+     * @throws SQLException 
      */
     @Beta
     @NonDBOperation
@@ -352,12 +353,14 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * 
      *
-     * @param propName
-     * @param propValue
-     * @param cond
-     * @return
-     * @throws SQLException
+     * @param propName 
+     * @param propValue 
+     * @param cond 
+     * @return 
+     * @throws UnsupportedOperationException 
+     * @throws SQLException 
      * @deprecated unsupported Operation
      */
     @Override
@@ -399,12 +402,12 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     /**
      * Update all the records found by specified {@code cond} with specified {@code propNamesToUpdate} from specified {@code entity}.
      *
-     * @param entity
-     * @param cond
-     * @param propNamesToUpdate
-     * @return
-     * @throws UnsupportedOperationException
-     * @throws SQLException
+     * @param entity 
+     * @param propNamesToUpdate 
+     * @param cond 
+     * @return 
+     * @throws UnsupportedOperationException 
+     * @throws SQLException 
      * @deprecated unsupported Operation
      */
     @Deprecated
