@@ -2973,7 +2973,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(entityClass);
 
-                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
+                            return ExceptionalStream.of(supplier).flatMap(Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.RowMapper.class)) {
@@ -2991,7 +2991,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
+                            return ExceptionalStream.of(supplier).flatMap(Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.BiRowMapper.class)) {
@@ -3009,7 +3009,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
+                            return ExceptionalStream.of(supplier).flatMap(Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.RowFilter.class) && paramTypes[2].equals(Jdbc.RowMapper.class)) {
@@ -3029,7 +3029,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowFilter, rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
+                            return ExceptionalStream.of(supplier).flatMap(Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.BiRowFilter.class) && paramTypes[2].equals(Jdbc.BiRowMapper.class)) {
@@ -3049,7 +3049,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowFilter, rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
+                            return ExceptionalStream.of(supplier).flatMap(Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class)) {
@@ -3066,7 +3066,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(entityClass);
 
-                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
+                            return ExceptionalStream.of(supplier).flatMap(Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(Jdbc.RowMapper.class)) {
@@ -3085,7 +3085,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
+                            return ExceptionalStream.of(supplier).flatMap(Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(Jdbc.BiRowMapper.class)) {
@@ -3104,7 +3104,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
+                            return ExceptionalStream.of(supplier).flatMap(Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(Jdbc.RowFilter.class) && paramTypes[3].equals(Jdbc.RowMapper.class)) {
@@ -3125,7 +3125,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowFilter, rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
+                            return ExceptionalStream.of(supplier).flatMap(Throwables.Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(Jdbc.BiRowFilter.class) && paramTypes[3].equals(Jdbc.BiRowMapper.class)) {
@@ -3146,7 +3146,7 @@ final class DaoImpl {
                                     .settParameters(sp.parameters, collParamsSetter)
                                     .stream(rowFilter, rowMapper);
 
-                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
+                            return ExceptionalStream.of(supplier).flatMap(Throwables.Supplier::get);
                         };
                     } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.RowConsumer.class)) {
@@ -5188,7 +5188,7 @@ final class DaoImpl {
                         call = (proxy, args) -> {
                             final Throwables.Supplier<ExceptionalStream, Exception> supplier = () -> tmp.apply(proxy, args);
 
-                            return ExceptionalStream.of(supplier).flatMap(com.landawn.abacus.util.Throwables.Supplier::get);
+                            return ExceptionalStream.of(supplier).flatMap(Throwables.Supplier::get);
                         };
                     } else {
                         final Throwables.BiFunction<Dao, Object[], Stream, Exception> tmp = (Throwables.BiFunction) call;
