@@ -1411,7 +1411,7 @@ final class DaoImpl {
             if (queryInfo.isCall) {
                 final String[] paramNames = IntStreamEx.of(stmtParamIndexes)
                         .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]).select(Bind.class).first().orElse(null))
-                        .skipNull()
+                        .skipNulls()
                         .map(Bind::value)
                         .toArray(IntFunctions.ofStringArray());
 
@@ -4582,7 +4582,7 @@ final class DaoImpl {
                         if (isNamedQuery) {
                             final List<String> tmp = IntStreamEx.range(0, paramLen)
                                     .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]).select(Bind.class).first().orElseNull())
-                                    .skipNull()
+                                    .skipNulls()
                                     .map(Bind::value)
                                     .filter(it -> !parsedSql.getNamedParameters().contains(it))
                                     .toList();
@@ -4741,7 +4741,7 @@ final class DaoImpl {
                                 } else {
                                     return null;
                                 }
-                            }).skipNull().first())
+                            }).skipNulls().first())
                             .filter(u.Optional::isPresent)
                             .map(u.Optional::get)
                             .toArray(it -> new Function[it]);
