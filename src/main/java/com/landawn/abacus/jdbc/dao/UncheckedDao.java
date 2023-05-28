@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -63,29 +64,29 @@ import com.landawn.abacus.util.u.OptionalShort;
 public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends Dao<T, SB, TD> {
 
     /**
-     * 
      *
-     * @param entityToSave 
+     *
+     * @param entityToSave
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
     void save(final T entityToSave) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param entityToSave 
-     * @param propNamesToSave 
+     *
+     * @param entityToSave
+     * @param propNamesToSave
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
     void save(final T entityToSave, final Collection<String> propNamesToSave) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param namedInsertSQL 
-     * @param entityToSave 
+     *
+     * @param namedInsertSQL
+     * @param entityToSave
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -94,7 +95,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     /**
      * Insert the specified entities to database by batch.
      *
-     * @param entitiesToSave 
+     * @param entitiesToSave
      * @throws UncheckedSQLException the unchecked SQL exception
      * @see CrudDao#batchInsert(Collection)
      */
@@ -106,8 +107,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     /**
      * Insert the specified entities to database by batch.
      *
-     * @param entitiesToSave 
-     * @param batchSize 
+     * @param entitiesToSave
+     * @param batchSize
      * @throws UncheckedSQLException the unchecked SQL exception
      * @see CrudDao#batchInsert(Collection)
      */
@@ -117,8 +118,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     /**
      * Insert the specified entities to database by batch.
      *
-     * @param entitiesToSave 
-     * @param propNamesToSave 
+     * @param entitiesToSave
+     * @param propNamesToSave
      * @throws UncheckedSQLException the unchecked SQL exception
      * @see CrudDao#batchInsert(Collection)
      */
@@ -130,9 +131,9 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     /**
      * Insert the specified entities to database by batch.
      *
-     * @param entitiesToSave 
-     * @param propNamesToSave 
-     * @param batchSize 
+     * @param entitiesToSave
+     * @param propNamesToSave
+     * @param batchSize
      * @throws UncheckedSQLException the unchecked SQL exception
      * @see CrudDao#batchInsert(Collection)
      */
@@ -142,8 +143,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     /**
      * Insert the specified entities to database by batch.
      *
-     * @param namedInsertSQL 
-     * @param entitiesToSave 
+     * @param namedInsertSQL
+     * @param entitiesToSave
      * @throws UncheckedSQLException the unchecked SQL exception
      * @see CrudDao#batchInsert(Collection)
      */
@@ -156,9 +157,9 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     /**
      * Insert the specified entities to database by batch.
      *
-     * @param namedInsertSQL 
-     * @param entitiesToSave 
-     * @param batchSize 
+     * @param namedInsertSQL
+     * @param entitiesToSave
+     * @param batchSize
      * @throws UncheckedSQLException the unchecked SQL exception
      * @see CrudDao#batchInsert(Collection)
      */
@@ -202,6 +203,114 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
 
     /**
      *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @return
+     * @throws UncheckedSQLException
+     */
+    @Override
+    @Beta
+    default boolean anyMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws UncheckedSQLException {
+        try {
+            return prepareQuery(selectPropNames, cond).anyMatch(rowFilter);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @return
+     * @throws UncheckedSQLException
+     */
+    @Override
+    @Beta
+    default boolean anyMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws UncheckedSQLException {
+        try {
+            return prepareQuery(selectPropNames, cond).anyMatch(rowFilter);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @return
+     * @throws UncheckedSQLException
+     */
+    @Override
+    @Beta
+    default boolean allMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws UncheckedSQLException {
+        try {
+            return prepareQuery(selectPropNames, cond).allMatch(rowFilter);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @return
+     * @throws UncheckedSQLException
+     */
+    @Override
+    @Beta
+    default boolean allMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws UncheckedSQLException {
+        try {
+            return prepareQuery(selectPropNames, cond).allMatch(rowFilter);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @return
+     * @throws UncheckedSQLException
+     */
+    @Override
+    @Beta
+    default boolean noneMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws UncheckedSQLException {
+        try {
+            return prepareQuery(selectPropNames, cond).noneMatch(rowFilter);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @return
+     * @throws UncheckedSQLException
+     */
+    @Override
+    @Beta
+    default boolean noneMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws UncheckedSQLException {
+        try {
+            return prepareQuery(selectPropNames, cond).noneMatch(rowFilter);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     *
      * @param cond
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -210,24 +319,24 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     Optional<T> findFirst(final Condition cond) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
     <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -244,13 +353,13 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -258,13 +367,13 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
             throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -282,12 +391,12 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     Optional<T> findOnlyOne(final Condition cond) throws DuplicatedResultException, UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws UncheckedSQLException the unchecked SQL exception
      */
@@ -295,12 +404,12 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicatedResultException, UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws UncheckedSQLException the unchecked SQL exception
      */
@@ -319,13 +428,13 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicatedResultException, UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws UncheckedSQLException the unchecked SQL exception
      */
@@ -334,13 +443,13 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
             throws DuplicatedResultException, UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws UncheckedSQLException the unchecked SQL exception
      */
@@ -509,10 +618,10 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * Query for single non null.
      *
      * @param <V> the value type
-     * @param targetValueClass 
-     * @param singleSelectPropName 
-     * @param cond 
-     * @return 
+     * @param targetValueClass
+     * @param singleSelectPropName
+     * @param cond
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      */
@@ -539,11 +648,11 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * Query for unique non null.
      *
      * @param <V> the value type
-     * @param targetValueClass 
-     * @param singleSelectPropName 
-     * @param cond 
-     * @return 
-     * @throws DuplicatedResultException 
+     * @param targetValueClass
+     * @param singleSelectPropName
+     * @param cond
+     * @return
+     * @throws DuplicatedResultException
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -570,25 +679,25 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     DataSet query(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
+     *
+     * @param <R>
+     * @param cond
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return 
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
     <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
+     * @param cond
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return 
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -596,25 +705,25 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
             throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
+     *
+     * @param <R>
+     * @param cond
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return 
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
     <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
+     * @param cond
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return 
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -631,50 +740,50 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     List<T> list(final Condition cond) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
     <R> List<R> list(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
     <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowFilter 
-     * @param rowMapper 
-     * @return 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
     <R> List<R> list(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowFilter 
-     * @param rowMapper 
-     * @return 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -691,26 +800,26 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     List<T> list(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -718,14 +827,14 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
             throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowFilter 
-     * @param rowMapper 
-     * @return 
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -733,14 +842,14 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
             final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowFilter 
-     * @param rowMapper 
-     * @return 
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -748,12 +857,12 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
             final Jdbc.BiRowMapper<? extends R> rowMapper) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param singleSelectPropName 
-     * @param cond 
-     * @return 
+     *
+     * @param <R>
+     * @param singleSelectPropName
+     * @param cond
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -766,13 +875,13 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     }
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param singleSelectPropName 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     *
+     * @param <R>
+     * @param singleSelectPropName
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -782,14 +891,14 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     }
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param singleSelectPropName 
-     * @param cond 
-     * @param rowFilter 
-     * @param rowMapper 
-     * @return 
+     *
+     * @param <R>
+     * @param singleSelectPropName
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -799,76 +908,76 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     }
 
     /**
-     * 
      *
-     * @param cond 
-     * @param rowConsumer 
+     *
+     * @param cond
+     * @param rowConsumer
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
     void forEach(final Condition cond, final Jdbc.RowConsumer rowConsumer) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param cond 
-     * @param rowConsumer 
+     *
+     * @param cond
+     * @param rowConsumer
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
     void forEach(final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param cond 
-     * @param rowFilter 
-     * @param rowConsumer 
+     *
+     * @param cond
+     * @param rowFilter
+     * @param rowConsumer
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
     void forEach(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param cond 
-     * @param rowFilter 
-     * @param rowConsumer 
+     *
+     * @param cond
+     * @param rowFilter
+     * @param rowConsumer
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
     void forEach(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param selectPropNames 
-     * @param cond 
-     * @param rowConsumer 
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowConsumer
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowConsumer rowConsumer) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param selectPropNames 
-     * @param cond 
-     * @param rowConsumer 
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowConsumer
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param selectPropNames 
-     * @param cond 
-     * @param rowFilter 
-     * @param rowConsumer 
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @param rowConsumer
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -876,12 +985,12 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
             throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param selectPropNames 
-     * @param cond 
-     * @param rowFilter 
-     * @param rowConsumer 
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @param rowConsumer
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -889,12 +998,12 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
             throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param selectPropNames 
-     * @param cond 
-     * @param rowConsumer 
-     * @throws UncheckedSQLException 
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowConsumer
+     * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -907,11 +1016,11 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     }
 
     /**
-     * 
      *
-     * @param cond 
-     * @param rowConsumer 
-     * @throws UncheckedSQLException 
+     *
+     * @param cond
+     * @param rowConsumer
+     * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -967,11 +1076,11 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     /**
      * Update all the records found by specified {@code cond} with specified {@code propNamesToUpdate} from specified {@code entity}.
      *
-     * @param entity 
-     * @param propNamesToUpdate 
-     * @param cond 
-     * @return 
-     * @throws UncheckedSQLException 
+     * @param entity
+     * @param propNamesToUpdate
+     * @param cond
+     * @return
+     * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */

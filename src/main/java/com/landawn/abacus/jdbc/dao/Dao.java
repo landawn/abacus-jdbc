@@ -257,9 +257,9 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     Class<T> targetEntityClass();
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      * @deprecated for internal use only.
      */
     @Deprecated
@@ -268,9 +268,9 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     Executor executor();
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      * @deprecated for internal use only.
      */
     @Deprecated
@@ -414,12 +414,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * 
      *
-     * @param query 
-     * @param returnColumnNames 
-     * @return 
-     * @throws SQLException 
+     *
+     * @param query
+     * @param returnColumnNames
+     * @return
+     * @throws SQLException
      */
     @Beta
     @NonDBOperation
@@ -756,36 +756,36 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * 
      *
-     * @param entityToSave 
-     * @throws SQLException 
+     *
+     * @param entityToSave
+     * @throws SQLException
      */
     void save(final T entityToSave) throws SQLException;
 
     /**
-     * 
      *
-     * @param entityToSave 
-     * @param propNamesToSave 
-     * @throws SQLException 
+     *
+     * @param entityToSave
+     * @param propNamesToSave
+     * @throws SQLException
      */
     void save(final T entityToSave, final Collection<String> propNamesToSave) throws SQLException;
 
     /**
-     * 
      *
-     * @param namedInsertSQL 
-     * @param entityToSave 
-     * @throws SQLException 
+     *
+     * @param namedInsertSQL
+     * @param entityToSave
+     * @throws SQLException
      */
     void save(final String namedInsertSQL, final T entityToSave) throws SQLException;
 
     /**
      * Insert the specified entities to database by batch.
      *
-     * @param entitiesToSave 
-     * @throws SQLException 
+     * @param entitiesToSave
+     * @throws SQLException
      * @see CrudDao#batchInsert(Collection)
      */
     default void batchSave(final Collection<? extends T> entitiesToSave) throws SQLException {
@@ -795,9 +795,9 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Insert the specified entities to database by batch.
      *
-     * @param entitiesToSave 
-     * @param batchSize 
-     * @throws SQLException 
+     * @param entitiesToSave
+     * @param batchSize
+     * @throws SQLException
      * @see CrudDao#batchInsert(Collection)
      */
     void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws SQLException;
@@ -805,9 +805,9 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Insert the specified entities to database by batch.
      *
-     * @param entitiesToSave 
-     * @param propNamesToSave 
-     * @throws SQLException 
+     * @param entitiesToSave
+     * @param propNamesToSave
+     * @throws SQLException
      * @see CrudDao#batchInsert(Collection)
      */
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave) throws SQLException {
@@ -817,10 +817,10 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Insert the specified entities to database by batch.
      *
-     * @param entitiesToSave 
-     * @param propNamesToSave 
-     * @param batchSize 
-     * @throws SQLException 
+     * @param entitiesToSave
+     * @param propNamesToSave
+     * @param batchSize
+     * @throws SQLException
      * @see CrudDao#batchInsert(Collection)
      */
     void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize) throws SQLException;
@@ -828,9 +828,9 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Insert the specified entities to database by batch.
      *
-     * @param namedInsertSQL 
-     * @param entitiesToSave 
-     * @throws SQLException 
+     * @param namedInsertSQL
+     * @param entitiesToSave
+     * @throws SQLException
      * @see CrudDao#batchInsert(Collection)
      */
     @Beta
@@ -841,10 +841,10 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Insert the specified entities to database by batch.
      *
-     * @param namedInsertSQL 
-     * @param entitiesToSave 
-     * @param batchSize 
-     * @throws SQLException 
+     * @param namedInsertSQL
+     * @param entitiesToSave
+     * @param batchSize
+     * @throws SQLException
      * @see CrudDao#batchInsert(Collection)
      */
     @Beta
@@ -887,6 +887,84 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    default boolean anyMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws SQLException {
+        return prepareQuery(selectPropNames, cond).anyMatch(rowFilter);
+    }
+
+    /**
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    default boolean anyMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws SQLException {
+        return prepareQuery(selectPropNames, cond).anyMatch(rowFilter);
+    }
+
+    /**
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    default boolean allMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws SQLException {
+        return prepareQuery(selectPropNames, cond).allMatch(rowFilter);
+    }
+
+    /**
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    default boolean allMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws SQLException {
+        return prepareQuery(selectPropNames, cond).allMatch(rowFilter);
+    }
+
+    /**
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    default boolean noneMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws SQLException {
+        return prepareQuery(selectPropNames, cond).noneMatch(rowFilter);
+    }
+
+    /**
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    default boolean noneMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws SQLException {
+        return prepareQuery(selectPropNames, cond).noneMatch(rowFilter);
+    }
+
+    /**
+     *
      * @param cond
      * @return
      * @throws SQLException
@@ -896,13 +974,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     Optional<T> findFirst(final Condition cond) throws SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
-     * @throws SQLException 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowMapper
+     * @return
+     * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -910,13 +988,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException, NullPointerException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
-     * @throws SQLException 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowMapper
+     * @return
+     * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -935,14 +1013,14 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowMapper 
-     * @return 
-     * @throws SQLException 
+     * @param cond
+     * @param rowMapper
+     * @return
+     * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -951,14 +1029,14 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             throws SQLException, NullPointerException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowMapper 
-     * @return 
-     * @throws SQLException 
+     * @param cond
+     * @param rowMapper
+     * @return
+     * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -978,14 +1056,14 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     Optional<T> findOnlyOne(final Condition cond) throws DuplicatedResultException, SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException 
+     * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -994,14 +1072,14 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             throws DuplicatedResultException, SQLException, NullPointerException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException 
+     * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -1022,30 +1100,30 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicatedResultException, SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException 
+     * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      */
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws DuplicatedResultException, SQLException, NullPointerException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     * @param cond
+     * @param rowMapper
+     * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException 
+     * @throws SQLException
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -1228,11 +1306,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Query for single non null.
      *
      * @param <V> the value type
-     * @param targetValueClass 
-     * @param singleSelectPropName 
-     * @param cond 
-     * @return 
-     * @throws SQLException 
+     * @param targetValueClass
+     * @param singleSelectPropName
+     * @param cond
+     * @return
+     * @throws SQLException
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -1260,12 +1338,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Query for unique non null.
      *
      * @param <V> the value type
-     * @param targetValueClass 
-     * @param singleSelectPropName 
-     * @param cond 
-     * @return 
-     * @throws DuplicatedResultException 
-     * @throws SQLException 
+     * @param targetValueClass
+     * @param singleSelectPropName
+     * @param cond
+     * @return
+     * @throws DuplicatedResultException
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1294,52 +1372,52 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     DataSet query(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
+     *
+     * @param <R>
+     * @param cond
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return 
-     * @throws SQLException 
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
+     * @param cond
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return 
-     * @throws SQLException 
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
+     *
+     * @param <R>
+     * @param cond
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return 
-     * @throws SQLException 
+     * @return
+     * @throws SQLException
      */
     <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
+     * @param cond
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return 
-     * @throws SQLException 
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1356,54 +1434,54 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     List<T> list(final Condition cond) throws SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
-     * @throws SQLException 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowMapper
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     <R> List<R> list(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
-     * @throws SQLException 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowMapper
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowFilter 
-     * @param rowMapper 
-     * @return 
-     * @throws SQLException 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     <R> List<R> list(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowFilter 
-     * @param rowMapper 
-     * @return 
-     * @throws SQLException 
+     *
+     * @param <R>
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1421,43 +1499,43 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     List<T> list(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowMapper 
-     * @return 
-     * @throws SQLException 
+     * @param cond
+     * @param rowMapper
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowMapper 
-     * @return 
-     * @throws SQLException 
+     * @param cond
+     * @param rowMapper
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowFilter 
-     * @param rowMapper 
-     * @return 
-     * @throws SQLException 
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1465,15 +1543,15 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowFilter 
-     * @param rowMapper 
-     * @return 
-     * @throws SQLException 
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1481,13 +1559,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param singleSelectPropName 
-     * @param cond 
-     * @return 
-     * @throws SQLException 
+     *
+     * @param <R>
+     * @param singleSelectPropName
+     * @param cond
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1499,14 +1577,14 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param singleSelectPropName 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
-     * @throws SQLException 
+     *
+     * @param <R>
+     * @param singleSelectPropName
+     * @param cond
+     * @param rowMapper
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1515,15 +1593,15 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param singleSelectPropName 
-     * @param cond 
-     * @param rowFilter 
-     * @param rowMapper 
-     * @return 
-     * @throws SQLException 
+     *
+     * @param <R>
+     * @param singleSelectPropName
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1548,10 +1626,10 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * lazy-execution, lazy-fetch.
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     * @param <R>
+     * @param cond
+     * @param rowMapper
+     * @return
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1562,10 +1640,10 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     * @param <R>
+     * @param cond
+     * @param rowMapper
+     * @return
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1575,11 +1653,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowFilter 
-     * @param rowMapper 
-     * @return 
+     * @param <R>
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1589,11 +1667,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
-     * @param <R> 
-     * @param cond 
-     * @param rowFilter 
-     * @param rowMapper 
-     * @return 
+     * @param <R>
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1617,11 +1695,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
-     * @param <R> 
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     * @param cond
+     * @param rowMapper
+     * @return
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1632,11 +1710,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
-     * @param <R> 
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     * @param cond
+     * @param rowMapper
+     * @return
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1648,12 +1726,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
-     * @param <R> 
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowFilter 
-     * @param rowMapper 
-     * @return 
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1665,12 +1743,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
-     * @param <R> 
+     * @param <R>
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond 
-     * @param rowFilter 
-     * @param rowMapper 
-     * @return 
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1682,10 +1760,10 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
-     * @param <R> 
-     * @param singleSelectPropName 
-     * @param cond 
-     * @return 
+     * @param <R>
+     * @param singleSelectPropName
+     * @param cond
+     * @return
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1701,11 +1779,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
-     * @param <R> 
-     * @param singleSelectPropName 
-     * @param cond 
-     * @param rowMapper 
-     * @return 
+     * @param <R>
+     * @param singleSelectPropName
+     * @param cond
+     * @param rowMapper
+     * @return
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1719,12 +1797,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
-     * @param <R> 
-     * @param singleSelectPropName 
-     * @param cond 
-     * @param rowFilter 
-     * @param rowMapper 
-     * @return 
+     * @param <R>
+     * @param singleSelectPropName
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1735,83 +1813,83 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * 
      *
-     * @param cond 
-     * @param rowConsumer 
-     * @throws SQLException 
+     *
+     * @param cond
+     * @param rowConsumer
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     void forEach(final Condition cond, final Jdbc.RowConsumer rowConsumer) throws SQLException;
 
     /**
-     * 
      *
-     * @param cond 
-     * @param rowConsumer 
-     * @throws SQLException 
+     *
+     * @param cond
+     * @param rowConsumer
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     void forEach(final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws SQLException;
 
     /**
-     * 
      *
-     * @param cond 
-     * @param rowFilter 
-     * @param rowConsumer 
-     * @throws SQLException 
+     *
+     * @param cond
+     * @param rowFilter
+     * @param rowConsumer
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     void forEach(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer) throws SQLException;
 
     /**
-     * 
      *
-     * @param cond 
-     * @param rowFilter 
-     * @param rowConsumer 
-     * @throws SQLException 
+     *
+     * @param cond
+     * @param rowFilter
+     * @param rowConsumer
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     void forEach(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer) throws SQLException;
 
     /**
-     * 
      *
-     * @param selectPropNames 
-     * @param cond 
-     * @param rowConsumer 
-     * @throws SQLException 
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowConsumer
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowConsumer rowConsumer) throws SQLException;
 
     /**
-     * 
      *
-     * @param selectPropNames 
-     * @param cond 
-     * @param rowConsumer 
-     * @throws SQLException 
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowConsumer
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws SQLException;
 
     /**
-     * 
      *
-     * @param selectPropNames 
-     * @param cond 
-     * @param rowFilter 
-     * @param rowConsumer 
-     * @throws SQLException 
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @param rowConsumer
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1819,13 +1897,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             throws SQLException;
 
     /**
-     * 
      *
-     * @param selectPropNames 
-     * @param cond 
-     * @param rowFilter 
-     * @param rowConsumer 
-     * @throws SQLException 
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowFilter
+     * @param rowConsumer
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1833,12 +1911,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             throws SQLException;
 
     /**
-     * 
      *
-     * @param selectPropNames 
-     * @param cond 
-     * @param rowConsumer 
-     * @throws SQLException 
+     *
+     * @param selectPropNames
+     * @param cond
+     * @param rowConsumer
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1848,11 +1926,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * 
      *
-     * @param cond 
-     * @param rowConsumer 
-     * @throws SQLException 
+     *
+     * @param cond
+     * @param rowConsumer
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -1909,11 +1987,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Update all the records found by specified {@code cond} with specified {@code propNamesToUpdate} from specified {@code entity}.
      *
-     * @param entity 
-     * @param propNamesToUpdate 
-     * @param cond 
-     * @return 
-     * @throws SQLException 
+     * @param entity
+     * @param propNamesToUpdate
+     * @param cond
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */

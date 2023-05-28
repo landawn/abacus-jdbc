@@ -67,6 +67,30 @@ public class DaoTest {
     }
 
     @Test
+    public void test_match() throws SQLException {
+        final List<User> users = new ArrayList<>();
+
+        for (int i = 0; i < 789; i++) {
+            users.add(User.builder().id(100 + i).firstName("Forrest").lastName("Gump").email("123@email.com").build());
+        }
+
+        List<Long> ids = userDao.batchInsert(users);
+
+        assertTrue(userDao.anyMatch(N.asList("id"), CF.ge("id", 10), rs -> rs.getLong(1) > 10));
+        assertFalse(userDao.anyMatch(N.asList("id"), CF.ge("id", 10), rs -> rs.getLong(1) < 10));
+
+        assertTrue(userDao.allMatch(N.asList("id"), CF.ge("id", 10), rs -> rs.getLong(1) > 10));
+        assertFalse(userDao.allMatch(N.asList("id"), CF.ge("id", 10), rs -> rs.getLong(1) < 200));
+
+        assertTrue(userDao.noneMatch(N.asList("id"), CF.ge("id", 10), rs -> rs.getLong(1) > 10000));
+        assertTrue(userDao.noneMatch(N.asList("id"), CF.ge("id", 10), rs -> rs.getLong(1) < 10));
+
+        assertEquals(789, userDao.batchDeleteByIds(ids));
+
+        assertEquals(0, userDao.count(ids));
+    }
+
+    @Test
     public void test_count() throws SQLException {
         final List<User> users = new ArrayList<>();
 
