@@ -48,7 +48,7 @@ Optional<Account> account = JdbcUtil.prepareQuery(query)
 ```java
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
    // ...
-    @NamedInsert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
+    Insert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
     void insertWithId(User user) throws SQLException;
 }
 
@@ -83,7 +83,7 @@ userDao.deleteById(100L);
     String query = "select ....";
     
     // annotated on method in Dao interface
-    @NamedUpdate("UPDATE user SET first_name = :firstName, last_name = :lastName WHERE id = :id")
+    Update("UPDATE user SET first_name = :firstName, last_name = :lastName WHERE id = :id")
     int updateFirstAndLastName(@Bind("firstName") String newFirstName, @Bind("lastName") String newLastName, @Bind("id") long id) throws SQLException;
     
     // Or define it in nested class and then annotated by field name

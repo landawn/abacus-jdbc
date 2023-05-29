@@ -3164,93 +3164,93 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         }
     }
 
-    /**
-     *
-     * @param <T>
-     * @param targetType
-     * @return
-     * @throws DuplicatedResultException If More than one record found by the query
-     * @throws SQLException
-     * @deprecated replaced by {@code findOnlyOne}.
-     */
-    @Deprecated
-    public <T> Optional<T> get(final Class<? extends T> targetType) throws DuplicatedResultException, SQLException {
-        return Optional.ofNullable(gett(targetType));
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param rowMapper
-     * @return
-     * @throws DuplicatedResultException If More than one record found by the query
-     * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
-     * @deprecated replaced by {@code findOnlyOne}.
-     */
-    @Deprecated
-    public <T> Optional<T> get(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
-        return Optional.ofNullable(gett(rowMapper));
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param rowMapper
-     * @return
-     * @throws DuplicatedResultException If More than one record found by the query
-     * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
-     * @deprecated replaced by {@code findOnlyOne}.
-     */
-    @Deprecated
-    public <T> Optional<T> get(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
-        return Optional.ofNullable(gett(rowMapper));
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param targetType
-     * @return
-     * @throws DuplicatedResultException If More than one record found by the query
-     * @throws SQLException
-     * @deprecated replaced by {@code findOnlyOneOrNull}.
-     */
-    @Deprecated
-    public <T> T gett(final Class<? extends T> targetType) throws DuplicatedResultException, SQLException {
-        return findOnlyOneOrNull(targetType);
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param rowMapper
-     * @return
-     * @throws DuplicatedResultException If More than one record found by the query
-     * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
-     * @deprecated replaced by {@code findOnlyOneOrNull}.
-     */
-    @Deprecated
-    public <T> T gett(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
-        return findOnlyOneOrNull(rowMapper);
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param rowMapper
-     * @return
-     * @throws DuplicatedResultException If More than one record found by the query
-     * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
-     * @deprecated replaced by {@code findOnlyOneOrNull}.
-     */
-    @Deprecated
-    public <T> T gett(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
-        return findOnlyOneOrNull(rowMapper);
-    }
+    //    /**
+    //     *
+    //     * @param <T>
+    //     * @param targetType
+    //     * @return
+    //     * @throws DuplicatedResultException If More than one record found by the query
+    //     * @throws SQLException
+    //     * @deprecated replaced by {@code findOnlyOne}.
+    //     */
+    //    @Deprecated
+    //    public <T> Optional<T> get(final Class<? extends T> targetType) throws DuplicatedResultException, SQLException {
+    //        return Optional.ofNullable(gett(targetType));
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param <T>
+    //     * @param rowMapper
+    //     * @return
+    //     * @throws DuplicatedResultException If More than one record found by the query
+    //     * @throws SQLException
+    //     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+    //     * @deprecated replaced by {@code findOnlyOne}.
+    //     */
+    //    @Deprecated
+    //    public <T> Optional<T> get(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    //        return Optional.ofNullable(gett(rowMapper));
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param <T>
+    //     * @param rowMapper
+    //     * @return
+    //     * @throws DuplicatedResultException If More than one record found by the query
+    //     * @throws SQLException
+    //     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+    //     * @deprecated replaced by {@code findOnlyOne}.
+    //     */
+    //    @Deprecated
+    //    public <T> Optional<T> get(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    //        return Optional.ofNullable(gett(rowMapper));
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param <T>
+    //     * @param targetType
+    //     * @return
+    //     * @throws DuplicatedResultException If More than one record found by the query
+    //     * @throws SQLException
+    //     * @deprecated replaced by {@code findOnlyOneOrNull}.
+    //     */
+    //    @Deprecated
+    //    public <T> T gett(final Class<? extends T> targetType) throws DuplicatedResultException, SQLException {
+    //        return findOnlyOneOrNull(targetType);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param <T>
+    //     * @param rowMapper
+    //     * @return
+    //     * @throws DuplicatedResultException If More than one record found by the query
+    //     * @throws SQLException
+    //     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+    //     * @deprecated replaced by {@code findOnlyOneOrNull}.
+    //     */
+    //    @Deprecated
+    //    public <T> T gett(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    //        return findOnlyOneOrNull(rowMapper);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param <T>
+    //     * @param rowMapper
+    //     * @return
+    //     * @throws DuplicatedResultException If More than one record found by the query
+    //     * @throws SQLException
+    //     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+    //     * @deprecated replaced by {@code findOnlyOneOrNull}.
+    //     */
+    //    @Deprecated
+    //    public <T> T gett(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    //        return findOnlyOneOrNull(rowMapper);
+    //    }
 
     /**
      *
