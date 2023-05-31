@@ -2690,7 +2690,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Query for boolean.
+     * Returns an {@code OptionalBoolean} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalBoolean}.
      *
      * @return
      * @throws SQLException
@@ -2708,7 +2708,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     static final Type<Character> charType = TypeFactory.getType(char.class);
 
     /**
-     * Query for char.
+     * Returns an {@code OptionalChar} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalChar}.
      *
      * @return
      * @throws SQLException
@@ -2728,7 +2728,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Query for byte.
+     * Returns an {@code OptionalByte} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalByte}.
      *
      * @return
      * @throws SQLException
@@ -2744,7 +2744,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Query for short.
+     * Returns an {@code OptionalShort} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalShort}.
      *
      * @return
      * @throws SQLException
@@ -2760,7 +2760,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Query for int.
+     * Returns an {@code OptionalInt} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalInt}.
      *
      * @return
      * @throws SQLException
@@ -2776,7 +2776,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Query for long.
+     * Returns an {@code OptionalLong} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalLong}.
      *
      * @return
      * @throws SQLException
@@ -2792,7 +2792,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Query for float.
+     * Returns an {@code OptionalFloat} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalFloat}.
      *
      * @return
      * @throws SQLException
@@ -2808,7 +2808,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Query for double.
+     * Returns an {@code OptionalDouble} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalDouble}.
      *
      * @return
      * @throws SQLException
@@ -2824,7 +2824,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Query for string.
+     * Returns a {@code Nullable<String>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @return
      * @throws SQLException
@@ -2842,7 +2842,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     private static final Type<BigInteger> BIG_INTEGER_TYPE = Type.of(BigInteger.class);
 
     /**
-     * Query big integer.
+     * Returns a {@code Nullable<BigInteger>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @return
      * @throws SQLException
@@ -2859,7 +2859,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Query big decimal.
+     * Returns a {@code Nullable<BigDecimal>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @return
      * @throws SQLException
@@ -2876,7 +2876,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Query for date.
+     * Returns a {@code Nullable<java.sql.Date>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @return
      * @throws SQLException
@@ -2892,7 +2892,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Query for time.
+     * Returns a {@code Nullable<java.sql.Time>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @return
      * @throws SQLException
@@ -2908,7 +2908,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Query for timestamp.
+     * Returns a {@code Nullable<java.sql.Timestamp>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @return
      * @throws SQLException
@@ -2924,7 +2924,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
-     * Query for byte[].
+     * Returns a {@code Nullable<byte[]>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @return
      * @throws SQLException
@@ -3009,7 +3009,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     /**
      * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
-     * And throws {@code DuplicatedResultException} if more than one record found.
      *
      * @param <V> the value type
      * @param targetType
@@ -3026,7 +3025,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     /**
      * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
-     * And throws {@code DuplicatedResultException} if more than one record found.
      *
      * @param <V>
      * @param targetType
@@ -3054,7 +3052,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     /**
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
-     * And throws {@code DuplicatedResultException} if more than one record found.
      *
      * @param <V> the value type
      * @param targetType
@@ -3071,7 +3068,6 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     /**
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
-     * And throws {@code DuplicatedResultException} if more than one record found.
      *
      * @param <V> the value type
      * @param targetType

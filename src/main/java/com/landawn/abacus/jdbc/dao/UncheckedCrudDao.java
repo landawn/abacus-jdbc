@@ -24,10 +24,12 @@ import java.util.Set;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.condition.Condition;
+import com.landawn.abacus.condition.ConditionFactory;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.AbstractPreparedQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
+import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLExecutor;
 import com.landawn.abacus.jdbc.SQLTransaction;
@@ -181,239 +183,289 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
 
     /**
-     * Query for boolean.
+     * Returns an {@code OptionalBoolean} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalBoolean}.
      *
      * @param singleSelectPropName
      * @param id
      * @return
      * @throws UncheckedSQLException
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForBoolean()
      */
     @Override
     OptionalBoolean queryForBoolean(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
 
     /**
-     * Query for char.
+     * Returns an {@code OptionalChar} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalChar}.
      *
      * @param singleSelectPropName
      * @param id
      * @return
      * @throws UncheckedSQLException
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForChar()
      */
     @Override
     OptionalChar queryForChar(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
 
     /**
-     * Query for byte.
+     * Returns an {@code OptionalByte} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalByte}.
      *
      * @param singleSelectPropName
      * @param id
      * @return
      * @throws UncheckedSQLException
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForByte()
      */
     @Override
     OptionalByte queryForByte(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
 
     /**
-     * Query for short.
+     * Returns an {@code OptionalShort} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalShort}.
      *
      * @param singleSelectPropName
      * @param id
      * @return
      * @throws UncheckedSQLException
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForShort()
      */
     @Override
     OptionalShort queryForShort(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
 
     /**
-     * Query for int.
+     * Returns an {@code OptionalInt} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalInt}.
      *
      * @param singleSelectPropName
      * @param id
      * @return
      * @throws UncheckedSQLException
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForInt()
      */
     @Override
     OptionalInt queryForInt(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
 
     /**
-     * Query for long.
+     * Returns an {@code OptionalLong} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalLong}.
      *
      * @param singleSelectPropName
      * @param id
      * @return
      * @throws UncheckedSQLException
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForLong()
      */
     @Override
     OptionalLong queryForLong(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
 
     /**
-     * Query for float.
+     * Returns an {@code OptionalFloat} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalFloat}.
      *
      * @param singleSelectPropName
      * @param id
      * @return
      * @throws UncheckedSQLException
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForFloat()
      */
     @Override
     OptionalFloat queryForFloat(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
 
     /**
-     * Query for double.
+     * Returns an {@code OptionalDouble} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalDouble}.
      *
      * @param singleSelectPropName
      * @param id
      * @return
      * @throws UncheckedSQLException
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForDouble()
      */
     @Override
     OptionalDouble queryForDouble(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
 
     /**
-     * Query for string.
+     * Returns a {@code Nullable<String>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @param singleSelectPropName
      * @param id
      * @return
      * @throws UncheckedSQLException
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForString()
      */
     @Override
     Nullable<String> queryForString(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
 
     /**
-     * Query for date.
+     * Returns a {@code Nullable<java.sql.Date>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @param singleSelectPropName
      * @param id
      * @return
      * @throws UncheckedSQLException
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForDate()
      */
     @Override
     Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
 
     /**
-     * Query for time.
+     * Returns a {@code Nullable<java.sql.Time>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @param singleSelectPropName
      * @param id
      * @return
      * @throws UncheckedSQLException
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForTime()
      */
     @Override
     Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
 
     /**
-     * Query for timestamp.
+     * Returns a {@code Nullable<java.sql.Timestamp>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @param singleSelectPropName
      * @param id
      * @return
      * @throws UncheckedSQLException
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForTimestamp()
      */
     @Override
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
 
     /**
-     * Query for byte[].
+     * Returns a {@code Nullable<byte[]>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @param singleSelectPropName
      * @param id
      * @return
      * @throws UncheckedSQLException
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForBytes()
      */
     @Override
     Nullable<byte[]> queryForBytes(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
 
     /**
-     * Query for single result.
+     * Returns a {@code Nullable<V>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
-     * @param <V> the value type
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param id
      * @return
      * @throws UncheckedSQLException
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForSingleResult(Class)
      */
     @Override
     <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
             throws UncheckedSQLException;
 
     /**
-     * Query for single non null.
-     *
-     * @param <V> the value type
-     * @param targetValueClass 
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code idition}).
-     * @see IDFactory
-     * @see IDFactory.CF
-     */
-    @Override
-    <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
-            throws UncheckedSQLException;
-
-    /**
-     * Query for unique result.
+     * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
      *
      * @param <V> the value type
      * @param targetValueClass
      * @param singleSelectPropName
      * @param id
      * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code idition}).
      * @throws UncheckedSQLException
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForSingleNonNull(Class)
+     */
+    @Override
+    <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
+            throws UncheckedSQLException;
+
+    /**
+     * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
+     *
+     * @param <V> the value type
+     * @param singleSelectPropName
+     * @param id
+     * @param rowMapper
+     * @return
+     * @throws UncheckedSQLException
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForSingleNonNull(Class)
+     */
+    @Override
+    <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
+            throws DuplicatedResultException, UncheckedSQLException;
+
+    /**
+     * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
+     * And throws {@code DuplicatedResultException} if more than one record found.
+     *
+     * @param <V> the value type
+     * @param targetValueClass
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+     * @throws UncheckedSQLException
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForUniqueResult(Class)
      */
     @Override
     <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
             throws DuplicatedResultException, UncheckedSQLException;
 
     /**
-     * Query for unique non null.
+     * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
      *
      * @param <V> the value type
-     * @param targetValueClass 
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws DuplicatedResultException 
-     * @throws UncheckedSQLException 
-     * @see IDFactory
-     * @see IDFactory.CF
+     * @param targetValueClass
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+     * @throws UncheckedSQLException
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForUniqueNonNull(Class)
      */
     @Override
     <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
+            throws DuplicatedResultException, UncheckedSQLException;
+
+    /**
+     * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
+     *
+     * @param <V> the value type
+     * @param singleSelectPropName
+     * @param id
+     * @param rowMapper
+     * @return
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
+     * @throws UncheckedSQLException
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     * @see AbstractPreparedQuery#queryForUniqueNonNull(Class)
+     */
+    @Override
+    <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
             throws DuplicatedResultException, UncheckedSQLException;
 
     /**
@@ -528,11 +580,11 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     boolean exists(final ID id) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      * @see AbstractPreparedQuery#notExists()
      */
     @Beta

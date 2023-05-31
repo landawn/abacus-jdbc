@@ -1720,7 +1720,7 @@ final class DaoImpl {
         final DBVersion dbVersion = dbProductInfo.getVersion();
 
         final AsyncExecutor asyncExecutor = executor == null ? JdbcUtil.asyncExecutor : new AsyncExecutor(executor);
-        final boolean isUnchecked = UncheckedDao.class.isAssignableFrom(daoInterface);
+        final boolean isUncheckedDao = UncheckedDao.class.isAssignableFrom(daoInterface);
         final boolean isCrudDao = CrudDao.class.isAssignableFrom(daoInterface) || UncheckedCrudDao.class.isAssignableFrom(daoInterface);
         final boolean isCrudDaoL = CrudDaoL.class.isAssignableFrom(daoInterface) || UncheckedCrudDaoL.class.isAssignableFrom(daoInterface);
 
@@ -2182,7 +2182,7 @@ final class DaoImpl {
                 //        call = (proxy, args) -> sqlsCache.get(args[0]);
             } else {
                 final boolean isStreamReturn = Stream.class.isAssignableFrom(returnType) || ExceptionalStream.class.isAssignableFrom(returnType);
-                final boolean throwsSQLException = StreamEx.of(method.getExceptionTypes()).anyMatch(e -> SQLException.class.equals(e));
+                final boolean throwsSQLException = StreamEx.of(method.getExceptionTypes()).anyMatch(e -> e.isAssignableFrom(SQLException.class));
                 final Annotation sqlAnno = StreamEx.of(method.getAnnotations())
                         .filter(anno -> sqlAnnoMap.containsKey(anno.annotationType()))
                         .first()
@@ -2673,6 +2673,20 @@ final class DaoImpl {
                             final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForSingleNonNull(targetType);
                         };
+                    } else if (methodName.equals("queryForSingleNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
+                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final Jdbc.RowMapper<?> rowMapper = (Jdbc.RowMapper<?>) args[2];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).findFirst(rowMapper);
+                        };
                     } else if (methodName.equals("queryForUniqueResult") && paramLen == 3 && paramTypes[0].equals(Class.class)
                             && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
@@ -2700,6 +2714,20 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(2).settParameters(sp.parameters, collParamsSetter).queryForUniqueNonNull(targetType);
+                        };
+                    } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
+                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final Jdbc.RowMapper<?> rowMapper = (Jdbc.RowMapper<?>) args[2];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).findOnlyOne(rowMapper);
                         };
                     } else if (methodName.equals("query") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
                         call = (proxy, args) -> {
@@ -3784,8 +3812,8 @@ final class DaoImpl {
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForBytes();
                         };
-                    } else if (methodName.equals("queryForSingleResult") && paramLen == 2 && paramTypes[0].equals(String.class)
-                            && !paramTypes[1].equals(Condition.class)) {
+                    } else if (methodName.equals("queryForSingleResult") && paramLen == 3 && paramTypes[0].equals(Class.class)
+                            && paramTypes[1].equals(String.class) && !paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Class<?> targetType = (Class) args[0];
                             final String selectPropName = (String) args[1];
@@ -3798,8 +3826,8 @@ final class DaoImpl {
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForSingleResult(targetType);
                         };
-                    } else if (methodName.equals("queryForSingleNonNull") && paramLen == 2 && paramTypes[0].equals(String.class)
-                            && !paramTypes[1].equals(Condition.class)) {
+                    } else if (methodName.equals("queryForSingleNonNull") && paramLen == 3 && paramTypes[0].equals(Class.class)
+                            && paramTypes[1].equals(String.class) && !paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Class<?> targetType = (Class) args[0];
                             final String selectPropName = (String) args[1];
@@ -3812,8 +3840,22 @@ final class DaoImpl {
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForSingleNonNull(targetType);
                         };
-                    } else if (methodName.equals("queryForUniqueResult") && paramLen == 2 && paramTypes[0].equals(String.class)
-                            && !paramTypes[1].equals(Condition.class)) {
+                    } else if (methodName.equals("queryForSingleNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            final Jdbc.RowMapper<?> rowMapper = (Jdbc.RowMapper<?>) args[2];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).findFirst(rowMapper);
+                        };
+                    } else if (methodName.equals("queryForUniqueResult") && paramLen == 3 && paramTypes[0].equals(Class.class)
+                            && paramTypes[1].equals(String.class) && !paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Class<?> targetType = (Class) args[0];
                             final String selectPropName = (String) args[1];
@@ -3826,8 +3868,8 @@ final class DaoImpl {
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.sql).setFetchSize(2).settParameters(id, idParamSetter).queryForUniqueResult(targetType);
                         };
-                    } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 2 && paramTypes[0].equals(String.class)
-                            && !paramTypes[1].equals(Condition.class)) {
+                    } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 3 && paramTypes[0].equals(Class.class)
+                            && paramTypes[1].equals(String.class) && !paramTypes[2].equals(Condition.class)) {
                         call = (proxy, args) -> {
                             final Class<?> targetType = (Class) args[0];
                             final String selectPropName = (String) args[1];
@@ -3839,6 +3881,20 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.sql).setFetchSize(2).settParameters(id, idParamSetter).queryForUniqueNonNull(targetType);
+                        };
+                    } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowMapper.class)) {
+                        call = (proxy, args) -> {
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            final Jdbc.RowMapper<?> rowMapper = (Jdbc.RowMapper<?>) args[2];
+                            N.checkArgNotNullOrEmpty(selectPropName, "selectPropName");
+                            N.checkArgNotNull(id, "id");
+                            N.checkArgNotNull(rowMapper, "rowMapper");
+
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).findOnlyOne(rowMapper);
                         };
                     } else if (methodName.equals("gett")) {
                         if (paramLen == 1) {
@@ -4532,7 +4588,7 @@ final class DaoImpl {
                                 + ". Please use the OptionalXXX classes defined in com.landawn.abacus.util.u");
                     }
 
-                    if (!(isNonDBOperation || isUnchecked || throwsSQLException || isStreamReturn)) {
+                    if (!(isNonDBOperation || isUncheckedDao || throwsSQLException || isStreamReturn)) {
                         throw new UnsupportedOperationException("'throws SQLException' is not declared in method: " + fullClassMethodName
                                 + ". It's required for Dao interface extends Dao. Don't want to throw SQLException? extends UncheckedDao");
                     }
