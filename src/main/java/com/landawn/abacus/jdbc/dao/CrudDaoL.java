@@ -242,6 +242,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * @return
      * @throws SQLException
      */
+    @Beta
     default <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper)
             throws SQLException {
         return queryForSingleNonNull(singleSelectPropName, Long.valueOf(id), rowMapper);
@@ -289,6 +290,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * @throws DuplicatedResultException
      * @throws SQLException
      */
+    @Beta
     default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper)
             throws DuplicatedResultException, SQLException {
         return queryForUniqueNonNull(singleSelectPropName, Long.valueOf(id), rowMapper);

@@ -1343,6 +1343,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      * @see AbstractPreparedQuery#queryForSingleNonNull(Class)
      */
+    @Beta
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
             throws DuplicatedResultException, SQLException;
 
@@ -1395,6 +1396,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      * @see AbstractPreparedQuery#queryForUniqueNonNull(Class)
      */
+    @Beta
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
             throws DuplicatedResultException, SQLException;
 

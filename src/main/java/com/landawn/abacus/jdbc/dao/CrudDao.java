@@ -390,6 +390,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @see ConditionFactory.CF
      * @see AbstractPreparedQuery#queryForSingleNonNull(Class)
      */
+    @Beta
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
             throws DuplicatedResultException, SQLException;
 
@@ -442,6 +443,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @see ConditionFactory.CF
      * @see AbstractPreparedQuery#queryForUniqueNonNull(Class)
      */
+    @Beta
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
             throws DuplicatedResultException, SQLException;
 
