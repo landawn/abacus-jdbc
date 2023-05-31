@@ -15,7 +15,6 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -201,113 +200,113 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     @Override
     int count(final Condition cond) throws UncheckedSQLException;
 
-    /**
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowFilter
-     * @return
-     * @throws UncheckedSQLException
-     */
-    @Override
-    @Beta
-    default boolean anyMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws UncheckedSQLException {
-        try {
-            return prepareQuery(selectPropNames, cond).anyMatch(rowFilter);
-        } catch (SQLException e) {
-            throw new UncheckedSQLException(e);
-        }
-    }
-
-    /**
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowFilter
-     * @return
-     * @throws UncheckedSQLException
-     */
-    @Override
-    @Beta
-    default boolean anyMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws UncheckedSQLException {
-        try {
-            return prepareQuery(selectPropNames, cond).anyMatch(rowFilter);
-        } catch (SQLException e) {
-            throw new UncheckedSQLException(e);
-        }
-    }
-
-    /**
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowFilter
-     * @return
-     * @throws UncheckedSQLException
-     */
-    @Override
-    @Beta
-    default boolean allMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws UncheckedSQLException {
-        try {
-            return prepareQuery(selectPropNames, cond).allMatch(rowFilter);
-        } catch (SQLException e) {
-            throw new UncheckedSQLException(e);
-        }
-    }
-
-    /**
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowFilter
-     * @return
-     * @throws UncheckedSQLException
-     */
-    @Override
-    @Beta
-    default boolean allMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws UncheckedSQLException {
-        try {
-            return prepareQuery(selectPropNames, cond).allMatch(rowFilter);
-        } catch (SQLException e) {
-            throw new UncheckedSQLException(e);
-        }
-    }
-
-    /**
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowFilter
-     * @return
-     * @throws UncheckedSQLException
-     */
-    @Override
-    @Beta
-    default boolean noneMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws UncheckedSQLException {
-        try {
-            return prepareQuery(selectPropNames, cond).noneMatch(rowFilter);
-        } catch (SQLException e) {
-            throw new UncheckedSQLException(e);
-        }
-    }
-
-    /**
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowFilter
-     * @return
-     * @throws UncheckedSQLException
-     */
-    @Override
-    @Beta
-    default boolean noneMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws UncheckedSQLException {
-        try {
-            return prepareQuery(selectPropNames, cond).noneMatch(rowFilter);
-        } catch (SQLException e) {
-            throw new UncheckedSQLException(e);
-        }
-    }
+    //    /**
+    //     *
+    //     * @param selectPropNames
+    //     * @param cond
+    //     * @param rowFilter
+    //     * @return
+    //     * @throws UncheckedSQLException
+    //     */
+    //    @Override
+    //    @Beta
+    //    default boolean anyMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws UncheckedSQLException {
+    //        try {
+    //            return prepareQuery(selectPropNames, cond).anyMatch(rowFilter);
+    //        } catch (SQLException e) {
+    //            throw new UncheckedSQLException(e);
+    //        }
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param selectPropNames
+    //     * @param cond
+    //     * @param rowFilter
+    //     * @return
+    //     * @throws UncheckedSQLException
+    //     */
+    //    @Override
+    //    @Beta
+    //    default boolean anyMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws UncheckedSQLException {
+    //        try {
+    //            return prepareQuery(selectPropNames, cond).anyMatch(rowFilter);
+    //        } catch (SQLException e) {
+    //            throw new UncheckedSQLException(e);
+    //        }
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param selectPropNames
+    //     * @param cond
+    //     * @param rowFilter
+    //     * @return
+    //     * @throws UncheckedSQLException
+    //     */
+    //    @Override
+    //    @Beta
+    //    default boolean allMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws UncheckedSQLException {
+    //        try {
+    //            return prepareQuery(selectPropNames, cond).allMatch(rowFilter);
+    //        } catch (SQLException e) {
+    //            throw new UncheckedSQLException(e);
+    //        }
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param selectPropNames
+    //     * @param cond
+    //     * @param rowFilter
+    //     * @return
+    //     * @throws UncheckedSQLException
+    //     */
+    //    @Override
+    //    @Beta
+    //    default boolean allMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws UncheckedSQLException {
+    //        try {
+    //            return prepareQuery(selectPropNames, cond).allMatch(rowFilter);
+    //        } catch (SQLException e) {
+    //            throw new UncheckedSQLException(e);
+    //        }
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param selectPropNames
+    //     * @param cond
+    //     * @param rowFilter
+    //     * @return
+    //     * @throws UncheckedSQLException
+    //     */
+    //    @Override
+    //    @Beta
+    //    default boolean noneMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws UncheckedSQLException {
+    //        try {
+    //            return prepareQuery(selectPropNames, cond).noneMatch(rowFilter);
+    //        } catch (SQLException e) {
+    //            throw new UncheckedSQLException(e);
+    //        }
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param selectPropNames
+    //     * @param cond
+    //     * @param rowFilter
+    //     * @return
+    //     * @throws UncheckedSQLException
+    //     */
+    //    @Override
+    //    @Beta
+    //    default boolean noneMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws UncheckedSQLException {
+    //        try {
+    //            return prepareQuery(selectPropNames, cond).noneMatch(rowFilter);
+    //        } catch (SQLException e) {
+    //            throw new UncheckedSQLException(e);
+    //        }
+    //    }
 
     /**
      *

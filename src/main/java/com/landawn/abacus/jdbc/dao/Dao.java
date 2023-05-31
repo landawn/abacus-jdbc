@@ -885,83 +885,84 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     int count(final Condition cond) throws SQLException;
 
-    /**
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowFilter
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    default boolean anyMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws SQLException {
-        return prepareQuery(selectPropNames, cond).anyMatch(rowFilter);
-    }
-
-    /**
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowFilter
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    default boolean anyMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws SQLException {
-        return prepareQuery(selectPropNames, cond).anyMatch(rowFilter);
-    }
-
-    /**
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowFilter
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    default boolean allMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws SQLException {
-        return prepareQuery(selectPropNames, cond).allMatch(rowFilter);
-    }
-
-    /**
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowFilter
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    default boolean allMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws SQLException {
-        return prepareQuery(selectPropNames, cond).allMatch(rowFilter);
-    }
-
-    /**
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowFilter
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    default boolean noneMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws SQLException {
-        return prepareQuery(selectPropNames, cond).noneMatch(rowFilter);
-    }
-
-    /**
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowFilter
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    default boolean noneMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws SQLException {
-        return prepareQuery(selectPropNames, cond).noneMatch(rowFilter);
-    }
+    // TODO dao.anyMatch/allMatch/noneMatch(...) 语义/语境不对，在dao里
+    //    /**
+    //     *
+    //     * @param selectPropNames
+    //     * @param cond
+    //     * @param rowFilter
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    @Beta
+    //    default boolean anyMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws SQLException {
+    //        return prepareQuery(selectPropNames, cond).anyMatch(rowFilter);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param selectPropNames
+    //     * @param cond
+    //     * @param rowFilter
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    @Beta
+    //    default boolean anyMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws SQLException {
+    //        return prepareQuery(selectPropNames, cond).anyMatch(rowFilter);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param selectPropNames
+    //     * @param cond
+    //     * @param rowFilter
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    @Beta
+    //    default boolean allMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws SQLException {
+    //        return prepareQuery(selectPropNames, cond).allMatch(rowFilter);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param selectPropNames
+    //     * @param cond
+    //     * @param rowFilter
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    @Beta
+    //    default boolean allMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws SQLException {
+    //        return prepareQuery(selectPropNames, cond).allMatch(rowFilter);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param selectPropNames
+    //     * @param cond
+    //     * @param rowFilter
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    @Beta
+    //    default boolean noneMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws SQLException {
+    //        return prepareQuery(selectPropNames, cond).noneMatch(rowFilter);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param selectPropNames
+    //     * @param cond
+    //     * @param rowFilter
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    @Beta
+    //    default boolean noneMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws SQLException {
+    //        return prepareQuery(selectPropNames, cond).noneMatch(rowFilter);
+    //    }
 
     /**
      *
