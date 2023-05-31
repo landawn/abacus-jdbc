@@ -21,6 +21,7 @@ import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
@@ -235,6 +236,21 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      *
      *
      * @param <V>
+     * @param singleSelectPropName
+     * @param id
+     * @param rowMapper
+     * @return
+     * @throws SQLException
+     */
+    default <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper)
+            throws SQLException {
+        return queryForSingleNonNull(singleSelectPropName, Long.valueOf(id), rowMapper);
+    }
+
+    /**
+     *
+     *
+     * @param <V>
      * @param targetValueClass
      * @param singleSelectPropName
      * @param id
@@ -261,6 +277,21 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     default <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
             throws DuplicatedResultException, SQLException {
         return queryForUniqueNonNull(targetValueClass, singleSelectPropName, Long.valueOf(id));
+    }
+
+    /**
+     *
+     * @param <V>
+     * @param singleSelectPropName
+     * @param id
+     * @param rowMapper
+     * @return
+     * @throws DuplicatedResultException
+     * @throws SQLException
+     */
+    default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper)
+            throws DuplicatedResultException, SQLException {
+        return queryForUniqueNonNull(singleSelectPropName, Long.valueOf(id), rowMapper);
     }
 
     /**

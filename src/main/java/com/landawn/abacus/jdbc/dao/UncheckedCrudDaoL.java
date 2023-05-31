@@ -21,6 +21,7 @@ import java.util.Map;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
@@ -45,12 +46,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
         extends UncheckedCrudDao<T, Long, SB, TD>, CrudDaoL<T, SB, TD> {
 
     /**
-     * 
      *
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default OptionalBoolean queryForBoolean(final String singleSelectPropName, final long id) throws UncheckedSQLException {
@@ -58,12 +59,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default OptionalChar queryForChar(final String singleSelectPropName, final long id) throws UncheckedSQLException {
@@ -71,12 +72,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default OptionalByte queryForByte(final String singleSelectPropName, final long id) throws UncheckedSQLException {
@@ -84,12 +85,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default OptionalShort queryForShort(final String singleSelectPropName, final long id) throws UncheckedSQLException {
@@ -97,12 +98,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default OptionalInt queryForInt(final String singleSelectPropName, final long id) throws UncheckedSQLException {
@@ -110,12 +111,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default OptionalLong queryForLong(final String singleSelectPropName, final long id) throws UncheckedSQLException {
@@ -123,12 +124,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default OptionalFloat queryForFloat(final String singleSelectPropName, final long id) throws UncheckedSQLException {
@@ -136,12 +137,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default OptionalDouble queryForDouble(final String singleSelectPropName, final long id) throws UncheckedSQLException {
@@ -149,12 +150,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default Nullable<String> queryForString(final String singleSelectPropName, final long id) throws UncheckedSQLException {
@@ -162,12 +163,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final long id) throws UncheckedSQLException {
@@ -175,12 +176,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final long id) throws UncheckedSQLException {
@@ -188,12 +189,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final long id) throws UncheckedSQLException {
@@ -201,12 +202,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default Nullable<byte[]> queryForBytes(final String singleSelectPropName, final long id) throws UncheckedSQLException {
@@ -214,14 +215,14 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param <V> 
-     * @param targetValueClass 
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param <V>
+     * @param targetValueClass
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
@@ -230,14 +231,14 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param <V> 
-     * @param targetValueClass 
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param <V>
+     * @param targetValueClass
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
@@ -246,15 +247,30 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param <V> 
-     * @param targetValueClass 
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws DuplicatedResultException 
-     * @throws UncheckedSQLException 
+     * @param <V>
+     * @param singleSelectPropName
+     * @param id
+     * @param rowMapper
+     * @return
+     * @throws UncheckedSQLException
+     */
+    @Override
+    default <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper)
+            throws UncheckedSQLException {
+        return queryForSingleNonNull(singleSelectPropName, Long.valueOf(id), rowMapper);
+    }
+
+    /**
+     *
+     *
+     * @param <V>
+     * @param targetValueClass
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws DuplicatedResultException
+     * @throws UncheckedSQLException
      */
     @Override
     default <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
@@ -263,15 +279,15 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param <V> 
-     * @param targetValueClass 
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws DuplicatedResultException 
-     * @throws UncheckedSQLException 
+     *
+     * @param <V>
+     * @param targetValueClass
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws DuplicatedResultException
+     * @throws UncheckedSQLException
      */
     @Override
     default <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
@@ -280,11 +296,27 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     * @param <V>
+     * @param singleSelectPropName
+     * @param id
+     * @param rowMapper
+     * @return
+     * @throws DuplicatedResultException
+     * @throws UncheckedSQLException
+     */
+    @Override
+    default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper)
+            throws DuplicatedResultException, UncheckedSQLException {
+        return queryForUniqueNonNull(singleSelectPropName, Long.valueOf(id), rowMapper);
+    }
+
+    /**
+     *
+     *
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default Optional<T> get(final long id) throws UncheckedSQLException {
@@ -292,12 +324,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param id 
-     * @param selectPropNames 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param id
+     * @param selectPropNames
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default Optional<T> get(final long id, final Collection<String> selectPropNames) throws UncheckedSQLException {
@@ -305,11 +337,11 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default T gett(final long id) throws UncheckedSQLException {
@@ -317,12 +349,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param id 
-     * @param selectPropNames 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param id
+     * @param selectPropNames
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default T gett(final long id, final Collection<String> selectPropNames) throws UncheckedSQLException {
@@ -330,11 +362,11 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default boolean exists(final long id) throws UncheckedSQLException {
@@ -342,11 +374,11 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Beta
     @Override
@@ -355,13 +387,13 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param propName 
-     * @param propValue 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param propName
+     * @param propValue
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default int update(final String propName, final Object propValue, final long id) throws UncheckedSQLException {
@@ -369,12 +401,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param updateProps 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param updateProps
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default int update(final Map<String, Object> updateProps, final long id) throws UncheckedSQLException {
@@ -382,11 +414,11 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * 
      *
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      */
     @Override
     default int deleteById(final long id) throws UncheckedSQLException {
