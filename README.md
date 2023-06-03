@@ -112,10 +112,12 @@ userDao.selectUserByFirstName(firstName)
 ```
 <br />
 
-*  Questions? Please take a look at the samples in: `./samples/com.landawn.abacus.samples/...`
+
+## Why abacus-jdbc?
 
 The biggest difference between this library and other data(database) access frameworks is the simplicity/consistency/integrity in the APIs design.
 
+<br />
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
 
@@ -130,7 +132,7 @@ compile 'com.landawn:abacus-jdbc:3.3.6'
 ## User Guide:
 * [Introduction to JDBC](https://www.javacodegeeks.com/2015/02/jdbc-tutorial.html)
 * [Programming in JDBC/DB with JdbcUtil/PreparedQuery/SQLExecutor/Mapper/Dao](https://github.com/landawn/abacus-jdbc/wiki/Programming-in-RDBMS-with-Jdbc,-PreparedQuery,-SQLExecutor,-Mapper-and-Dao).
-* [More samples](https://github.com/landawn/abacus-jdbc/tree/master/samples/com/landawn/abacus/samples)
+* [More samples/questions(?)](https://github.com/landawn/abacus-jdbc/tree/master/samples/com/landawn/abacus/samples)
 
 ## Also See: [abacus-common](https://github.com/landawn/abacus-common), [abacus-entity-manager](https://github.com/landawn/abacus-entity-manager).
 
