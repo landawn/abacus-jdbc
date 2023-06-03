@@ -64,15 +64,19 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 *  How to execute a sql and retrieve the result(If needed).
 
 ```java
-// First set query parameters, if needed.
-	preparedQuery.setString(1, fistName)
-                   //.setLong(paramName,...) // for NamedQuery or PreparedCallableQuery.
-                   //.setParameterx(param1, param2...)
-                   //. 
-			            //.prepareQuery(connection, query...)		
-			            //.prepareNamedQuery(dataSource, namedQuery...)									   
-			            //.prepareCallableQuery(dataSource, query...)									   
-			            //....										   
+// There are tens of well designed methods in PreparedQuery/NamedQuery/PreparedCallableQuery.
+preparedQuery.setString(1, fistName) // First set query parameters, if needed.
+               //.setLong(paramName,...) // set parameter by parameter name for NamedQuery or PreparedCallableQuery.
+               //.setParameters(param1, param2...) // set several parameters in one line.
+               //.setParameters(Collection<?> parameters)
+               //.setParameters(ParametersSetter parametersSetter) // set parameters by functional interface. 
+               //....  
+               findFirst()
+               //.findFirst(rowMapper)
+               //.findOnlyOne()
+               //.list()
+               //.stream()
+               //.query...
 																		   
 
 // There are tens of well designed methods in PreparedQuery/NamedQuery/PreparedCallableQuery.
