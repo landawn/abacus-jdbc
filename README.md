@@ -66,9 +66,9 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 ```java
 // First set query parameters, if needed.
 	preparedQuery.setString(1, fistName)
-               //.setLong(paramName,...) // for NamedQuery or PreparedCallableQuery.
-               //.setParameterx(param1, param2...)
-               //. 
+                   //.setLong(paramName,...) // for NamedQuery or PreparedCallableQuery.
+                   //.setParameterx(param1, param2...)
+                   //. 
 			            //.prepareQuery(connection, query...)		
 			            //.prepareNamedQuery(dataSource, namedQuery...)									   
 			            //.prepareCallableQuery(dataSource, query...)									   
