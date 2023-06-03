@@ -8,8 +8,8 @@ Hope it will bring you the programming experiences: coding with SQL/DB is just l
 ## Features:
 
 This library is just about three things:
-*  How to write a sql script(if needed): [SQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/SQLBuilder_view.html), 
-[DynamicSQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DynamicSQLBuilder_view.html)
+*  How to write a `sql script`(if needed): [SQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/SQLBuilder_view.html), 
+[DynamicSQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DynamicSQLBuilder_view.html).
 
 ```java
 // Manually write the sql in plain string.
@@ -23,38 +23,44 @@ String query = PSC.selectFrom(Account.class).where(CF.eq("first")).sql();
 // Sql scripts can also placed in sql mapper xml file and then associated with a DAO object. See JdbcUtil.createDao(...) 
 ```
 
-*  How to use a sql to prepare Statement: [PreparedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedQuery_view.html), 
+*  How to prepare a [PreparedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedQuery_view.html), 
 [NamedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/NamedQuery_view.html), 
-[PreparedCallableQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedCallableQuery_view.html), 
-[JdbcUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtil_view.html),
-[JdbcUtils](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtils_view.html),
+[PreparedCallableQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedCallableQuery_view.html) with a `sql`.
 
 ```java
 // sql can be used to create PreparedQuery/NamedQuery/PreparedCallableQuery
-PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...); //.prepareQuery(connection, query...)
-																		   //.prepareNamedQuery(connection, namedQuery...)	
-																		   //.prepareCallableQuery(connection, query...)
+PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...); 
+									//.prepareQuery(connection, query...)		
+									//.prepareNamedQuery(connection, namedQuery...)									   
+									//.prepareCallableQuery(connection, query...)											   
+																		   
 
-// It can also associated a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
+// It can also associated a sql to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
-    ...
-    @Select(id = "sql_listToSet")
-    Set<User> listToSet(int id) throws SQLException;
+    // This is just a sample. Normally there is pre-defined method available for this query: userDao.list(Condition cond).
+    @Select(sql = "SELECT id, first_name, last_name, email FROM account WHERE first_Name = ?")
+    List<User> selectUserByFirstName(String firstName) throws SQLException;
+    
+    // Or id of the sql script defined in xml mapper file.
+    @Select(id = "selectUserByFirstName")
+    List<User> selectUserByFirstName(String firstName) throws SQLException;
+
+    // Or id of the sql script defined in below nested static class.
+    // Instead of writing sql script manually, you can use SQLBuilder/DynamicSQLBuilder to write sql scripts.
+    @Select(id = "selectUserByFirstName")
+    List<User> selectUserByFirstName(String firstName) throws SQLException;
 
     static final class SqlTable {
         @SqlField
-        static final String sql_listToSet = PSC.selectFrom(User.class).where(CF.gt("id")).sql();
+        static final String selectUserByFirstName = PSC.select("id", "firstName, "lastName", "email").from(Account.class).where(CF.eq("first")).sql();
     }
 }
 
-String query = PSC.select("id", "firstName, "lastName", "email").from(Account.class).where(CF.eq("first")).sql();
-// Or if select all columns from account:
-String query = PSC.selectFrom(Account.class).where(CF.eq("first")).sql();
-
-// Sql scripts can also placed in sql mapper xml file and then associated with a DAO object. See JdbcUtil.createDao(...) 
 ```
 
-
+, 
+[JdbcUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtil_view.html),
+[JdbcUtils](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtils_view.html).
 *  How to execute a sql and retrieve the result(If needed) 
 [Dao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dao_view.html)/[CrudDao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/CrudDao_view.html)/[JoinEntityHelper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JoinEntityHelper_view.html), 
 [Jdbc](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Jdbc_view.html),
