@@ -31,10 +31,10 @@ String query = PSC.selectFrom(Account.class).where(CF.eq("firstName")).sql();
 ```java
 // sql can be used to create PreparedQuery/NamedQuery/PreparedCallableQuery
 PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...); 
-									//.prepareQuery(connection, query...)		
-									//.prepareNamedQuery(dataSource, namedQuery...)									   
-									//.prepareCallableQuery(dataSource, query...)									   
-									//....										   
+			            //.prepareQuery(connection, query...)		
+			            //.prepareNamedQuery(dataSource, namedQuery...)									   
+			            //.prepareCallableQuery(dataSource, query...)									   
+			            //....										   
 																		   
 
 // It can also associated a sql to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
