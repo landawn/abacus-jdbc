@@ -121,7 +121,7 @@ The biggest difference between this library and other data(database) access fram
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
 
-* [Maven](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.landawn%22)
+* [Maven]([http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.landawn%22](https://central.sonatype.com/artifact/com.landawn/abacus-jdbc))
 
 * Gradle:
 ```gradle
@@ -131,7 +131,6 @@ compile 'com.landawn:abacus-jdbc:3.3.6'
 
 ## User Guide:
 * [Introduction to JDBC](https://www.javacodegeeks.com/2015/02/jdbc-tutorial.html)
-* [Programming in JDBC/DB with JdbcUtil/PreparedQuery/SQLExecutor/Mapper/Dao](https://github.com/landawn/abacus-jdbc/wiki/Programming-in-RDBMS-with-Jdbc,-PreparedQuery,-SQLExecutor,-Mapper-and-Dao).
 * [More samples/questions(?)](https://github.com/landawn/abacus-jdbc/tree/master/samples/com/landawn/abacus/samples)
 
 ## Also See: [abacus-common](https://github.com/landawn/abacus-common), [abacus-entity-manager](https://github.com/landawn/abacus-entity-manager).
