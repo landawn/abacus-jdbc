@@ -64,7 +64,7 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 *  How to execute a sql and retrieve the result(If needed).
 
 ```java
-// There are tens of well designed methods in PreparedQuery/NamedQuery/PreparedCallableQuery.
+// Execute the sql script by PreparedQuery/NamedQuery/PreparedCallableQuery
 preparedQuery.setString(1, fistName) // First set query parameters, if needed.
                //.setLong(paramName,...) // set parameter by parameter name for NamedQuery or PreparedCallableQuery.
                //.setParameters(param1, param2...) // set several parameters in one line.
@@ -76,30 +76,14 @@ preparedQuery.setString(1, fistName) // First set query parameters, if needed.
                //.findOnlyOne()
                //.list()
                //.stream()
-               //.query...
+               //.exists()/ifExists(rowConsumer)/query/update/batchUpdate/execute/... (Tens more well designed methods)
 																		   
+ 
 
-// There are tens of well designed methods in PreparedQuery/NamedQuery/PreparedCallableQuery.
+// Sql script can also be executed by directly calling DAO methods.
+userDao.selectUserByFirstName(firstName)
+         //.setLong(paramName,...) // set parameter by parameter name for NamedQuery or PreparedCallableQuery.
 
-// It can also associated to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
-public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
-    // This is just a sample. Normally there are pre-defined methods available for this query: userDao.list(Condition cond).
-    @Select(sql = "SELECT id, first_name, last_name, email FROM account WHERE first_Name = ?")
-    List<User> selectUserByFirstName(String firstName) throws SQLException;
-    
-    // Or id of the sql script defined in xml mapper file.
-    @Select(id = "selectUserByFirstName")
-    List<User> selectUserByFirstName(String firstName) throws SQLException;
-
-    // Or id of the sql script defined in below nested static class.
-    // Instead of writing sql scripts manually, you can also use SQLBuilder/DynamicSQLBuilder to write sql scripts.
-    @Select(id = "selectUserByFirstName")
-    List<User> selectUserByFirstName(String firstName) throws SQLException;
-
-    static final class SqlTable {
-        @SqlField
-        static final String selectUserByFirstName = PSC.select("id", "firstName, "lastName", "email").from(Account.class).where(CF.eq("first")).sql();
-    }
 }
 
 ```
