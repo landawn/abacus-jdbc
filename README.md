@@ -27,6 +27,10 @@ Hope it will bring you the programming experiences: coding with SQL/DB is just l
 
 
 ## Why abacus-jdbc?
+This library is just about three things:
+*  How to write a sql script(if needed)
+*  How to use a sql to prepare Statement.
+*  How to execute a sql and retrieve the result(If needed).
 
 Abacus-jdbc provides the best APIs, which you won't find in other libraries, for preparing query/setting parameters/extracting result. A lot of DB operations can be done through Dao/CrudDao without writing a single data access method.
 
