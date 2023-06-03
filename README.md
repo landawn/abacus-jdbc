@@ -87,7 +87,6 @@ preparedQuery.setString(1, fistName) // Firstly set query parameters, if needed.
                //.stream()
                //.exists()/ifExists(rowConsumer)/query/update/batchUpdate/execute/...
 																		   
- 
 
 // Sql script can also be executed by directly calling DAO methods.
 userDao.selectUserByFirstName(firstName)
@@ -100,8 +99,9 @@ userDao.selectUserByFirstName(firstName)
 ```
 <br />
 
+*  Questions? Please take a look at the samples in: `./samples/com.landawn.abacus.samples/...`
 
-* Questions? Please take a look at the samples in: `./samples/com.landawn.abacus.samples/...`
+The biggest difference between this library and other data(database) access frameworks is simplicity/consistency/integrality in the APIs design.
 
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
