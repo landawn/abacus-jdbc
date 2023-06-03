@@ -24,7 +24,7 @@ String query = PSC.selectFrom(Account.class).where(CF.eq("firstName")).sql();
 ```
 <br />
 
-*  How to prepare a [PreparedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedQuery_view.html), 
+*  How to create a [PreparedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedQuery_view.html), 
 [NamedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/NamedQuery_view.html), 
 [PreparedCallableQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedCallableQuery_view.html) with a `sql`.
 
@@ -37,9 +37,9 @@ PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...);
 			            //....										   
 																		   
 
-// It can also associated a sql to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
+// It can also associated to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
-    // This is just a sample. Normally there is pre-defined method available for this query: userDao.list(Condition cond).
+    // This is just a sample. Normally there are pre-defined methods available for this query: userDao.list(Condition cond).
     @Select(sql = "SELECT id, first_name, last_name, email FROM account WHERE first_Name = ?")
     List<User> selectUserByFirstName(String firstName) throws SQLException;
     
@@ -48,7 +48,7 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     List<User> selectUserByFirstName(String firstName) throws SQLException;
 
     // Or id of the sql script defined in below nested static class.
-    // Instead of writing sql script manually, you can use SQLBuilder/DynamicSQLBuilder to write sql scripts.
+    // Instead of writing sql scripts manually, you can also use SQLBuilder/DynamicSQLBuilder to write sql scripts.
     @Select(id = "selectUserByFirstName")
     List<User> selectUserByFirstName(String firstName) throws SQLException;
 
@@ -62,6 +62,44 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 <br />
 
 *  How to execute a sql and retrieve the result(If needed).
+
+```java
+// First set query parameters, if needed.
+	preparedQuery.setString(1, fistName)
+               //.setLong(paramName,...) // for NamedQuery or PreparedCallableQuery.
+               //.setParameterx(param1, param2...)
+               //. 
+			            //.prepareQuery(connection, query...)		
+			            //.prepareNamedQuery(dataSource, namedQuery...)									   
+			            //.prepareCallableQuery(dataSource, query...)									   
+			            //....										   
+																		   
+
+// There are tens of well designed methods in PreparedQuery/NamedQuery/PreparedCallableQuery.
+
+// It can also associated to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
+public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
+    // This is just a sample. Normally there are pre-defined methods available for this query: userDao.list(Condition cond).
+    @Select(sql = "SELECT id, first_name, last_name, email FROM account WHERE first_Name = ?")
+    List<User> selectUserByFirstName(String firstName) throws SQLException;
+    
+    // Or id of the sql script defined in xml mapper file.
+    @Select(id = "selectUserByFirstName")
+    List<User> selectUserByFirstName(String firstName) throws SQLException;
+
+    // Or id of the sql script defined in below nested static class.
+    // Instead of writing sql scripts manually, you can also use SQLBuilder/DynamicSQLBuilder to write sql scripts.
+    @Select(id = "selectUserByFirstName")
+    List<User> selectUserByFirstName(String firstName) throws SQLException;
+
+    static final class SqlTable {
+        @SqlField
+        static final String selectUserByFirstName = PSC.select("id", "firstName, "lastName", "email").from(Account.class).where(CF.eq("first")).sql();
+    }
+}
+
+```
+<br />
 [Dao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dao_view.html)/[CrudDao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/CrudDao_view.html)/[JoinEntityHelper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JoinEntityHelper_view.html), 
 [Jdbc](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Jdbc_view.html),
 [DataSet](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DataSet_view.html), 
