@@ -89,7 +89,7 @@ preparedQuery.setString(1, fistName) // Firstly set query parameters, if needed.
            //.setParameters(Collection<?> parameters)
            //.setParameters(ParametersSetter parametersSetter) // set parameters by functional interface. 
            //....  
-           findFirst()
+             .findFirst()
            //.findFirst(rowMapper)
            //.findOnlyOne()
            //.list()
