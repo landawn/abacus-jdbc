@@ -121,7 +121,7 @@ The biggest difference between this library and other data(database) access fram
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
 
-* [Maven]([http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.landawn%22](https://central.sonatype.com/artifact/com.landawn/abacus-jdbc))
+* [Maven](https://central.sonatype.com/artifact/com.landawn/abacus-jdbc)
 
 * Gradle:
 ```gradle
