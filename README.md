@@ -71,9 +71,9 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 [JdbcUtils](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtils_view.html).
 
 ```java
-// Execute the sql script by PreparedQuery/NamedQuery/PreparedCallableQuery
-preparedQuery.setString(1, fistName) // First set query parameters, if needed.
-               //.setLong(paramName,...) // set parameter by parameter name for NamedQuery or PreparedCallableQuery.
+// Execute the sql script by a PreparedQuery/NamedQuery/PreparedCallableQuery
+preparedQuery.setString(1, fistName) // Firstly set query parameters, if needed.
+               //.setLong(paramName, paramValue) // set named parameters for NamedQuery or PreparedCallableQuery.
                //.setParameters(entity) // set named parameters by entity with getter/setter methods
                //.setParameters(Map<String, ?>) // set named parameters by Map
                //.setParameters(param1, param2...) // set several parameters in one line.
@@ -85,7 +85,7 @@ preparedQuery.setString(1, fistName) // First set query parameters, if needed.
                //.findOnlyOne()
                //.list()
                //.stream()
-               //.exists()/ifExists(rowConsumer)/query/update/batchUpdate/execute/... (Tens more well designed methods)
+               //.exists()/ifExists(rowConsumer)/query/update/batchUpdate/execute/...
 																		   
  
 
@@ -95,14 +95,13 @@ userDao.selectUserByFirstName(firstName)
          //.findOnlyOne(Condition)
          //.list(Condition)
          //.stream(Condition)
-         //.update(user)/deleteById(userId)/batchInsert(Collection<User>)/... (Tens more well designed methods)
+         //.update(user)/deleteById(userId)/batchInsert(Collection<User>)/...
 
 ```
 <br />
 
 
-* Samples/questions? 
-    Take a look at the samples in: `./samples/com.landawn.abacus.samples/...`
+* Questions? Please take a look at the samples in: `./samples/com.landawn.abacus.samples/...`
 
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
