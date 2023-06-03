@@ -29,6 +29,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLType;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -560,6 +561,34 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
+     * Sets the String.
+     *
+     * @param parameterIndex
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public This setNString(int parameterIndex, String x) throws SQLException {
+        stmt.setNString(parameterIndex, x);
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the String.
+     *
+     * @param parameterIndex
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public This setNString(int parameterIndex, CharSequence x) throws SQLException {
+        stmt.setNString(parameterIndex, x == null ? null : x.toString());
+
+        return (This) this;
+    }
+
+    /**
      * Sets the date.
      *
      * @param parameterIndex starts from 1, not 0.
@@ -583,6 +612,21 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      */
     public This setDate(int parameterIndex, java.util.Date x) throws SQLException {
         stmt.setDate(parameterIndex, x == null ? null : x instanceof java.sql.Date ? (java.sql.Date) x : new java.sql.Date(x.getTime()));
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the date.
+     *
+     * @param parameterIndex starts from 1, not 0.
+     * @param x
+     * @param cal
+     * @return
+     * @throws SQLException
+     */
+    public This setDate(int parameterIndex, java.sql.Date x, Calendar cal) throws SQLException {
+        stmt.setDate(parameterIndex, x, cal);
 
         return (This) this;
     }
@@ -616,6 +660,21 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
+     * Sets the time.
+     *
+     * @param parameterIndex starts from 1, not 0.
+     * @param x
+     * @param cal
+     * @return
+     * @throws SQLException
+     */
+    public This setTime(int parameterIndex, java.sql.Time x, Calendar cal) throws SQLException {
+        stmt.setTime(parameterIndex, x, cal);
+
+        return (This) this;
+    }
+
+    /**
      * Sets the timestamp.
      *
      * @param parameterIndex starts from 1, not 0.
@@ -644,6 +703,20 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
+     * Sets the timestamp.
+     *
+     * @param parameterIndex starts from 1, not 0.
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public This setTimestamp(int parameterIndex, java.sql.Timestamp x, Calendar cal) throws SQLException {
+        stmt.setTimestamp(parameterIndex, x, cal);
+
+        return (This) this;
+    }
+
+    /**
      * Sets the bytes.
      *
      * @param parameterIndex
@@ -667,6 +740,21 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      */
     public This setAsciiStream(int parameterIndex, InputStream inputStream) throws SQLException {
         stmt.setAsciiStream(parameterIndex, inputStream);
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the ascii stream.
+     *
+     * @param parameterIndex
+     * @param inputStream
+     * @param length
+     * @return
+     * @throws SQLException
+     */
+    public This setAsciiStream(int parameterIndex, InputStream inputStream, int length) throws SQLException {
+        stmt.setAsciiStream(parameterIndex, inputStream, length);
 
         return (This) this;
     }
@@ -709,6 +797,21 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @return
      * @throws SQLException
      */
+    public This setBinaryStream(int parameterIndex, InputStream inputStream, int length) throws SQLException {
+        stmt.setBinaryStream(parameterIndex, inputStream, length);
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the binary stream.
+     *
+     * @param parameterIndex
+     * @param inputStream
+     * @param length
+     * @return
+     * @throws SQLException
+     */
     public This setBinaryStream(int parameterIndex, InputStream inputStream, long length) throws SQLException {
         stmt.setBinaryStream(parameterIndex, inputStream, length);
 
@@ -725,6 +828,21 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      */
     public This setCharacterStream(int parameterIndex, Reader reader) throws SQLException {
         stmt.setCharacterStream(parameterIndex, reader);
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the character stream.
+     *
+     * @param parameterIndex
+     * @param reader
+     * @param length
+     * @return
+     * @throws SQLException
+     */
+    public This setCharacterStream(int parameterIndex, Reader reader, int length) throws SQLException {
+        stmt.setCharacterStream(parameterIndex, reader, length);
 
         return (This) this;
     }
@@ -2630,12 +2748,12 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws SQLException
      */
     @Beta
-    public This configStmt(final Throwables.Consumer<? super This, ? extends SQLException> stmtSetter) throws SQLException {
+    public This configStmt(final Throwables.Consumer<? super Stmt, ? extends SQLException> stmtSetter) throws SQLException {
         checkArgNotNull(stmtSetter, "stmtSetter");
         boolean noException = false;
 
         try {
-            stmtSetter.accept((This) this);
+            stmtSetter.accept(stmt);
 
             noException = true;
         } finally {

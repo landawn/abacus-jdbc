@@ -369,6 +369,20 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     }
 
     /**
+     * Sets the string.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public PreparedCallableQuery setNString(String parameterName, String x) throws SQLException {
+        cstmt.setNString(parameterName, x);
+
+        return this;
+    }
+
+    /**
      * Sets the date.
      *
      * @param parameterName
@@ -2037,10 +2051,10 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param targetType 
+     *
+     * @param <T>
+     * @param targetType
      * @return the {@code ExceptionalStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      */
     public <T> ExceptionalStream<T, SQLException> streamAll(final Class<? extends T> targetType) {
@@ -2050,10 +2064,10 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param rowMapper 
+     *
+     * @param <T>
+     * @param rowMapper
      * @return the {@code ExceptionalStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      */
     public <T> ExceptionalStream<T, SQLException> streamAll(final Jdbc.RowMapper<? extends T> rowMapper) {
@@ -2068,11 +2082,11 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param rowFilter 
-     * @param rowMapper 
+     *
+     * @param <T>
+     * @param rowFilter
+     * @param rowMapper
      * @return the {@code ExceptionalStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      */
     public <T> ExceptionalStream<T, SQLException> streamAll(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) {
@@ -2088,10 +2102,10 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param rowMapper 
+     *
+     * @param <T>
+     * @param rowMapper
      * @return the {@code ExceptionalStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      */
     public <T> ExceptionalStream<T, SQLException> streamAll(final Jdbc.BiRowMapper<? extends T> rowMapper) {
@@ -2106,11 +2120,11 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param rowFilter 
-     * @param rowMapper 
+     *
+     * @param <T>
+     * @param rowFilter
+     * @param rowMapper
      * @return the {@code ExceptionalStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      */
     public <T> ExceptionalStream<T, SQLException> streamAll(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) {

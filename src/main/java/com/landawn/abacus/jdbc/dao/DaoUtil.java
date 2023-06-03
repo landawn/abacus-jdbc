@@ -16,6 +16,8 @@
 package com.landawn.abacus.jdbc.dao;
 
 import java.lang.reflect.ParameterizedType;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashSet;
@@ -26,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.jdbc.AbstractPreparedQuery;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JoinInfo;
 import com.landawn.abacus.jdbc.NamedQuery;
@@ -60,9 +61,10 @@ final class DaoUtil {
         // singleton.
     }
 
-    @SuppressWarnings("rawtypes")
-    static final Throwables.Consumer<AbstractPreparedQuery, ? extends SQLException> stmtSetterForBigQueryResult = stmt -> stmt.setFetchDirectionToForward()
-            .setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+    static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
+        stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
+        stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+    };
 
     @SuppressWarnings("deprecation")
     static <T, ID> ID extractId(final T entity, final List<String> idPropNameList, final BeanInfo entityInfo) {

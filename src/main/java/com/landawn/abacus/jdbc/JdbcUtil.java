@@ -202,11 +202,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param ds 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param ds
+     * @return
+     * @throws UncheckedSQLException
      */
     public static DBProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws UncheckedSQLException {
         try (Connection conn = ds.getConnection()) {
@@ -217,11 +217,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param conn 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param conn
+     * @return
+     * @throws UncheckedSQLException
      */
     public static DBProductInfo getDBProductInfo(final Connection conn) throws UncheckedSQLException {
         try {
@@ -918,11 +918,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param rs 
-     * @return 
-     * @throws SQLException 
+     *
+     * @param rs
+     * @return
+     * @throws SQLException
      */
     public static List<String> getColumnLabelList(ResultSet rs) throws SQLException {
         final ResultSetMetaData metaData = rs.getMetaData();
@@ -1085,11 +1085,11 @@ public final class JdbcUtil {
     /**
      * Gets the column value.
      *
-     * @param <T> 
-     * @param rs 
+     * @param <T>
+     * @param rs
      * @param columnIndex starts with 1, not 0.
-     * @return 
-     * @throws SQLException 
+     * @return
+     * @throws SQLException
      */
     public static <T> List<T> getAllColumnValues(final ResultSet rs, final int columnIndex) throws SQLException {
         // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
@@ -1260,11 +1260,11 @@ public final class JdbcUtil {
     /**
      * Gets the column value.
      *
-     * @param <T> 
-     * @param rs 
-     * @param columnLabel 
-     * @return 
-     * @throws SQLException 
+     * @param <T>
+     * @param rs
+     * @param columnLabel
+     * @return
+     * @throws SQLException
      */
     public static <T> List<T> getAllColumnValues(final ResultSet rs, final String columnLabel) throws SQLException {
         final int columnIndex = JdbcUtil.getColumnIndex(rs, columnLabel);
@@ -1279,12 +1279,12 @@ public final class JdbcUtil {
     /**
      * Gets the column value.
      *
-     * @param <T> 
-     * @param rs 
-     * @param columnIndex 
-     * @param targetClass 
-     * @return 
-     * @throws SQLException 
+     * @param <T>
+     * @param rs
+     * @param columnIndex
+     * @param targetClass
+     * @return
+     * @throws SQLException
      */
     public static <T> T getColumnValue(final ResultSet rs, final int columnIndex, final Class<? extends T> targetClass) throws SQLException {
         return N.<T> typeOf(targetClass).get(rs, columnIndex);
@@ -1293,12 +1293,12 @@ public final class JdbcUtil {
     /**
      * Gets the column value.
      *
-     * @param <T> 
-     * @param rs 
-     * @param columnLabel 
-     * @param targetClass 
-     * @return 
-     * @throws SQLException 
+     * @param <T>
+     * @param rs
+     * @param columnLabel
+     * @param targetClass
+     * @return
+     * @throws SQLException
      * @deprecated please consider using {@link #getColumnValue(ResultSet, int, Class)}
      */
     @Deprecated
@@ -1339,10 +1339,10 @@ public final class JdbcUtil {
     //    }
 
     /**
-     * 
      *
-     * @param entityClass 
-     * @return 
+     *
+     * @param entityClass
+     * @return
      */
     public static ImmutableMap<String, String> getColumn2FieldNameMap(Class<?> entityClass) {
         return QueryUtil.getColumn2PropNameMap(entityClass);
@@ -1582,12 +1582,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param <E> 
-     * @param dataSource 
-     * @param cmd 
-     * @throws E 
+     *
+     * @param <E>
+     * @param dataSource
+     * @param cmd
+     * @throws E
      */
     @Beta
     public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd) throws E {
@@ -1605,12 +1605,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param <E> 
-     * @param dataSource 
-     * @param cmd 
-     * @throws E 
+     *
+     * @param <E>
+     * @param dataSource
+     * @param cmd
+     * @throws E
      */
     @Beta
     public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Consumer<javax.sql.DataSource, E> cmd)
@@ -1708,12 +1708,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param <E> 
-     * @param dataSource 
-     * @param cmd 
-     * @throws E 
+     *
+     * @param <E>
+     * @param dataSource
+     * @param cmd
+     * @throws E
      */
     @Beta
     public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd) throws E {
@@ -1746,12 +1746,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param <E> 
-     * @param dataSource 
-     * @param cmd 
-     * @throws E 
+     *
+     * @param <E>
+     * @param dataSource
+     * @param cmd
+     * @throws E
      */
     @Beta
     public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource,
@@ -1812,19 +1812,17 @@ public final class JdbcUtil {
         return SQLOperation.UNKNOWN;
     }
 
-    @SuppressWarnings("rawtypes")
-    static final Throwables.Consumer<AbstractPreparedQuery, ? extends SQLException> stmtSetterForBigQueryResult = stmt -> {
+    static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
         // stmt.setFetchDirectionToForward().setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
-        stmt.setFetchDirectionToForward();
+        stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
         if (stmt.getFetchSize() < JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT) {
             stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
         }
     };
 
-    @SuppressWarnings("rawtypes")
-    static final Throwables.Consumer<AbstractPreparedQuery, ? extends SQLException> stmtSetterForStream = stmt -> {
-        stmt.setFetchDirectionToForward();
+    static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForStream = stmt -> {
+        stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
         if (stmt.getFetchSize() < JdbcUtil.DEFAULT_FETCH_SIZE_FOR_STREAM) {
             stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_STREAM);
@@ -4126,8 +4124,8 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.extractAllResultSets(stmt).onClose(Fn.closeQuietly(stmt))...}
      *
-     * @param stmt 
-     * @return 
+     * @param stmt
+     * @return
      */
     public static ExceptionalStream<DataSet, SQLException> extractAllResultSets(final Statement stmt) {
         return extractAllResultSets(stmt, ResultExtractor.TO_DATA_SET);
@@ -4138,10 +4136,10 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.extractAllResultSets(stmt, resultExtractor).onClose(Fn.closeQuietly(stmt))...}
      *
-     * @param <T> 
-     * @param stmt 
-     * @param resultExtractor 
-     * @return 
+     * @param <T>
+     * @param stmt
+     * @param resultExtractor
+     * @return
      */
     public static <T> ExceptionalStream<T, SQLException> extractAllResultSets(final Statement stmt, final ResultExtractor<T> resultExtractor) {
         N.checkArgNotNull(stmt, "stmt");
@@ -4160,10 +4158,10 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.extractAllResultSets(stmt, resultExtractor).onClose(Fn.closeQuietly(stmt))...}
      *
-     * @param <T> 
-     * @param stmt 
-     * @param resultExtractor 
-     * @return 
+     * @param <T>
+     * @param stmt
+     * @param resultExtractor
+     * @return
      */
     public static <T> ExceptionalStream<T, SQLException> extractAllResultSets(final Statement stmt, final BiResultExtractor<T> resultExtractor) {
         N.checkArgNotNull(stmt, "stmt");
@@ -5141,10 +5139,10 @@ public final class JdbcUtil {
     /**
      * Gets the DB sequence.
      *
-     * @param ds 
-     * @param tableName 
-     * @param seqName 
-     * @return 
+     * @param ds
+     * @param tableName
+     * @param seqName
+     * @return
      */
     public static DBSequence getDBSequence(final javax.sql.DataSource ds, final String tableName, final String seqName) {
         return new DBSequence(ds, tableName, seqName, 0, 1000);
@@ -5153,12 +5151,12 @@ public final class JdbcUtil {
     /**
      * Supports global sequence by db table.
      *
-     * @param ds 
-     * @param tableName 
-     * @param seqName 
-     * @param startVal 
+     * @param ds
+     * @param tableName
+     * @param seqName
+     * @param startVal
      * @param seqBufferSize the numbers to allocate/reserve from database table when cached numbers are used up.
-     * @return 
+     * @return
      */
     public static DBSequence getDBSequence(final javax.sql.DataSource ds, final String tableName, final String seqName, final long startVal,
             final int seqBufferSize) {
@@ -5168,9 +5166,9 @@ public final class JdbcUtil {
     /**
      * Supports global lock by db table.
      *
-     * @param ds 
-     * @param tableName 
-     * @return 
+     * @param ds
+     * @param tableName
+     * @return
      */
     public static DBLock getDBLock(final javax.sql.DataSource ds, final String tableName) {
         return new DBLock(ds, tableName);
@@ -5200,7 +5198,7 @@ public final class JdbcUtil {
     static boolean isSqlLogAllowed = true;
 
     /**
-     * 
+     *
      */
     public static void turnOffSqlLogGlobally() {
         isSqlLogAllowed = false;
@@ -5209,7 +5207,7 @@ public final class JdbcUtil {
     static boolean isSqlPerfLogAllowed = true;
 
     /**
-     * 
+     *
      */
     public static void turnOffSqlPerfLogGlobally() {
         isSqlPerfLogAllowed = false;
@@ -5218,7 +5216,7 @@ public final class JdbcUtil {
     static boolean isDaoMethodPerfLogAllowed = true;
 
     /**
-     * 
+     *
      */
     public static void turnOffDaoMethodPerfLogGlobally() {
         isDaoMethodPerfLogAllowed = false;
@@ -5321,18 +5319,18 @@ public final class JdbcUtil {
     //    }
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     public static Throwables.Function<Statement, String, SQLException> getSqlExtractor() {
         return _sqlExtractor;
     }
 
     /**
-     * 
      *
-     * @param sqlExtractor 
+     *
+     * @param sqlExtractor
      */
     public static void setSqlExtractor(final Throwables.Function<Statement, String, SQLException> sqlExtractor) {
         _sqlExtractor = sqlExtractor;
@@ -5341,9 +5339,9 @@ public final class JdbcUtil {
     private static TriConsumer<String, Long, Long> _sqlLogHandler = null; //NOSONAR
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     public static TriConsumer<String, Long, Long> getSqlLogHandler() {
         return _sqlLogHandler;
@@ -5617,9 +5615,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param sqlAction 
+     *
+     * @param sqlAction
      */
     @Beta
     public static void run(final Throwables.Runnable<Exception> sqlAction) {
@@ -5633,11 +5631,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param t 
-     * @param sqlAction 
+     *
+     * @param <T>
+     * @param t
+     * @param sqlAction
      */
     @Beta
     public static <T> void run(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) {
@@ -5651,13 +5649,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param <U> 
-     * @param t 
-     * @param u 
-     * @param sqlAction 
+     *
+     * @param <T>
+     * @param <U>
+     * @param t
+     * @param u
+     * @param sqlAction
      */
     @Beta
     public static <T, U> void run(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) {
@@ -5671,15 +5669,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param <A> 
-     * @param <B> 
-     * @param <C> 
-     * @param a 
-     * @param b 
-     * @param c 
-     * @param sqlAction 
+     *
+     * @param <A>
+     * @param <B>
+     * @param <C>
+     * @param a
+     * @param b
+     * @param c
+     * @param sqlAction
      */
     @Beta
     public static <A, B, C> void run(final A a, final B b, final C c, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) {
@@ -5693,11 +5691,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param <R> 
-     * @param sqlAction 
-     * @return 
+     *
+     * @param <R>
+     * @param sqlAction
+     * @return
      */
     @Beta
     public static <R> R call(final Callable<R> sqlAction) {
@@ -5711,13 +5709,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param <R> 
-     * @param t 
-     * @param sqlAction 
-     * @return 
+     *
+     * @param <T>
+     * @param <R>
+     * @param t
+     * @param sqlAction
+     * @return
      */
     @Beta
     public static <T, R> R call(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) {
@@ -5731,15 +5729,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param <U> 
-     * @param <R> 
-     * @param t 
-     * @param u 
-     * @param sqlAction 
-     * @return 
+     *
+     * @param <T>
+     * @param <U>
+     * @param <R>
+     * @param t
+     * @param u
+     * @param sqlAction
+     * @return
      */
     @Beta
     public static <T, U, R> R call(final T t, final U u, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) {
@@ -5753,17 +5751,17 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param <A> 
-     * @param <B> 
-     * @param <C> 
-     * @param <R> 
-     * @param a 
-     * @param b 
-     * @param c 
-     * @param sqlAction 
-     * @return 
+     *
+     * @param <A>
+     * @param <B>
+     * @param <C>
+     * @param <R>
+     * @param a
+     * @param b
+     * @param c
+     * @param sqlAction
+     * @return
      */
     @Beta
     public static <A, B, C, R> R call(final A a, final B b, final C c,
@@ -6231,14 +6229,14 @@ public final class JdbcUtil {
     private static final Map<Class<? extends Dao>, BiRowMapper<?>> idExtractorPool = new ConcurrentHashMap<>();
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param <ID> 
-     * @param <SB> 
-     * @param <TD> 
-     * @param daoInterface 
-     * @param idExtractor 
+     *
+     * @param <T>
+     * @param <ID>
+     * @param <SB>
+     * @param <TD>
+     * @param daoInterface
+     * @param idExtractor
      */
     public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
             final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final RowMapper<? extends ID> idExtractor) {
@@ -6249,14 +6247,14 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param <ID> 
-     * @param <SB> 
-     * @param <TD> 
-     * @param daoInterface 
-     * @param idExtractor 
+     *
+     * @param <T>
+     * @param <ID>
+     * @param <SB>
+     * @param <TD>
+     * @param daoInterface
+     * @param idExtractor
      */
     public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
             final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final BiRowMapper<? extends ID> idExtractor) {
@@ -6419,108 +6417,108 @@ public final class JdbcUtil {
     //    }
 
     /**
-     * 
      *
-     * @param ds 
-     * @param tableName 
-     * @return 
+     *
+     * @param ds
+     * @param tableName
+     * @return
      */
     public static String generateEntityClass(final DataSource ds, final String tableName) {
         return CodeGenerationUtil.generateEntityClass(ds, tableName);
     }
 
     /**
-     * 
      *
-     * @param ds 
-     * @param tableName 
-     * @param config 
-     * @return 
+     *
+     * @param ds
+     * @param tableName
+     * @param config
+     * @return
      */
     public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
         return CodeGenerationUtil.generateEntityClass(ds, tableName, config);
     }
 
     /**
-     * 
      *
-     * @param conn 
-     * @param tableName 
-     * @return 
+     *
+     * @param conn
+     * @param tableName
+     * @return
      */
     public static String generateEntityClass(final Connection conn, final String tableName) {
         return CodeGenerationUtil.generateEntityClass(conn, tableName);
     }
 
     /**
-     * 
      *
-     * @param conn 
-     * @param tableName 
-     * @param config 
-     * @return 
+     *
+     * @param conn
+     * @param tableName
+     * @param config
+     * @return
      */
     public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
         return CodeGenerationUtil.generateEntityClass(conn, tableName, config);
     }
 
     /**
-     * 
      *
-     * @param ds 
-     * @param entityName 
-     * @param query 
-     * @return 
+     *
+     * @param ds
+     * @param entityName
+     * @param query
+     * @return
      */
     public static String generateEntityClass(final DataSource ds, final String entityName, String query) {
         return CodeGenerationUtil.generateEntityClass(ds, entityName, query);
     }
 
     /**
-     * 
      *
-     * @param ds 
-     * @param entityName 
-     * @param query 
-     * @param config 
-     * @return 
+     *
+     * @param ds
+     * @param entityName
+     * @param query
+     * @param config
+     * @return
      */
     public static String generateEntityClass(final DataSource ds, final String entityName, String query, final EntityCodeConfig config) {
         return CodeGenerationUtil.generateEntityClass(ds, entityName, query, config);
     }
 
     /**
-     * 
      *
-     * @param conn 
-     * @param entityName 
-     * @param query 
-     * @return 
+     *
+     * @param conn
+     * @param entityName
+     * @param query
+     * @return
      */
     public static String generateEntityClass(final Connection conn, final String entityName, String query) {
         return CodeGenerationUtil.generateEntityClass(conn, entityName, query);
     }
 
     /**
-     * 
      *
-     * @param conn 
-     * @param entityName 
-     * @param query 
-     * @param config 
-     * @return 
+     *
+     * @param conn
+     * @param entityName
+     * @param query
+     * @param config
+     * @return
      */
     public static String generateEntityClass(final Connection conn, final String entityName, String query, final EntityCodeConfig config) {
         return CodeGenerationUtil.generateEntityClass(conn, entityName, query, config);
     }
 
     /**
-     * 
      *
-     * @param dataSource 
-     * @param tableName 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param dataSource
+     * @param tableName
+     * @return
+     * @throws UncheckedSQLException
      */
     public static String generateSelectSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
         try (Connection conn = dataSource.getConnection()) {
@@ -6531,11 +6529,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param conn 
-     * @param tableName 
-     * @return 
+     *
+     * @param conn
+     * @param tableName
+     * @return
      */
     public static String generateSelectSql(final Connection conn, final String tableName) {
         String query = "select * from " + tableName + " where 1 > 2";
@@ -6553,12 +6551,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param dataSource 
-     * @param tableName 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param dataSource
+     * @param tableName
+     * @return
+     * @throws UncheckedSQLException
      */
     public static String generateInsertSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
         try (Connection conn = dataSource.getConnection()) {
@@ -6569,11 +6567,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param conn 
-     * @param tableName 
-     * @return 
+     *
+     * @param conn
+     * @param tableName
+     * @return
      */
     public static String generateInsertSql(final Connection conn, final String tableName) {
         String query = "select * from " + tableName + " where 1 > 2";
@@ -6591,12 +6589,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param dataSource 
-     * @param tableName 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param dataSource
+     * @param tableName
+     * @return
+     * @throws UncheckedSQLException
      */
     public static String generateNamedInsertSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
         try (Connection conn = dataSource.getConnection()) {
@@ -6607,11 +6605,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param conn 
-     * @param tableName 
-     * @return 
+     *
+     * @param conn
+     * @param tableName
+     * @return
      */
     public static String generateNamedInsertSql(final Connection conn, final String tableName) {
         String query = "select * from " + tableName + " where 1 > 2";
@@ -6629,12 +6627,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param dataSource 
-     * @param tableName 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param dataSource
+     * @param tableName
+     * @return
+     * @throws UncheckedSQLException
      */
     public static String generateUpdateSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
         try (Connection conn = dataSource.getConnection()) {
@@ -6645,11 +6643,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param conn 
-     * @param tableName 
-     * @return 
+     *
+     * @param conn
+     * @param tableName
+     * @return
      */
     public static String generateUpdateSql(final Connection conn, final String tableName) {
         String query = "select * from " + tableName + " where 1 > 2";
@@ -6666,12 +6664,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param dataSource 
-     * @param tableName 
-     * @return 
-     * @throws UncheckedSQLException 
+     *
+     * @param dataSource
+     * @param tableName
+     * @return
+     * @throws UncheckedSQLException
      */
     public static String generateNamedUpdateSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
         try (Connection conn = dataSource.getConnection()) {
@@ -6682,11 +6680,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param conn 
-     * @param tableName 
-     * @return 
+     *
+     * @param conn
+     * @param tableName
+     * @return
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName) {
         String query = "select * from " + tableName + " where 1 > 2";
@@ -6731,75 +6729,75 @@ public final class JdbcUtil {
     //    }
 
     /**
-     * 
      *
-     * @param entity 
-     * @return 
+     *
+     * @param entity
+     * @return
      */
     public static Collection<String> getInsertPropNames(final Object entity) {
         return getInsertPropNames(entity, null);
     }
 
     /**
-     * 
      *
-     * @param entity 
-     * @param excludedPropNames 
-     * @return 
+     *
+     * @param entity
+     * @param excludedPropNames
+     * @return
      */
     public static Collection<String> getInsertPropNames(final Object entity, final Set<String> excludedPropNames) {
         return QueryUtil.getInsertPropNames(entity, excludedPropNames);
     }
 
     /**
-     * 
      *
-     * @param entityClass 
-     * @return 
+     *
+     * @param entityClass
+     * @return
      */
     public static Collection<String> getInsertPropNames(final Class<?> entityClass) {
         return getInsertPropNames(entityClass, null);
     }
 
     /**
-     * 
      *
-     * @param entityClass 
-     * @param excludedPropNames 
-     * @return 
+     *
+     * @param entityClass
+     * @param excludedPropNames
+     * @return
      */
     public static Collection<String> getInsertPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
         return QueryUtil.getInsertPropNames(entityClass, excludedPropNames);
     }
 
     /**
-     * 
      *
-     * @param entityClass 
-     * @return 
+     *
+     * @param entityClass
+     * @return
      */
     public static Collection<String> getSelectPropNames(final Class<?> entityClass) {
         return getSelectPropNames(entityClass, null);
     }
 
     /**
-     * 
      *
-     * @param entityClass 
-     * @param excludedPropNames 
-     * @return 
+     *
+     * @param entityClass
+     * @param excludedPropNames
+     * @return
      */
     public static Collection<String> getSelectPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
         return getSelectPropNames(entityClass, false, excludedPropNames);
     }
 
     /**
-     * 
      *
-     * @param entityClass 
-     * @param includeSubEntityProperties 
-     * @param excludedPropNames 
-     * @return 
+     *
+     * @param entityClass
+     * @param includeSubEntityProperties
+     * @param excludedPropNames
+     * @return
      */
     public static Collection<String> getSelectPropNames(final Class<?> entityClass, final boolean includeSubEntityProperties,
             final Set<String> excludedPropNames) {
@@ -6807,32 +6805,32 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param entityClass 
-     * @return 
+     *
+     * @param entityClass
+     * @return
      */
     public static Collection<String> getUpdatePropNames(final Class<?> entityClass) {
         return getUpdatePropNames(entityClass, null);
     }
 
     /**
-     * 
      *
-     * @param entityClass 
-     * @param excludedPropNames 
-     * @return 
+     *
+     * @param entityClass
+     * @param excludedPropNames
+     * @return
      */
     public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
         return QueryUtil.getUpdatePropNames(entityClass, excludedPropNames);
     }
 
     /**
-     * 
      *
-     * @param blob 
-     * @return 
-     * @throws SQLException 
+     *
+     * @param blob
+     * @return
+     * @throws SQLException
      */
     public static String blob2String(final Blob blob) throws SQLException {
         return new String(blob.getBytes(1, (int) blob.length()));
@@ -6840,35 +6838,35 @@ public final class JdbcUtil {
     }
 
     /**
-     * 
      *
-     * @param blob 
-     * @param charset 
-     * @return 
-     * @throws SQLException 
+     *
+     * @param blob
+     * @param charset
+     * @return
+     * @throws SQLException
      */
     public static String blob2String(final Blob blob, final Charset charset) throws SQLException {
         return new String(blob.getBytes(1, (int) blob.length()), charset);
     }
 
     /**
-     * 
      *
-     * @param blob 
-     * @param output 
-     * @return 
-     * @throws SQLException 
-     * @throws IOException 
+     *
+     * @param blob
+     * @param output
+     * @return
+     * @throws SQLException
+     * @throws IOException
      */
     public static long writeBlobToFile(final Blob blob, final File output) throws SQLException, IOException {
         return IOUtil.write(output, blob.getBinaryStream());
     }
 
     /**
-     * 
      *
-     * @param value 
-     * @return 
+     *
+     * @param value
+     * @return
      */
     public static boolean isNullOrDefault(final Object value) {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
