@@ -16,12 +16,13 @@ This library is just about three things:
 String query = "SELECT id, first_name, last_name, email FROM account WHERE first_Name = ?";
 
 // Or by SQLBuilder
-String query = PSC.select("id", "firstName, "lastName", "email").from(Account.class).where(CF.eq("first")).sql();
+String query = PSC.select("id", "firstName, "lastName", "email").from(Account.class).where(CF.eq("firstName")).sql();
 // Or if select all columns from account:
-String query = PSC.selectFrom(Account.class).where(CF.eq("first")).sql();
+String query = PSC.selectFrom(Account.class).where(CF.eq("firstName")).sql();
 
 // Sql scripts can also placed in sql mapper xml file and then associated with a DAO object. See JdbcUtil.createDao(...) 
 ```
+<br />
 
 *  How to prepare a [PreparedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedQuery_view.html), 
 [NamedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/NamedQuery_view.html), 
@@ -31,8 +32,9 @@ String query = PSC.selectFrom(Account.class).where(CF.eq("first")).sql();
 // sql can be used to create PreparedQuery/NamedQuery/PreparedCallableQuery
 PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...); 
 									//.prepareQuery(connection, query...)		
-									//.prepareNamedQuery(connection, namedQuery...)									   
-									//.prepareCallableQuery(connection, query...)											   
+									//.prepareNamedQuery(dataSource, namedQuery...)									   
+									//.prepareCallableQuery(dataSource, query...)									   
+									//....										   
 																		   
 
 // It can also associated a sql to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
@@ -57,11 +59,9 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 }
 
 ```
+<br />
 
-, 
-[JdbcUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtil_view.html),
-[JdbcUtils](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtils_view.html).
-*  How to execute a sql and retrieve the result(If needed) 
+*  How to execute a sql and retrieve the result(If needed).
 [Dao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dao_view.html)/[CrudDao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/CrudDao_view.html)/[JoinEntityHelper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JoinEntityHelper_view.html), 
 [Jdbc](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Jdbc_view.html),
 [DataSet](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DataSet_view.html), 
@@ -69,6 +69,10 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 
 Abacus-jdbc provides the best APIs, which you won't find in other libraries, for preparing query/setting parameters/extracting result. A lot of DB operations can be done through Dao/CrudDao without writing a single data access method.
 
+
+, 
+[JdbcUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtil_view.html),
+[JdbcUtils](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtils_view.html).
 * Work with sql statements
 
 
