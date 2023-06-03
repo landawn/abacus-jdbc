@@ -50,6 +50,7 @@ PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...);
 // It can also associated to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
     // This is just a sample. Normally there are pre-defined methods available for this query: userDao.list(Condition cond).
+    // This method doesn't require the implementation.
     @Select(sql = "SELECT id, first_name, last_name, email FROM user WHERE first_Name = ?")
     List<User> selectUserByFirstName(String firstName) throws SQLException;
     
@@ -68,6 +69,7 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     }
 }
 
+UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, ...);
 ```
 <br />
 
@@ -94,7 +96,10 @@ preparedQuery.setString(1, fistName) // Firstly set query parameters, if needed.
            //.findOnlyOne()
            //.list()
            //.stream()
-           //.exists()/ifExists(rowConsumer)/query/update/batchUpdate/execute/...
+	   //.query()
+	   //.qurey(resultExtractor)/queryForInt/queryForString/queryForSingleResult/...
+           //.exists()/ifExists(rowConsumer)
+	   //.update/batchUpdate/execute/...
 																		   
 
 // Sql script can also be executed by directly calling DAO methods.
