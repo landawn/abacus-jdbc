@@ -101,7 +101,7 @@ userDao.selectUserByFirstName(firstName)
 
 *  Questions? Please take a look at the samples in: `./samples/com.landawn.abacus.samples/...`
 
-The biggest difference between this library and other data(database) access frameworks is simplicity/consistency/integrality in the APIs design.
+The biggest difference between this library and other data(database) access frameworks is the simplicity/consistency/integrity in the APIs design.
 
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
