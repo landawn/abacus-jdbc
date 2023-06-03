@@ -82,12 +82,17 @@ preparedQuery.setString(1, fistName) // First set query parameters, if needed.
 
 // Sql script can also be executed by directly calling DAO methods.
 userDao.selectUserByFirstName(firstName)
-         //.setLong(paramName,...) // set parameter by parameter name for NamedQuery or PreparedCallableQuery.
+         //.findFirst(Condition)
+         //.findOnlyOne(Condition)
+         //.update(user)
+         //.deleteById(userId)
+         //.list(Condition)/stream(Condition)/batchInsert(Collection<User>)/... (Tens more well designed methods)
 
 }
 
 ```
 <br />
+
 [Dao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dao_view.html)/[CrudDao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/CrudDao_view.html)/[JoinEntityHelper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JoinEntityHelper_view.html), 
 [Jdbc](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Jdbc_view.html),
 [DataSet](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DataSet_view.html), 
