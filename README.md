@@ -12,15 +12,15 @@ This library is just about three things:
 [DynamicSQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DynamicSQLBuilder_view.html)
 
 ```java
-	// Manually write the sql in plain string.
-	String query = "SELECT id, first_name, last_name, email FROM account WHERE first_Name = ?";
-	
-	// Or by SQLBuilder
-	String query = PSC.select("id", "firstName, "lastName", "email").from(Account.class).where(CF.eq("first")).sql();
-	// Or if select all columns from account:
-	String query = PSC.selectFrom(Account.class).where(CF.eq("first")).sql();
-	
-	// Sql scripts can also placed in sql mapper xml file and then associated with a DAO object. See JdbcUtil.createDao(...) 
+// Manually write the sql in plain string.
+String query = "SELECT id, first_name, last_name, email FROM account WHERE first_Name = ?";
+
+// Or by SQLBuilder
+String query = PSC.select("id", "firstName, "lastName", "email").from(Account.class).where(CF.eq("first")).sql();
+// Or if select all columns from account:
+String query = PSC.selectFrom(Account.class).where(CF.eq("first")).sql();
+
+// Sql scripts can also placed in sql mapper xml file and then associated with a DAO object. See JdbcUtil.createDao(...) 
 ```
 
 *  How to use a sql to prepare Statement: [PreparedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedQuery_view.html), 
@@ -30,22 +30,22 @@ This library is just about three things:
 [JdbcUtils](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtils_view.html),
 
 ```java
-	// sql can be used to create PreparedQuery/NamedQuery/PreparedCallableQuery
-	PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...); //.prepareQuery(connection, query...)
-																			   //.prepareNamedQuery(connection, namedQuery...)	
-																			   //.prepareCallableQuery(connection, query...)
+// sql can be used to create PreparedQuery/NamedQuery/PreparedCallableQuery
+PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...); //.prepareQuery(connection, query...)
+																		   //.prepareNamedQuery(connection, namedQuery...)	
+																		   //.prepareCallableQuery(connection, query...)
 
-	// It can also associated a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
-	public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
-	    ...
-	    @Select(id = "sql_listToSet")
-	    Set<User> listToSet(int id) throws SQLException;
-	
-	    static final class SqlTable {
-	        @SqlField
-	        static final String sql_listToSet = PSC.selectFrom(User.class).where(CF.gt("id")).sql();
-	    }
-	}
+// It can also associated a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
+public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
+    ...
+    @Select(id = "sql_listToSet")
+    Set<User> listToSet(int id) throws SQLException;
+
+    static final class SqlTable {
+        @SqlField
+        static final String sql_listToSet = PSC.selectFrom(User.class).where(CF.gt("id")).sql();
+    }
+}
 
 String query = PSC.select("id", "firstName, "lastName", "email").from(Account.class).where(CF.eq("first")).sql();
 // Or if select all columns from account:
