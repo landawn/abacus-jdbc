@@ -14,12 +14,12 @@ This library is just about three things:
 
 ```java
 // Manually write the sql in plain string.
-String query = "SELECT id, first_name, last_name, email FROM account WHERE first_Name = ?";
+String query = "SELECT id, first_name, last_name, email FROM user WHERE first_Name = ?";
 
 // Or by SQLBuilder
-String query = PSC.select("id", "firstName, "lastName", "email").from(Account.class).where(CF.eq("firstName")).sql();
-// Or if select all columns from account:
-String query = PSC.selectFrom(Account.class).where(CF.eq("firstName")).sql();
+String query = PSC.select("id", "firstName, "lastName", "email").from(User.class).where(CF.eq("firstName")).sql();
+// Or if select all columns from user:
+String query = PSC.selectFrom(User.class).where(CF.eq("firstName")).sql();
 
 // Sql scripts can also placed in sql mapper xml file and then associated with a DAO object. See JdbcUtil.createDao(...) 
 ```
@@ -41,7 +41,7 @@ PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...);
 // It can also associated to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
     // This is just a sample. Normally there are pre-defined methods available for this query: userDao.list(Condition cond).
-    @Select(sql = "SELECT id, first_name, last_name, email FROM account WHERE first_Name = ?")
+    @Select(sql = "SELECT id, first_name, last_name, email FROM user WHERE first_Name = ?")
     List<User> selectUserByFirstName(String firstName) throws SQLException;
     
     // Or id of the sql script defined in xml mapper file.
@@ -55,7 +55,7 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 
     static final class SqlTable {
         @SqlField
-        static final String selectUserByFirstName = PSC.select("id", "firstName, "lastName", "email").from(Account.class).where(CF.eq("first")).sql();
+        static final String selectUserByFirstName = PSC.select("id", "firstName, "lastName", "email").from(User.class).where(CF.eq("first")).sql();
     }
 }
 
