@@ -21,13 +21,22 @@ String query = PSC.select("id", "firstName, "lastName", "email").from(User.class
 // Or if select all columns from user:
 String query = PSC.selectFrom(User.class).where(CF.eq("firstName")).sql();
 
-// Sql scripts can also placed in sql mapper xml file and then associated with a DAO object. See JdbcUtil.createDao(...) 
+// Sql scripts can also placed in sql mapper xml file and then associated with a DAO object.
+UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
 ```
+`userSqlMapper.xml`
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<sqlMapper>
+	<sql id="selectUserByFirstName">SELECT id, first_name, last_name, email FROM user WHERE first_Name = ?</sql>
+</sqlMapper>
+```
+
 <br />
 
 *  How to create a [PreparedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedQuery_view.html), 
 [NamedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/NamedQuery_view.html), 
-[PreparedCallableQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedCallableQuery_view.html) with a `sql`.
+[PreparedCallableQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedCallableQuery_view.html) with a `sql` or `Dao` mapped with `sql scripts`.
 
 ```java
 // sql can be used to create PreparedQuery/NamedQuery/PreparedCallableQuery
@@ -73,28 +82,28 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
 ```java
 // Execute the sql script by a PreparedQuery/NamedQuery/PreparedCallableQuery
 preparedQuery.setString(1, fistName) // Firstly set query parameters, if needed.
-               //.setLong(paramName, paramValue) // set named parameters for NamedQuery or PreparedCallableQuery.
-               //.setParameters(entity) // set named parameters by entity with getter/setter methods
-               //.setParameters(Map<String, ?>) // set named parameters by Map
-               //.setParameters(param1, param2...) // set several parameters in one line.
-               //.setParameters(Collection<?> parameters)
-               //.setParameters(ParametersSetter parametersSetter) // set parameters by functional interface. 
-               //....  
-               findFirst()
-               //.findFirst(rowMapper)
-               //.findOnlyOne()
-               //.list()
-               //.stream()
-               //.exists()/ifExists(rowConsumer)/query/update/batchUpdate/execute/...
+           //.setLong(paramName, paramValue) // set named parameters for NamedQuery or PreparedCallableQuery.
+           //.setParameters(entity) // set named parameters by entity with getter/setter methods
+           //.setParameters(Map<String, ?>) // set named parameters by Map
+           //.setParameters(param1, param2...) // set several parameters in one line.
+           //.setParameters(Collection<?> parameters)
+           //.setParameters(ParametersSetter parametersSetter) // set parameters by functional interface. 
+           //....  
+           findFirst()
+           //.findFirst(rowMapper)
+           //.findOnlyOne()
+           //.list()
+           //.stream()
+           //.exists()/ifExists(rowConsumer)/query/update/batchUpdate/execute/...
 																		   
 
 // Sql script can also be executed by directly calling DAO methods.
 userDao.selectUserByFirstName(firstName)
-         //.findFirst(Condition)
-         //.findOnlyOne(Condition)
-         //.list(Condition)
-         //.stream(Condition)
-         //.update(user)/deleteById(userId)/batchInsert(Collection<User>)/...
+     //.findFirst(Condition)
+     //.findOnlyOne(Condition)
+     //.list(Condition)
+     //.stream(Condition)
+     //.update(user)/deleteById(userId)/batchInsert(Collection<User>)/...
 
 ```
 <br />
