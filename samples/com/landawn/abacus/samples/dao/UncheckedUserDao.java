@@ -4,6 +4,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.OP;
 import com.landawn.abacus.jdbc.Propagation;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.Define;
@@ -17,7 +18,6 @@ import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
 import com.landawn.abacus.jdbc.annotation.Sqls;
 import com.landawn.abacus.jdbc.annotation.Transactional;
 import com.landawn.abacus.jdbc.annotation.Update;
-import com.landawn.abacus.jdbc.dao.OP;
 import com.landawn.abacus.jdbc.dao.UncheckedCrudDao;
 import com.landawn.abacus.jdbc.dao.UncheckedJoinEntityHelper;
 import com.landawn.abacus.samples.entity.User;

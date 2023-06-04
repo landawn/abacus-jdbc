@@ -20,7 +20,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import com.landawn.abacus.jdbc.dao.OnDeleteAction;
+import com.landawn.abacus.jdbc.OnDeleteAction;
 
 /**
  * Unsupported operation.

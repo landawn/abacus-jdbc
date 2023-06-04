@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.dao.OP;
+import com.landawn.abacus.jdbc.OP;
 
 /**
  * The Interface Update.

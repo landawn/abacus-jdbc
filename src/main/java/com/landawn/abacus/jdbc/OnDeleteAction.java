@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.landawn.abacus.jdbc.dao;
+package com.landawn.abacus.jdbc;
 
 import com.landawn.abacus.annotation.Beta;
 

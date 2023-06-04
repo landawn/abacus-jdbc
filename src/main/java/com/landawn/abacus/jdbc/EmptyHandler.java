@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.landawn.abacus.jdbc.dao;
+package com.landawn.abacus.jdbc;
 
 import com.landawn.abacus.annotation.Internal;
-import com.landawn.abacus.jdbc.Jdbc;
+import com.landawn.abacus.jdbc.dao.Dao;
 
 @Internal
 @SuppressWarnings("rawtypes")

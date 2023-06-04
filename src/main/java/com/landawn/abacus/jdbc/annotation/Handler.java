@@ -22,9 +22,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.jdbc.EmptyHandler;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.dao.Dao;
-import com.landawn.abacus.jdbc.dao.EmptyHandler;
 
 @Beta
 @Retention(RetentionPolicy.RUNTIME)
