@@ -15,7 +15,7 @@
 		<maven.compiler.source>17</maven.compiler.source>
 		<maven.compiler.target>17</maven.compiler.target>
 		<java.version>17</java.version>
-		<log4j2.version>2.17.2</log4j2.version>
+		<log4j2.version>2.20.0</log4j2.version>
 	</properties>
 
 	<dependencies>
@@ -62,14 +62,14 @@
 
 		<dependency>
 			<groupId>org.springframework</groupId>
-			<artifactId>spring-context</artifactId>
+			<artifactId>spring-jdbc</artifactId>
 			<version>6.0.9</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.springframework</groupId>
-			<artifactId>spring-jdbc</artifactId>
+			<artifactId>spring-context</artifactId>
 			<version>6.0.9</version>
 			<scope>provided</scope>
 		</dependency>
@@ -78,34 +78,13 @@
 			<groupId>net.spy</groupId>
 			<artifactId>spymemcached</artifactId>
 			<version>2.12.3</version>
-			<scope>provided</scope>
+			<scope>test</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>com.github.ben-manes.caffeine</groupId>
 			<artifactId>caffeine</artifactId>
-			<version>2.7.0</version>
-			<scope>provided</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.ehcache</groupId>
-			<artifactId>ehcache</artifactId>
-			<version>3.8.0</version>
-			<scope>provided</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>redis.clients</groupId>
-			<artifactId>jedis</artifactId>
-			<version>3.0.1</version>
-			<scope>provided</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-dbcp2</artifactId>
-			<version>2.6.0</version>
+			<version>3.1.6</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -113,13 +92,20 @@
 			<groupId>com.opencsv</groupId>
 			<artifactId>opencsv</artifactId>
 			<version>5.2</version>
-			<scope>provided</scope>
+			<scope>test</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
 			<version>[8.0.16,)</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.oracle.database.jdbc</groupId>
+			<artifactId>ojdbc11</artifactId>
+			<version>21.7.0.0</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -133,14 +119,7 @@
 		<dependency>
 			<groupId>org.hsqldb</groupId>
 			<artifactId>hsqldb</artifactId>
-			<version>2.5.0</version>
-			<scope>provided</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>com.oracle.database.jdbc</groupId>
-			<artifactId>ojdbc11</artifactId>
-			<version>21.7.0.0</version>
+			<version>2.7.2</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -154,7 +133,7 @@
 		<dependency>
 			<groupId>com.zaxxer</groupId>
 			<artifactId>HikariCP</artifactId>
-			<version>3.4.5</version>
+			<version>5.0.1</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -168,15 +147,15 @@
 		<dependency>
 			<groupId>org.jdbi</groupId>
 			<artifactId>jdbi3-core</artifactId>
-			<version>3.37.0</version>
-			<scope>provided</scope>
+			<version>3.38.2</version>
+			<scope>test</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.jdbi</groupId>
 			<artifactId>jdbi3-sqlobject</artifactId>
-			<version>3.37.0</version>
-			<scope>provided</scope>
+			<version>3.38.2</version>
+			<scope>test</scope>
 		</dependency>
 
 		<dependency>
@@ -191,13 +170,7 @@
 			<artifactId>log4j-core</artifactId>
 			<version>${log4j2.version}</version>
 			<scope>provided</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>jakarta.xml.bind</groupId>
-			<artifactId>jakarta.xml.bind-api</artifactId>
-			<version>3.0.0</version>
-		</dependency>
+		</dependency> 
 
   		<!-- JAXB RI, Jakarta XML Binding -->
 		<dependency>
