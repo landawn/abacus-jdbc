@@ -137,11 +137,9 @@ compile 'com.landawn:abacus-jdbc:3.3.6'
 
 ## Recommended Java programming libraries/frameworks:
 [lombok](https://github.com/rzwitserloot/lombok), 
-[Jinq](https://github.com/my2iu/Jinq), 
-[jdbi](https://github.com/jdbi/jdbi), 
-[Mybatis](https://github.com/mybatis/mybatis-3), 
-[Sharding-JDBC](https://github.com/apache/incubator-shardingsphere),
-[mapstruct](https://github.com/mapstruct/mapstruct)...[awesome-java](https://github.com/akullpp/awesome-java#database)
+[Apache Druid](https://github.com/apache/druid), 
+[Sharding-JDBC](https://github.com/apache/incubator-shardingsphere)
+... [awesome-java](https://github.com/akullpp/awesome-java#database)
 
 
 ## Recommended Java programming tools:
