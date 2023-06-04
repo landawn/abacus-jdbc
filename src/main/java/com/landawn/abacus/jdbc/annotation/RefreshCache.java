@@ -45,5 +45,6 @@ public @interface RefreshCache {
      *
      * @return
      */
-    String[] filter() default { "save", "insert", "update", "delete", "upsert", "execute" };
+    String[] filter() default { "update", "delete", "deleteById", "insert", "save", "batchUpdate", "batchDelete", "batchDeleteByIds", "batchInsert",
+            "batchSave", "upsert", "execute" };
 }

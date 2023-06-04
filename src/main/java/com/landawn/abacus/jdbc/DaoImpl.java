@@ -161,11 +161,11 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 @SuppressWarnings({ "deprecation", "java:S1192" })
 final class DaoImpl {
 
-    private static final String _1 = "1";
-
     private DaoImpl() {
         // singleton for utility class.
     }
+
+    private static final String _1 = "1";
 
     static final ThreadLocal<Boolean> isInDaoMethod_TL = ThreadLocal.withInitial(() -> false);
 
@@ -2084,7 +2084,11 @@ final class DaoImpl {
             }
 
             final boolean isNonDBOperation = StreamEx.of(method.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(NonDBOperation.class));
-            final Predicate<String> filterByMethodName = it -> N.notNullOrEmpty(it)
+
+            final Predicate<String> filterByMethodNameStartsWith = it -> N.notNullOrEmpty(it)
+                    && (Strings.startsWith(method.getName(), it) || Pattern.matches(it, method.getName()));
+
+            final Predicate<String> filterByMethodNameContains = it -> N.notNullOrEmpty(it)
                     && (Strings.containsIgnoreCase(method.getName(), it) || Pattern.matches(it, method.getName()));
 
             final Class<?> declaringClass = method.getDeclaringClass();
@@ -5290,14 +5294,14 @@ final class DaoImpl {
                 final SqlLogEnabled daoClassSqlLogAnno = StreamEx.of(allInterfaces)
                         .flattMap(Class::getAnnotations)
                         .select(SqlLogEnabled.class)
-                        .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
+                        .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodNameContains))
                         .first()
                         .orElseNull();
 
                 final PerfLog daoClassPerfLogAnno = StreamEx.of(allInterfaces)
                         .flattMap(Class::getAnnotations)
                         .select(PerfLog.class)
-                        .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodName))
+                        .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodNameContains))
                         .first()
                         .orElseNull();
 
@@ -5536,15 +5540,18 @@ final class DaoImpl {
                 final CacheResult cacheResultAnno = StreamEx.of(method.getAnnotations())
                         .select(CacheResult.class)
                         .last()
-                        .orElse((daoClassCacheResultAnno != null && N.anyMatch(daoClassCacheResultAnno.filter(), filterByMethodName)) ? daoClassCacheResultAnno
+                        .orElse((daoClassCacheResultAnno != null && N.anyMatch(daoClassCacheResultAnno.filter(), filterByMethodNameStartsWith))
+                                ? daoClassCacheResultAnno
                                 : null);
 
                 final RefreshCache refreshResultAnno = StreamEx.of(method.getAnnotations())
                         .select(RefreshCache.class)
                         .last()
-                        .orElse((daoClassRefreshCacheAnno != null && N.anyMatch(daoClassRefreshCacheAnno.filter(), filterByMethodName))
+                        .orElse((daoClassRefreshCacheAnno != null && N.anyMatch(daoClassRefreshCacheAnno.filter(), filterByMethodNameStartsWith))
                                 ? daoClassRefreshCacheAnno
                                 : null);
+
+                final boolean refreshCacheRequired = (refreshResultAnno != null && !refreshResultAnno.disabled());
 
                 if (cacheResultAnno != null && !cacheResultAnno.disabled()) {
                     if (daoLogger.isDebugEnabled()) {
@@ -5608,7 +5615,7 @@ final class DaoImpl {
                     hasCacheResult.setTrue();
                 }
 
-                if (refreshResultAnno != null && !refreshResultAnno.disabled()) {
+                if (refreshCacheRequired) {
                     if (daoLogger.isDebugEnabled()) {
                         daoLogger.debug("Add RefreshCache method: " + method);
                     }
@@ -5616,9 +5623,11 @@ final class DaoImpl {
                     final Throwables.BiFunction<Dao, Object[], ?, Throwable> temp = call;
 
                     call = (proxy, args) -> {
-                        cache.clear();
-
-                        return temp.apply(proxy, args);
+                        try {
+                            return temp.apply(proxy, args);
+                        } finally {
+                            cache.clear();
+                        }
                     };
 
                     hasRefreshCache.setTrue();
@@ -5640,7 +5649,7 @@ final class DaoImpl {
                 final List<Tuple2<Jdbc.Handler, Boolean>> handlerList = StreamEx.of(method.getAnnotations())
                         .filter(anno -> anno.annotationType().equals(Handler.class) || anno.annotationType().equals(HandlerList.class))
                         .flatmap(anno -> anno.annotationType().equals(Handler.class) ? N.asList((Handler) anno) : N.asList(((HandlerList) anno).value()))
-                        .prepend(StreamEx.of(daoClassHandlerList).filter(h -> StreamEx.of(h.filter()).anyMatch(filterByMethodName)))
+                        .prepend(StreamEx.of(daoClassHandlerList).filter(h -> StreamEx.of(h.filter()).anyMatch(filterByMethodNameContains)))
                         .map(handlerAnno -> Tuple.of((Jdbc.Handler) (N.notNullOrEmpty(handlerAnno.qualifier())
                                 ? daoClassHandlerMap.getOrDefault(handlerAnno.qualifier(), HandlerFactory.get(handlerAnno.qualifier()))
                                 : HandlerFactory.getOrCreate(handlerAnno.type())), handlerAnno.isForInvokeFromOutsideOfDaoOnly()))

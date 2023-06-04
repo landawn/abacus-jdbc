@@ -24,7 +24,8 @@ import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Propagation;
 
 /**
- *
+ * It's for transaction started in {@code Dao} methods.
+ * For service classes in Spring, {@code org.springframework.transaction.annotation.Transactional} should be used.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD) // Should be used on method only, not for ElementType.TYPE/CLASS
