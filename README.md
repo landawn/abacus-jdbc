@@ -123,9 +123,18 @@ The biggest difference between this library and other data(database) access fram
 
 * [Maven](https://central.sonatype.com/artifact/com.landawn/abacus-jdbc)
 
+```xml
+<dependency>
+	<groupId>com.landawn</groupId>
+	<artifactId>abacus-jdbc</artifactId>
+	<version>3.3.6</version> 
+<dependency>
+```
+
 * Gradle:
+
 ```gradle
-// JDK 1.8 or above:
+// JDK 17 or above:
 compile 'com.landawn:abacus-jdbc:3.3.6'
 ```
 
