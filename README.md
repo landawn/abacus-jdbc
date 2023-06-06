@@ -9,7 +9,7 @@ Hope it will bring you the programming experiences: coding with SQL/DB is just l
 
 This library is just about three things:
 
-*  How to write/generate a `sql script`(if needed): [SQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/SQLBuilder_view.html), 
+*  Write/generate a `sql script`(if needed): [SQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/SQLBuilder_view.html), 
 [DynamicSQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DynamicSQLBuilder_view.html).
 
 ```java
@@ -34,9 +34,9 @@ UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
 
 <br />
 
-*  How to create a [PreparedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedQuery_view.html), 
+*  Prepare `Statement` [PreparedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedQuery_view.html), 
 [NamedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/NamedQuery_view.html), 
-[PreparedCallableQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedCallableQuery_view.html) with a `sql` or `Dao` mapped with `sql scripts`.
+[PreparedCallableQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedCallableQuery_view.html) with a `sql` or `Dao` mapped with `sqls`.
 
 ```java
 // sql can be used to create PreparedQuery/NamedQuery/PreparedCallableQuery
@@ -44,10 +44,18 @@ PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...);
 			            //.prepareQuery(connection, query...)		
 			            //.prepareNamedQuery(dataSource, namedQuery...)									   
 			            //.prepareCallableQuery(dataSource, query...)									   
-			            //....										   
+			            //....	
+				      .setString(1, fistName) // Firstly set query parameters, if needed.
+				    //.setLong(paramName, paramValue) // set named parameters for NamedQuery/PreparedCallableQuery.
+				    //.setParameters(entity) // set named parameters by entity with getter/setter methods
+				    //.setParameters(Map<String, ?>) // set named parameters by Map
+				    //.setParameters(param1, param2...) // set several parameters in one line.
+				    //.setParameters(Collection<?> parameters) // set parameters with a Collection.
+				    //.setParameters(ParametersSetter parametersSetter) // set parameters by functional interface. 
+				    //....  									   
 																		   
 
-// It can also associated to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
+// Sql can also associated to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
     // This is just a sample. Normally there are pre-defined methods available for this query: userDao.list(Condition cond).
     // This method doesn't require the implementation.
@@ -73,7 +81,7 @@ UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, ...);
 ```
 <br />
 
-*  How to execute a sql and retrieve the result(If needed):
+* Execute the parepared `statement/query` or `Dao` method and retrieve the result(If needed):
 [Dao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dao_view.html)/[CrudDao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/CrudDao_view.html)/[JoinEntityHelper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JoinEntityHelper_view.html), 
 [Jdbc](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Jdbc_view.html),
 [DataSet](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DataSet_view.html), 
@@ -82,16 +90,8 @@ UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, ...);
 [JdbcUtils](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtils_view.html).
 
 ```java
-// Execute the sql script by a PreparedQuery/NamedQuery/PreparedCallableQuery
-preparedQuery.setString(1, fistName) // Firstly set query parameters, if needed.
-           //.setLong(paramName, paramValue) // set named parameters for NamedQuery or PreparedCallableQuery.
-           //.setParameters(entity) // set named parameters by entity with getter/setter methods
-           //.setParameters(Map<String, ?>) // set named parameters by Map
-           //.setParameters(param1, param2...) // set several parameters in one line.
-           //.setParameters(Collection<?> parameters) // set parameters with a Collection.
-           //.setParameters(ParametersSetter parametersSetter) // set parameters by functional interface. 
-           //....  
-             .findFirst()
+// Execute the sql by a PreparedQuery/NamedQuery/PreparedCallableQuery
+preparedQuery.findFirst()
            //.findFirst(User.class)/findFirst(rowMapper)/...
            //.findOnlyOne()/findOnlyOne(User.class)/findOnlyOne(rowMapper)/...
            //.list()/list(User.class)/list(rowMapper)/...
@@ -101,7 +101,7 @@ preparedQuery.setString(1, fistName) // Firstly set query parameters, if needed.
 	   //.update/batchUpdate/execute/...
 																		   
 
-// Sql script can also be executed by directly calling DAO methods.
+// Sql can also be executed by directly calling DAO methods.
 userDao.selectUserByFirstName(firstName)
      //.findFirst(Condition)
      //.findOnlyOne(Condition)
