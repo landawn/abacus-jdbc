@@ -2143,7 +2143,7 @@ final class DaoImpl {
                     if (sqlsAnno != null) {
                         if (N.notNullOrEmpty((String[]) args[paramLen - 1])) {
                             throw new IllegalArgumentException(
-                                    "The last parameter(String[]) of method annotated by @Sqls must be empty, don't specify it. It will auto-filled by sqls from annotation @Sqls on the method: "
+                                    "The last parameter(String[]) of method annotated by @Sqls must be empty, don't specify it. It will be auto-filled by sqls from annotation @Sqls on the method: "
                                             + fullClassMethodName);
                         }
 
