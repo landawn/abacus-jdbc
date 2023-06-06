@@ -58,7 +58,7 @@ PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...);
 // Sql can also associated to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
     // This is just a sample. Normally there are pre-defined methods available for this query: userDao.list(Condition cond).
-    // This method doesn't require the implementation.
+    // Methods defined in Dao interface don't require implementation. Of course, Customized implemnetation is also supported by default method.
     @Select(sql = "SELECT id, first_name, last_name, email FROM user WHERE first_Name = ?")
     List<User> selectUserByFirstName(String firstName) throws SQLException;
     
@@ -70,6 +70,14 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     // Instead of writing sql scripts manually, you can also use SQLBuilder/DynamicSQLBuilder to write sql scripts.
     @Select(id = "selectUserByFirstName")
     List<User> selectUserByFirstName(String firstName) throws SQLException;
+    
+    // Multiple updates within transaction.
+    @Sqls({ "update user set first_name = ? where id = ?", "update user set last_name = ? where id = :id" })
+    @Transactional
+    default void updateFirstNameLastNameByIds(long idForUpdateFirstName, long idForUpdateLastName, String... sqls) throws SQLException { // Last parameter must be String[] for transferring sql scripts.
+        prepareQuery(sqls[0]).setLong(1, idForUpdateFirstName).update();
+        prepareNamedQuery(sqls[1]).setLong(1, idForUpdateLastName).update();
+    }
 
     static final class SqlTable {
         @SqlField
@@ -103,6 +111,7 @@ preparedQuery.findFirst()
 
 // Sql can also be executed by directly calling DAO methods.
 userDao.selectUserByFirstName(firstName)
+     //.updateFirstNameLastNameByIds(100, 101)
      //.findFirst(Condition)
      //.findOnlyOne(Condition)
      //.list(Condition)
