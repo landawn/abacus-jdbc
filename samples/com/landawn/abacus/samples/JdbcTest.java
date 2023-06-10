@@ -453,7 +453,7 @@ public class JdbcTest {
         long nextStartId = 0; //  0 => start id
 
         List<List<User>> list1 = JdbcUtil
-                .paginate(User.class, dataSource, "select * from user where id > ? order by id limit 10", 10,
+                .queryByPage(User.class, dataSource, "select * from user where id > ? order by id limit 10", 10,
                         (stmt, ret) -> stmt.setLong(1, Stream.of(ret).mapToLong(User::getId).max().orElse(0)))
                 .toList();
 

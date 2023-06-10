@@ -4697,13 +4697,25 @@ public final class JdbcUtil {
         };
     }
 
+    /**
+     * Runs a {@code Stream} with each element(page) is loaded from database table by running sql {@code query}.
+     *
+     * @param ds
+     * @param query this query must has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
+     * @param pageSize
+     * @param paramSetter
+     * @return
+     */
     @SuppressWarnings("rawtypes")
-    public static ExceptionalStream<DataSet, SQLException> paginate(final javax.sql.DataSource ds, final String query, final int pageSize,
+    public static ExceptionalStream<DataSet, SQLException> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, DataSet> paramSetter) {
+
+        final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
+
         return ExceptionalStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null))
-                .cycled(Long.MAX_VALUE) //
+                .cycled(Long.MAX_VALUE) // should be cycled() but there is a bug in method cycled()
                 .map(it -> {
-                    final DataSet ret = JdbcUtil.prepareQuery(ds, query) //
+                    final DataSet ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
                             .setFetchDirectionToForward()
                             .setFetchSize(pageSize)
                             .settParameters(it.value(), paramSetter)
@@ -4716,13 +4728,27 @@ public final class JdbcUtil {
                 .takeWhile(N::notNullOrEmpty);
     }
 
+    /**
+     * Runs a {@code Stream} with each element(page) is loaded from database table by running sql {@code query}.
+     *
+     * @param <T>
+     * @param entityCalss
+     * @param ds
+     * @param query this query must has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
+     * @param pageSize
+     * @param paramSetter
+     * @return
+     */
     @SuppressWarnings("rawtypes")
-    public static <T> ExceptionalStream<List<T>, SQLException> paginate(final Class<T> entityCalss, final javax.sql.DataSource ds, final String query,
+    public static <T> ExceptionalStream<List<T>, SQLException> queryByPage(final Class<T> entityCalss, final javax.sql.DataSource ds, final String query,
             final int pageSize, final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, List<T>> paramSetter) {
+
+        final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
+
         return ExceptionalStream.<Holder<List<T>>, SQLException> of(Holder.of((List<T>) null))
-                .cycled(Long.MAX_VALUE) //
+                .cycled(Long.MAX_VALUE) // should be cycled() but there is a bug in method cycled()
                 .map(it -> {
-                    final List<T> ret = JdbcUtil.prepareQuery(ds, query) //
+                    final List<T> ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
                             .setFetchDirectionToForward()
                             .setFetchSize(pageSize)
                             .settParameters(it.value(), paramSetter)
@@ -4730,20 +4756,30 @@ public final class JdbcUtil {
 
                     it.setValue(ret);
 
-                    N.println("==================================: " + ret.size());
-
                     return ret;
                 })
                 .takeWhile(N::notNullOrEmpty);
     }
 
+    /**
+     * Runs a {@code Stream} with each element(page) is loaded from database table by running sql {@code query}.
+     *
+     * @param conn
+     * @param query this query must has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
+     * @param pageSize
+     * @param paramSetter
+     * @return
+     */
     @SuppressWarnings("rawtypes")
-    public static ExceptionalStream<DataSet, SQLException> paginate(final Connection conn, final String query, final int pageSize,
+    public static ExceptionalStream<DataSet, SQLException> queryByPage(final Connection conn, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, DataSet> paramSetter) {
+
+        final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
+
         return ExceptionalStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null))
-                .cycled(Long.MAX_VALUE) //
+                .cycled(Long.MAX_VALUE) // should be cycled() but there is a bug in method cycled()
                 .map(it -> {
-                    final DataSet ret = JdbcUtil.prepareQuery(conn, query) //
+                    final DataSet ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
                             .setFetchDirectionToForward()
                             .setFetchSize(pageSize)
                             .settParameters(it.value(), paramSetter)
@@ -4756,13 +4792,27 @@ public final class JdbcUtil {
                 .takeWhile(N::notNullOrEmpty);
     }
 
+    /**
+     * Runs a {@code Stream} with each element(page) is loaded from database table by running sql {@code query}.
+     *
+     * @param <T>
+     * @param entityCalss
+     * @param conn
+     * @param query this query must has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
+     * @param pageSize
+     * @param paramSetter
+     * @return
+     */
     @SuppressWarnings("rawtypes")
-    public static <T> ExceptionalStream<List<T>, SQLException> paginate(final Class<T> entityCalss, final Connection conn, final String query,
+    public static <T> ExceptionalStream<List<T>, SQLException> queryByPage(final Class<T> entityCalss, final Connection conn, final String query,
             final int pageSize, final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, List<T>> paramSetter) {
+
+        final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
+
         return ExceptionalStream.<Holder<List<T>>, SQLException> just(Holder.of((List<T>) null))
-                .cycled(Long.MAX_VALUE) //
+                .cycled(Long.MAX_VALUE) // should be cycled() but there is a bug in method cycled()
                 .map(it -> {
-                    final List<T> ret = JdbcUtil.prepareQuery(conn, query) //
+                    final List<T> ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
                             .setFetchDirectionToForward()
                             .setFetchSize(pageSize)
                             .settParameters(it.value(), paramSetter)
