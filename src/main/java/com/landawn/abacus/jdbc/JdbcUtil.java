@@ -4697,6 +4697,84 @@ public final class JdbcUtil {
         };
     }
 
+    @SuppressWarnings("rawtypes")
+    public static ExceptionalStream<DataSet, SQLException> paginate(final javax.sql.DataSource ds, final String query, final int pageSize,
+            final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, DataSet> paramSetter) {
+        return ExceptionalStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null))
+                .cycled(Long.MAX_VALUE) //
+                .map(it -> {
+                    final DataSet ret = JdbcUtil.prepareQuery(ds, query) //
+                            .setFetchDirectionToForward()
+                            .setFetchSize(pageSize)
+                            .settParameters(it.value(), paramSetter)
+                            .query();
+
+                    it.setValue(ret);
+
+                    return ret;
+                })
+                .takeWhile(N::notNullOrEmpty);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static <T> ExceptionalStream<List<T>, SQLException> paginate(final Class<T> entityCalss, final javax.sql.DataSource ds, final String query,
+            final int pageSize, final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, List<T>> paramSetter) {
+        return ExceptionalStream.<Holder<List<T>>, SQLException> of(Holder.of((List<T>) null))
+                .cycled(Long.MAX_VALUE) //
+                .map(it -> {
+                    final List<T> ret = JdbcUtil.prepareQuery(ds, query) //
+                            .setFetchDirectionToForward()
+                            .setFetchSize(pageSize)
+                            .settParameters(it.value(), paramSetter)
+                            .list(entityCalss);
+
+                    it.setValue(ret);
+
+                    N.println("==================================: " + ret.size());
+
+                    return ret;
+                })
+                .takeWhile(N::notNullOrEmpty);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static ExceptionalStream<DataSet, SQLException> paginate(final Connection conn, final String query, final int pageSize,
+            final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, DataSet> paramSetter) {
+        return ExceptionalStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null))
+                .cycled(Long.MAX_VALUE) //
+                .map(it -> {
+                    final DataSet ret = JdbcUtil.prepareQuery(conn, query) //
+                            .setFetchDirectionToForward()
+                            .setFetchSize(pageSize)
+                            .settParameters(it.value(), paramSetter)
+                            .query();
+
+                    it.setValue(ret);
+
+                    return ret;
+                })
+                .takeWhile(N::notNullOrEmpty);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static <T> ExceptionalStream<List<T>, SQLException> paginate(final Class<T> entityCalss, final Connection conn, final String query,
+            final int pageSize, final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, List<T>> paramSetter) {
+        return ExceptionalStream.<Holder<List<T>>, SQLException> just(Holder.of((List<T>) null))
+                .cycled(Long.MAX_VALUE) //
+                .map(it -> {
+                    final List<T> ret = JdbcUtil.prepareQuery(conn, query) //
+                            .setFetchDirectionToForward()
+                            .setFetchSize(pageSize)
+                            .settParameters(it.value(), paramSetter)
+                            .list(entityCalss);
+
+                    it.setValue(ret);
+
+                    return ret;
+                })
+                .takeWhile(N::notNullOrEmpty);
+    }
+
     static <R> R checkNotResultSet(R result) {
         if (result instanceof ResultSet) {
             throw new UnsupportedOperationException("The result value of ResultExtractor/BiResultExtractor.apply can't be ResultSet");

@@ -35,13 +35,16 @@ import com.landawn.abacus.samples.dao.UncheckedUserDaoL;
 import com.landawn.abacus.samples.dao.UserDao;
 import com.landawn.abacus.samples.dao.UserDaoL;
 import com.landawn.abacus.samples.entity.User;
+import com.landawn.abacus.util.ExceptionalStream;
 import com.landawn.abacus.util.Fn;
+import com.landawn.abacus.util.Holder;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.stream.IntStream;
+import com.landawn.abacus.util.stream.Stream;
 
 /**
  * CRUD: insert -> read -> update -> delete a record in DB table.
@@ -428,5 +431,46 @@ public class JdbcTest {
 
         sql = JdbcUtil.generateNamedUpdateSql(dataSource, "user");
         N.println(sql);
+    }
+
+    @Test
+    public void test_cycled() throws Exception {
+        ExceptionalStream.of(1).cycled(1000).map(it -> "a").println();
+        Stream.of(1).cycled(10).map(it -> "a").println();
+
+    }
+
+    @Test
+    public void test_page() throws SQLException {
+
+        List<User> users = IntStream.range(1, 1000)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                .toList();
+
+        List<Long> ids = userDao.batchInsertWithId(users);
+        assertEquals(users.size(), ids.size());
+
+        long nextStartId = 0; //  0 => start id
+
+        List<List<User>> list1 = JdbcUtil
+                .paginate(User.class, dataSource, "select * from user where id > ? order by id limit 10", 10,
+                        (stmt, ret) -> stmt.setLong(1, Stream.of(ret).mapToLong(User::getId).max().orElse(0)))
+                .toList();
+
+        List<List<User>> list2 = Stream.of(Holder.of(nextStartId)).cycled().mapE(it -> {
+            List<User> page = JdbcUtil.prepareQuery(dataSource, "select * from user where id > ?  order by id limit 10")
+                    .setFetchDirectionToForward()
+                    .setFetchSize(10)
+                    .setLong(1, it.value())
+                    .list(User.class);
+            page.stream().mapToLong(User::getId).max().ifPresent(it::setValue);
+            return page;
+        }).takeWhile(N::notNullOrEmpty).toList();
+
+        list2.forEach(N::println);
+
+        assertEquals(list1, list2);
+
+        userDao.batchDelete(users);
     }
 }
