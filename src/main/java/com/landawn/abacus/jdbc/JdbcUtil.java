@@ -4712,8 +4712,8 @@ public final class JdbcUtil {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return ExceptionalStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null))
-                .cycled(Long.MAX_VALUE) // should be cycled() but there is a bug in method cycled()
+        return ExceptionalStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null)) //
+                .cycled()
                 .map(it -> {
                     final DataSet ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
                             .setFetchDirectionToForward()
@@ -4745,8 +4745,8 @@ public final class JdbcUtil {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return ExceptionalStream.<Holder<List<T>>, SQLException> of(Holder.of((List<T>) null))
-                .cycled(Long.MAX_VALUE) // should be cycled() but there is a bug in method cycled()
+        return ExceptionalStream.<Holder<List<T>>, SQLException> of(Holder.of((List<T>) null)) //
+                .cycled()
                 .map(it -> {
                     final List<T> ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
                             .setFetchDirectionToForward()
@@ -4776,8 +4776,8 @@ public final class JdbcUtil {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return ExceptionalStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null))
-                .cycled(Long.MAX_VALUE) // should be cycled() but there is a bug in method cycled()
+        return ExceptionalStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null)) //
+                .cycled()
                 .map(it -> {
                     final DataSet ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
                             .setFetchDirectionToForward()
@@ -4809,8 +4809,8 @@ public final class JdbcUtil {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return ExceptionalStream.<Holder<List<T>>, SQLException> just(Holder.of((List<T>) null))
-                .cycled(Long.MAX_VALUE) // should be cycled() but there is a bug in method cycled()
+        return ExceptionalStream.<Holder<List<T>>, SQLException> just(Holder.of((List<T>) null)) //
+                .cycled()
                 .map(it -> {
                     final List<T> ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
                             .setFetchDirectionToForward()
