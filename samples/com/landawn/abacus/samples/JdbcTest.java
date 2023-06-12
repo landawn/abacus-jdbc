@@ -443,7 +443,7 @@ public class JdbcTest {
     @Test
     public void test_page() throws SQLException {
 
-        List<User> users = IntStream.range(1, 1000)
+        List<User> users = IntStream.range(0, 31)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
@@ -454,7 +454,7 @@ public class JdbcTest {
 
         List<List<User>> list1 = JdbcUtil
                 .queryByPage(User.class, dataSource, "select * from user where id > ? order by id limit 10", 10,
-                        (stmt, ret) -> stmt.setLong(1, Stream.of(ret).mapToLong(User::getId).max().orElse(0)))
+                        (stmt, ret) -> stmt.setLong(1, ret == null ? 0 : N.lastElement(ret).get().getId()))
                 .toList();
 
         List<List<User>> list2 = Stream.of(Holder.of(nextStartId)).cycled().mapE(it -> {
