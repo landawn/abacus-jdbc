@@ -4701,9 +4701,9 @@ public final class JdbcUtil {
      * Runs a {@code Stream} with each element(page) is loaded from database table by running sql {@code query}.
      *
      * @param ds
-     * @param query this query must has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
+     * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
      * @param pageSize
-     * @param paramSetter
+     * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
      * @return
      */
     @SuppressWarnings("rawtypes")
@@ -4734,9 +4734,9 @@ public final class JdbcUtil {
      * @param <T>
      * @param entityCalss
      * @param ds
-     * @param query this query must has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
+     * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
      * @param pageSize
-     * @param paramSetter
+     * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
      * @return
      */
     @SuppressWarnings("rawtypes")
@@ -4765,9 +4765,9 @@ public final class JdbcUtil {
      * Runs a {@code Stream} with each element(page) is loaded from database table by running sql {@code query}.
      *
      * @param conn
-     * @param query this query must has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
+     * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
      * @param pageSize
-     * @param paramSetter
+     * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
      * @return
      */
     @SuppressWarnings("rawtypes")
@@ -4798,9 +4798,9 @@ public final class JdbcUtil {
      * @param <T>
      * @param entityCalss
      * @param conn
-     * @param query this query must has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
+     * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
      * @param pageSize
-     * @param paramSetter
+     * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
      * @return
      */
     @SuppressWarnings("rawtypes")
