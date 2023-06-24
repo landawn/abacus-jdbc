@@ -2,6 +2,7 @@ package com.landawn.abacus.samples;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -20,6 +21,7 @@ import com.landawn.abacus.jdbc.EntityCodeConfig;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.JdbcUtils;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.samples.dao.AddressDao;
 import com.landawn.abacus.samples.dao.DeviceDao;
@@ -105,6 +107,16 @@ public class JdbcTest {
                     + "create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)";
 
             JdbcUtil.executeUpdate(dataSource, sql_user_creat_table);
+
+            final String sql_user2_creat_table = "CREATE TABLE IF NOT EXISTS user2 (" //
+                    + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
+                    + "first_name varchar(32) NOT NULL, " //
+                    + "last_name varchar(32) NOT NULL, " //
+                    + "prop1 varchar(32), " //
+                    + "email varchar(32), " //
+                    + "create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)";
+
+            JdbcUtil.executeUpdate(dataSource, sql_user2_creat_table);
 
             final String sql_device_creat_table = "CREATE TABLE IF NOT EXISTS device (" //
                     + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
@@ -472,5 +484,29 @@ public class JdbcTest {
         assertEquals(list1, list2);
 
         userDao.batchDelete(users);
+    }
+
+    @Test
+    public void test_copy() throws Exception {
+        JdbcUtil.prepareQuery(dataSource, "delete from user").update();
+        JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
+
+        List<User> users = IntStream.range(1, 9999)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                .toList();
+
+        List<Long> ids = userDao.batchInsertWithId(users);
+        assertEquals(users.size(), ids.size());
+
+        assertTrue(JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class).size() == 0);
+
+        JdbcUtils.copy(dataSource, dataSource2, "user", "user2");
+
+        assertEquals(JdbcUtil.prepareQuery(dataSource, "select * from user").list(User.class),
+                JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class));
+
+        JdbcUtil.prepareQuery(dataSource, "delete from user").update();
+        JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
+
     }
 }

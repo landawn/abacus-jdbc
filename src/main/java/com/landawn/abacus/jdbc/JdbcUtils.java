@@ -2997,7 +2997,7 @@ public final class JdbcUtils {
 
         try {
             selectStmt = JdbcUtil.prepareStatement(sourceConn, selectSql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-            selectStmt.setFetchSize(fetchSize);
+            setFetchForBigResult(sourceConn, selectStmt, fetchSize);
 
             insertStmt = JdbcUtil.prepareStatement(targetConn, insertSql);
 
@@ -3643,13 +3643,17 @@ public final class JdbcUtils {
     //        Iterators.forEach(iter, offset, count, processThreadNum, queueSize, elementParser);
     //    }
 
-    private static void setFetchForBigResult(final Connection conn, PreparedStatement stmt) throws SQLException {
+    private static void setFetchForBigResult(final Connection conn, final PreparedStatement stmt) throws SQLException {
+        setFetchForBigResult(conn, stmt, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+    }
+
+    private static void setFetchForBigResult(final Connection conn, final PreparedStatement stmt, final int fetchSize) throws SQLException {
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
         if (JdbcUtil.getDBProductInfo(conn).getVersion().isMySQL()) {
             stmt.setFetchSize(Integer.MIN_VALUE);
         } else {
-            stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+            stmt.setFetchSize(fetchSize);
         }
     }
 
