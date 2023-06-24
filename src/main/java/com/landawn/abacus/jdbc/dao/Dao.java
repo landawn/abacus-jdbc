@@ -885,7 +885,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     int count(final Condition cond) throws SQLException;
 
-    // TODO dao.anyMatch/allMatch/noneMatch(...) 语义/语境不对，在dao里
+    // TODO dao.anyMatch/allMatch/noneMatch(...)
     //    /**
     //     *
     //     * @param selectPropNames
