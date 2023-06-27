@@ -1926,6 +1926,45 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     /**
      *
      *
+     * @param sqlType
+     * @param parameterIndices
+     * @return
+     * @throws SQLException
+     * @see java.sql.Types
+     */
+    @Beta
+    public This setNullForMultiPositions(final int sqlType, final int... parameterIndices) throws SQLException {
+        checkParameterIndices(parameterIndices);
+
+        for (int parameterIndex : parameterIndices) {
+            setNull(parameterIndex, sqlType);
+        }
+
+        return (This) this;
+    }
+
+    /**
+     *
+     *
+     * @param parameterValue
+     * @param parameterIndices
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public This setBooleanForMultiPositions(final boolean parameterValue, final int... parameterIndices) throws SQLException {
+        checkParameterIndices(parameterIndices);
+
+        for (int parameterIndex : parameterIndices) {
+            setBoolean(parameterIndex, parameterValue);
+        }
+
+        return (This) this;
+    }
+
+    /**
+     *
+     *
      * @param parameterValue
      * @param parameterIndices
      * @return
