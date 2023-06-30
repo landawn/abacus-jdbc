@@ -581,68 +581,46 @@ public final class JdbcUtils {
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative", //NOSONAR
                 batchSize, batchIntervalInMillis);
 
-        int result = 0;
+        final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = new Throwables.BiConsumer<>() {
+            private int columnCount = 0;
+            private Type<Object>[] columnTypes = null;
+            private int[] columnIndexes = new int[columnCount];
 
-        final int columnCount = columnTypeMap.size();
-        final List<String> columnNameList = dataset.columnNameList();
-        final int[] columnIndexes = new int[columnCount];
-        final Type<Object>[] columnTypes = new Type[columnCount];
-        final Set<String> columnNameSet = N.newHashSet(columnCount);
+            @Override
+            public void accept(PreparedQuery t, Object[] u) throws SQLException {
+                if (columnTypes == null) {
+                    columnCount = columnTypeMap.size();
+                    columnTypes = new Type[columnCount];
+                    columnIndexes = new int[columnCount];
 
-        int idx = 0;
-        for (String columnName : columnNameList) {
-            if (columnTypeMap.containsKey(columnName)) {
-                columnIndexes[idx] = dataset.getColumnIndex(columnName);
-                columnTypes[idx] = columnTypeMap.get(columnName);
-                columnNameSet.add(columnName);
-                idx++;
-            }
-        }
+                    final List<String> columnNameList = dataset.columnNameList();
+                    final Set<String> columnNameSet = N.newHashSet(columnCount);
 
-        if (columnNameSet.size() != columnTypeMap.size()) {
-            final List<String> keys = new ArrayList<>(columnTypeMap.keySet());
-            keys.removeAll(columnNameSet);
-            throw new RuntimeException(keys + " are not included in titles: " + N.toString(columnNameList));
-        }
+                    int idx = 0;
 
-        final Object[] row = filter == null ? null : new Object[columnCount];
-        for (int i = offset, size = dataset.size(); result < count && i < size; i++) {
-            dataset.absolute(i);
+                    for (String columnName : columnNameList) {
+                        if (columnTypeMap.containsKey(columnName)) {
+                            columnIndexes[idx] = dataset.getColumnIndex(columnName);
+                            columnTypes[idx] = columnTypeMap.get(columnName);
+                            columnNameSet.add(columnName);
+                            idx++;
+                        }
+                    }
 
-            if (filter == null) {
+                    if (columnNameSet.size() != columnTypeMap.size()) {
+                        final List<String> keys = new ArrayList<>(columnTypeMap.keySet());
+                        keys.removeAll(columnNameSet);
+                        throw new IllegalArgumentException(keys + " are not included in titles: " + N.toString(columnNameList));
+                    }
+                }
+
                 for (int j = 0; j < columnCount; j++) {
                     columnTypes[j].set(stmt, j + 1, dataset.get(columnIndexes[j]));
                 }
-            } else {
-                for (int j = 0; j < columnCount; j++) {
-                    row[j] = dataset.get(columnIndexes[j]);
-                }
-
-                if (!filter.test(row)) {
-                    continue;
-                }
-
-                for (int j = 0; j < columnCount; j++) {
-                    columnTypes[j].set(stmt, j + 1, row[j]);
-                }
             }
+        };
 
-            stmt.addBatch();
-
-            if ((++result % batchSize) == 0) {
-                JdbcUtil.executeBatch(stmt);
-
-                if (batchIntervalInMillis > 0) {
-                    N.sleep(batchIntervalInMillis);
-                }
-            }
-        }
-
-        if ((result % batchSize) > 0) {
-            JdbcUtil.executeBatch(stmt);
-        }
-
-        return result;
+        return importData(dataset, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -1055,128 +1033,6 @@ public final class JdbcUtils {
     /**
      *
      * @param <T>
-     * @param <E>
-     * @param iter
-     * @param conn
-     * @param insertSQL
-     * @param func
-     * @return
-     * @throws SQLException
-     * @throws E
-     */
-    public static <T, E extends Exception> long importData(final Iterator<T> iter, final Connection conn, final String insertSQL,
-            final Throwables.Function<? super T, Object[], E> func) throws SQLException, E {
-        return importData(iter, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param <E>
-     * @param iter
-     * @param offset
-     * @param count
-     * @param conn
-     * @param insertSQL
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param func
-     * @return
-     * @throws SQLException
-     * @throws E
-     */
-    public static <T, E extends Exception> long importData(final Iterator<T> iter, final long offset, final long count, final Connection conn,
-            final String insertSQL, final int batchSize, final long batchIntervalInMillis, final Throwables.Function<? super T, Object[], E> func)
-            throws SQLException, E {
-        PreparedStatement stmt = null;
-
-        try {
-            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
-
-            return importData(iter, offset, count, stmt, batchSize, batchIntervalInMillis, func);
-        } finally {
-            JdbcUtil.closeQuietly(stmt);
-        }
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param <E>
-     * @param iter
-     * @param stmt
-     * @param func
-     * @return
-     * @throws SQLException
-     * @throws E
-     */
-    public static <T, E extends Exception> long importData(final Iterator<T> iter, final PreparedStatement stmt,
-            final Throwables.Function<? super T, Object[], E> func) throws SQLException, E {
-        return importData(iter, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
-    }
-
-    /**
-     * Imports the data from Iterator to database.
-     *
-     * @param <T>
-     * @param <E>
-     * @param iter
-     * @param offset
-     * @param count
-     * @param stmt
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param func convert element to the parameters for record insert. Returns a <code>null</code> array to skip the line.
-     * @return
-     * @throws SQLException
-     * @throws E
-     */
-    public static <T, E extends Exception> long importData(final Iterator<T> iter, long offset, final long count, final PreparedStatement stmt,
-            final int batchSize, final long batchIntervalInMillis, final Throwables.Function<? super T, Object[], E> func) throws SQLException, E {
-        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
-        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
-                batchSize, batchIntervalInMillis);
-
-        long result = 0;
-
-        while (offset-- > 0 && iter.hasNext()) {
-            iter.next();
-        }
-
-        Object[] row = null;
-
-        while (result < count && iter.hasNext()) {
-            row = func.apply(iter.next());
-
-            if (row == null) {
-                continue;
-            }
-
-            for (int i = 0, len = row.length; i < len; i++) {
-                stmt.setObject(i + 1, row[i]);
-            }
-
-            stmt.addBatch();
-
-            if ((++result % batchSize) == 0) {
-                JdbcUtil.executeBatch(stmt);
-
-                if (batchIntervalInMillis > 0) {
-                    N.sleep(batchIntervalInMillis);
-                }
-            }
-        }
-
-        if ((result % batchSize) > 0) {
-            JdbcUtil.executeBatch(stmt);
-        }
-
-        return result;
-    }
-
-    /**
-     *
-     * @param <T>
      * @param iter
      * @param conn
      * @param insertSQL
@@ -1330,650 +1186,650 @@ public final class JdbcUtils {
         return result;
     }
 
-    /**
-     *
-     * @param file
-     * @param conn
-     * @param insertSQL
-     * @param columnTypeList
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings("rawtypes")
-    public static long importCSV(final File file, final Connection conn, final String insertSQL, final List<? extends Type> columnTypeList)
-            throws SQLException, IOException {
-        return importCSV(file, 0, Long.MAX_VALUE, true, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeList);
-    }
-
-    /**
-     *
-     * @param file
-     * @param offset
-     * @param count
-     * @param skipTitle
-     * @param conn
-     * @param insertSQL
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeList
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static long importCSV(final File file, final long offset, final long count, final boolean skipTitle, final Connection conn, final String insertSQL,
-            final int batchSize, final long batchIntervalInMillis, final List<? extends Type> columnTypeList) throws SQLException, IOException {
-        return importCSV(file, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), conn, insertSQL, batchSize, batchIntervalInMillis, columnTypeList);
-    }
-
-    /**
-     * Imports the data from CSV to database.
-     *
-     * @param <E>
-     * @param file
-     * @param offset
-     * @param count
-     * @param skipTitle
-     * @param filter
-     * @param conn
-     * @param insertSQL the column order in the sql must be consistent with the column order in the CSV file.
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeList set the column type to null to skip the column in CSV.
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     * @throws E
-     */
-    @SuppressWarnings("rawtypes")
-    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final boolean skipTitle,
-            final Throwables.Predicate<String[], E> filter, final Connection conn, final String insertSQL, final int batchSize,
-            final long batchIntervalInMillis, final List<? extends Type> columnTypeList) throws SQLException, IOException, E {
-        PreparedStatement stmt = null;
-
-        try {
-            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
-
-            return importCSV(file, offset, count, skipTitle, filter, stmt, batchSize, batchIntervalInMillis, columnTypeList);
-        } finally {
-            JdbcUtil.closeQuietly(stmt);
-        }
-    }
-
-    /**
-     *
-     * @param file
-     * @param stmt
-     * @param columnTypeList
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings("rawtypes")
-    public static long importCSV(final File file, final PreparedStatement stmt, final List<? extends Type> columnTypeList) throws SQLException, IOException {
-        return importCSV(file, 0, Long.MAX_VALUE, true, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeList);
-    }
-
-    /**
-     *
-     * @param file
-     * @param offset
-     * @param count
-     * @param skipTitle
-     * @param stmt
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeList
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static long importCSV(final File file, long offset, final long count, final boolean skipTitle, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final List<? extends Type> columnTypeList) throws SQLException, IOException {
-        return importCSV(file, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeList);
-    }
-
-    /**
-     * Imports the data from CSV to database.
-     *
-     * @param <E>
-     * @param file
-     * @param offset
-     * @param count
-     * @param skipTitle
-     * @param filter
-     * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeList set the column type to null to skip the column in CSV.
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     * @throws E
-     */
-    @SuppressWarnings("rawtypes")
-    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final boolean skipTitle,
-            final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final List<? extends Type> columnTypeList) throws SQLException, IOException, E {
-
-        try (Reader reader = new FileReader(file)) {
-            return importCSV(reader, offset, count, skipTitle, filter, stmt, batchSize, batchIntervalInMillis, columnTypeList);
-        }
-    }
-
-    /**
-     *
-     * @param is
-     * @param stmt
-     * @param columnTypeList
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings("rawtypes")
-    public static long importCSV(final InputStream is, final PreparedStatement stmt, final List<? extends Type> columnTypeList)
-            throws SQLException, IOException {
-        return importCSV(is, 0, Long.MAX_VALUE, true, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeList);
-    }
-
-    /**
-     *
-     * @param is
-     * @param offset
-     * @param count
-     * @param skipTitle
-     * @param stmt
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeList
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static long importCSV(final InputStream is, long offset, final long count, final boolean skipTitle, final PreparedStatement stmt,
-            final int batchSize, final long batchIntervalInMillis, final List<? extends Type> columnTypeList) throws SQLException, IOException {
-        return importCSV(is, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeList);
-    }
-
-    /**
-     * Imports the data from CSV to database.
-     *
-     * @param <E>
-     * @param is
-     * @param offset
-     * @param count
-     * @param skipTitle
-     * @param filter
-     * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeList set the column type to null to skip the column in CSV.
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     * @throws E
-     */
-    @SuppressWarnings("rawtypes")
-    public static <E extends Exception> long importCSV(final InputStream is, final long offset, final long count, final boolean skipTitle,
-            final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final List<? extends Type> columnTypeList) throws SQLException, IOException, E {
-        final Reader reader = new InputStreamReader(is);
-
-        return importCSV(reader, offset, count, skipTitle, filter, stmt, batchSize, batchIntervalInMillis, columnTypeList);
-    }
-
-    /**
-     *
-     * @param reader
-     * @param stmt
-     * @param columnTypeList
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings("rawtypes")
-    public static long importCSV(final Reader reader, final PreparedStatement stmt, final List<? extends Type> columnTypeList)
-            throws SQLException, IOException {
-        return importCSV(reader, 0, Long.MAX_VALUE, true, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeList);
-    }
-
-    /**
-     *
-     * @param reader
-     * @param offset
-     * @param count
-     * @param skipTitle
-     * @param stmt
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeList
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static long importCSV(final Reader reader, long offset, final long count, final boolean skipTitle, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final List<? extends Type> columnTypeList) throws SQLException, IOException {
-        return importCSV(reader, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeList);
-    }
-
-    /**
-     * Imports the data from CSV to database.
-     *
-     * @param <E>
-     * @param reader
-     * @param offset
-     * @param count
-     * @param skipTitle
-     * @param filter
-     * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeList set the column type to null to skip the column in CSV.
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     * @throws E
-     */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count, final boolean skipTitle,
-            final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final List<? extends Type> columnTypeList) throws SQLException, IOException, E {
-        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
-        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
-                batchSize, batchIntervalInMillis);
-
-        final BiConsumer<String[], String> lineParser = CSVUtil.getCurrentLineParser();
-        long result = 0;
-        final BufferedReader br = Objectory.createBufferedReader(reader);
-
-        try {
-            if (skipTitle) {
-                br.readLine(); // skip the title line.
-            }
-
-            while (offset-- > 0 && br.readLine() != null) {
-                // skip.
-            }
-
-            final Type<Object>[] columnTypes = columnTypeList.toArray(new Type[columnTypeList.size()]);
-            final String[] strs = new String[columnTypeList.size()];
-            String line = null;
-            Type<Object> type = null;
-
-            while (result < count && (line = br.readLine()) != null) {
-                lineParser.accept(strs, line);
-
-                if (filter != null && !filter.test(strs)) {
-                    continue;
-                }
-
-                for (int i = 0, parameterIndex = 1, len = strs.length; i < len; i++) {
-                    type = columnTypes[i];
-
-                    if (type == null) {
-                        continue;
-                    }
-
-                    type.set(stmt, parameterIndex++, (strs[i] == null) ? null : type.valueOf(strs[i]));
-                }
-
-                stmt.addBatch();
-
-                result++;
-
-                if ((result % batchSize) == 0) {
-                    JdbcUtil.executeBatch(stmt);
-
-                    if (batchIntervalInMillis > 0) {
-                        N.sleep(batchIntervalInMillis);
-                    }
-                }
-
-                N.fill(strs, null);
-            }
-
-            if ((result % batchSize) > 0) {
-                JdbcUtil.executeBatch(stmt);
-            }
-        } finally {
-            Objectory.recycle(br);
-        }
-
-        return result;
-    }
-
-    /**
-     * Imports the data from CSV to database.
-     *
-     * @param file
-     * @param conn
-     * @param insertSQL the column order in the sql must be consistent with the column order in the CSV file.
-     * @param columnTypeMap
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings("rawtypes")
-    public static long importCSV(final File file, final Connection conn, final String insertSQL, final Map<String, ? extends Type> columnTypeMap)
-            throws SQLException, IOException {
-        return importCSV(file, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
-    }
-
-    /**
-     *
-     * @param file
-     * @param offset
-     * @param count
-     * @param conn
-     * @param insertSQL
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeMap
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings("rawtypes")
-    public static long importCSV(final File file, final long offset, final long count, final Connection conn, final String insertSQL, final int batchSize,
-            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException, IOException {
-        return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), conn, insertSQL, batchSize, batchIntervalInMillis, columnTypeMap);
-    }
-
-    /**
-     *
-     * @param <E>
-     * @param file
-     * @param offset
-     * @param count
-     * @param filter
-     * @param conn
-     * @param insertSQL the column order in the sql must be consistent with the column order in the CSV file.
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeMap
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     * @throws E
-     */
-    @SuppressWarnings("rawtypes")
-    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
-            final Connection conn, final String insertSQL, final int batchSize, final long batchIntervalInMillis,
-            final Map<String, ? extends Type> columnTypeMap) throws SQLException, IOException, E {
-        PreparedStatement stmt = null;
-
-        try {
-            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
-
-            return importCSV(file, offset, count, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
-        } finally {
-            JdbcUtil.closeQuietly(stmt);
-        }
-    }
-
-    /**
-     *
-     * @param file
-     * @param stmt
-     * @param columnTypeMap
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings("rawtypes")
-    public static long importCSV(final File file, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
-            throws SQLException, IOException {
-        return importCSV(file, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
-    }
-
-    /**
-     *
-     * @param file
-     * @param offset
-     * @param count
-     * @param stmt
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeMap
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings("rawtypes")
-    public static long importCSV(final File file, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException, IOException {
-        return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeMap);
-    }
-
-    /**
-     * Imports the data from CSV to database.
-     *
-     * @param <E>
-     * @param file
-     * @param offset
-     * @param count
-     * @param filter
-     * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeMap
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     * @throws E
-     */
-    @SuppressWarnings("rawtypes")
-    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
-            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
-            throws SQLException, IOException, E {
-
-        try (Reader reader = new FileReader(file)) {
-            return importCSV(reader, offset, count, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
-        }
-    }
-
-    /**
-     *
-     * @param is
-     * @param stmt
-     * @param columnTypeMap
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings("rawtypes")
-    public static long importCSV(final InputStream is, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
-            throws SQLException, IOException {
-        return importCSV(is, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
-    }
-
-    /**
-     *
-     * @param is
-     * @param offset
-     * @param count
-     * @param stmt
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeMap
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings("rawtypes")
-    public static long importCSV(final InputStream is, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException, IOException {
-        return importCSV(is, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeMap);
-    }
-
-    /**
-     * Imports the data from CSV to database.
-     *
-     * @param <E>
-     * @param is
-     * @param offset
-     * @param count
-     * @param filter
-     * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeMap
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     * @throws E
-     */
-    @SuppressWarnings("rawtypes")
-    public static <E extends Exception> long importCSV(final InputStream is, long offset, final long count, final Throwables.Predicate<String[], E> filter,
-            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
-            throws SQLException, IOException, E {
-        final Reader reader = new InputStreamReader(is);
-        return importCSV(reader, offset, count, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
-    }
-
-    /**
-     *
-     * @param reader
-     * @param stmt
-     * @param columnTypeMap
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings("rawtypes")
-    public static long importCSV(final Reader reader, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
-            throws SQLException, IOException {
-        return importCSV(reader, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
-    }
-
-    /**
-     *
-     * @param reader
-     * @param offset
-     * @param count
-     * @param stmt
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeMap
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static long importCSV(final Reader reader, long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException, IOException {
-        return importCSV(reader, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeMap);
-    }
-
-    /**
-     * Imports the data from CSV to database.
-     *
-     * @param <E>
-     * @param reader
-     * @param offset
-     * @param count
-     * @param filter
-     * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeMap
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     * @throws E
-     */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count, final Throwables.Predicate<String[], E> filter,
-            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
-            throws SQLException, IOException, E {
-        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
-        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
-                batchSize, batchIntervalInMillis);
-
-        final Function<String, String[]> headerParser = CSVUtil.getCurrentHeaderParser();
-        final BiConsumer<String[], String> lineParser = CSVUtil.getCurrentLineParser();
-        long result = 0;
-        final BufferedReader br = Objectory.createBufferedReader(reader);
-
-        try {
-            String line = br.readLine();
-            final String[] titles = headerParser.apply(line);
-
-            final Type<Object>[] columnTypes = new Type[titles.length];
-            final List<String> columnNameList = new ArrayList<>(columnTypeMap.size());
-
-            for (int i = 0, columnCount = titles.length; i < columnCount; i++) {
-                if (columnTypeMap.containsKey(titles[i])) {
-                    columnTypes[i] = columnTypeMap.get(titles[i]);
-                    columnNameList.add(titles[i]);
-                }
-            }
-
-            if (columnNameList.size() != columnTypeMap.size()) {
-                final List<String> keys = new ArrayList<>(columnTypeMap.keySet());
-                keys.removeAll(columnNameList);
-                throw new IllegalArgumentException(keys + " are not included in titles: " + N.toString(titles));
-            }
-
-            while (offset-- > 0 && br.readLine() != null) {
-                // skip.
-            }
-
-            final boolean isNullOrEmptyTypes = N.isNullOrEmpty(columnTypes);
-            final String[] strs = new String[titles.length];
-            Type<Object> type = null;
-
-            while (result < count && (line = br.readLine()) != null) {
-                lineParser.accept(strs, line);
-
-                if (filter != null && !filter.test(strs)) {
-                    continue;
-                }
-
-                if (isNullOrEmptyTypes) {
-                    for (int i = 0, len = strs.length; i < len; i++) {
-                        stmt.setObject(i + 1, strs[i]);
-                    }
-                } else {
-                    for (int i = 0, parameterIndex = 1, len = strs.length; i < len; i++) {
-                        type = columnTypes[i];
-
-                        if (type == null) {
-                            continue;
-                        }
-
-                        type.set(stmt, parameterIndex++, (strs[i] == null) ? null : type.valueOf(strs[i]));
-                    }
-                }
-
-                stmt.addBatch();
-
-                result++;
-
-                if ((result % batchSize) == 0) {
-                    JdbcUtil.executeBatch(stmt);
-
-                    if (batchIntervalInMillis > 0) {
-                        N.sleep(batchIntervalInMillis);
-                    }
-                }
-
-                N.fill(strs, null);
-            }
-
-            if ((result % batchSize) > 0) {
-                JdbcUtil.executeBatch(stmt);
-            }
-        } finally {
-            Objectory.recycle(br);
-        }
-
-        return result;
-    }
+    //    /**
+    //     *
+    //     * @param file
+    //     * @param conn
+    //     * @param insertSQL
+    //     * @param columnTypeList
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static long importCSV(final File file, final Connection conn, final String insertSQL, final List<? extends Type> columnTypeList)
+    //            throws SQLException, IOException {
+    //        return importCSV(file, 0, Long.MAX_VALUE, true, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeList);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param file
+    //     * @param offset
+    //     * @param count
+    //     * @param skipTitle
+    //     * @param conn
+    //     * @param insertSQL
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeList
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings({ "unchecked", "rawtypes" })
+    //    public static long importCSV(final File file, final long offset, final long count, final boolean skipTitle, final Connection conn, final String insertSQL,
+    //            final int batchSize, final long batchIntervalInMillis, final List<? extends Type> columnTypeList) throws SQLException, IOException {
+    //        return importCSV(file, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), conn, insertSQL, batchSize, batchIntervalInMillis, columnTypeList);
+    //    }
+    //
+    //    /**
+    //     * Imports the data from CSV to database.
+    //     *
+    //     * @param <E>
+    //     * @param file
+    //     * @param offset
+    //     * @param count
+    //     * @param skipTitle
+    //     * @param filter
+    //     * @param conn
+    //     * @param insertSQL the column order in the sql must be consistent with the column order in the CSV file.
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeList set the column type to null to skip the column in CSV.
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     * @throws E
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final boolean skipTitle,
+    //            final Throwables.Predicate<String[], E> filter, final Connection conn, final String insertSQL, final int batchSize,
+    //            final long batchIntervalInMillis, final List<? extends Type> columnTypeList) throws SQLException, IOException, E {
+    //        PreparedStatement stmt = null;
+    //
+    //        try {
+    //            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
+    //
+    //            return importCSV(file, offset, count, skipTitle, filter, stmt, batchSize, batchIntervalInMillis, columnTypeList);
+    //        } finally {
+    //            JdbcUtil.closeQuietly(stmt);
+    //        }
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param file
+    //     * @param stmt
+    //     * @param columnTypeList
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static long importCSV(final File file, final PreparedStatement stmt, final List<? extends Type> columnTypeList) throws SQLException, IOException {
+    //        return importCSV(file, 0, Long.MAX_VALUE, true, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeList);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param file
+    //     * @param offset
+    //     * @param count
+    //     * @param skipTitle
+    //     * @param stmt
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeList
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings({ "unchecked", "rawtypes" })
+    //    public static long importCSV(final File file, long offset, final long count, final boolean skipTitle, final PreparedStatement stmt, final int batchSize,
+    //            final long batchIntervalInMillis, final List<? extends Type> columnTypeList) throws SQLException, IOException {
+    //        return importCSV(file, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeList);
+    //    }
+    //
+    //    /**
+    //     * Imports the data from CSV to database.
+    //     *
+    //     * @param <E>
+    //     * @param file
+    //     * @param offset
+    //     * @param count
+    //     * @param skipTitle
+    //     * @param filter
+    //     * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeList set the column type to null to skip the column in CSV.
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     * @throws E
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final boolean skipTitle,
+    //            final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
+    //            final List<? extends Type> columnTypeList) throws SQLException, IOException, E {
+    //
+    //        try (Reader reader = new FileReader(file)) {
+    //            return importCSV(reader, offset, count, skipTitle, filter, stmt, batchSize, batchIntervalInMillis, columnTypeList);
+    //        }
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param is
+    //     * @param stmt
+    //     * @param columnTypeList
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static long importCSV(final InputStream is, final PreparedStatement stmt, final List<? extends Type> columnTypeList)
+    //            throws SQLException, IOException {
+    //        return importCSV(is, 0, Long.MAX_VALUE, true, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeList);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param is
+    //     * @param offset
+    //     * @param count
+    //     * @param skipTitle
+    //     * @param stmt
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeList
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings({ "unchecked", "rawtypes" })
+    //    public static long importCSV(final InputStream is, long offset, final long count, final boolean skipTitle, final PreparedStatement stmt,
+    //            final int batchSize, final long batchIntervalInMillis, final List<? extends Type> columnTypeList) throws SQLException, IOException {
+    //        return importCSV(is, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeList);
+    //    }
+    //
+    //    /**
+    //     * Imports the data from CSV to database.
+    //     *
+    //     * @param <E>
+    //     * @param is
+    //     * @param offset
+    //     * @param count
+    //     * @param skipTitle
+    //     * @param filter
+    //     * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeList set the column type to null to skip the column in CSV.
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     * @throws E
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static <E extends Exception> long importCSV(final InputStream is, final long offset, final long count, final boolean skipTitle,
+    //            final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
+    //            final List<? extends Type> columnTypeList) throws SQLException, IOException, E {
+    //        final Reader reader = new InputStreamReader(is);
+    //
+    //        return importCSV(reader, offset, count, skipTitle, filter, stmt, batchSize, batchIntervalInMillis, columnTypeList);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param reader
+    //     * @param stmt
+    //     * @param columnTypeList
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static long importCSV(final Reader reader, final PreparedStatement stmt, final List<? extends Type> columnTypeList)
+    //            throws SQLException, IOException {
+    //        return importCSV(reader, 0, Long.MAX_VALUE, true, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeList);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param reader
+    //     * @param offset
+    //     * @param count
+    //     * @param skipTitle
+    //     * @param stmt
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeList
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings({ "unchecked", "rawtypes" })
+    //    public static long importCSV(final Reader reader, long offset, final long count, final boolean skipTitle, final PreparedStatement stmt, final int batchSize,
+    //            final long batchIntervalInMillis, final List<? extends Type> columnTypeList) throws SQLException, IOException {
+    //        return importCSV(reader, offset, count, skipTitle, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeList);
+    //    }
+    //
+    //    /**
+    //     * Imports the data from CSV to database.
+    //     *
+    //     * @param <E>
+    //     * @param reader
+    //     * @param offset
+    //     * @param count
+    //     * @param skipTitle
+    //     * @param filter
+    //     * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeList set the column type to null to skip the column in CSV.
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     * @throws E
+    //     */
+    //    @SuppressWarnings({ "unchecked", "rawtypes" })
+    //    public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count, final boolean skipTitle,
+    //            final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
+    //            final List<? extends Type> columnTypeList) throws SQLException, IOException, E {
+    //        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
+    //        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
+    //                batchSize, batchIntervalInMillis);
+    //
+    //        final BiConsumer<String[], String> lineParser = CSVUtil.getCurrentLineParser();
+    //        long result = 0;
+    //        final BufferedReader br = Objectory.createBufferedReader(reader);
+    //
+    //        try {
+    //            if (skipTitle) {
+    //                br.readLine(); // skip the title line.
+    //            }
+    //
+    //            while (offset-- > 0 && br.readLine() != null) {
+    //                // skip.
+    //            }
+    //
+    //            final Type<Object>[] columnTypes = columnTypeList.toArray(new Type[columnTypeList.size()]);
+    //            final String[] strs = new String[columnTypeList.size()];
+    //            String line = null;
+    //            Type<Object> type = null;
+    //
+    //            while (result < count && (line = br.readLine()) != null) {
+    //                lineParser.accept(strs, line);
+    //
+    //                if (filter != null && !filter.test(strs)) {
+    //                    continue;
+    //                }
+    //
+    //                for (int i = 0, parameterIndex = 1, len = strs.length; i < len; i++) {
+    //                    type = columnTypes[i];
+    //
+    //                    if (type == null) {
+    //                        continue;
+    //                    }
+    //
+    //                    type.set(stmt, parameterIndex++, (strs[i] == null) ? null : type.valueOf(strs[i]));
+    //                }
+    //
+    //                stmt.addBatch();
+    //
+    //                result++;
+    //
+    //                if ((result % batchSize) == 0) {
+    //                    JdbcUtil.executeBatch(stmt);
+    //
+    //                    if (batchIntervalInMillis > 0) {
+    //                        N.sleep(batchIntervalInMillis);
+    //                    }
+    //                }
+    //
+    //                N.fill(strs, null);
+    //            }
+    //
+    //            if ((result % batchSize) > 0) {
+    //                JdbcUtil.executeBatch(stmt);
+    //            }
+    //        } finally {
+    //            Objectory.recycle(br);
+    //        }
+    //
+    //        return result;
+    //    }
+    //
+    //    /**
+    //     * Imports the data from CSV to database.
+    //     *
+    //     * @param file
+    //     * @param conn
+    //     * @param insertSQL the column order in the sql must be consistent with the column order in the CSV file.
+    //     * @param columnTypeMap
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static long importCSV(final File file, final Connection conn, final String insertSQL, final Map<String, ? extends Type> columnTypeMap)
+    //            throws SQLException, IOException {
+    //        return importCSV(file, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param file
+    //     * @param offset
+    //     * @param count
+    //     * @param conn
+    //     * @param insertSQL
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeMap
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static long importCSV(final File file, final long offset, final long count, final Connection conn, final String insertSQL, final int batchSize,
+    //            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException, IOException {
+    //        return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), conn, insertSQL, batchSize, batchIntervalInMillis, columnTypeMap);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param <E>
+    //     * @param file
+    //     * @param offset
+    //     * @param count
+    //     * @param filter
+    //     * @param conn
+    //     * @param insertSQL the column order in the sql must be consistent with the column order in the CSV file.
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeMap
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     * @throws E
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
+    //            final Connection conn, final String insertSQL, final int batchSize, final long batchIntervalInMillis,
+    //            final Map<String, ? extends Type> columnTypeMap) throws SQLException, IOException, E {
+    //        PreparedStatement stmt = null;
+    //
+    //        try {
+    //            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
+    //
+    //            return importCSV(file, offset, count, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
+    //        } finally {
+    //            JdbcUtil.closeQuietly(stmt);
+    //        }
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param file
+    //     * @param stmt
+    //     * @param columnTypeMap
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static long importCSV(final File file, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
+    //            throws SQLException, IOException {
+    //        return importCSV(file, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param file
+    //     * @param offset
+    //     * @param count
+    //     * @param stmt
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeMap
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static long importCSV(final File file, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
+    //            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException, IOException {
+    //        return importCSV(file, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeMap);
+    //    }
+    //
+    //    /**
+    //     * Imports the data from CSV to database.
+    //     *
+    //     * @param <E>
+    //     * @param file
+    //     * @param offset
+    //     * @param count
+    //     * @param filter
+    //     * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeMap
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     * @throws E
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
+    //            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
+    //            throws SQLException, IOException, E {
+    //
+    //        try (Reader reader = new FileReader(file)) {
+    //            return importCSV(reader, offset, count, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
+    //        }
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param is
+    //     * @param stmt
+    //     * @param columnTypeMap
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static long importCSV(final InputStream is, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
+    //            throws SQLException, IOException {
+    //        return importCSV(is, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param is
+    //     * @param offset
+    //     * @param count
+    //     * @param stmt
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeMap
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static long importCSV(final InputStream is, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
+    //            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException, IOException {
+    //        return importCSV(is, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeMap);
+    //    }
+    //
+    //    /**
+    //     * Imports the data from CSV to database.
+    //     *
+    //     * @param <E>
+    //     * @param is
+    //     * @param offset
+    //     * @param count
+    //     * @param filter
+    //     * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeMap
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     * @throws E
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static <E extends Exception> long importCSV(final InputStream is, long offset, final long count, final Throwables.Predicate<String[], E> filter,
+    //            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
+    //            throws SQLException, IOException, E {
+    //        final Reader reader = new InputStreamReader(is);
+    //        return importCSV(reader, offset, count, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param reader
+    //     * @param stmt
+    //     * @param columnTypeMap
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings("rawtypes")
+    //    public static long importCSV(final Reader reader, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
+    //            throws SQLException, IOException {
+    //        return importCSV(reader, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
+    //    }
+    //
+    //    /**
+    //     *
+    //     * @param reader
+    //     * @param offset
+    //     * @param count
+    //     * @param stmt
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeMap
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     */
+    //    @SuppressWarnings({ "unchecked", "rawtypes" })
+    //    public static long importCSV(final Reader reader, long offset, final long count, final PreparedStatement stmt, final int batchSize,
+    //            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException, IOException {
+    //        return importCSV(reader, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeMap);
+    //    }
+    //
+    //    /**
+    //     * Imports the data from CSV to database.
+    //     *
+    //     * @param <E>
+    //     * @param reader
+    //     * @param offset
+    //     * @param count
+    //     * @param filter
+    //     * @param stmt the column order in the sql must be consistent with the column order in the CSV file.
+    //     * @param batchSize
+    //     * @param batchIntervalInMillis
+    //     * @param columnTypeMap
+    //     * @return
+    //     * @throws SQLException
+    //     * @throws IOException
+    //     * @throws E
+    //     */
+    //    @SuppressWarnings({ "unchecked", "rawtypes" })
+    //    public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count, final Throwables.Predicate<String[], E> filter,
+    //            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
+    //            throws SQLException, IOException, E {
+    //        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
+    //        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
+    //                batchSize, batchIntervalInMillis);
+    //
+    //        final Function<String, String[]> headerParser = CSVUtil.getCurrentHeaderParser();
+    //        final BiConsumer<String[], String> lineParser = CSVUtil.getCurrentLineParser();
+    //        long result = 0;
+    //        final BufferedReader br = Objectory.createBufferedReader(reader);
+    //
+    //        try {
+    //            String line = br.readLine();
+    //            final String[] titles = headerParser.apply(line);
+    //
+    //            final Type<Object>[] columnTypes = new Type[titles.length];
+    //            final List<String> columnNameList = new ArrayList<>(columnTypeMap.size());
+    //
+    //            for (int i = 0, columnCount = titles.length; i < columnCount; i++) {
+    //                if (columnTypeMap.containsKey(titles[i])) {
+    //                    columnTypes[i] = columnTypeMap.get(titles[i]);
+    //                    columnNameList.add(titles[i]);
+    //                }
+    //            }
+    //
+    //            if (columnNameList.size() != columnTypeMap.size()) {
+    //                final List<String> keys = new ArrayList<>(columnTypeMap.keySet());
+    //                keys.removeAll(columnNameList);
+    //                throw new IllegalArgumentException(keys + " are not included in titles: " + N.toString(titles));
+    //            }
+    //
+    //            while (offset-- > 0 && br.readLine() != null) {
+    //                // skip.
+    //            }
+    //
+    //            final boolean isNullOrEmptyTypes = N.isNullOrEmpty(columnTypes);
+    //            final String[] strs = new String[titles.length];
+    //            Type<Object> type = null;
+    //
+    //            while (result < count && (line = br.readLine()) != null) {
+    //                lineParser.accept(strs, line);
+    //
+    //                if (filter != null && !filter.test(strs)) {
+    //                    continue;
+    //                }
+    //
+    //                if (isNullOrEmptyTypes) {
+    //                    for (int i = 0, len = strs.length; i < len; i++) {
+    //                        stmt.setObject(i + 1, strs[i]);
+    //                    }
+    //                } else {
+    //                    for (int i = 0, parameterIndex = 1, len = strs.length; i < len; i++) {
+    //                        type = columnTypes[i];
+    //
+    //                        if (type == null) {
+    //                            continue;
+    //                        }
+    //
+    //                        type.set(stmt, parameterIndex++, (strs[i] == null) ? null : type.valueOf(strs[i]));
+    //                    }
+    //                }
+    //
+    //                stmt.addBatch();
+    //
+    //                result++;
+    //
+    //                if ((result % batchSize) == 0) {
+    //                    JdbcUtil.executeBatch(stmt);
+    //
+    //                    if (batchIntervalInMillis > 0) {
+    //                        N.sleep(batchIntervalInMillis);
+    //                    }
+    //                }
+    //
+    //                N.fill(strs, null);
+    //            }
+    //
+    //            if ((result % batchSize) > 0) {
+    //                JdbcUtil.executeBatch(stmt);
+    //            }
+    //        } finally {
+    //            Objectory.recycle(br);
+    //        }
+    //
+    //        return result;
+    //    }
 
     /**
      * Imports the data from CSV to database.

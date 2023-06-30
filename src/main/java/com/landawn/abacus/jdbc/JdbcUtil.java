@@ -209,10 +209,15 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException
      */
     public static DBProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws UncheckedSQLException {
-        try (Connection conn = ds.getConnection()) {
+        Connection conn = null;
+
+        try {
+            conn = ds.getConnection();
             return getDBProductInfo(conn);
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
+        } finally {
+            JdbcUtil.releaseConnection(conn, ds);
         }
     }
 
@@ -1563,7 +1568,7 @@ public final class JdbcUtil {
      * @throws E
      */
     @Beta
-    public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource dataSource, final Throwables.Function<javax.sql.DataSource, T, E> cmd)
+    public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource dataSource, final Throwables.Function<Connection, T, E> cmd)
             throws E {
         N.checkArgNotNull(dataSource, "dataSource");
         N.checkArgNotNull(cmd, "cmd");
@@ -1572,7 +1577,7 @@ public final class JdbcUtil {
         T result = null;
 
         try {
-            result = cmd.apply(dataSource);
+            result = cmd.apply(tran.connection());
             tran.commit();
         } finally {
             tran.rollbackIfNotCommitted();
@@ -1613,15 +1618,14 @@ public final class JdbcUtil {
      * @throws E
      */
     @Beta
-    public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Consumer<javax.sql.DataSource, E> cmd)
-            throws E {
+    public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Consumer<Connection, E> cmd) throws E {
         N.checkArgNotNull(dataSource, "dataSource");
         N.checkArgNotNull(cmd, "cmd");
 
         final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
         try {
-            cmd.accept(dataSource);
+            cmd.accept(tran.connection());
             tran.commit();
         } finally {
             tran.rollbackIfNotCommitted();
@@ -4184,20 +4188,20 @@ public final class JdbcUtil {
      * @return
      */
     public static ExceptionalStream<Object[], SQLException> stream(final ResultSet resultSet) {
-        return stream(Object[].class, resultSet);
+        return stream(resultSet, Object[].class);
     }
 
     /**
      * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
+     * @param resultSet
+     * @param targetClass Array/List/Map or Entity with getter/setter methods.
      *
      * @param <T>
-     * @param targetClass Array/List/Map or Entity with getter/setter methods.
-     * @param resultSet
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final Class<? extends T> targetClass, final ResultSet resultSet) {
+    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final Class<? extends T> targetClass) {
         N.checkArgNotNull(targetClass, "targetClass");
         N.checkArgNotNull(resultSet, "resultSet");
 
@@ -4530,6 +4534,23 @@ public final class JdbcUtil {
     /**
      * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
      * <br />
+     * {@code JdbcUtil.streamAllResultSets(stmt, targetClass).onClose(Fn.closeQuietly(stmt))...}
+     *
+     * @param <T>
+     * @param stmt
+     * @param targetClass
+     * @return
+     */
+    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final Class<? extends T> targetClass) {
+        N.checkArgNotNull(stmt, "stmt");
+        N.checkArgNotNull(targetClass, "targetClass");
+
+        return streamAllResultSets(stmt, BiRowMapper.to(targetClass));
+    }
+
+    /**
+     * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
+     * <br />
      * {@code JdbcUtil.streamAllResultSets(stmt, rowMapper).onClose(Fn.closeQuietly(stmt))...}
      *
      * @param <T>
@@ -4730,18 +4751,18 @@ public final class JdbcUtil {
 
     /**
      * Runs a {@code Stream} with each element(page) is loaded from database table by running sql {@code query}.
-     *
-     * @param <T>
-     * @param entityCalss
      * @param ds
      * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
      * @param pageSize
      * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
+     * @param entityCalss
+     *
+     * @param <T>
      * @return
      */
     @SuppressWarnings("rawtypes")
-    public static <T> ExceptionalStream<List<T>, SQLException> queryByPage(final Class<T> entityCalss, final javax.sql.DataSource ds, final String query,
-            final int pageSize, final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, List<T>> paramSetter) {
+    public static <T> ExceptionalStream<List<T>, SQLException> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
+            final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, List<T>> paramSetter, final Class<T> entityCalss) {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
@@ -4794,18 +4815,18 @@ public final class JdbcUtil {
 
     /**
      * Runs a {@code Stream} with each element(page) is loaded from database table by running sql {@code query}.
-     *
-     * @param <T>
-     * @param entityCalss
      * @param conn
      * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
      * @param pageSize
      * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
+     * @param entityCalss
+     *
+     * @param <T>
      * @return
      */
     @SuppressWarnings("rawtypes")
-    public static <T> ExceptionalStream<List<T>, SQLException> queryByPage(final Class<T> entityCalss, final Connection conn, final String query,
-            final int pageSize, final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, List<T>> paramSetter) {
+    public static <T> ExceptionalStream<List<T>, SQLException> queryByPage(final Connection conn, final String query, final int pageSize,
+            final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, List<T>> paramSetter, final Class<T> entityCalss) {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
