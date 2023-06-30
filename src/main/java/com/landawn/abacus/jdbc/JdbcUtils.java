@@ -2306,12 +2306,11 @@ public final class JdbcUtils {
      */
     public static long exportCSV(final File out, final ResultSet rs, final Collection<String> selectColumnNames, final long offset, final long count,
             final boolean writeTitle, final boolean quoted) throws SQLException, IOException {
+        if (!out.exists()) {
+            out.createNewFile(); //NOSONAR
+        }
 
         try (OutputStream os = new FileOutputStream(out)) {
-            if (!out.exists()) {
-                out.createNewFile(); //NOSONAR
-            }
-
             long result = exportCSV(os, rs, selectColumnNames, offset, count, writeTitle, quoted);
 
             os.flush();
