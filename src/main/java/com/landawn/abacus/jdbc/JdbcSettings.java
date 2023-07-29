@@ -76,7 +76,7 @@ public final class JdbcSettings {
     //    @Setter(value = AccessLevel.NONE)
     //    @EqualsAndHashCode.Exclude
     //    @ToString.Exclude
-    //    private boolean fozen = false;
+    //    private boolean isFrozen = false;
     //
     //    /**
     //     *
@@ -139,14 +139,14 @@ public final class JdbcSettings {
     //     * Freeze.
     //     */
     //    void freeze() {
-    //        fozen = true;
+    //        isFrozen = true;
     //    }
     //
     //    /**
     //     * Assert not frozen.
     //     */
     //    void assertNotFrozen() {
-    //        if (fozen) {
+    //        if (isFrozen) {
     //            throw new RuntimeException("It's finalized. No change is allowed");
     //        }
     //    }
