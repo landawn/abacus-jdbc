@@ -1040,7 +1040,7 @@ public final class JdbcUtils {
      * @return
      * @throws SQLException
      */
-    public static <T> long importData(final Iterator<T> iter, final Connection conn, final String insertSQL,
+    public static <T> long importData(final Iterator<? extends T> iter, final Connection conn, final String insertSQL,
             final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
         return importData(iter, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
@@ -1059,7 +1059,7 @@ public final class JdbcUtils {
      * @return
      * @throws SQLException
      */
-    public static <T> long importData(final Iterator<T> iter, final long offset, final long count, final Connection conn, final String insertSQL,
+    public static <T> long importData(final Iterator<? extends T> iter, final long offset, final long count, final Connection conn, final String insertSQL,
             final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter)
             throws SQLException {
         return importData(iter, offset, count, Fn.alwaysTrue(), conn, insertSQL, batchSize, batchIntervalInMillis, stmtSetter);
@@ -1082,7 +1082,7 @@ public final class JdbcUtils {
      * @throws SQLException
      * @throws E
      */
-    public static <T, E extends Exception> long importData(final Iterator<T> iter, final long offset, final long count,
+    public static <T, E extends Exception> long importData(final Iterator<? extends T> iter, final long offset, final long count,
             final Throwables.Predicate<? super T, E> filter, final Connection conn, final String insertSQL, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException, E {
         PreparedStatement stmt = null;
@@ -1105,7 +1105,7 @@ public final class JdbcUtils {
      * @return
      * @throws SQLException
      */
-    public static <T> long importData(final Iterator<T> iter, final PreparedStatement stmt,
+    public static <T> long importData(final Iterator<? extends T> iter, final PreparedStatement stmt,
             final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
         return importData(iter, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
@@ -1123,7 +1123,7 @@ public final class JdbcUtils {
      * @return
      * @throws SQLException
      */
-    public static <T> long importData(final Iterator<T> iter, long offset, final long count, final PreparedStatement stmt, final int batchSize,
+    public static <T> long importData(final Iterator<? extends T> iter, long offset, final long count, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
         return importData(iter, offset, count, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
@@ -1145,7 +1145,7 @@ public final class JdbcUtils {
      * @throws SQLException
      * @throws E
      */
-    public static <T, E extends Exception> long importData(final Iterator<T> iter, long offset, final long count,
+    public static <T, E extends Exception> long importData(final Iterator<? extends T> iter, long offset, final long count,
             final Throwables.Predicate<? super T, E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
