@@ -131,7 +131,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @since 0.8
  * @author Haiyang Li
  */
-@SuppressWarnings("java:S1192")
+@SuppressWarnings({ "java:S1192", "java:S6539" })
 public final class JdbcUtil {
 
     static final Logger logger = LoggerFactory.getLogger(JdbcUtil.class);

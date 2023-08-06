@@ -847,7 +847,7 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
         if (x == null) {
             return setNull(parameterName, Types.DECIMAL);
         } else {
-            return setBigDecimal(parameterName, new BigDecimal(x)); //NOSONAR
+            return setBigDecimal(parameterName, new BigDecimal(x));
         }
     }
 
@@ -953,7 +953,7 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
         if (x == null) {
             return setNull(parameterName, Types.VARCHAR);
         } else {
-            return setString(parameterName, x.toString(10)); //NOSONAR
+            return setString(parameterName, x.toString(10));
         }
     }
 
