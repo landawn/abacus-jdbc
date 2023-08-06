@@ -28,6 +28,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLType;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -427,6 +428,24 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
+     * Sets the long.
+     *
+     * @param parameterIndex
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public This setLong(int parameterIndex, BigInteger x) throws SQLException {
+        if (x == null) {
+            stmt.setNull(parameterIndex, java.sql.Types.BIGINT);
+        } else {
+            stmt.setLong(parameterIndex, x.longValueExact());
+        }
+
+        return (This) this;
+    }
+
+    /**
      * Sets the float.
      *
      * @param parameterIndex starts from 1, not 0.
@@ -505,6 +524,24 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
+     * Sets the BigInteger.
+     *
+     * @param parameterIndex starts from 1, not 0.
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public This setBigDecimal(int parameterIndex, BigInteger x) throws SQLException {
+        if (x == null) {
+            stmt.setNull(parameterIndex, Types.DECIMAL);
+        } else {
+            stmt.setBigDecimal(parameterIndex, new BigDecimal(x));
+        }
+
+        return (This) this;
+    }
+
+    /**
      * Sets the string.
      *
      * @param parameterIndex starts from 1, not 0.
@@ -556,6 +593,24 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      */
     public This setString(int parameterIndex, Character x) throws SQLException {
         stmt.setString(parameterIndex, x == null ? null : String.valueOf(x));
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the BigInteger.
+     *
+     * @param parameterIndex starts from 1, not 0.
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public This setString(int parameterIndex, BigInteger x) throws SQLException {
+        if (x == null) {
+            stmt.setNull(parameterIndex, Types.VARCHAR);
+        } else {
+            stmt.setString(parameterIndex, x.toString(10));
+        }
 
         return (This) this;
     }

@@ -19,15 +19,18 @@ package com.landawn.abacus.jdbc;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.net.URL;
 import java.sql.CallableStatement;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLType;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.jdbc.Jdbc.RowMapper;
@@ -277,6 +280,24 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     }
 
     /**
+     * Sets the long.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public PreparedCallableQuery setLong(String parameterName, BigInteger x) throws SQLException {
+        if (x == null) {
+            cstmt.setNull(parameterName, Types.BIGINT);
+        } else {
+            cstmt.setLong(parameterName, x.longValueExact());
+        }
+
+        return this;
+    }
+
+    /**
      * Sets the float.
      *
      * @param parameterName
@@ -355,6 +376,24 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
     }
 
     /**
+     * Sets the big decimal.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public PreparedCallableQuery setBigDecimal(String parameterName, BigInteger x) throws SQLException {
+        if (x == null) {
+            cstmt.setNull(parameterName, Types.DECIMAL);
+        } else {
+            cstmt.setBigDecimal(parameterName, new BigDecimal(x));
+        }
+
+        return this;
+    }
+
+    /**
      * Sets the string.
      *
      * @param parameterName
@@ -364,6 +403,60 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
      */
     public PreparedCallableQuery setString(String parameterName, String x) throws SQLException {
         cstmt.setString(parameterName, x);
+
+        return this;
+    }
+
+    /**
+     * Sets the string.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public PreparedCallableQuery setString(String parameterName, CharSequence x) throws SQLException {
+        return setString(parameterName, x == null ? null : x.toString());
+    }
+
+    /**
+     *
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public PreparedCallableQuery setString(String parameterName, char x) throws SQLException {
+        return setString(parameterName, String.valueOf(x));
+    }
+
+    /**
+     *
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public PreparedCallableQuery setString(String parameterName, Character x) throws SQLException {
+        return setString(parameterName, x == null ? (String) null : x.toString()); //NOSONAR
+    }
+
+    /**
+     * Sets the string.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public PreparedCallableQuery setString(String parameterName, BigInteger x) throws SQLException {
+        if (x == null) {
+            cstmt.setNull(parameterName, Types.VARCHAR);
+        } else {
+            cstmt.setString(parameterName, x.toString(10));
+        }
 
         return this;
     }

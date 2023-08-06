@@ -19,14 +19,17 @@ package com.landawn.abacus.jdbc;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.net.URL;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.SQLType;
+import java.sql.Types;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
@@ -617,6 +620,24 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
     }
 
     /**
+     * Sets the long.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public NamedQuery setLong(String parameterName, BigInteger x) throws SQLException {
+        if (x == null) {
+            setNull(parameterName, java.sql.Types.BIGINT);
+        } else {
+            setLong(parameterName, x.longValueExact());
+        }
+
+        return this;
+    }
+
+    /**
      * Sets the float.
      *
      * @param parameterName
@@ -815,6 +836,22 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
     }
 
     /**
+     *
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public NamedQuery setBigDecimal(String parameterName, BigInteger x) throws SQLException {
+        if (x == null) {
+            return setNull(parameterName, Types.DECIMAL);
+        } else {
+            return setBigDecimal(parameterName, new BigDecimal(x)); //NOSONAR
+        }
+    }
+
+    /**
      * Sets the string.
      *
      * @param parameterName
@@ -902,6 +939,22 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
      */
     public NamedQuery setString(String parameterName, Character x) throws SQLException {
         return setString(parameterName, x == null ? (String) null : x.toString()); //NOSONAR
+    }
+
+    /**
+     *
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public NamedQuery setString(String parameterName, BigInteger x) throws SQLException {
+        if (x == null) {
+            return setNull(parameterName, Types.VARCHAR);
+        } else {
+            return setString(parameterName, x.toString(10)); //NOSONAR
+        }
     }
 
     /**
