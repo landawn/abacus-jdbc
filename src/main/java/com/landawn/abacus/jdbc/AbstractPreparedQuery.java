@@ -542,6 +542,22 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     /**
+     * Sets the BigInteger.
+     *
+     * @param parameterIndex starts from 1, not 0.
+     * @param x
+     * @return
+     * @throws SQLException
+     * @see {@link #setString(int, BigInteger)}
+     * @see {@link #setBigDecimal(int, BigInteger)}
+     * @see {@link #setLong(int, BigInteger)}
+     */
+    @Beta
+    public This setBigIntegerAsString(int parameterIndex, BigInteger x) throws SQLException {
+        return setString(parameterIndex, x);
+    }
+
+    /**
      * Sets the string.
      *
      * @param parameterIndex starts from 1, not 0.

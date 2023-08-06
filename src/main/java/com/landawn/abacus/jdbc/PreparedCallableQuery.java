@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.parser.ParserUtil;
@@ -391,6 +392,22 @@ public final class PreparedCallableQuery extends AbstractPreparedQuery<CallableS
         }
 
         return this;
+    }
+
+    /**
+     * Sets the BigInteger.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     * @see {@link #setString(String, BigInteger)}
+     * @see {@link #setBigDecimal(String, BigInteger)}
+     * @see {@link #setLong(String, BigInteger)}
+     */
+    @Beta
+    public PreparedCallableQuery setBigIntegerAsString(String parameterName, BigInteger x) throws SQLException {
+        return setString(parameterName, x);
     }
 
     /**

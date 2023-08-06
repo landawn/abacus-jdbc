@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -849,6 +850,22 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
         } else {
             return setBigDecimal(parameterName, new BigDecimal(x));
         }
+    }
+
+    /**
+     * Sets the BigInteger.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     * @see {@link #setString(String, BigInteger)}
+     * @see {@link #setBigDecimal(String, BigInteger)}
+     * @see {@link #setLong(String, BigInteger)}
+     */
+    @Beta
+    public NamedQuery setBigIntegerAsString(String parameterName, BigInteger x) throws SQLException {
+        return setString(parameterName, x);
     }
 
     /**
