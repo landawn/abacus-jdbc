@@ -175,6 +175,27 @@
 	<build>
 		<plugins>
 			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>3.4.0</version>
+				<executions>
+					<execution>
+						<id>add-source</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>add-source</goal>
+						</goals>
+						<configuration>
+							<sources>
+								<source>./src/main/java</source>
+								<source>../../abacus-core/src/jdbc</source>
+							</sources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<configuration>
@@ -186,6 +207,12 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>com/landawn/abacus/jdbc/DaoImpl.java</exclude>
+						<exclude>com/landawn/abacus/jdbc/JoinInfo.java</exclude>
+					</excludes>
+				</configuration>
 				<executions>
 					<execution>
 						<id>attach-sources</id>
