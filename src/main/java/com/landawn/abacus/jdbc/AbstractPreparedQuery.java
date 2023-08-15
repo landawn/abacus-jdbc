@@ -4017,6 +4017,57 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         }
     }
 
+    /**
+     *
+     * @param <T>
+     * @param <R>
+     * @param <E>
+     * @param targetType
+     * @param func
+     * @return
+     * @throws SQLException
+     * @throws E
+     */
+    @Beta
+    public <T, R, E extends Exception> R listAndThen(final Class<? extends T> targetType, final Throwables.Function<? super List<T>, ? extends R, E> func)
+            throws SQLException, E {
+        return func.apply(list(targetType));
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param <R>
+     * @param <E>
+     * @param rowMapper
+     * @param func
+     * @return
+     * @throws SQLException
+     * @throws E
+     */
+    @Beta
+    public <T, R, E extends Exception> R listAndThen(final Jdbc.RowMapper<? extends T> rowMapper,
+            final Throwables.Function<? super List<T>, ? extends R, E> func) throws SQLException, E {
+        return func.apply(list(rowMapper));
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param <R>
+     * @param <E>
+     * @param rowMapper
+     * @param func
+     * @return
+     * @throws SQLException
+     * @throws E
+     */
+    @Beta
+    public <T, R, E extends Exception> R listAndThen(final Jdbc.BiRowMapper<? extends T> rowMapper,
+            final Throwables.Function<? super List<T>, ? extends R, E> func) throws SQLException, E {
+        return func.apply(list(rowMapper));
+    }
+
     // Will it cause confusion if it's called in transaction?
 
     /**
