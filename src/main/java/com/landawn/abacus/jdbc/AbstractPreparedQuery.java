@@ -3346,6 +3346,17 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     /**
      *
+     * @param entityClass used to fetch fields from columns
+     * @return
+     * @throws SQLException
+     * @see {@link Jdbc.ResultExtractor#toDataSet(Class)}
+     */
+    public DataSet query(final Class<?> entityClass) throws SQLException {
+        return query(Jdbc.ResultExtractor.toDataSet(entityClass));
+    }
+
+    /**
+     *
      * @param <R>
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return
@@ -3385,7 +3396,67 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
             JdbcUtil.resetCheckDateTypeFlag();
 
             closeAfterExecutionIfAllowed();
+
         }
+    }
+
+    /**
+     *
+     * @param <R>
+     * @param <E>
+     * @param func
+     * @return
+     * @throws SQLException
+     * @throws E
+     */
+    @Beta
+    public <R, E extends Exception> R queryThenApply(final Throwables.Function<? super DataSet, ? extends R, E> func) throws SQLException, E {
+        return func.apply(query());
+    }
+
+    /**
+     *
+     * @param <R>
+     * @param <E>
+     * @param entityClass used to fetch fields from columns
+     * @param func
+     * @return
+     * @throws SQLException
+     * @throws E
+     * @see {@link Jdbc.ResultExtractor#toDataSet(Class)}
+     */
+    @Beta
+    public <R, E extends Exception> R queryThenApply(final Class<?> entityClass, final Throwables.Function<? super DataSet, ? extends R, E> func)
+            throws SQLException, E {
+        return func.apply(query(entityClass));
+    }
+
+    /**
+     *
+     * @param <E>
+     * @param action
+     * @return
+     * @throws SQLException
+     * @throws E
+     */
+    @Beta
+    public <E extends Exception> void queryThenAccept(final Throwables.Consumer<? super DataSet, E> action) throws SQLException, E {
+        action.accept(query());
+    }
+
+    /**
+     *
+     * @param <E>
+     * @param entityClass used to fetch fields from columns
+     * @param action
+     * @return
+     * @throws SQLException
+     * @throws E
+     * @see {@link Jdbc.ResultExtractor#toDataSet(Class)}
+     */
+    @Beta
+    public <E extends Exception> void queryThenAccept(final Class<?> entityClass, final Throwables.Consumer<? super DataSet, E> action) throws SQLException, E {
+        action.accept(query(entityClass));
     }
 
     //    /**
@@ -4029,7 +4100,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws E
      */
     @Beta
-    public <T, R, E extends Exception> R listAndThen(final Class<? extends T> targetType, final Throwables.Function<? super List<T>, ? extends R, E> func)
+    public <T, R, E extends Exception> R listThenApply(final Class<? extends T> targetType, final Throwables.Function<? super List<T>, ? extends R, E> func)
             throws SQLException, E {
         return func.apply(list(targetType));
     }
@@ -4046,7 +4117,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws E
      */
     @Beta
-    public <T, R, E extends Exception> R listAndThen(final Jdbc.RowMapper<? extends T> rowMapper,
+    public <T, R, E extends Exception> R listThenApply(final Jdbc.RowMapper<? extends T> rowMapper,
             final Throwables.Function<? super List<T>, ? extends R, E> func) throws SQLException, E {
         return func.apply(list(rowMapper));
     }
@@ -4063,7 +4134,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @throws E
      */
     @Beta
-    public <T, R, E extends Exception> R listAndThen(final Jdbc.BiRowMapper<? extends T> rowMapper,
+    public <T, R, E extends Exception> R listThenApply(final Jdbc.BiRowMapper<? extends T> rowMapper,
             final Throwables.Function<? super List<T>, ? extends R, E> func) throws SQLException, E {
         return func.apply(list(rowMapper));
     }
