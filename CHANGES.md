@@ -1,3 +1,9 @@
+### 3.3.12
+
+* Add `AbstractPreparedQuery.queryThenApply/queryThenAccept/listThenApply`.
+* Improvements and bug fix.
+
+
 ### 3.3.11
 
 * Improvements and bug fix.
