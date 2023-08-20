@@ -18,6 +18,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -57,7 +58,7 @@ public class UncheckedDaoTest {
         List<Long> ids = uncheckedUserDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
-        assertNotNull(uncheckedUserDao.selectByIdWithDefine("user", "last_name", ids.get(0)));
+        assertNotNull(uncheckedUserDao.selectByIdWithDefine("user", N.asList("last_name", "first_name"), ids.get(0)));
         assertEquals(ids.size(), uncheckedUserDao.selectByIdWithDefine_2("user", "id", ids.get(0)).size());
 
         assertEquals(ids.size(), uncheckedUserDao.selectByIdWithDefine_3("user", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
@@ -68,9 +69,9 @@ public class UncheckedDaoTest {
         assertTrue(JdbcUtil.call(() -> uncheckedUserDao.isThere("user", "last_name", ids.get(0))));
 
         assertEquals(1, uncheckedUserDao.deleteByIdWithDefine("user", ids.get(0)));
-        assertEquals(ids.size() - 1, uncheckedUserDao.deleteByIdsWithDefine(N.asList("user"), ids));
+        assertEquals(ids.size() - 1, uncheckedUserDao.deleteByIdsWithDefine("user", ids));
 
-        assertNull(uncheckedUserDao.selectByIdWithDefine("user", "last_name", ids.get(0)));
+        assertNull(uncheckedUserDao.selectByIdWithDefine("user", N.asList("last_name", "first_name"), ids.get(0)));
         assertEquals(0, uncheckedUserDao.selectByIdWithDefine_2("user", "id", ids.get(0)).size());
 
         assertFalse(uncheckedUserDao.exists("user", "last_name", ids.get(0)));
@@ -517,20 +518,18 @@ public class UncheckedDaoTest {
             uncheckedUserDao.stream(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fnn.println());
         }
 
-        uncheckedUserDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null, Jdbc.RowMapper.builder().get(1, (rs, i) -> rs.getString(i)).toList())
+        uncheckedUserDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null, Jdbc.RowMapper.builder().get(1, ResultSet::getString).toList())
                 .forEach(Fn.println());
 
         uncheckedUserDao
-                .list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
-                        Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(List.class))
+                .list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(List.class))
                 .forEach(Fn.println());
 
         uncheckedUserDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
                 .forEach(Fn.println());
 
         uncheckedUserDao
-                .list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
-                        Jdbc.BiRowMapper.builder().get("firstName", (rs, i) -> rs.getString(i)).to(User.class))
+                .list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(User.class))
                 .forEach(Fn.println());
 
         uncheckedUserDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.to(User.class)).forEach(Fn.println());

@@ -111,10 +111,10 @@ public interface UncheckedUserDao
     int deleteByIdWithDefine(@Define("tableName") String tableName, @Bind("id") long id);
 
     @Delete(sql = "DELETE FROM {tableName} where id = :id", isBatch = true, batchSize = 10000)
-    int deleteByIdsWithDefine(@DefineList("tableName") List<String> tableName, List<Long> userIds);
+    int deleteByIdsWithDefine(@Define("tableName") String tableName, List<Long> userIds);
 
     @Select(sql = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
-    User selectByIdWithDefine(@Define("tableName") String tableName, @Define("{{orderBy}}") String orderBy, @Bind("id") long id);
+    User selectByIdWithDefine(@Define("tableName") String tableName, @DefineList("{{orderBy}}") List<String> orderByFields, @Bind("id") long id);
 
     @Select(sql = "SELECT * FROM {tableName} where id >= ? ORDER BY {whatever -> orderBy{{P}}")
     List<User> selectByIdWithDefine_2(@Define("tableName") String tableName, @Define("{whatever -> orderBy{{P}}") String orderBy, long id);
