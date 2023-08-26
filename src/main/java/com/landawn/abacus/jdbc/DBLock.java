@@ -107,7 +107,8 @@ public final class DBLock {
 
             String removeDeadLockSQL = "DELETE FROM " + tableName + " WHERE host_name = ? and create_time < ?";
 
-            JdbcUtil.executeUpdate(conn, removeDeadLockSQL, IOUtil.HOST_NAME, DateUtil.createTimestamp(ManagementFactory.getRuntimeMXBean().getStartTime()));
+            JdbcUtil.executeUpdate(conn, removeDeadLockSQL, IOUtil.getHostName(),
+                    DateUtil.createTimestamp(ManagementFactory.getRuntimeMXBean().getStartTime()));
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
@@ -198,7 +199,7 @@ public final class DBLock {
 
         do {
             try {
-                if (JdbcUtil.executeUpdate(ds, lockSQL, IOUtil.HOST_NAME, target, code, LOCKED, DateUtil.createTimestamp(now.getTime() + liveTime), now,
+                if (JdbcUtil.executeUpdate(ds, lockSQL, IOUtil.getHostName(), target, code, LOCKED, DateUtil.createTimestamp(now.getTime() + liveTime), now,
                         now) > 0) {
                     targetCodePool.put(target, code);
 
