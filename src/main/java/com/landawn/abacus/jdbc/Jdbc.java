@@ -124,10 +124,10 @@ public final class Jdbc {
         };
 
         /**
-         * 
          *
-         * @param preparedQuery 
-         * @throws SQLException 
+         *
+         * @param preparedQuery
+         * @throws SQLException
          */
         @Override
         void accept(QS preparedQuery) throws SQLException;
@@ -150,11 +150,11 @@ public final class Jdbc {
         };
 
         /**
-         * 
          *
-         * @param preparedQuery 
-         * @param param 
-         * @throws SQLException 
+         *
+         * @param preparedQuery
+         * @param param
+         * @throws SQLException
          */
         @Override
         void accept(QS preparedQuery, T param) throws SQLException;
@@ -251,12 +251,12 @@ public final class Jdbc {
         };
 
         /**
-         * 
          *
-         * @param parsedSql 
-         * @param preparedQuery 
-         * @param param 
-         * @throws SQLException 
+         *
+         * @param parsedSql
+         * @param preparedQuery
+         * @param param
+         * @throws SQLException
          */
         @Override
         void accept(ParsedSql parsedSql, QS preparedQuery, T param) throws SQLException;
@@ -281,19 +281,19 @@ public final class Jdbc {
         /**
          * In a lot of scenarios, including PreparedQuery/Dao/SQLExecutor, the input {@code ResultSet} will be closed after {@code apply(rs)} call. So don't save/return the input {@code ResultSet}.
          *
-         * @param rs 
-         * @return 
-         * @throws SQLException 
+         * @param rs
+         * @return
+         * @throws SQLException
          */
         @Override
         T apply(ResultSet rs) throws SQLException;
 
         /**
-         * 
          *
-         * @param <R> 
-         * @param after 
-         * @return 
+         *
+         * @param <R>
+         * @param after
+         * @return
          */
         default <R> ResultExtractor<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
             N.checkArgNotNull(after);
@@ -302,9 +302,9 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @return 
+         *
+         * @return
          */
         default BiResultExtractor<T> toBiResultExtractor() {
             return BiResultExtractor.from(this);
@@ -387,16 +387,16 @@ public final class Jdbc {
         }
 
         /**
-         * 
+         *
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param <A> 
-         * @param <D> 
-         * @param keyExtractor 
-         * @param valueExtractor 
-         * @param downstream 
-         * @return 
+         * @param <A>
+         * @param <D>
+         * @param keyExtractor
+         * @param valueExtractor
+         * @param downstream
+         * @return
          * @see #groupTo(RowMapper, RowMapper, Collector)
          * @deprecated replaced by {@code groupTo(RowMapper, RowMapper, Collector)}
          */
@@ -407,18 +407,18 @@ public final class Jdbc {
         }
 
         /**
-         * 
+         *
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param <A> 
-         * @param <D> 
-         * @param <M> 
-         * @param keyExtractor 
-         * @param valueExtractor 
-         * @param downstream 
-         * @param supplier 
-         * @return 
+         * @param <A>
+         * @param <D>
+         * @param <M>
+         * @param keyExtractor
+         * @param valueExtractor
+         * @param downstream
+         * @param supplier
+         * @return
          * @see #groupTo(RowMapper, RowMapper, Collector, Supplier)
          * @deprecated replaced by {@code groupTo(RowMapper, RowMapper, Collector, Supplier)}
          */
@@ -469,13 +469,13 @@ public final class Jdbc {
         }
 
         /**
-         * 
+         *
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param keyExtractor 
-         * @param valueExtractor 
-         * @return 
+         * @param keyExtractor
+         * @param valueExtractor
+         * @return
          */
         static <K, V> ResultExtractor<Map<K, List<V>>> groupTo(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor) {
             return groupTo(keyExtractor, valueExtractor, Suppliers.<K, List<V>> ofMap());
@@ -585,23 +585,23 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param rowMapper 
-         * @return 
+         *
+         * @param <T>
+         * @param rowMapper
+         * @return
          */
         static <T> ResultExtractor<List<T>> toList(final RowMapper<? extends T> rowMapper) {
             return toList(RowFilter.ALWAYS_TRUE, rowMapper);
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param rowFilter 
-         * @param rowMapper 
-         * @return 
+         *
+         * @param <T>
+         * @param rowFilter
+         * @param rowMapper
+         * @return
          */
         static <T> ResultExtractor<List<T>> toList(final RowFilter rowFilter, RowMapper<? extends T> rowMapper) {
             N.checkArgNotNull(rowFilter, "rowFilter");
@@ -669,10 +669,10 @@ public final class Jdbc {
         /**
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
-         * @param <T> 
-         * @param targetClass 
-         * @param idPropNamesForMerge 
-         * @return 
+         * @param <T>
+         * @param targetClass
+         * @param idPropNamesForMerge
+         * @return
          * @see DataSet#toMergedEntities(Class, Collection, Collection)
          */
         @SequentialOnly
@@ -700,11 +700,11 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param entityClass 
-         * @param prefixAndFieldNameMap 
-         * @return 
+         *
+         * @param entityClass
+         * @param prefixAndFieldNameMap
+         * @return
          */
         @SequentialOnly
         @Stateful
@@ -713,42 +713,42 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param rowFilter 
-         * @return 
+         *
+         * @param rowFilter
+         * @return
          */
         static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter) {
             return rs -> JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowFilter, false);
         }
 
         /**
-         * 
          *
-         * @param rowExtractor 
-         * @return 
+         *
+         * @param rowExtractor
+         * @return
          */
         static ResultExtractor<DataSet> toDataSet(final RowExtractor rowExtractor) {
             return rs -> JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowExtractor, false);
         }
 
         /**
-         * 
          *
-         * @param rowFilter 
-         * @param rowExtractor 
-         * @return 
+         *
+         * @param rowFilter
+         * @param rowExtractor
+         * @return
          */
         static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter, final RowExtractor rowExtractor) {
             return rs -> JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowFilter, rowExtractor, false);
         }
 
         /**
-         * 
          *
-         * @param <R> 
-         * @param after 
-         * @return 
+         *
+         * @param <R>
+         * @param after
+         * @return
          */
         static <R> ResultExtractor<R> to(final Throwables.Function<DataSet, R, SQLException> after) {
             return rs -> after.apply(TO_DATA_SET.apply(rs));
@@ -774,20 +774,20 @@ public final class Jdbc {
         /**
          * In a lot of scenarios, including PreparedQuery/Dao/SQLExecutor, the input {@code ResultSet} will be closed after {@code apply(rs)} call. So don't save/return the input {@code ResultSet}.
          *
-         * @param rs 
-         * @param columnLabels 
-         * @return 
-         * @throws SQLException 
+         * @param rs
+         * @param columnLabels
+         * @return
+         * @throws SQLException
          */
         @Override
         T apply(ResultSet rs, List<String> columnLabels) throws SQLException;
 
         /**
-         * 
          *
-         * @param <R> 
-         * @param after 
-         * @return 
+         *
+         * @param <R>
+         * @param after
+         * @return
          */
         default <R> BiResultExtractor<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
             N.checkArgNotNull(after);
@@ -796,11 +796,11 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param <R> 
-         * @param resultExtractor 
-         * @return 
+         *
+         * @param <R>
+         * @param resultExtractor
+         * @return
          */
         static <R> BiResultExtractor<R> from(final ResultExtractor<? extends R> resultExtractor) {
             N.checkArgNotNull(resultExtractor);
@@ -885,16 +885,16 @@ public final class Jdbc {
         }
 
         /**
-         * 
+         *
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param <A> 
-         * @param <D> 
-         * @param keyExtractor 
-         * @param valueExtractor 
-         * @param downstream 
-         * @return 
+         * @param <A>
+         * @param <D>
+         * @param keyExtractor
+         * @param valueExtractor
+         * @param downstream
+         * @return
          * @see #groupTo(BiRowMapper, BiRowMapper, Collector)
          * @deprecated replaced by {@code groupTo(BiRowMapper, BiRowMapper, Collector)}
          */
@@ -905,18 +905,18 @@ public final class Jdbc {
         }
 
         /**
-         * 
+         *
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param <A> 
-         * @param <D> 
-         * @param <M> 
-         * @param keyExtractor 
-         * @param valueExtractor 
-         * @param downstream 
-         * @param supplier 
-         * @return 
+         * @param <A>
+         * @param <D>
+         * @param <M>
+         * @param keyExtractor
+         * @param valueExtractor
+         * @param downstream
+         * @param supplier
+         * @return
          * @see #groupTo(BiRowMapper, BiRowMapper, Collector, Supplier)
          * @deprecated replaced by {@code groupTo(BiRowMapper, BiRowMapper, Collector, Supplier)}
          */
@@ -1084,23 +1084,23 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param rowMapper 
-         * @return 
+         *
+         * @param <T>
+         * @param rowMapper
+         * @return
          */
         static <T> BiResultExtractor<List<T>> toList(final BiRowMapper<? extends T> rowMapper) {
             return toList(BiRowFilter.ALWAYS_TRUE, rowMapper);
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param rowFilter 
-         * @param rowMapper 
-         * @return 
+         *
+         * @param <T>
+         * @param rowFilter
+         * @param rowMapper
+         * @return
          */
         static <T> BiResultExtractor<List<T>> toList(final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper) {
             N.checkArgNotNull(rowFilter, "rowFilter");
@@ -1157,21 +1157,21 @@ public final class Jdbc {
     public interface RowMapper<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
         /**
-         * 
          *
-         * @param rs 
-         * @return 
-         * @throws SQLException 
+         *
+         * @param rs
+         * @return
+         * @throws SQLException
          */
         @Override
         T apply(ResultSet rs) throws SQLException;
 
         /**
-         * 
          *
-         * @param <R> 
-         * @param after 
-         * @return 
+         *
+         * @param <R>
+         * @param after
+         * @return
          */
         default <R> RowMapper<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
             N.checkArgNotNull(after);
@@ -1180,9 +1180,9 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @return 
+         *
+         * @return
          */
         default BiRowMapper<T> toBiRowMapper() {
             return BiRowMapper.from(this);
@@ -1218,13 +1218,13 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param <U> 
-         * @param rowMapper1 
-         * @param rowMapper2 
-         * @return 
+         *
+         * @param <T>
+         * @param <U>
+         * @param rowMapper1
+         * @param rowMapper2
+         * @return
          */
         static <T, U> RowMapper<Tuple2<T, U>> combine(final RowMapper<? extends T> rowMapper1, final RowMapper<? extends U> rowMapper2) {
             N.checkArgNotNull(rowMapper1, "rowMapper1");
@@ -1234,15 +1234,15 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param <A> 
-         * @param <B> 
-         * @param <C> 
-         * @param rowMapper1 
-         * @param rowMapper2 
-         * @param rowMapper3 
-         * @return 
+         *
+         * @param <A>
+         * @param <B>
+         * @param <C>
+         * @param rowMapper1
+         * @param rowMapper2
+         * @param rowMapper3
+         * @return
          */
         static <A, B, C> RowMapper<Tuple3<A, B, C>> combine(final RowMapper<? extends A> rowMapper1, final RowMapper<? extends B> rowMapper2,
                 final RowMapper<? extends C> rowMapper3) {
@@ -1352,19 +1352,19 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @return 
+         *
+         * @return
          */
         static RowMapperBuilder builder() {
             return builder(ColumnGetter.GET_OBJECT);
         }
 
         /**
-         * 
          *
-         * @param defaultColumnGetter 
-         * @return 
+         *
+         * @param defaultColumnGetter
+         * @return
          */
         static RowMapperBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
             return new RowMapperBuilder(defaultColumnGetter);
@@ -1387,120 +1387,120 @@ public final class Jdbc {
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowMapperBuilder getBoolean(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BOOLEAN);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowMapperBuilder getByte(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BYTE);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowMapperBuilder getShort(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_SHORT);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowMapperBuilder getInt(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_INT);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowMapperBuilder getLong(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_LONG);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowMapperBuilder getFloat(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_FLOAT);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowMapperBuilder getDouble(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_DOUBLE);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowMapperBuilder getBigDecimal(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BIG_DECIMAL);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowMapperBuilder getString(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_STRING);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowMapperBuilder getDate(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_DATE);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowMapperBuilder getTime(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_TIME);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowMapperBuilder getTimestamp(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_TIMESTAMP);
@@ -1518,22 +1518,22 @@ public final class Jdbc {
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @param type 
-             * @return 
+             *
+             * @param columnIndex
+             * @param type
+             * @return
              */
             public RowMapperBuilder getObject(final int columnIndex, Class<?> type) {
                 return get(columnIndex, ColumnGetter.get(type));
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @param columnGetter 
-             * @return 
+             *
+             * @param columnIndex
+             * @param columnGetter
+             * @return
              */
             public RowMapperBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) {
                 N.checkArgPositive(columnIndex, "columnIndex");
@@ -1946,22 +1946,22 @@ public final class Jdbc {
         };
 
         /**
-         * 
          *
-         * @param rs 
-         * @param columnLabels 
-         * @return 
-         * @throws SQLException 
+         *
+         * @param rs
+         * @param columnLabels
+         * @return
+         * @throws SQLException
          */
         @Override
         T apply(ResultSet rs, List<String> columnLabels) throws SQLException;
 
         /**
-         * 
          *
-         * @param <R> 
-         * @param after 
-         * @return 
+         *
+         * @param <R>
+         * @param after
+         * @return
          */
         default <R> BiRowMapper<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
             N.checkArgNotNull(after);
@@ -1983,11 +1983,11 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param rowMapper 
-         * @return 
+         *
+         * @param <T>
+         * @param rowMapper
+         * @return
          */
         static <T> BiRowMapper<T> from(final RowMapper<? extends T> rowMapper) {
             N.checkArgNotNull(rowMapper, "rowMapper");
@@ -1996,13 +1996,13 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param <U> 
-         * @param rowMapper1 
-         * @param rowMapper2 
-         * @return 
+         *
+         * @param <T>
+         * @param <U>
+         * @param rowMapper1
+         * @param rowMapper2
+         * @return
          */
         static <T, U> BiRowMapper<Tuple2<T, U>> combine(final BiRowMapper<? extends T> rowMapper1, final BiRowMapper<? extends U> rowMapper2) {
             N.checkArgNotNull(rowMapper1, "rowMapper1");
@@ -2012,15 +2012,15 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param <A> 
-         * @param <B> 
-         * @param <C> 
-         * @param rowMapper1 
-         * @param rowMapper2 
-         * @param rowMapper3 
-         * @return 
+         *
+         * @param <A>
+         * @param <B>
+         * @param <C>
+         * @param rowMapper1
+         * @param rowMapper2
+         * @param rowMapper3
+         * @return
          */
         static <A, B, C> BiRowMapper<Tuple3<A, B, C>> combine(final BiRowMapper<? extends A> rowMapper1, final BiRowMapper<? extends B> rowMapper2,
                 final BiRowMapper<? extends C> rowMapper3) {
@@ -2584,10 +2584,10 @@ public final class Jdbc {
         //        }
 
         /**
-         * 
          *
-         * @param valueFilter 
-         * @return 
+         *
+         * @param valueFilter
+         * @return
          */
         static BiRowMapper<Map<String, Object>> toMap(final Predicate<Object> valueFilter) {
             return (rs, columnLabels) -> {
@@ -2609,11 +2609,11 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param valueFilter 
-         * @param mapSupplier 
-         * @return 
+         *
+         * @param valueFilter
+         * @param mapSupplier
+         * @return
          */
         static BiRowMapper<Map<String, Object>> toMap(final BiPredicate<String, Object> valueFilter, final IntFunction<Map<String, Object>> mapSupplier) {
             return (rs, columnLabels) -> {
@@ -2768,10 +2768,10 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param rowExtractor 
-         * @return 
+         *
+         * @param rowExtractor
+         * @return
          */
         @SequentialOnly
         @Stateful
@@ -2897,19 +2897,19 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @return 
+         *
+         * @return
          */
         static BiRowMapperBuilder builder() {
             return builder(ColumnGetter.GET_OBJECT);
         }
 
         /**
-         * 
          *
-         * @param defaultColumnGetter 
-         * @return 
+         *
+         * @param defaultColumnGetter
+         * @return
          */
         static BiRowMapperBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
             return new BiRowMapperBuilder(defaultColumnGetter);
@@ -2932,120 +2932,120 @@ public final class Jdbc {
             }
 
             /**
-             * 
              *
-             * @param columnName 
-             * @return 
+             *
+             * @param columnName
+             * @return
              */
             public BiRowMapperBuilder getBoolean(final String columnName) {
                 return get(columnName, ColumnGetter.GET_BOOLEAN);
             }
 
             /**
-             * 
              *
-             * @param columnName 
-             * @return 
+             *
+             * @param columnName
+             * @return
              */
             public BiRowMapperBuilder getByte(final String columnName) {
                 return get(columnName, ColumnGetter.GET_BYTE);
             }
 
             /**
-             * 
              *
-             * @param columnName 
-             * @return 
+             *
+             * @param columnName
+             * @return
              */
             public BiRowMapperBuilder getShort(final String columnName) {
                 return get(columnName, ColumnGetter.GET_SHORT);
             }
 
             /**
-             * 
              *
-             * @param columnName 
-             * @return 
+             *
+             * @param columnName
+             * @return
              */
             public BiRowMapperBuilder getInt(final String columnName) {
                 return get(columnName, ColumnGetter.GET_INT);
             }
 
             /**
-             * 
              *
-             * @param columnName 
-             * @return 
+             *
+             * @param columnName
+             * @return
              */
             public BiRowMapperBuilder getLong(final String columnName) {
                 return get(columnName, ColumnGetter.GET_LONG);
             }
 
             /**
-             * 
              *
-             * @param columnName 
-             * @return 
+             *
+             * @param columnName
+             * @return
              */
             public BiRowMapperBuilder getFloat(final String columnName) {
                 return get(columnName, ColumnGetter.GET_FLOAT);
             }
 
             /**
-             * 
              *
-             * @param columnName 
-             * @return 
+             *
+             * @param columnName
+             * @return
              */
             public BiRowMapperBuilder getDouble(final String columnName) {
                 return get(columnName, ColumnGetter.GET_DOUBLE);
             }
 
             /**
-             * 
              *
-             * @param columnName 
-             * @return 
+             *
+             * @param columnName
+             * @return
              */
             public BiRowMapperBuilder getBigDecimal(final String columnName) {
                 return get(columnName, ColumnGetter.GET_BIG_DECIMAL);
             }
 
             /**
-             * 
              *
-             * @param columnName 
-             * @return 
+             *
+             * @param columnName
+             * @return
              */
             public BiRowMapperBuilder getString(final String columnName) {
                 return get(columnName, ColumnGetter.GET_STRING);
             }
 
             /**
-             * 
              *
-             * @param columnName 
-             * @return 
+             *
+             * @param columnName
+             * @return
              */
             public BiRowMapperBuilder getDate(final String columnName) {
                 return get(columnName, ColumnGetter.GET_DATE);
             }
 
             /**
-             * 
              *
-             * @param columnName 
-             * @return 
+             *
+             * @param columnName
+             * @return
              */
             public BiRowMapperBuilder getTime(final String columnName) {
                 return get(columnName, ColumnGetter.GET_TIME);
             }
 
             /**
-             * 
              *
-             * @param columnName 
-             * @return 
+             *
+             * @param columnName
+             * @return
              */
             public BiRowMapperBuilder getTimestamp(final String columnName) {
                 return get(columnName, ColumnGetter.GET_TIMESTAMP);
@@ -3063,22 +3063,22 @@ public final class Jdbc {
             }
 
             /**
-             * 
              *
-             * @param columnName 
-             * @param type 
-             * @return 
+             *
+             * @param columnName
+             * @param type
+             * @return
              */
             public BiRowMapperBuilder getObject(final String columnName, Class<?> type) {
                 return get(columnName, ColumnGetter.get(type));
             }
 
             /**
-             * 
              *
-             * @param columnName 
-             * @param columnGetter 
-             * @return 
+             *
+             * @param columnName
+             * @param columnGetter
+             * @return
              */
             public BiRowMapperBuilder get(final String columnName, final ColumnGetter<?> columnGetter) {
                 N.checkArgNotNull(columnName, "columnName");
@@ -3350,19 +3350,19 @@ public final class Jdbc {
         };
 
         /**
-         * 
          *
-         * @param rs 
-         * @throws SQLException 
+         *
+         * @param rs
+         * @throws SQLException
          */
         @Override
         void accept(ResultSet rs) throws SQLException;
 
         /**
-         * 
          *
-         * @param after 
-         * @return 
+         *
+         * @param after
+         * @return
          */
         default RowConsumer andThen(final Throwables.Consumer<? super ResultSet, SQLException> after) {
             N.checkArgNotNull(after);
@@ -3374,9 +3374,9 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @return 
+         *
+         * @return
          */
         default BiRowConsumer toBiRowConsumer() {
             return BiRowConsumer.from(this);
@@ -3496,20 +3496,20 @@ public final class Jdbc {
         };
 
         /**
-         * 
          *
-         * @param rs 
-         * @param columnLabels 
-         * @throws SQLException 
+         *
+         * @param rs
+         * @param columnLabels
+         * @throws SQLException
          */
         @Override
         void accept(ResultSet rs, List<String> columnLabels) throws SQLException;
 
         /**
-         * 
          *
-         * @param after 
-         * @return 
+         *
+         * @param after
+         * @return
          */
         default BiRowConsumer andThen(final Throwables.BiConsumer<? super ResultSet, ? super List<String>, SQLException> after) {
             N.checkArgNotNull(after);
@@ -3521,10 +3521,10 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param rowConsumer 
-         * @return 
+         *
+         * @param rowConsumer
+         * @return
          */
         static BiRowConsumer from(final RowConsumer rowConsumer) {
             N.checkArgNotNull(rowConsumer, "rowConsumer");
@@ -3650,19 +3650,19 @@ public final class Jdbc {
         RowFilter ALWAYS_FALSE = rs -> false;
 
         /**
-         * 
          *
-         * @param rs 
-         * @return 
-         * @throws SQLException 
+         *
+         * @param rs
+         * @return
+         * @throws SQLException
          */
         @Override
         boolean test(final ResultSet rs) throws SQLException;
 
         /**
-         * 
          *
-         * @return 
+         *
+         * @return
          */
         @Override
         default RowFilter negate() {
@@ -3670,10 +3670,10 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param other 
-         * @return 
+         *
+         * @param other
+         * @return
          */
         default RowFilter and(final Throwables.Predicate<? super ResultSet, SQLException> other) {
             N.checkArgNotNull(other);
@@ -3682,9 +3682,9 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @return 
+         *
+         * @return
          */
         default BiRowFilter toBiRowFilter() {
             return BiRowFilter.from(this);
@@ -3706,30 +3706,30 @@ public final class Jdbc {
         BiRowFilter ALWAYS_FALSE = (rs, columnLabels) -> false;
 
         /**
-         * 
          *
-         * @param rs 
-         * @param columnLabels 
-         * @return 
-         * @throws SQLException 
+         *
+         * @param rs
+         * @param columnLabels
+         * @return
+         * @throws SQLException
          */
         @Override
         boolean test(ResultSet rs, List<String> columnLabels) throws SQLException;
 
         /**
-         * 
          *
-         * @return 
+         *
+         * @return
          */
         default BiRowFilter negate() {
             return (rs, cls) -> !test(rs, cls);
         }
 
         /**
-         * 
          *
-         * @param other 
-         * @return 
+         *
+         * @param other
+         * @return
          */
         default BiRowFilter and(final Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException> other) {
             N.checkArgNotNull(other);
@@ -3738,10 +3738,10 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param rowFilter 
-         * @return 
+         *
+         * @param rowFilter
+         * @return
          */
         static BiRowFilter from(final RowFilter rowFilter) {
             N.checkArgNotNull(rowFilter, "rowFilter");
@@ -3754,11 +3754,11 @@ public final class Jdbc {
     public interface RowExtractor extends Throwables.BiConsumer<ResultSet, Object[], SQLException> {
 
         /**
-         * 
          *
-         * @param rs 
-         * @param outputRow 
-         * @throws SQLException 
+         *
+         * @param rs
+         * @param outputRow
+         * @throws SQLException
          */
         @Override
         void accept(final ResultSet rs, final Object[] outputRow) throws SQLException;
@@ -3804,10 +3804,10 @@ public final class Jdbc {
         /**
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
-         * @param entityClassForFetch 
-         * @param columnLabels 
-         * @param prefixAndFieldNameMap 
-         * @return 
+         * @param entityClassForFetch
+         * @param columnLabels
+         * @param prefixAndFieldNameMap
+         * @return
          */
         @SequentialOnly
         @Stateful
@@ -3886,19 +3886,19 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @return 
+         *
+         * @return
          */
         static RowExtractorBuilder builder() {
             return builder(ColumnGetter.GET_OBJECT);
         }
 
         /**
-         * 
          *
-         * @param defaultColumnGetter 
-         * @return 
+         *
+         * @param defaultColumnGetter
+         * @return
          */
         static RowExtractorBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
             return new RowExtractorBuilder(defaultColumnGetter);
@@ -3917,120 +3917,120 @@ public final class Jdbc {
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowExtractorBuilder getBoolean(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BOOLEAN);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowExtractorBuilder getByte(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BYTE);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowExtractorBuilder getShort(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_SHORT);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowExtractorBuilder getInt(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_INT);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowExtractorBuilder getLong(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_LONG);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowExtractorBuilder getFloat(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_FLOAT);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowExtractorBuilder getDouble(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_DOUBLE);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowExtractorBuilder getBigDecimal(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BIG_DECIMAL);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowExtractorBuilder getString(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_STRING);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowExtractorBuilder getDate(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_DATE);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowExtractorBuilder getTime(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_TIME);
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @return 
+             *
+             * @param columnIndex
+             * @return
              */
             public RowExtractorBuilder getTimestamp(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_TIMESTAMP);
@@ -4048,22 +4048,22 @@ public final class Jdbc {
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @param type 
-             * @return 
+             *
+             * @param columnIndex
+             * @param type
+             * @return
              */
             public RowExtractorBuilder getObject(final int columnIndex, Class<?> type) {
                 return get(columnIndex, ColumnGetter.get(type));
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @param columnGetter 
-             * @return 
+             *
+             * @param columnIndex
+             * @param columnGetter
+             * @return
              */
             public RowExtractorBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) {
                 N.checkArgPositive(columnIndex, "columnIndex");
@@ -4172,22 +4172,22 @@ public final class Jdbc {
         V apply(ResultSet rs, int columnIndex) throws SQLException;
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param cls 
-         * @return 
+         *
+         * @param <T>
+         * @param cls
+         * @return
          */
         static <T> ColumnGetter<T> get(final Class<? extends T> cls) {
             return get(N.typeOf(cls));
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param type 
-         * @return 
+         *
+         * @param <T>
+         * @param type
+         * @return
          */
         static <T> ColumnGetter<T> get(final Type<? extends T> type) {
             ColumnGetter<?> columnGetter = COLUMN_GETTER_POOL.get(type);
@@ -4381,10 +4381,10 @@ public final class Jdbc {
             static final Map<Type<?>, RowMapper> rowMapperPool = new ObjectPool<>(1024);
 
             /**
-             * 
              *
-             * @param <T> 
-             * @return 
+             *
+             * @param <T>
+             * @return
              */
             public static <T> RowMapper<T> getObject() {
                 return (RowMapper<T>) GET_OBJECT;
@@ -4421,11 +4421,22 @@ public final class Jdbc {
             }
 
             /**
-             * 
+             * Convert the JSON string from the first column to instance of target type.
              *
-             * @param <T> 
-             * @param type 
-             * @return 
+             * @param <T>
+             * @param targetType
+             * @return
+             */
+            public static <T> RowMapper<T> readJson(final Class<? extends T> targetType) {
+                return rs -> N.fromJSON(targetType, rs.getString(1));
+            }
+
+            /**
+             *
+             *
+             * @param <T>
+             * @param type
+             * @return
              */
             @SuppressWarnings("rawtypes")
             public static <T> BiParametersSetter<AbstractPreparedQuery, T> set(final Class<T> type) {
@@ -4433,11 +4444,11 @@ public final class Jdbc {
             }
 
             /**
-             * 
              *
-             * @param <T> 
-             * @param type 
-             * @return 
+             *
+             * @param <T>
+             * @param type
+             * @return
              */
             @SuppressWarnings("rawtypes")
             public static <T> BiParametersSetter<AbstractPreparedQuery, T> set(final Type<T> type) {
@@ -4762,25 +4773,25 @@ public final class Jdbc {
     }
 
     /**
-     * 
+     *
      */
     @NoArgsConstructor
 
     /**
-     * 
      *
-     * @param parameterIndex 
-     * @param parameterName 
-     * @param sqlType 
-     * @param typeName 
-     * @param scale 
+     *
+     * @param parameterIndex
+     * @param parameterName
+     * @param sqlType
+     * @param typeName
+     * @param scale
      */
     @AllArgsConstructor
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     @Data
     public static final class OutParam {
@@ -4792,16 +4803,16 @@ public final class Jdbc {
     }
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     @EqualsAndHashCode
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     @ToString
     public static final class OutParamResult {
@@ -4814,40 +4825,40 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param parameterIndex 
-         * @return 
+         *
+         * @param <T>
+         * @param parameterIndex
+         * @return
          */
         public <T> T getOutParamValue(final int parameterIndex) {
             return (T) outParamValues.get(parameterIndex);
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param parameterName 
-         * @return 
+         *
+         * @param <T>
+         * @param parameterName
+         * @return
          */
         public <T> T getOutParamValue(final String parameterName) {
             return (T) outParamValues.get(parameterName);
         }
 
         /**
-         * 
          *
-         * @return 
+         *
+         * @return
          */
         public Map<Object, Object> getOutParamValues() {
             return outParamValues;
         }
 
         /**
-         * 
          *
-         * @return 
+         *
+         * @return
          */
         public List<OutParam> getOutParams() {
             return outParams;
@@ -4868,11 +4879,11 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param result 
-         * @param proxy 
-         * @param args 
+         *
+         * @param result
+         * @param proxy
+         * @param args
          * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
          */
         @SuppressWarnings("unused")
@@ -4907,10 +4918,10 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param handlerClass 
-         * @return 
+         *
+         * @param handlerClass
+         * @return
          */
         public static boolean register(final Class<? extends Handler<?>> handlerClass) {
             N.checkArgNotNull(handlerClass, "handlerClass");
@@ -4919,10 +4930,10 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param handler 
-         * @return 
+         *
+         * @param handler
+         * @return
          */
         public static boolean register(final Handler<?> handler) {
             N.checkArgNotNull(handler, "handler");
@@ -4931,11 +4942,11 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param qualifier 
-         * @param handler 
-         * @return 
+         *
+         * @param qualifier
+         * @param handler
+         * @return
          */
         public static boolean register(final String qualifier, final Handler<?> handler) {
             N.checkArgNotNullOrEmpty(qualifier, "qualifier");
@@ -4951,10 +4962,10 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param qualifier 
-         * @return 
+         *
+         * @param qualifier
+         * @return
          */
         public static Handler<?> get(final String qualifier) { //NOSONAR
             N.checkArgNotNullOrEmpty(qualifier, "qualifier");
@@ -4975,10 +4986,10 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param handlerClass 
-         * @return 
+         *
+         * @param handlerClass
+         * @return
          */
         public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) { //NOSONAR
             N.checkArgNotNull(handlerClass, "handlerClass");
@@ -5007,10 +5018,10 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param handlerClass 
-         * @return 
+         *
+         * @param handlerClass
+         * @return
          */
         public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) { //NOSONAR
             N.checkArgNotNull(handlerClass, "handlerClass");
@@ -5033,12 +5044,12 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param <E> 
-         * @param beforeInvokeAction 
-         * @return 
+         *
+         * @param <T>
+         * @param <E>
+         * @param beforeInvokeAction
+         * @return
          */
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction) {
@@ -5053,12 +5064,12 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param <E> 
-         * @param afterInvokeAction 
-         * @return 
+         *
+         * @param <T>
+         * @param <E>
+         * @param afterInvokeAction
+         * @return
          */
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) {
@@ -5075,13 +5086,13 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param <E> 
-         * @param beforeInvokeAction 
-         * @param afterInvokeAction 
-         * @return 
+         *
+         * @param <T>
+         * @param <E>
+         * @param beforeInvokeAction
+         * @param afterInvokeAction
+         * @return
          */
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction,
