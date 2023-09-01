@@ -48,6 +48,7 @@ import java.util.stream.Collector;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
+import com.landawn.abacus.jdbc.Jdbc.Columns;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -4429,6 +4430,17 @@ public final class Jdbc {
              */
             public static <T> RowMapper<T> readJson(final Class<? extends T> targetType) {
                 return rs -> N.fromJSON(targetType, rs.getString(1));
+            }
+
+            /**
+             * Convert the JSON string from the first column to instance of target type.
+             *
+             * @param <T>
+             * @param targetType
+             * @return
+             */
+            public static <T> RowMapper<T> readXml(final Class<? extends T> targetType) {
+                return rs -> N.fromXML(targetType, rs.getString(1));
             }
 
             /**
