@@ -48,6 +48,7 @@ import java.util.stream.Collector;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
+import com.landawn.abacus.jdbc.Jdbc.Columns;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -391,7 +392,6 @@ public final class Jdbc {
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param <A>
          * @param <D>
          * @param keyExtractor
          * @param valueExtractor
@@ -401,8 +401,8 @@ public final class Jdbc {
          * @deprecated replaced by {@code groupTo(RowMapper, RowMapper, Collector)}
          */
         @Deprecated
-        static <K, V, A, D> ResultExtractor<Map<K, D>> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
-                final Collector<? super V, A, D> downstream) {
+        static <K, V, D> ResultExtractor<Map<K, D>> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
+                final Collector<? super V, ?, D> downstream) {
             return toMap(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
         }
 
@@ -411,7 +411,6 @@ public final class Jdbc {
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param <A>
          * @param <D>
          * @param <M>
          * @param keyExtractor
@@ -423,8 +422,8 @@ public final class Jdbc {
          * @deprecated replaced by {@code groupTo(RowMapper, RowMapper, Collector, Supplier)}
          */
         @Deprecated
-        static <K, V, A, D, M extends Map<K, D>> ResultExtractor<M> toMap(final RowMapper<? extends K> keyExtractor,
-                final RowMapper<? extends V> valueExtractor, final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
+        static <K, V, D, M extends Map<K, D>> ResultExtractor<M> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
+                final Collector<? super V, ?, D> downstream, final Supplier<? extends M> supplier) {
             return groupTo(keyExtractor, valueExtractor, downstream, supplier);
         }
 
@@ -522,15 +521,14 @@ public final class Jdbc {
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param <A>
          * @param <D>
          * @param keyExtractor
          * @param valueExtractor
          * @param downstream
          * @return
          */
-        static <K, V, A, D> ResultExtractor<Map<K, D>> groupTo(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
-                final Collector<? super V, A, D> downstream) {
+        static <K, V, D> ResultExtractor<Map<K, D>> groupTo(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
+                final Collector<? super V, ?, D> downstream) {
             return groupTo(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
         }
 
@@ -538,7 +536,6 @@ public final class Jdbc {
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param <A>
          * @param <D>
          * @param <M>
          * @param keyExtractor
@@ -547,22 +544,22 @@ public final class Jdbc {
          * @param supplier
          * @return
          */
-        static <K, V, A, D, M extends Map<K, D>> ResultExtractor<M> groupTo(final RowMapper<? extends K> keyExtractor,
-                final RowMapper<? extends V> valueExtractor, final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
+        static <K, V, D, M extends Map<K, D>> ResultExtractor<M> groupTo(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
+                final Collector<? super V, ?, D> downstream, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(downstream, "downstream");
             N.checkArgNotNull(supplier, "supplier");
 
             return rs -> {
-                final Supplier<A> downstreamSupplier = downstream.supplier();
-                final BiConsumer<A, ? super V> downstreamAccumulator = downstream.accumulator();
-                final Function<A, D> downstreamFinisher = downstream.finisher();
+                final Supplier<Object> downstreamSupplier = (Supplier<Object>) downstream.supplier();
+                final BiConsumer<Object, ? super V> downstreamAccumulator = (BiConsumer<Object, ? super V>) downstream.accumulator();
+                final Function<Object, D> downstreamFinisher = (Function<Object, D>) downstream.finisher();
 
                 final M result = supplier.get();
-                final Map<K, A> tmp = (Map<K, A>) result;
+                final Map<K, Object> tmp = (Map<K, Object>) result;
                 K key = null;
-                A container = null;
+                Object container = null;
 
                 while (rs.next()) {
                     key = keyExtractor.apply(rs);
@@ -577,7 +574,7 @@ public final class Jdbc {
                 }
 
                 for (Map.Entry<K, D> entry : result.entrySet()) {
-                    entry.setValue(downstreamFinisher.apply((A) entry.getValue()));
+                    entry.setValue(downstreamFinisher.apply(entry.getValue()));
                 }
 
                 return result;
@@ -889,7 +886,6 @@ public final class Jdbc {
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param <A>
          * @param <D>
          * @param keyExtractor
          * @param valueExtractor
@@ -899,8 +895,8 @@ public final class Jdbc {
          * @deprecated replaced by {@code groupTo(BiRowMapper, BiRowMapper, Collector)}
          */
         @Deprecated
-        static <K, V, A, D> BiResultExtractor<Map<K, D>> toMap(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor,
-                final Collector<? super V, A, D> downstream) {
+        static <K, V, D> BiResultExtractor<Map<K, D>> toMap(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor,
+                final Collector<? super V, ?, D> downstream) {
             return toMap(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
         }
 
@@ -909,7 +905,6 @@ public final class Jdbc {
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param <A>
          * @param <D>
          * @param <M>
          * @param keyExtractor
@@ -921,8 +916,8 @@ public final class Jdbc {
          * @deprecated replaced by {@code groupTo(BiRowMapper, BiRowMapper, Collector, Supplier)}
          */
         @Deprecated
-        static <K, V, A, D, M extends Map<K, D>> BiResultExtractor<M> toMap(final BiRowMapper<? extends K> keyExtractor,
-                final BiRowMapper<? extends V> valueExtractor, final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
+        static <K, V, D, M extends Map<K, D>> BiResultExtractor<M> toMap(final BiRowMapper<? extends K> keyExtractor,
+                final BiRowMapper<? extends V> valueExtractor, final Collector<? super V, ?, D> downstream, final Supplier<? extends M> supplier) {
             return groupTo(keyExtractor, valueExtractor, downstream, supplier);
         }
 
@@ -1020,15 +1015,14 @@ public final class Jdbc {
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param <A>
          * @param <D>
          * @param keyExtractor
          * @param valueExtractor
          * @param downstream
          * @return
          */
-        static <K, V, A, D> BiResultExtractor<Map<K, D>> groupTo(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor,
-                final Collector<? super V, A, D> downstream) {
+        static <K, V, D> BiResultExtractor<Map<K, D>> groupTo(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor,
+                final Collector<? super V, ?, D> downstream) {
             return groupTo(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
         }
 
@@ -1036,7 +1030,6 @@ public final class Jdbc {
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param <A>
          * @param <D>
          * @param <M>
          * @param keyExtractor
@@ -1045,8 +1038,8 @@ public final class Jdbc {
          * @param supplier
          * @return
          */
-        static <K, V, A, D, M extends Map<K, D>> BiResultExtractor<M> groupTo(final BiRowMapper<? extends K> keyExtractor,
-                final BiRowMapper<? extends V> valueExtractor, final Collector<? super V, A, D> downstream, final Supplier<? extends M> supplier) {
+        static <K, V, D, M extends Map<K, D>> BiResultExtractor<M> groupTo(final BiRowMapper<? extends K> keyExtractor,
+                final BiRowMapper<? extends V> valueExtractor, final Collector<? super V, ?, D> downstream, final Supplier<? extends M> supplier) {
             N.checkArgNotNull(keyExtractor, "keyExtractor");
             N.checkArgNotNull(valueExtractor, "valueExtractor");
             N.checkArgNotNull(downstream, "downstream");
@@ -1054,14 +1047,14 @@ public final class Jdbc {
 
             return (rs, columnLabels) -> {
 
-                final Supplier<A> downstreamSupplier = downstream.supplier();
-                final BiConsumer<A, ? super V> downstreamAccumulator = downstream.accumulator();
-                final Function<A, D> downstreamFinisher = downstream.finisher();
+                final Supplier<Object> downstreamSupplier = (Supplier<Object>) downstream.supplier();
+                final BiConsumer<Object, ? super V> downstreamAccumulator = (BiConsumer<Object, ? super V>) downstream.accumulator();
+                final Function<Object, D> downstreamFinisher = (Function<Object, D>) downstream.finisher();
 
                 final M result = supplier.get();
-                final Map<K, A> tmp = (Map<K, A>) result;
+                final Map<K, Object> tmp = (Map<K, Object>) result;
                 K key = null;
-                A container = null;
+                Object container = null;
 
                 while (rs.next()) {
                     key = keyExtractor.apply(rs, columnLabels);
@@ -1076,7 +1069,7 @@ public final class Jdbc {
                 }
 
                 for (Map.Entry<K, D> entry : result.entrySet()) {
-                    entry.setValue(downstreamFinisher.apply((A) entry.getValue()));
+                    entry.setValue(downstreamFinisher.apply(entry.getValue()));
                 }
 
                 return result;
