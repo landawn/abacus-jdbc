@@ -3814,7 +3814,7 @@ public final class SQLExecutor {
     //                            @Override
     //                            public T next() {
     //                                if (!hasNext()) {
-    //                                    throw new NoSuchElementException();
+    //                                    throw new NoSuchElementException(InternalUtil.ERROR_MSG_FOR_NO_SUCH_EX);
     //                                }
     //
     //                                try {

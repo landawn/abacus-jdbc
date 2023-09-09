@@ -4242,7 +4242,7 @@ public final class JdbcUtil {
             @Override
             public T next() throws SQLException {
                 if (!hasNext()) {
-                    throw new NoSuchElementException();
+                    throw new NoSuchElementException(InternalUtil.ERROR_MSG_FOR_NO_SUCH_EX);
                 }
 
                 hasNext = false;
@@ -4327,7 +4327,7 @@ public final class JdbcUtil {
             @Override
             public T next() throws SQLException {
                 if (!hasNext()) {
-                    throw new NoSuchElementException();
+                    throw new NoSuchElementException(InternalUtil.ERROR_MSG_FOR_NO_SUCH_EX);
                 }
 
                 hasNext = false;
@@ -4379,7 +4379,7 @@ public final class JdbcUtil {
             @Override
             public T next() throws SQLException {
                 if (!hasNext()) {
-                    throw new NoSuchElementException();
+                    throw new NoSuchElementException(InternalUtil.ERROR_MSG_FOR_NO_SUCH_EX);
                 }
 
                 hasNext = false;
@@ -4469,7 +4469,7 @@ public final class JdbcUtil {
             @Override
             public T next() throws SQLException {
                 if (!hasNext()) {
-                    throw new NoSuchElementException();
+                    throw new NoSuchElementException(InternalUtil.ERROR_MSG_FOR_NO_SUCH_EX);
                 }
 
                 hasNext = false;
@@ -4703,7 +4703,7 @@ public final class JdbcUtil {
             @Override
             public ResultSet next() throws SQLException {
                 if (!hasNext()) {
-                    throw new NoSuchElementException();
+                    throw new NoSuchElementException(InternalUtil.ERROR_MSG_FOR_NO_SUCH_EX);
                 }
 
                 return resultSetHolder.getAndSet(null);
