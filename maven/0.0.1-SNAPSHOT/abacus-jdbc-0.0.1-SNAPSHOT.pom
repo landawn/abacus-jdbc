@@ -83,13 +83,13 @@
 		<dependency>
 			<groupId>com.landawn</groupId>
 			<artifactId>abacus-query</artifactId>
-			<version>1.2.21</version>
+			<version>1.2.22</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.landawn</groupId>
 			<artifactId>abacus-cache</artifactId>
-			<version>0.8.7</version>
+			<version>0.8.8</version>
 		</dependency>
 	</dependencies>
 
