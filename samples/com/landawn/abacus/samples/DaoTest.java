@@ -101,7 +101,7 @@ public class DaoTest {
         List<Long> ids = userDao.batchInsert(users);
 
         assertEquals(users.size(), userDao.count(ids));
-        assertEquals(users.size(), userDao.count(N.repeatAllToSize(ids, ids.size() * 3)));
+        assertEquals(users.size(), userDao.count(N.repeatCollectionToSize(ids, ids.size() * 3)));
 
         assertEquals(users.size(), userDao.batchDelete(users));
 
