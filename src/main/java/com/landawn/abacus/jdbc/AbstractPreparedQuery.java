@@ -355,6 +355,25 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
+    //    /**
+    //     * Sets the int.
+    //     *
+    //     * @param parameterIndex
+    //     * @param x
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    @Beta
+    //    public This setInt(int parameterIndex, String x) throws SQLException {
+    //        if (Strings.isEmpty(x)) {
+    //            stmt.setNull(parameterIndex, java.sql.Types.INTEGER);
+    //        } else {
+    //            stmt.setInt(parameterIndex, Numbers.toInt(x));
+    //        }
+    //
+    //        return (This) this;
+    //    }
+
     /**
      *
      *
@@ -426,6 +445,25 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
         return (This) this;
     }
+
+    //    /**
+    //     * Sets the long.
+    //     *
+    //     * @param parameterIndex
+    //     * @param x
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    @Beta
+    //    public This setLong(int parameterIndex, String x) throws SQLException {
+    //        if (Strings.isEmpty(x)) {
+    //            stmt.setNull(parameterIndex, java.sql.Types.BIGINT);
+    //        } else {
+    //            stmt.setLong(parameterIndex, Numbers.toLong(x));
+    //        }
+    //
+    //        return (This) this;
+    //    }
 
     /**
      * Sets the long.
