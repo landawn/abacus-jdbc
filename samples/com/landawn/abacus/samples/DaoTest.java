@@ -98,7 +98,6 @@ public class DaoTest {
             users.add(User.builder().id(100 + i).firstName("Forrest").lastName("Gump").email("123@email.com").build());
         }
 
-        JdbcUtil.enableSqlLog();
         List<Long> ids = userDao.batchInsert(users);
 
         assertEquals(users.size(), userDao.count(ids));

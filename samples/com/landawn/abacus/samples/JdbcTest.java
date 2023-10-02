@@ -87,8 +87,8 @@ public class JdbcTest {
     // initialize DB schema.
     static {
         try {
-            JdbcUtil.enableSqlLog(true);
-            JdbcUtil.setMinExecutionTimeForSqlPerfLog(10);
+            //    JdbcUtil.enableSqlLog();
+            //    JdbcUtil.setMinExecutionTimeForSqlPerfLog(10);
 
             final String sql_address_drop_table = "DROP TABLE IF EXISTS address";
             final String sql_device_drop_table = "DROP TABLE IF EXISTS device";
