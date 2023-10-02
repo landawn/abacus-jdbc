@@ -51,6 +51,7 @@ import com.landawn.abacus.util.stream.Stream;
 @Handler(qualifier = "handler2", filter = ".*", isForInvokeFromOutsideOfDaoOnly = true)
 @Config(addLimitForSingleQuery = true, callGenerateIdForInsertIfIdNotSet = false)
 @SqlMapper("./samples/userSqlMapper.xml")
+@SqlLogEnabled(true)
 public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
 
     @NonDBOperation

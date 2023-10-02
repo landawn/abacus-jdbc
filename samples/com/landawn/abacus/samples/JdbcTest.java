@@ -87,8 +87,8 @@ public class JdbcTest {
     // initialize DB schema.
     static {
         try {
-            //    JdbcUtil.enableSqlLog(true);
-            //    JdbcUtil.setMinExecutionTimeForSqlPerfLog(10);
+            JdbcUtil.enableSqlLog(true);
+            JdbcUtil.setMinExecutionTimeForSqlPerfLog(10);
 
             final String sql_address_drop_table = "DROP TABLE IF EXISTS address";
             final String sql_device_drop_table = "DROP TABLE IF EXISTS device";
@@ -465,8 +465,8 @@ public class JdbcTest {
         long nextStartId = 0; //  0 => start id
 
         List<List<User>> list1 = JdbcUtil
-                .queryByPage(dataSource, "select * from user where id > ? order by id limit 10", 10, (stmt, ret) -> stmt.setLong(1, ret == null ? 0 : N.lastElement(ret).get().getId()),
-                        User.class)
+                .queryByPage(dataSource, "select * from user where id > ? order by id limit 10", 10,
+                        (stmt, ret) -> stmt.setLong(1, ret == null ? 0 : N.lastElement(ret).get().getId()), User.class)
                 .toList();
 
         List<List<User>> list2 = Stream.of(Holder.of(nextStartId)).cycled().mapE(it -> {
