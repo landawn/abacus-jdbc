@@ -57,6 +57,7 @@ import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.ExceptionalStream;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
+import com.landawn.abacus.util.Numbers;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
@@ -355,24 +356,44 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
-    //    /**
-    //     * Sets the int.
-    //     *
-    //     * @param parameterIndex
-    //     * @param x
-    //     * @return
-    //     * @throws SQLException
-    //     */
-    //    @Beta
-    //    public This setInt(int parameterIndex, String x) throws SQLException {
-    //        if (Strings.isEmpty(x)) {
-    //            stmt.setNull(parameterIndex, java.sql.Types.INTEGER);
-    //        } else {
-    //            stmt.setInt(parameterIndex, Numbers.toInt(x));
-    //        }
-    //
-    //        return (This) this;
-    //    }
+    /**
+     * Sets the long.
+     *
+     * @param parameterIndex
+     * @param x
+     * @param defaultValueForNull
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public This setInt(int parameterIndex, Integer x, int defaultValueForNull) throws SQLException {
+        if (x == null) {
+            stmt.setInt(parameterIndex, defaultValueForNull);
+        } else {
+            stmt.setInt(parameterIndex, x);
+        }
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the int.
+     *
+     * @param parameterIndex
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public This setInt(int parameterIndex, String x) throws SQLException {
+        if (Strings.isEmpty(x)) {
+            stmt.setNull(parameterIndex, java.sql.Types.INTEGER);
+        } else {
+            stmt.setInt(parameterIndex, Numbers.toInt(x));
+        }
+
+        return (This) this;
+    }
 
     /**
      *
@@ -446,24 +467,44 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         return (This) this;
     }
 
-    //    /**
-    //     * Sets the long.
-    //     *
-    //     * @param parameterIndex
-    //     * @param x
-    //     * @return
-    //     * @throws SQLException
-    //     */
-    //    @Beta
-    //    public This setLong(int parameterIndex, String x) throws SQLException {
-    //        if (Strings.isEmpty(x)) {
-    //            stmt.setNull(parameterIndex, java.sql.Types.BIGINT);
-    //        } else {
-    //            stmt.setLong(parameterIndex, Numbers.toLong(x));
-    //        }
-    //
-    //        return (This) this;
-    //    }
+    /**
+     * Sets the long.
+     *
+     * @param parameterIndex
+     * @param x
+     * @param defaultValueForNull
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public This setLong(int parameterIndex, Long x, long defaultValueForNull) throws SQLException {
+        if (x == null) {
+            stmt.setLong(parameterIndex, defaultValueForNull);
+        } else {
+            stmt.setLong(parameterIndex, x);
+        }
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the long.
+     *
+     * @param parameterIndex
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public This setLong(int parameterIndex, String x) throws SQLException {
+        if (Strings.isEmpty(x)) {
+            stmt.setNull(parameterIndex, java.sql.Types.BIGINT);
+        } else {
+            stmt.setLong(parameterIndex, Numbers.toLong(x));
+        }
+
+        return (This) this;
+    }
 
     /**
      * Sets the long.
