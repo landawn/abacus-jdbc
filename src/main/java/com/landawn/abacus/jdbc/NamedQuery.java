@@ -2989,7 +2989,7 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
     public <T> NamedQuery addBatchParameters(final Collection<? extends T> batchParameters) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
 
-        if (N.isNullOrEmpty(batchParameters)) {
+        if (N.isEmpty(batchParameters)) {
             return this;
         }
 
@@ -3106,7 +3106,7 @@ public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, N
     //                throw new IllegalArgumentException("isSingleParameter is true but the count of parameters in query is: " + parameterCount);
     //            }
     //
-    //            if (N.isNullOrEmpty(batchParameters)) {
+    //            if (N.isEmpty(batchParameters)) {
     //                return this;
     //            }
     //

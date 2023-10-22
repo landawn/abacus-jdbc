@@ -729,7 +729,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, "batchSize");
 
-        if (N.isNullOrEmpty(entities)) {
+        if (N.isEmpty(entities)) {
             return new ArrayList<>();
         }
 
@@ -749,14 +749,14 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
         final List<T> entitiesToUpdate = map.get(true);
         final List<T> entitiesToInsert = map.get(false);
 
-        final SQLTransaction tran = N.notNullOrEmpty(entitiesToInsert) && N.notNullOrEmpty(entitiesToUpdate) ? JdbcUtil.beginTransaction(dataSource()) : null;
+        final SQLTransaction tran = N.notEmpty(entitiesToInsert) && N.notEmpty(entitiesToUpdate) ? JdbcUtil.beginTransaction(dataSource()) : null;
 
         try {
-            if (N.notNullOrEmpty(entitiesToInsert)) {
+            if (N.notEmpty(entitiesToInsert)) {
                 batchInsert(entitiesToInsert, batchSize);
             }
 
-            if (N.notNullOrEmpty(entitiesToUpdate)) {
+            if (N.notEmpty(entitiesToUpdate)) {
                 final Set<String> idPropNameSet = N.newHashSet(idPropNameList);
 
                 final List<T> dbEntitiesToUpdate = StreamEx.of(entitiesToUpdate)
@@ -843,7 +843,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     default int batchRefresh(final Collection<? extends T> entities, final int batchSize) throws SQLException {
-        if (N.isNullOrEmpty(entities)) {
+        if (N.isEmpty(entities)) {
             return 0;
         }
 
@@ -878,7 +878,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
         N.checkArgNotNullOrEmpty(propNamesToRefresh, "propNamesToRefresh");
         N.checkArgPositive(batchSize, "batchSize");
 
-        if (N.isNullOrEmpty(entities)) {
+        if (N.isEmpty(entities)) {
             return 0;
         }
 
@@ -893,14 +893,14 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
 
         final List<T> dbEntities = batchGet(idEntityMap.keySet(), selectPropNames, batchSize);
 
-        if (N.isNullOrEmpty(dbEntities)) {
+        if (N.isEmpty(dbEntities)) {
             return 0;
         } else {
             return dbEntities.stream().mapToInt(dbEntity -> {
                 final ID id = idExtractorFunc.apply(dbEntity);
                 final List<T> tmp = idEntityMap.get(id);
 
-                if (N.notNullOrEmpty(tmp)) {
+                if (N.notEmpty(tmp)) {
                     for (T entity : tmp) {
                         N.merge(dbEntity, entity, propNamesToRefresh);
                     }

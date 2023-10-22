@@ -952,7 +952,7 @@ public final class JdbcUtil {
     public static String getColumnLabel(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
         final String result = rsmd.getColumnLabel(columnIndex);
 
-        return N.isNullOrEmpty(result) ? rsmd.getColumnName(columnIndex) : result;
+        return Strings.isEmpty(result) ? rsmd.getColumnName(columnIndex) : result;
     }
 
     /**
@@ -3062,7 +3062,7 @@ public final class JdbcUtil {
         final ParsedSql parsedSql = ParsedSql.parse(sql);
         final PreparedStatement stmt = prepareStatement(conn, parsedSql);
 
-        if (N.notNullOrEmpty(parameters)) {
+        if (N.notEmpty(parameters)) {
             setParameters(parsedSql, stmt, parameters);
         }
 
@@ -3085,7 +3085,7 @@ public final class JdbcUtil {
         final ParsedSql parsedSql = ParsedSql.parse(sql);
         final CallableStatement stmt = prepareCallable(conn, parsedSql);
 
-        if (N.notNullOrEmpty(parameters)) {
+        if (N.notEmpty(parameters)) {
             setParameters(parsedSql, stmt, parameters);
         }
 
@@ -3381,7 +3381,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(sql);
         N.checkArgPositive(batchSize, "batchSize");
 
-        if (N.isNullOrEmpty(listOfParameters)) {
+        if (N.isEmpty(listOfParameters)) {
             return 0;
         }
 
@@ -3523,7 +3523,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(sql);
         N.checkArgPositive(batchSize, "batchSize");
 
-        if (N.isNullOrEmpty(listOfParameters)) {
+        if (N.isEmpty(listOfParameters)) {
             return 0;
         }
 
@@ -3811,7 +3811,7 @@ public final class JdbcUtil {
 
         if (parameterCount == 0) {
             return;
-        } else if (N.isNullOrEmpty(parameters)) {
+        } else if (N.isEmpty(parameters)) {
             throw new IllegalArgumentException(
                     "The count of parameter in sql is: " + parsedSql.getParameterCount() + ". But the specified parameters is null or empty");
         }
@@ -3876,11 +3876,11 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     static void setParameters(final PreparedStatement stmt, final int parameterCount, final Object[] parameters, final Type[] parameterTypes)
             throws SQLException {
-        if (N.notNullOrEmpty(parameterTypes) && parameterTypes.length >= parameterCount) {
+        if (N.notEmpty(parameterTypes) && parameterTypes.length >= parameterCount) {
             for (int i = 0; i < parameterCount; i++) {
                 parameterTypes[i].set(stmt, i + 1, parameters[i]);
             }
-        } else if (N.notNullOrEmpty(parameters) && parameters.length >= parameterCount) {
+        } else if (N.notEmpty(parameters) && parameters.length >= parameterCount) {
             for (int i = 0; i < parameterCount; i++) {
                 if (parameters[i] == null) {
                     stmt.setObject(i + 1, parameters[i]);
@@ -3912,7 +3912,7 @@ public final class JdbcUtil {
     }
 
     static boolean isEntityOrMapParameter(final ParsedSql parsedSql, final Object... parameters) {
-        if (N.isNullOrEmpty(parsedSql.getNamedParameters()) || N.isNullOrEmpty(parameters) || (parameters.length != 1) || (parameters[0] == null)) {
+        if (N.isEmpty(parsedSql.getNamedParameters()) || N.isEmpty(parameters) || (parameters.length != 1) || (parameters[0] == null)) {
             return false;
         }
 
@@ -4746,7 +4746,7 @@ public final class JdbcUtil {
 
                     return ret;
                 })
-                .takeWhile(N::notNullOrEmpty);
+                .takeWhile(N::notEmpty);
     }
 
     /**
@@ -4779,7 +4779,7 @@ public final class JdbcUtil {
 
                     return ret;
                 })
-                .takeWhile(N::notNullOrEmpty);
+                .takeWhile(N::notEmpty);
     }
 
     /**
@@ -4810,7 +4810,7 @@ public final class JdbcUtil {
 
                     return ret;
                 })
-                .takeWhile(N::notNullOrEmpty);
+                .takeWhile(N::notEmpty);
     }
 
     /**
@@ -4843,7 +4843,7 @@ public final class JdbcUtil {
 
                     return ret;
                 })
-                .takeWhile(N::notNullOrEmpty);
+                .takeWhile(N::notEmpty);
     }
 
     static <R> R checkNotResultSet(R result) {
@@ -5176,7 +5176,7 @@ public final class JdbcUtil {
     public static OutParamResult getOutParameters(final CallableStatement stmt, final List<OutParam> outParams) throws SQLException {
         N.checkArgNotNull(stmt, "stmt");
 
-        if (N.isNullOrEmpty(outParams)) {
+        if (N.isEmpty(outParams)) {
             return new OutParamResult(N.<OutParam> emptyList(), N.<Object, Object> emptyMap());
         }
 
@@ -5336,7 +5336,7 @@ public final class JdbcUtil {
             }
 
             final String msg = N.defaultIfNull(e.getMessage(), "").toLowerCase();
-            return N.notNullOrEmpty(msg) && (msg.contains("not exist") || msg.contains("doesn't exist") || msg.contains("not found"));
+            return Strings.isNotEmpty(msg) && (msg.contains("not exist") || msg.contains("doesn't exist") || msg.contains("not found"));
         } else if (e instanceof UncheckedSQLException sqlException) {
             return isTableNotExistsException(sqlException.getCause());
         }
@@ -5460,7 +5460,7 @@ public final class JdbcUtil {
 
     // TODO is it right to do it?
     //    static <ST extends Statement> ST checkStatement(ST stmt, String sql) {
-    //        if (isSqlPerfLogAllowed && N.notNullOrEmpty(sql)) {
+    //        if (isSqlPerfLogAllowed && N.notEmpty(sql)) {
     //            stmtPoolForSql.put(stmt, Poolable.wrap(sql, 3000, 3000));
     //        }
     //
@@ -5744,7 +5744,7 @@ public final class JdbcUtil {
             final Class<?> entityClass = value.getClass();
             final List<String> idPropNameList = QueryUtil.getIdFieldNames(entityClass);
 
-            if (N.isNullOrEmpty(idPropNameList)) {
+            if (N.isEmpty(idPropNameList)) {
                 return true;
             } else {
                 final BeanInfo idBeanInfo = ParserUtil.getBeanInfo(entityClass);
@@ -5760,7 +5760,7 @@ public final class JdbcUtil {
     }
 
     static <ID> boolean isAllNullIds(final List<ID> ids, final Predicate<Object> isDefaultIdTester) {
-        return N.notNullOrEmpty(ids) && ids.stream().allMatch(isDefaultIdTester);
+        return N.notEmpty(ids) && ids.stream().allMatch(isDefaultIdTester);
     }
 
     /**
@@ -6143,7 +6143,7 @@ public final class JdbcUtil {
             return getColumnValue(rs, 1);
         } else {
             final int columnCount = columnLabels.size();
-            final Seid id = Seid.of(N.EMPTY_STRING);
+            final Seid id = Seid.of(Strings.EMPTY_STRING);
 
             for (int i = 1; i <= columnCount; i++) {
                 id.set(columnLabels.get(i - 1), getColumnValue(rs, i));
@@ -6163,7 +6163,7 @@ public final class JdbcUtil {
             return getColumnValue(rs, 1);
         } else {
             final int columnCount = columnLabels.size();
-            final Seid id = Seid.of(N.EMPTY_STRING);
+            final Seid id = Seid.of(Strings.EMPTY_STRING);
 
             for (int i = 1; i <= columnCount; i++) {
                 id.set(columnLabels.get(i - 1), getColumnValue(rs, i));
@@ -6229,7 +6229,7 @@ public final class JdbcUtil {
     }
 
     static Object[] getParameterArray(final SP sp) {
-        return N.isNullOrEmpty(sp.parameters) ? N.EMPTY_OBJECT_ARRAY : sp.parameters.toArray();
+        return N.isEmpty(sp.parameters) ? N.EMPTY_OBJECT_ARRAY : sp.parameters.toArray();
     }
 
     static <R> BiRowMapper<R> toBiRowMapper(final RowMapper<R> rowMapper) {
@@ -6257,7 +6257,7 @@ public final class JdbcUtil {
 
         if (map == null) {
             final List<String> idPropNameList = QueryUtil.getIdFieldNames(entityClass);
-            final boolean isNoId = N.isNullOrEmpty(idPropNameList) || QueryUtil.isFakeId(idPropNameList);
+            final boolean isNoId = N.isEmpty(idPropNameList) || QueryUtil.isFakeId(idPropNameList);
             final String oneIdPropName = isNoId ? null : idPropNameList.get(0);
             final BeanInfo entityInfo = isNoId ? null : ParserUtil.getBeanInfo(entityClass);
             final List<PropInfo> idPropInfoList = isNoId ? null : Stream.of(idPropNameList).map(entityInfo::getPropInfo).toList();
@@ -6415,7 +6415,7 @@ public final class JdbcUtil {
 
     //    @SuppressWarnings("rawtypes")
     //    static Class<?> getTargetEntityClass(final Class<? extends Dao> daoInterface) {
-    //        if (N.notNullOrEmpty(daoInterface.getGenericInterfaces()) && daoInterface.getGenericInterfaces()[0] instanceof ParameterizedType) {
+    //        if (N.notEmpty(daoInterface.getGenericInterfaces()) && daoInterface.getGenericInterfaces()[0] instanceof ParameterizedType) {
     //            final ParameterizedType parameterizedType = (ParameterizedType) daoInterface.getGenericInterfaces()[0];
     //            java.lang.reflect.Type[] typeArguments = parameterizedType.getActualTypeArguments();
     //
@@ -6558,7 +6558,7 @@ public final class JdbcUtil {
     //            if (entityDaoPool != null) {
     //                entityDaoPool.remove(targetEntityClass);
     //
-    //                if (N.isNullOrEmpty(entityDaoPool)) {
+    //                if (N.isEmpty(entityDaoPool)) {
     //                    dsEntityDaoPool.remove(ds);
     //                }
     //            }
@@ -6870,7 +6870,7 @@ public final class JdbcUtil {
     //            if (entityDaoPool != null) {
     //                entityDaoPool.remove(targetEntityClass);
     //
-    //                if (N.isNullOrEmpty(entityDaoPool)) {
+    //                if (N.isEmpty(entityDaoPool)) {
     //                    dsEntityDaoPool.remove(ds);
     //                }
     //            }

@@ -292,7 +292,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
             final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
-        if (N.notNullOrEmpty(result)) {
+        if (N.notEmpty(result)) {
             if (result.size() > batchSize) {
                 StreamEx.of(result).splitToList(batchSize).forEach(it -> loadJoinEntities(it, joinEntitiesToLoad));
             } else {
@@ -319,7 +319,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
             final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
-        if (N.notNullOrEmpty(result) && N.notNullOrEmpty(joinEntitiesToLoad)) {
+        if (N.notEmpty(result) && N.notEmpty(joinEntitiesToLoad)) {
             if (result.size() > batchSize) {
                 StreamEx.of(result).splitToList(batchSize).forEach(it -> {
                     for (Class<?> joinEntityClass : joinEntitiesToLoad) {
@@ -352,7 +352,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
             final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException {
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
-        if (includeAllJoinEntities && N.notNullOrEmpty(result)) {
+        if (includeAllJoinEntities && N.notEmpty(result)) {
             if (result.size() > batchSize) {
                 StreamEx.of(result).splitToList(batchSize).forEach(this::loadAllJoinEntities);
             } else {

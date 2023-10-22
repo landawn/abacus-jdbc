@@ -1313,11 +1313,11 @@ public final class Jdbc {
                             if (propInfo == null) {
                                 String fieldName = column2FieldNameMap.get(columnLabels.get(i));
 
-                                if (N.isNullOrEmpty(fieldName)) {
+                                if (Strings.isEmpty(fieldName)) {
                                     fieldName = column2FieldNameMap.get(columnLabels.get(i).toLowerCase());
                                 }
 
-                                if (N.notNullOrEmpty(fieldName)) {
+                                if (Strings.isNotEmpty(fieldName)) {
                                     propInfo = entityInfo.getPropInfo(fieldName);
                                 }
                             }
@@ -1927,7 +1927,7 @@ public final class Jdbc {
             @Override
             public EntityId apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 final int columnCount = columnLabels.size();
-                final Seid entityId = Seid.of(N.EMPTY_STRING);
+                final Seid entityId = Seid.of(Strings.EMPTY_STRING);
 
                 for (int i = 1; i <= columnCount; i++) {
                     entityId.set(columnLabels.get(i - 1), JdbcUtil.getColumnValue(rs, i));
@@ -2273,11 +2273,11 @@ public final class Jdbc {
                                     if (propInfos[i] == null) {
                                         String fieldName = column2FieldNameMap.get(columnLabels[i]);
 
-                                        if (N.isNullOrEmpty(fieldName)) {
+                                        if (Strings.isEmpty(fieldName)) {
                                             fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
                                         }
 
-                                        if (N.notNullOrEmpty(fieldName)) {
+                                        if (Strings.isNotEmpty(fieldName)) {
                                             propInfos[i] = entityInfo.getPropInfo(fieldName);
                                         }
                                     }
@@ -2289,11 +2289,11 @@ public final class Jdbc {
                                         if (propInfos[i] == null) {
                                             String fieldName = column2FieldNameMap.get(newColumnName);
 
-                                            if (N.isNullOrEmpty(fieldName)) {
+                                            if (Strings.isEmpty(fieldName)) {
                                                 fieldName = column2FieldNameMap.get(newColumnName.toLowerCase());
                                             }
 
-                                            if (N.notNullOrEmpty(fieldName)) {
+                                            if (Strings.isNotEmpty(fieldName)) {
                                                 propInfos[i] = JdbcUtil.getSubPropInfo(targetClass, fieldName);
 
                                                 if (propInfos[i] != null) {
@@ -2394,7 +2394,7 @@ public final class Jdbc {
         @Stateful
         static <T> BiRowMapper<T> to(final Class<? extends T> entityClass, final Map<String, String> prefixAndFieldNameMap,
                 final boolean ignoreNonMatchedColumns) {
-            if (N.isNullOrEmpty(prefixAndFieldNameMap)) {
+            if (N.isEmpty(prefixAndFieldNameMap)) {
                 return to(entityClass, ignoreNonMatchedColumns);
             }
 
@@ -2425,11 +2425,11 @@ public final class Jdbc {
                             if (propInfos[i] == null) {
                                 String fieldName = column2FieldNameMap.get(columnLabels[i]);
 
-                                if (N.isNullOrEmpty(fieldName)) {
+                                if (Strings.isEmpty(fieldName)) {
                                     fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
                                 }
 
-                                if (N.notNullOrEmpty(fieldName)) {
+                                if (Strings.isNotEmpty(fieldName)) {
                                     propInfos[i] = entityInfo.getPropInfo(fieldName);
                                 }
                             }
@@ -2441,11 +2441,11 @@ public final class Jdbc {
                                 if (propInfos[i] == null) {
                                     String fieldName = column2FieldNameMap.get(newColumnName);
 
-                                    if (N.isNullOrEmpty(fieldName)) {
+                                    if (Strings.isEmpty(fieldName)) {
                                         fieldName = column2FieldNameMap.get(newColumnName.toLowerCase());
                                     }
 
-                                    if (N.notNullOrEmpty(fieldName)) {
+                                    if (Strings.isNotEmpty(fieldName)) {
                                         propInfos[i] = JdbcUtil.getSubPropInfo(entityClass, fieldName);
 
                                         if (propInfos[i] != null) {
@@ -2858,11 +2858,11 @@ public final class Jdbc {
                             if (propInfo == null) {
                                 String fieldName = column2FieldNameMap.get(columnLabels.get(i));
 
-                                if (N.isNullOrEmpty(fieldName)) {
+                                if (Strings.isEmpty(fieldName)) {
                                     fieldName = column2FieldNameMap.get(columnLabels.get(i).toLowerCase());
                                 }
 
-                                if (N.notNullOrEmpty(fieldName)) {
+                                if (Strings.isNotEmpty(fieldName)) {
                                     propInfo = entityInfo.getPropInfo(fieldName);
                                 }
                             }
@@ -3262,11 +3262,11 @@ public final class Jdbc {
                                     if (localPropInfos[i] == null) {
                                         String fieldName = column2FieldNameMap.get(columnLabels[i]);
 
-                                        if (N.isNullOrEmpty(fieldName)) {
+                                        if (Strings.isEmpty(fieldName)) {
                                             fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
                                         }
 
-                                        if (N.notNullOrEmpty(fieldName)) {
+                                        if (Strings.isNotEmpty(fieldName)) {
                                             localPropInfos[i] = entityInfo.getPropInfo(fieldName);
                                         }
                                     }
@@ -3447,11 +3447,11 @@ public final class Jdbc {
                             if (propInfo == null) {
                                 String fieldName = column2FieldNameMap.get(columnLabels.get(i));
 
-                                if (N.isNullOrEmpty(fieldName)) {
+                                if (Strings.isEmpty(fieldName)) {
                                     fieldName = column2FieldNameMap.get(columnLabels.get(i).toLowerCase());
                                 }
 
-                                if (N.notNullOrEmpty(fieldName)) {
+                                if (Strings.isNotEmpty(fieldName)) {
                                     propInfo = entityInfo.getPropInfo(fieldName);
                                 }
                             }
@@ -3595,11 +3595,11 @@ public final class Jdbc {
                             if (propInfo == null) {
                                 String fieldName = column2FieldNameMap.get(columnLabels.get(i));
 
-                                if (N.isNullOrEmpty(fieldName)) {
+                                if (Strings.isEmpty(fieldName)) {
                                     fieldName = column2FieldNameMap.get(columnLabels.get(i).toLowerCase());
                                 }
 
-                                if (N.notNullOrEmpty(fieldName)) {
+                                if (Strings.isNotEmpty(fieldName)) {
                                     propInfo = entityInfo.getPropInfo(fieldName);
                                 }
                             }
@@ -3816,7 +3816,7 @@ public final class Jdbc {
                 public void accept(ResultSet rs, Object[] outputRow) throws SQLException {
                     if (columnTypes == null) {
                         final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClassForFetch);
-                        final List<String> columnLabelList = N.isNullOrEmpty(columnLabels) ? JdbcUtil.getColumnLabelList(rs) : columnLabels;
+                        final List<String> columnLabelList = N.isEmpty(columnLabels) ? JdbcUtil.getColumnLabelList(rs) : columnLabels;
                         columnCount = columnLabelList.size();
                         final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
 
@@ -3829,11 +3829,11 @@ public final class Jdbc {
                             if (propInfo == null) {
                                 String fieldName = column2FieldNameMap.get(columnLabels[i]);
 
-                                if (N.isNullOrEmpty(fieldName)) {
+                                if (Strings.isEmpty(fieldName)) {
                                     fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
                                 }
 
-                                if (N.notNullOrEmpty(fieldName)) {
+                                if (Strings.isNotEmpty(fieldName)) {
                                     propInfo = entityInfo.getPropInfo(fieldName);
                                 }
                             }
@@ -3849,11 +3849,11 @@ public final class Jdbc {
                                     if (propInfo == null) {
                                         String fieldName = column2FieldNameMap.get(columnLabels[i]);
 
-                                        if (N.isNullOrEmpty(fieldName)) {
+                                        if (Strings.isEmpty(fieldName)) {
                                             fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
                                         }
 
-                                        if (N.notNullOrEmpty(fieldName)) {
+                                        if (Strings.isNotEmpty(fieldName)) {
                                             propInfo = JdbcUtil.getSubPropInfo(entityClassForFetch, fieldName);
                                         }
                                     }
@@ -5149,7 +5149,7 @@ public final class Jdbc {
             return columnName;
         }
 
-        if (N.notNullOrEmpty(prefixAndFieldNameMap) && prefixAndFieldNameMap.containsKey(prefix)) {
+        if (N.notEmpty(prefixAndFieldNameMap) && prefixAndFieldNameMap.containsKey(prefix)) {
             propInfo = entityInfo.getPropInfo(prefixAndFieldNameMap.get(prefix));
 
             if (propInfo != null) {

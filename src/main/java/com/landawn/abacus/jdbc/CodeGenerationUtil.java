@@ -163,7 +163,7 @@ final class CodeGenerationUtil {
 
         final Set<String> idFields = configToUse.getIdFields() == null ? new HashSet<>() : new HashSet<>(configToUse.getIdFields());
 
-        if (N.notNullOrEmpty(configToUse.getIdField())) {
+        if (Strings.isNotEmpty(configToUse.getIdField())) {
             idFields.add(configToUse.getIdField());
         }
 
@@ -183,7 +183,7 @@ final class CodeGenerationUtil {
         final Map<String, Tuple2<String, String>> customizedFieldDbTypeMap = Maps.create(N.nullToEmpty(configToUse.getCustomizedFieldDbTypes()), tp -> tp._1);
 
         try {
-            String finalClassName = N.isNullOrEmpty(className) ? Strings.capitalize(Strings.toCamelCase(entityName)) : className;
+            String finalClassName = Strings.isEmpty(className) ? Strings.capitalize(Strings.toCamelCase(entityName)) : className;
 
             if (N.commonSet(readOnlyFields, nonUpdatableFields).size() > 0) {
                 throw new RuntimeException("Fields: " + N.commonSet(readOnlyFields, nonUpdatableFields)
@@ -198,12 +198,12 @@ final class CodeGenerationUtil {
                 }
             }
 
-            final List<Tuple2<String, String>> additionalFields = N.isNullOrEmpty(configToUse.getAdditionalFieldsOrLines()) ? new ArrayList<>()
+            final List<Tuple2<String, String>> additionalFields = Strings.isEmpty(configToUse.getAdditionalFieldsOrLines()) ? new ArrayList<>()
                     : Stream.split(configToUse.getAdditionalFieldsOrLines(), "\n")
                             .map(it -> it.contains("//") ? Strings.substringBefore(it, "//") : it)
                             .map(Strings::strip)
                             .peek(Fn.println())
-                            .filter(Fn.notNullOrEmpty())
+                            .filter(Fn.isNotEmpty())
                             .filter(it -> Strings.startsWithAny(it, "private ", "protected ", "public ") && it.endsWith(";"))
                             .map(it -> Strings.substringBetween(it, " ", ";").trim())
                             .map(it -> {
@@ -214,7 +214,7 @@ final class CodeGenerationUtil {
 
             final StringBuilder sb = new StringBuilder();
 
-            if (N.notNullOrEmpty(packageName)) {
+            if (Strings.isNotEmpty(packageName)) {
                 sb.append("package ").append(packageName + ";");
             }
 
@@ -234,7 +234,7 @@ final class CodeGenerationUtil {
                 }
             }
 
-            if (N.notNullOrEmpty(headPart)) {
+            if (Strings.isNotEmpty(headPart)) {
                 headPart += "\n";
             }
 
@@ -252,7 +252,7 @@ final class CodeGenerationUtil {
                 headPart = headPart.replace("import javax.persistence.Table;\n", "");
             }
 
-            if (N.isNullOrEmpty(idFields)) {
+            if (N.isEmpty(idFields)) {
                 headPart = headPart.replace("import javax.persistence.Id;\n", "");
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
             } else if (isJavaPersistenceId) {
@@ -261,15 +261,15 @@ final class CodeGenerationUtil {
                 headPart = headPart.replace("import javax.persistence.Id;\n", "");
             }
 
-            if (N.isNullOrEmpty(nonUpdatableFields)) {
+            if (N.isEmpty(nonUpdatableFields)) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.NonUpdatable;\n", "");
             }
 
-            if (N.isNullOrEmpty(readOnlyFields)) {
+            if (N.isEmpty(readOnlyFields)) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.ReadOnly;\n", "");
             }
 
-            if (N.isNullOrEmpty(customizedFieldDbTypeMap)) {
+            if (N.isEmpty(customizedFieldDbTypeMap)) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Type;\n", "");
             }
 
@@ -308,7 +308,7 @@ final class CodeGenerationUtil {
                     tmp.add("namingPolicy = NamingPolicy." + eccJsonXmlConfig.getNamingPolicy().name());
                 }
 
-                if (N.notNullOrEmpty(eccJsonXmlConfig.getIgnoredFields())) {
+                if (Strings.isNotEmpty(eccJsonXmlConfig.getIgnoredFields())) {
                     tmp.add("ignoredFields = " + Splitter.with(",")
                             .trimResults()
                             .splitToStream(eccJsonXmlConfig.getIgnoredFields())
@@ -316,15 +316,15 @@ final class CodeGenerationUtil {
                             .join(", ", "{ ", " }"));
                 }
 
-                if (N.notNullOrEmpty(eccJsonXmlConfig.getDateFormat())) {
+                if (Strings.isNotEmpty(eccJsonXmlConfig.getDateFormat())) {
                     tmp.add("dateFormat = \"" + eccJsonXmlConfig.getDateFormat() + "\"");
                 }
 
-                if (N.notNullOrEmpty(eccJsonXmlConfig.getTimeZone())) {
+                if (Strings.isNotEmpty(eccJsonXmlConfig.getTimeZone())) {
                     tmp.add("timeZone = \"" + eccJsonXmlConfig.getTimeZone() + "\"");
                 }
 
-                if (N.notNullOrEmpty(eccJsonXmlConfig.getNumberFormat())) {
+                if (Strings.isNotEmpty(eccJsonXmlConfig.getNumberFormat())) {
                     tmp.add("numberFormat = \"" + eccJsonXmlConfig.getNumberFormat() + "\"");
                 }
 
@@ -354,10 +354,10 @@ final class CodeGenerationUtil {
                 final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(Strings.toCamelCase(columnName),
                         customizedFieldMap.get(columnName));
 
-                final String fieldName = customizedField == null || N.isNullOrEmpty(customizedField._2) ? fieldNameConverter.apply(entityName, columnName)
+                final String fieldName = customizedField == null || Strings.isEmpty(customizedField._2) ? fieldNameConverter.apply(entityName, columnName)
                         : customizedField._2;
 
-                if (N.notNullOrEmpty(excludedFields) && (excludedFields.contains(fieldName) || excludedFields.contains(columnName))) {
+                if (N.notEmpty(excludedFields) && (excludedFields.contains(fieldName) || excludedFields.contains(columnName))) {
                     continue;
                 }
 
@@ -407,7 +407,7 @@ final class CodeGenerationUtil {
             //                + tableName + ": with columns: " + columnNameList);
             //    }
 
-            if (N.notNullOrEmpty(configToUse.getAdditionalFieldsOrLines())) {
+            if (Strings.isNotEmpty(configToUse.getAdditionalFieldsOrLines())) {
                 sb.append("\n").append(configToUse.getAdditionalFieldsOrLines());
             }
 
@@ -435,10 +435,10 @@ final class CodeGenerationUtil {
 
             String result = sb.toString();
 
-            if (N.notNullOrEmpty(srcDir)) {
+            if (Strings.isNotEmpty(srcDir)) {
                 String packageDir = srcDir;
 
-                if (N.notNullOrEmpty(packageName)) {
+                if (Strings.isNotEmpty(packageName)) {
                     if (!(packageDir.endsWith("/") || packageDir.endsWith("\\"))) {
                         packageDir += "/";
                     }

@@ -477,7 +477,7 @@ public class JdbcTest {
                     .list(User.class);
             page.stream().mapToLong(User::getId).max().ifPresent(it::setValue);
             return page;
-        }).takeWhile(N::notNullOrEmpty).toList();
+        }).takeWhile(N::notEmpty).toList();
 
         list2.forEach(N::println);
 

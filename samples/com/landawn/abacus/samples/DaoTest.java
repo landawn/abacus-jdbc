@@ -198,7 +198,7 @@ public class DaoTest {
 
         userDao.batchInsertWithId(users.subList(0, 499));
 
-        users.forEach(it -> it.setFirstName(N.uuid().substring(0, 32)));
+        users.forEach(it -> it.setFirstName(Strings.uuid().substring(0, 32)));
 
         userDao.batchUpsert(users);
 
@@ -249,7 +249,7 @@ public class DaoTest {
 
         List<User> dbUsers = userDao.batchGet(ids).stream().map(N::copy).collect(Collectors.toList());
 
-        dbUsers.forEach(it -> it.setFirstName(N.uuid()));
+        dbUsers.forEach(it -> it.setFirstName(Strings.uuid()));
 
         userDao.batchRefresh(dbUsers, N.asList("lastName"));
         assertFalse(N.equals(userDao.batchGet(ids), dbUsers));
@@ -257,7 +257,7 @@ public class DaoTest {
         userDao.batchRefresh(dbUsers, N.asList("firstName"));
         assertTrue(N.equals(userDao.batchGet(ids), dbUsers));
 
-        dbUsers.forEach(it -> it.setFirstName(N.uuid()));
+        dbUsers.forEach(it -> it.setFirstName(Strings.uuid()));
 
         userDao.batchRefresh(dbUsers);
         assertTrue(N.equals(userDao.batchGet(ids), dbUsers));

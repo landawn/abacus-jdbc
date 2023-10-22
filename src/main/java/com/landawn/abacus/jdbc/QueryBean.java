@@ -47,27 +47,27 @@ import lombok.NoArgsConstructor;
  */
 
 /**
- * 
  *
- * @return 
+ *
+ * @return
  */
 @Data
 
 /**
- * 
+ *
  */
 @NoArgsConstructor
 
 /**
- * 
  *
- * @param select 
- * @param where 
- * @param having 
- * @param orderBy 
- * @param distinct 
- * @param offset 
- * @param limit 
+ *
+ * @param select
+ * @param where
+ * @param having
+ * @param orderBy
+ * @param distinct
+ * @param offset
+ * @param limit
  */
 @AllArgsConstructor
 public class QueryBean {
@@ -86,10 +86,10 @@ public class QueryBean {
     private Integer limit;
 
     /**
-     * 
      *
-     * @param resultEntityClass 
-     * @return 
+     *
+     * @param resultEntityClass
+     * @return
      */
     public List<Join> getJoinConditions(@SuppressWarnings("unused") final Class<?> resultEntityClass) {
         // TODO
@@ -97,27 +97,27 @@ public class QueryBean {
     }
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     @Data
 
     /**
-     * 
+     *
      */
     @NoArgsConstructor
 
     /**
-     * 
      *
-     * @param fieldName 
-     * @param fieldType 
-     * @param operator 
-     * @param parameter 
-     * @param caseInsensitive 
-     * @param and 
-     * @param or 
+     *
+     * @param fieldName
+     * @param fieldType
+     * @param operator
+     * @param parameter
+     * @param caseInsensitive
+     * @param and
+     * @param or
      */
     @AllArgsConstructor
     public static final class FilterField {
@@ -131,22 +131,22 @@ public class QueryBean {
         private List<FilterField> or;
 
         /**
-         * 
          *
-         * @return 
+         *
+         * @return
          */
         public Condition toCondition() {
             return toCondition(null);
         }
 
         /**
-         * 
          *
-         * @param resultEntityClass 
-         * @return 
+         *
+         * @param resultEntityClass
+         * @return
          */
         public Condition toCondition(final Class<?> resultEntityClass) {
-            if (N.notNullOrEmpty(and) && N.notNullOrEmpty(or)) {
+            if (N.notEmpty(and) && N.notEmpty(or)) {
                 throw new IllegalArgumentException("'and'/'or' can't have values at the same time");
             }
 
@@ -155,7 +155,7 @@ public class QueryBean {
 
             Type<Object> propType = strType;
 
-            if (N.notNullOrEmpty(fieldType)) {
+            if (Strings.isNotEmpty(fieldType)) {
                 propType = Type.of(fieldType);
             } else if (resultEntityClass != null) {
                 final PropInfo propInfo = ParserUtil.getBeanInfo(resultEntityClass).getPropInfo(fieldName);
@@ -251,9 +251,9 @@ public class QueryBean {
                     cond = CF.binary(propName, com.landawn.abacus.condition.Operator.getOperator(operator.sqlOperator), propVal);
             }
 
-            if (N.notNullOrEmpty(and)) {
+            if (N.notEmpty(and)) {
                 cond = CF.and(Stream.of(and).map(FilterField::toCondition).prepend(cond).toList());
-            } else if (N.notNullOrEmpty(or)) {
+            } else if (N.notEmpty(or)) {
                 cond = CF.or(Stream.of(or).map(FilterField::toCondition).prepend(cond).toList());
             }
 
@@ -262,23 +262,23 @@ public class QueryBean {
     }
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     @Data
 
     /**
-     * 
+     *
      */
     @NoArgsConstructor
 
     /**
-     * 
      *
-     * @param fieldName 
-     * @param fieldNames 
-     * @param sortDirection 
+     *
+     * @param fieldName
+     * @param fieldNames
+     * @param sortDirection
      */
     @AllArgsConstructor
     public static final class OrderByField {
@@ -287,12 +287,12 @@ public class QueryBean {
         private SortDirection sortDirection;
 
         /**
-         * 
          *
-         * @return 
+         *
+         * @return
          */
         public OrderBy toOrderBy() {
-            if (N.notNullOrEmpty(fieldNames)) {
+            if (N.notEmpty(fieldNames)) {
                 return CF.orderBy(fieldNames, sortDirection);
             } else {
                 return CF.orderBy(fieldName, sortDirection);
@@ -510,93 +510,93 @@ public class QueryBean {
         }
 
         /**
-         * 
          *
-         * @return 
+         *
+         * @return
          */
         public String sqlOperator() {
             return sqlOperator;
         }
 
         /**
-         * 
          *
-         * @param parameter 
-         * @return 
+         *
+         * @param parameter
+         * @return
          */
         public String toSql(final Object parameter) {
             return sqlConverter.apply(null, null, this, parameter);
         }
 
         /**
-         * 
          *
-         * @param columnName 
-         * @param parameter 
-         * @return 
+         *
+         * @param columnName
+         * @param parameter
+         * @return
          */
         public String toSql(final String columnName, final Object parameter) {
             return sqlConverter.apply(null, columnName, this, parameter);
         }
 
         /**
-         * 
          *
-         * @param sqlBuilder 
-         * @param parameter 
+         *
+         * @param sqlBuilder
+         * @param parameter
          */
         public void appendSql(final StringBuilder sqlBuilder, final Object parameter) {
             sqlConverter.apply(sqlBuilder, null, this, parameter);
         }
 
         /**
-         * 
          *
-         * @param sqlBuilder 
-         * @param columnName 
-         * @param parameter 
+         *
+         * @param sqlBuilder
+         * @param columnName
+         * @param parameter
          */
         public void appendSql(final StringBuilder sqlBuilder, final String columnName, final Object parameter) {
             sqlConverter.apply(sqlBuilder, columnName, this, parameter);
         }
 
         /**
-         * 
          *
-         * @param parameter 
-         * @return 
+         *
+         * @param parameter
+         * @return
          */
         public String toParameterizedSql(Object parameter) {
             return parameterizedSqlConverter.apply(null, null, this, parameter);
         }
 
         /**
-         * 
          *
-         * @param columnName 
-         * @param parameter 
-         * @return 
+         *
+         * @param columnName
+         * @param parameter
+         * @return
          */
         public String toParameterizedSql(String columnName, Object parameter) {
             return parameterizedSqlConverter.apply(null, columnName, this, parameter);
         }
 
         /**
-         * 
          *
-         * @param sqlBuilder 
-         * @param parameter 
+         *
+         * @param sqlBuilder
+         * @param parameter
          */
         public void appendParameterizedSql(final StringBuilder sqlBuilder, final Object parameter) {
             parameterizedSqlConverter.apply(sqlBuilder, null, this, parameter);
         }
 
         /**
-         * 
          *
-         * @param sqlBuilder 
-         * @param columnName 
-         * @param parameter 
+         *
+         * @param sqlBuilder
+         * @param columnName
+         * @param parameter
          */
         public void appendParameterizedSql(final StringBuilder sqlBuilder, final String columnName, final Object parameter) {
             parameterizedSqlConverter.apply(sqlBuilder, columnName, this, parameter);

@@ -35,6 +35,7 @@ import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.MoreExecutors;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Objectory;
+import com.landawn.abacus.util.Strings;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -192,7 +193,7 @@ public final class DBLock {
             }
         }
 
-        final String code = N.uuid();
+        final String code = Strings.uuid();
 
         Timestamp now = DateUtil.currentTimestamp();
         final long endTime = now.getTime() + timeout;

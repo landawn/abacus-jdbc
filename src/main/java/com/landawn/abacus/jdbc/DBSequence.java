@@ -25,7 +25,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.util.DateUtil;
-import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.Strings;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -59,11 +59,11 @@ public final class DBSequence {
         this.seqName = seqName;
         this.seqBufferSize = seqBufferSize;
 
-        if (N.isNullOrEmpty(tableName)) {
+        if (Strings.isEmpty(tableName)) {
             throw new IllegalArgumentException("Table name can't be null or empty");
         }
 
-        if (N.isNullOrEmpty(seqName)) {
+        if (Strings.isEmpty(seqName)) {
             throw new IllegalArgumentException("Sequence name can't be null or empty");
         }
 
@@ -131,9 +131,9 @@ public final class DBSequence {
     }
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     public long nextVal() {
         synchronized (seqName) { //NOSONAR

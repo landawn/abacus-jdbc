@@ -2379,7 +2379,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     }
 
     private void checkParameterIndices(final int... parameterIndices) {
-        checkArg(N.notNullOrEmpty(parameterIndices), "'parameterIndices' can't be null or empty");
+        checkArg(N.notEmpty(parameterIndices), "'parameterIndices' can't be null or empty");
 
         for (int parameterIndex : parameterIndices) {
             if (parameterIndex <= 0) {
@@ -2447,7 +2447,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     public <T> This addBatchParameters(final Collection<? extends T> batchParameters) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
 
-        if (N.isNullOrEmpty(batchParameters)) {
+        if (N.isEmpty(batchParameters)) {
             return (This) this;
         }
 
@@ -2467,7 +2467,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
         checkArgNotNull(batchParameters, "batchParameters");
         checkArgNotNull(type, "type");
 
-        if (N.isNullOrEmpty(batchParameters)) {
+        if (N.isEmpty(batchParameters)) {
             return (This) this;
         }
 
@@ -2584,7 +2584,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
     //    public Q addSingleBatchParameters(final Collection<?> batchParameters) throws SQLException {
     //        checkArgNotNull(batchParameters, "batchParameters");
     //
-    //        if (N.isNullOrEmpty(batchParameters)) {
+    //        if (N.isEmpty(batchParameters)) {
     //            return (Q) this;
     //        }
     //

@@ -1779,7 +1779,7 @@ public final class JdbcUtils {
     //                // skip.
     //            }
     //
-    //            final boolean isNullOrEmptyTypes = N.isNullOrEmpty(columnTypes);
+    //            final boolean isNullOrEmptyTypes = N.isEmpty(columnTypes);
     //            final String[] strs = new String[titles.length];
     //            Type<Object> type = null;
     //

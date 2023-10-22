@@ -224,12 +224,12 @@ final class DaoUtil {
         if (tp == null) {
             java.lang.reflect.Type[] typeArguments = null;
 
-            if (N.notNullOrEmpty(daoInterface.getGenericInterfaces()) && daoInterface.getGenericInterfaces()[0] instanceof ParameterizedType) {
+            if (N.notEmpty(daoInterface.getGenericInterfaces()) && daoInterface.getGenericInterfaces()[0] instanceof ParameterizedType) {
                 final ParameterizedType parameterizedType = (ParameterizedType) daoInterface.getGenericInterfaces()[0];
                 typeArguments = parameterizedType.getActualTypeArguments();
             }
 
-            final Class<? extends SQLBuilder> sbc = N.isNullOrEmpty(typeArguments) ? PSC.class
+            final Class<? extends SQLBuilder> sbc = N.isEmpty(typeArguments) ? PSC.class
                     : (typeArguments.length >= 2 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[1]) ? (Class) typeArguments[1]
                             : (typeArguments.length >= 3 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[2]) ? (Class) typeArguments[2]
                                     : PSC.class));
@@ -240,7 +240,7 @@ final class DaoUtil {
             final Throwables.BiFunction<javax.sql.DataSource, SP, PreparedQuery, SQLException> prepareQueryFunc = (dataSource, sp) -> {
                 final PreparedQuery query = JdbcUtil.prepareQuery(dataSource, sp.sql);
 
-                if (N.notNullOrEmpty(sp.parameters)) {
+                if (N.notEmpty(sp.parameters)) {
                     boolean noException = false;
 
                     try {
@@ -260,7 +260,7 @@ final class DaoUtil {
             final Throwables.BiFunction<javax.sql.DataSource, SP, NamedQuery, SQLException> prepareNamedQueryFunc = (dataSource, sp) -> {
                 final NamedQuery query = JdbcUtil.prepareNamedQuery(dataSource, sp.sql);
 
-                if (N.notNullOrEmpty(sp.parameters)) {
+                if (N.notEmpty(sp.parameters)) {
                     boolean noException = false;
 
                     try {
