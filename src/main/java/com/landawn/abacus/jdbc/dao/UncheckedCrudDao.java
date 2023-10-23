@@ -844,7 +844,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     @SuppressWarnings("deprecation")
     default boolean refresh(final T entity, Collection<String> propNamesToRefresh) throws UncheckedSQLException {
         N.checkArgNotNull(entity, "entity");
-        N.checkArgNotNullOrEmpty(propNamesToRefresh, "propNamesToRefresh");
+        N.checkArgNotEmpty(propNamesToRefresh, "propNamesToRefresh");
 
         final Class<?> cls = entity.getClass();
         final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
@@ -918,7 +918,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     @Override
     @SuppressWarnings("deprecation")
     default int batchRefresh(final Collection<? extends T> entities, Collection<String> propNamesToRefresh, final int batchSize) throws UncheckedSQLException {
-        N.checkArgNotNullOrEmpty(propNamesToRefresh, "propNamesToRefresh");
+        N.checkArgNotEmpty(propNamesToRefresh, "propNamesToRefresh");
         N.checkArgPositive(batchSize, "batchSize");
 
         if (N.isEmpty(entities)) {

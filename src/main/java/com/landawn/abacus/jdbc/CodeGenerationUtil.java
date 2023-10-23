@@ -203,7 +203,7 @@ final class CodeGenerationUtil {
                             .map(it -> it.contains("//") ? Strings.substringBefore(it, "//") : it)
                             .map(Strings::strip)
                             .peek(Fn.println())
-                            .filter(Fn.isNotEmpty())
+                            .filter(Fn.notEmpty())
                             .filter(it -> Strings.startsWithAny(it, "private ", "protected ", "public ") && it.endsWith(";"))
                             .map(it -> Strings.substringBetween(it, " ", ";").trim())
                             .map(it -> {

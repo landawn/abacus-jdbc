@@ -805,7 +805,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     @SuppressWarnings("deprecation")
     default boolean refresh(final T entity, Collection<String> propNamesToRefresh) throws SQLException {
         N.checkArgNotNull(entity, "entity");
-        N.checkArgNotNullOrEmpty(propNamesToRefresh, "propNamesToRefresh");
+        N.checkArgNotEmpty(propNamesToRefresh, "propNamesToRefresh");
 
         final Class<?> cls = entity.getClass();
         final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
@@ -875,7 +875,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      */
     @SuppressWarnings("deprecation")
     default int batchRefresh(final Collection<? extends T> entities, Collection<String> propNamesToRefresh, final int batchSize) throws SQLException {
-        N.checkArgNotNullOrEmpty(propNamesToRefresh, "propNamesToRefresh");
+        N.checkArgNotEmpty(propNamesToRefresh, "propNamesToRefresh");
         N.checkArgPositive(batchSize, "batchSize");
 
         if (N.isEmpty(entities)) {

@@ -170,7 +170,7 @@ public final class Jdbc {
         @Beta
         @Stateful
         static <T> BiParametersSetter<PreparedStatement, T[]> createForArray(final List<String> fieldNameList, final Class<?> entityClass) {
-            N.checkArgNotNullOrEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
+            N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
             N.checkArgument(ClassUtil.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
 
             return new BiParametersSetter<>() {
@@ -207,7 +207,7 @@ public final class Jdbc {
         @Beta
         @Stateful
         static <T> BiParametersSetter<PreparedStatement, List<T>> createForList(final List<String> fieldNameList, final Class<?> entityClass) {
-            N.checkArgNotNullOrEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
+            N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
             N.checkArgument(ClassUtil.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
 
             return new BiParametersSetter<>() {
@@ -4952,7 +4952,7 @@ public final class Jdbc {
          * @return
          */
         public static boolean register(final String qualifier, final Handler<?> handler) {
-            N.checkArgNotNullOrEmpty(qualifier, "qualifier");
+            N.checkArgNotEmpty(qualifier, "qualifier");
             N.checkArgNotNull(handler, "handler");
 
             if (handlerPool.containsKey(qualifier)) {
@@ -4971,7 +4971,7 @@ public final class Jdbc {
          * @return
          */
         public static Handler<?> get(final String qualifier) { //NOSONAR
-            N.checkArgNotNullOrEmpty(qualifier, "qualifier");
+            N.checkArgNotEmpty(qualifier, "qualifier");
 
             Handler<?> result = handlerPool.get(qualifier);
 
