@@ -26,7 +26,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
-import com.landawn.abacus.jdbc.PreparedCallableQuery;
+import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.util.ParsedSql;
@@ -331,7 +331,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     @Deprecated
     @NonDBOperation
     @Override
-    default PreparedCallableQuery prepareCallableQuery(final String query) throws UnsupportedOperationException, SQLException {
+    default CallableQuery prepareCallableQuery(final String query) throws UnsupportedOperationException, SQLException {
         throw new UnsupportedOperationException();
     }
 
@@ -347,7 +347,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     @Deprecated
     @NonDBOperation
     @Override
-    default PreparedCallableQuery prepareCallableQuery(final String query,
+    default CallableQuery prepareCallableQuery(final String query,
             final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws UnsupportedOperationException, SQLException {
         throw new UnsupportedOperationException();
     }

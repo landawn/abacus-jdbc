@@ -37,7 +37,7 @@ import com.landawn.abacus.samples.dao.UncheckedUserDaoL;
 import com.landawn.abacus.samples.dao.UserDao;
 import com.landawn.abacus.samples.dao.UserDaoL;
 import com.landawn.abacus.samples.entity.User;
-import com.landawn.abacus.util.ExceptionalStream;
+import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Holder;
 import com.landawn.abacus.util.N;
@@ -447,7 +447,7 @@ public class JdbcTest {
 
     @Test
     public void test_cycled() throws Exception {
-        ExceptionalStream.of(1).cycled(1000).map(it -> "a").println();
+        CheckedStream.of(1).cycled(1000).map(it -> "a").println();
         Stream.of(1).cycled(10).map(it -> "a").println();
 
     }

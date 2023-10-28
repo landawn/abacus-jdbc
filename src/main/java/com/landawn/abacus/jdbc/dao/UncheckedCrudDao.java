@@ -27,7 +27,7 @@ import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.jdbc.AbstractPreparedQuery;
+import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
@@ -191,7 +191,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForBoolean()
+     * @see AbstractQuery#queryForBoolean()
      */
     @Override
     OptionalBoolean queryForBoolean(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
@@ -205,7 +205,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForChar()
+     * @see AbstractQuery#queryForChar()
      */
     @Override
     OptionalChar queryForChar(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
@@ -219,7 +219,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForByte()
+     * @see AbstractQuery#queryForByte()
      */
     @Override
     OptionalByte queryForByte(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
@@ -233,7 +233,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForShort()
+     * @see AbstractQuery#queryForShort()
      */
     @Override
     OptionalShort queryForShort(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
@@ -247,7 +247,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForInt()
+     * @see AbstractQuery#queryForInt()
      */
     @Override
     OptionalInt queryForInt(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
@@ -261,7 +261,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForLong()
+     * @see AbstractQuery#queryForLong()
      */
     @Override
     OptionalLong queryForLong(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
@@ -275,7 +275,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForFloat()
+     * @see AbstractQuery#queryForFloat()
      */
     @Override
     OptionalFloat queryForFloat(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
@@ -289,7 +289,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForDouble()
+     * @see AbstractQuery#queryForDouble()
      */
     @Override
     OptionalDouble queryForDouble(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
@@ -303,7 +303,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForString()
+     * @see AbstractQuery#queryForString()
      */
     @Override
     Nullable<String> queryForString(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
@@ -317,7 +317,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForDate()
+     * @see AbstractQuery#queryForDate()
      */
     @Override
     Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
@@ -331,7 +331,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForTime()
+     * @see AbstractQuery#queryForTime()
      */
     @Override
     Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
@@ -345,7 +345,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForTimestamp()
+     * @see AbstractQuery#queryForTimestamp()
      */
     @Override
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
@@ -359,7 +359,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForBytes()
+     * @see AbstractQuery#queryForBytes()
      */
     @Override
     Nullable<byte[]> queryForBytes(final String singleSelectPropName, final ID id) throws UncheckedSQLException;
@@ -373,7 +373,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForSingleResult(Class)
+     * @see AbstractQuery#queryForSingleResult(Class)
      */
     @Override
     <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
@@ -390,7 +390,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForSingleNonNull(Class)
+     * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Override
     <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
@@ -407,7 +407,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForSingleNonNull(Class)
+     * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Override
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
@@ -426,7 +426,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForUniqueResult(Class)
+     * @see AbstractQuery#queryForUniqueResult(Class)
      */
     @Override
     <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
@@ -444,7 +444,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForUniqueNonNull(Class)
+     * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
     <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
@@ -462,7 +462,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForUniqueNonNull(Class)
+     * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
@@ -574,7 +574,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id
      * @return true, if successful
      * @throws UncheckedSQLException the unchecked SQL exception
-     * @see AbstractPreparedQuery#exists()
+     * @see AbstractQuery#exists()
      */
     @Override
     boolean exists(final ID id) throws UncheckedSQLException;
@@ -585,7 +585,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id
      * @return
      * @throws UncheckedSQLException
-     * @see AbstractPreparedQuery#notExists()
+     * @see AbstractQuery#notExists()
      */
     @Beta
     @Override

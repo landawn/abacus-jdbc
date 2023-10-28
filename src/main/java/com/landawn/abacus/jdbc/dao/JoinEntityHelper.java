@@ -31,9 +31,8 @@ import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.ContinuableFuture;
-import com.landawn.abacus.util.ExceptionalStream;
-import com.landawn.abacus.util.ExceptionalStream.CheckedStream;
 import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder;
@@ -284,7 +283,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @return
      */
     @Beta
-    default ExceptionalStream<T, SQLException> stream(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) {
+    default CheckedStream<T, SQLException> stream(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) {
         return DaoUtil.getDao(this)
                 .stream(selectPropNames, cond)
                 .splitToList(JdbcUtil.DEFAULT_BATCH_SIZE)
@@ -300,7 +299,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @return
      */
     @Beta
-    default ExceptionalStream<T, SQLException> stream(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad,
+    default CheckedStream<T, SQLException> stream(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad,
             final Condition cond) {
         return DaoUtil.getDao(this)
                 .stream(selectPropNames, cond)
@@ -321,7 +320,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @return
      */
     @Beta
-    default ExceptionalStream<T, SQLException> stream(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) {
+    default CheckedStream<T, SQLException> stream(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) {
         if (includeAllJoinEntities) {
             return DaoUtil.getDao(this)
                     .stream(selectPropNames, cond)

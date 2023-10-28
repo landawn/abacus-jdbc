@@ -4300,70 +4300,70 @@ public final class Jdbc {
             public static final RowMapper<Object> GET_OBJECT = rs -> JdbcUtil.getColumnValue(rs, 1);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(1, x);
+            public static final BiParametersSetter<AbstractQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, Byte> SET_BYTE = (preparedQuery, x) -> preparedQuery.setByte(1, x);
+            public static final BiParametersSetter<AbstractQuery, Byte> SET_BYTE = (preparedQuery, x) -> preparedQuery.setByte(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, Short> SET_SHORT = (preparedQuery, x) -> preparedQuery.setShort(1, x);
+            public static final BiParametersSetter<AbstractQuery, Short> SET_SHORT = (preparedQuery, x) -> preparedQuery.setShort(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, Integer> SET_INT = (preparedQuery, x) -> preparedQuery.setInt(1, x);
+            public static final BiParametersSetter<AbstractQuery, Integer> SET_INT = (preparedQuery, x) -> preparedQuery.setInt(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, Long> SET_LONG = (preparedQuery, x) -> preparedQuery.setLong(1, x);
+            public static final BiParametersSetter<AbstractQuery, Long> SET_LONG = (preparedQuery, x) -> preparedQuery.setLong(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, Float> SET_FLOAT = (preparedQuery, x) -> preparedQuery.setFloat(1, x);
+            public static final BiParametersSetter<AbstractQuery, Float> SET_FLOAT = (preparedQuery, x) -> preparedQuery.setFloat(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, Double> SET_DOUBLE = (preparedQuery, x) -> preparedQuery.setDouble(1, x);
+            public static final BiParametersSetter<AbstractQuery, Double> SET_DOUBLE = (preparedQuery, x) -> preparedQuery.setDouble(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, BigDecimal> SET_BIG_DECIMAL = (preparedQuery, x) -> preparedQuery.setBigDecimal(1, x);
+            public static final BiParametersSetter<AbstractQuery, BigDecimal> SET_BIG_DECIMAL = (preparedQuery, x) -> preparedQuery.setBigDecimal(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, String> SET_STRING = (preparedQuery, x) -> preparedQuery.setString(1, x);
+            public static final BiParametersSetter<AbstractQuery, String> SET_STRING = (preparedQuery, x) -> preparedQuery.setString(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, Date> SET_DATE = (preparedQuery, x) -> preparedQuery.setDate(1, x);
+            public static final BiParametersSetter<AbstractQuery, Date> SET_DATE = (preparedQuery, x) -> preparedQuery.setDate(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, Time> SET_TIME = (preparedQuery, x) -> preparedQuery.setTime(1, x);
+            public static final BiParametersSetter<AbstractQuery, Time> SET_TIME = (preparedQuery, x) -> preparedQuery.setTime(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, Timestamp> SET_TIMESTAMP = (preparedQuery, x) -> preparedQuery.setTimestamp(1, x);
+            public static final BiParametersSetter<AbstractQuery, Timestamp> SET_TIMESTAMP = (preparedQuery, x) -> preparedQuery.setTimestamp(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_DATE_JU = (preparedQuery, x) -> preparedQuery.setDate(1, x);
+            public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_DATE_JU = (preparedQuery, x) -> preparedQuery.setDate(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIME_JU = (preparedQuery, x) -> preparedQuery.setTime(1, x);
+            public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_TIME_JU = (preparedQuery, x) -> preparedQuery.setTime(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIMESTAMP_JU = (preparedQuery, x) -> preparedQuery.setTimestamp(1,
+            public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_TIMESTAMP_JU = (preparedQuery, x) -> preparedQuery.setTimestamp(1,
                     x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, byte[]> SET_BYTES = (preparedQuery, x) -> preparedQuery.setBytes(1, x);
+            public static final BiParametersSetter<AbstractQuery, byte[]> SET_BYTES = (preparedQuery, x) -> preparedQuery.setBytes(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, InputStream> SET_BINARY_STREAM = (preparedQuery, x) -> preparedQuery
+            public static final BiParametersSetter<AbstractQuery, InputStream> SET_BINARY_STREAM = (preparedQuery, x) -> preparedQuery
                     .setBinaryStream(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, Reader> SET_CHARACTER_STREAM = (preparedQuery, x) -> preparedQuery
+            public static final BiParametersSetter<AbstractQuery, Reader> SET_CHARACTER_STREAM = (preparedQuery, x) -> preparedQuery
                     .setCharacterStream(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, Blob> SET_BLOB = (preparedQuery, x) -> preparedQuery.setBlob(1, x);
+            public static final BiParametersSetter<AbstractQuery, Blob> SET_BLOB = (preparedQuery, x) -> preparedQuery.setBlob(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, Clob> SET_CLOB = (preparedQuery, x) -> preparedQuery.setClob(1, x);
+            public static final BiParametersSetter<AbstractQuery, Clob> SET_CLOB = (preparedQuery, x) -> preparedQuery.setClob(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractPreparedQuery, Object> SET_OBJECT = (preparedQuery, x) -> preparedQuery.setObject(1, x);
+            public static final BiParametersSetter<AbstractQuery, Object> SET_OBJECT = (preparedQuery, x) -> preparedQuery.setObject(1, x);
 
             private ColumnOne() {
                 // singleton for utility class
@@ -4442,7 +4442,7 @@ public final class Jdbc {
              * @return
              */
             @SuppressWarnings("rawtypes")
-            public static <T> BiParametersSetter<AbstractPreparedQuery, T> set(final Class<T> type) {
+            public static <T> BiParametersSetter<AbstractQuery, T> set(final Class<T> type) {
                 return set(N.typeOf(type));
             }
 
@@ -4454,7 +4454,7 @@ public final class Jdbc {
              * @return
              */
             @SuppressWarnings("rawtypes")
-            public static <T> BiParametersSetter<AbstractPreparedQuery, T> set(final Type<T> type) {
+            public static <T> BiParametersSetter<AbstractQuery, T> set(final Type<T> type) {
                 return (preparedQuery, x) -> type.set(preparedQuery.stmt, 1, x);
             }
 
@@ -4498,72 +4498,72 @@ public final class Jdbc {
         //        public static final RowMapper<Object> GET_OBJECT = rs -> JdbcUtil.getColumnValue(rs, 2);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Byte> SET_BYTE = (preparedQuery, x) -> preparedQuery.setByte(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, Byte> SET_BYTE = (preparedQuery, x) -> preparedQuery.setByte(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Short> SET_SHORT = (preparedQuery, x) -> preparedQuery.setShort(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, Short> SET_SHORT = (preparedQuery, x) -> preparedQuery.setShort(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Integer> SET_INT = (preparedQuery, x) -> preparedQuery.setInt(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, Integer> SET_INT = (preparedQuery, x) -> preparedQuery.setInt(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Long> SET_LONG = (preparedQuery, x) -> preparedQuery.setLong(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, Long> SET_LONG = (preparedQuery, x) -> preparedQuery.setLong(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Float> SET_FLOAT = (preparedQuery, x) -> preparedQuery.setFloat(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, Float> SET_FLOAT = (preparedQuery, x) -> preparedQuery.setFloat(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Double> SET_DOUBLE = (preparedQuery, x) -> preparedQuery.setDouble(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, Double> SET_DOUBLE = (preparedQuery, x) -> preparedQuery.setDouble(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, BigDecimal> SET_BIG_DECIMAL = (preparedQuery, x) -> preparedQuery
+        //        public static final BiParametersSetter<AbstractQuery, BigDecimal> SET_BIG_DECIMAL = (preparedQuery, x) -> preparedQuery
         //                .setBigDecimal(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, String> SET_STRING = (preparedQuery, x) -> preparedQuery.setString(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, String> SET_STRING = (preparedQuery, x) -> preparedQuery.setString(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Date> SET_DATE = (preparedQuery, x) -> preparedQuery.setDate(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, Date> SET_DATE = (preparedQuery, x) -> preparedQuery.setDate(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Time> SET_TIME = (preparedQuery, x) -> preparedQuery.setTime(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, Time> SET_TIME = (preparedQuery, x) -> preparedQuery.setTime(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Timestamp> SET_TIMESTAMP = (preparedQuery, x) -> preparedQuery.setTimestamp(2,
+        //        public static final BiParametersSetter<AbstractQuery, Timestamp> SET_TIMESTAMP = (preparedQuery, x) -> preparedQuery.setTimestamp(2,
         //                x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_DATE_JU = (preparedQuery, x) -> preparedQuery.setDate(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_DATE_JU = (preparedQuery, x) -> preparedQuery.setDate(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIME_JU = (preparedQuery, x) -> preparedQuery.setTime(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_TIME_JU = (preparedQuery, x) -> preparedQuery.setTime(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIMESTAMP_JU = (preparedQuery, x) -> preparedQuery
+        //        public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_TIMESTAMP_JU = (preparedQuery, x) -> preparedQuery
         //                .setTimestamp(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, byte[]> SET_BYTES = (preparedQuery, x) -> preparedQuery.setBytes(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, byte[]> SET_BYTES = (preparedQuery, x) -> preparedQuery.setBytes(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, InputStream> SET_BINARY_STREAM = (preparedQuery, x) -> preparedQuery
+        //        public static final BiParametersSetter<AbstractQuery, InputStream> SET_BINARY_STREAM = (preparedQuery, x) -> preparedQuery
         //                .setBinaryStream(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Reader> SET_CHARACTER_STREAM = (preparedQuery, x) -> preparedQuery
+        //        public static final BiParametersSetter<AbstractQuery, Reader> SET_CHARACTER_STREAM = (preparedQuery, x) -> preparedQuery
         //                .setCharacterStream(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Blob> SET_BLOB = (preparedQuery, x) -> preparedQuery.setBlob(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, Blob> SET_BLOB = (preparedQuery, x) -> preparedQuery.setBlob(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Clob> SET_CLOB = (preparedQuery, x) -> preparedQuery.setClob(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, Clob> SET_CLOB = (preparedQuery, x) -> preparedQuery.setClob(2, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Object> SET_OBJECT = (preparedQuery, x) -> preparedQuery.setObject(2, x);
+        //        public static final BiParametersSetter<AbstractQuery, Object> SET_OBJECT = (preparedQuery, x) -> preparedQuery.setObject(2, x);
         //
         //        private ColumnTwo() {
         //            // singleton for utility class
@@ -4607,12 +4607,12 @@ public final class Jdbc {
         //        }
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static <T> BiParametersSetter<AbstractPreparedQuery, T> set(final Class<T> type) {
+        //        public static <T> BiParametersSetter<AbstractQuery, T> set(final Class<T> type) {
         //            return set(N.typeOf(type));
         //        }
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static <T> BiParametersSetter<AbstractPreparedQuery, T> set(final Type<T> type) {
+        //        public static <T> BiParametersSetter<AbstractQuery, T> set(final Type<T> type) {
         //            return (preparedQuery, x) -> type.set(preparedQuery.stmt, 2, x);
         //        }
         //    }
@@ -4655,72 +4655,72 @@ public final class Jdbc {
         //        public static final RowMapper<Object> GET_OBJECT = rs -> JdbcUtil.getColumnValue(rs, 3);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Byte> SET_BYTE = (preparedQuery, x) -> preparedQuery.setByte(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, Byte> SET_BYTE = (preparedQuery, x) -> preparedQuery.setByte(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Short> SET_SHORT = (preparedQuery, x) -> preparedQuery.setShort(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, Short> SET_SHORT = (preparedQuery, x) -> preparedQuery.setShort(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Integer> SET_INT = (preparedQuery, x) -> preparedQuery.setInt(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, Integer> SET_INT = (preparedQuery, x) -> preparedQuery.setInt(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Long> SET_LONG = (preparedQuery, x) -> preparedQuery.setLong(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, Long> SET_LONG = (preparedQuery, x) -> preparedQuery.setLong(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Float> SET_FLOAT = (preparedQuery, x) -> preparedQuery.setFloat(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, Float> SET_FLOAT = (preparedQuery, x) -> preparedQuery.setFloat(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Double> SET_DOUBLE = (preparedQuery, x) -> preparedQuery.setDouble(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, Double> SET_DOUBLE = (preparedQuery, x) -> preparedQuery.setDouble(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, BigDecimal> SET_BIG_DECIMAL = (preparedQuery, x) -> preparedQuery
+        //        public static final BiParametersSetter<AbstractQuery, BigDecimal> SET_BIG_DECIMAL = (preparedQuery, x) -> preparedQuery
         //                .setBigDecimal(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, String> SET_STRING = (preparedQuery, x) -> preparedQuery.setString(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, String> SET_STRING = (preparedQuery, x) -> preparedQuery.setString(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Date> SET_DATE = (preparedQuery, x) -> preparedQuery.setDate(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, Date> SET_DATE = (preparedQuery, x) -> preparedQuery.setDate(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Time> SET_TIME = (preparedQuery, x) -> preparedQuery.setTime(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, Time> SET_TIME = (preparedQuery, x) -> preparedQuery.setTime(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Timestamp> SET_TIMESTAMP = (preparedQuery, x) -> preparedQuery.setTimestamp(3,
+        //        public static final BiParametersSetter<AbstractQuery, Timestamp> SET_TIMESTAMP = (preparedQuery, x) -> preparedQuery.setTimestamp(3,
         //                x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_DATE_JU = (preparedQuery, x) -> preparedQuery.setDate(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_DATE_JU = (preparedQuery, x) -> preparedQuery.setDate(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIME_JU = (preparedQuery, x) -> preparedQuery.setTime(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_TIME_JU = (preparedQuery, x) -> preparedQuery.setTime(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, java.util.Date> SET_TIMESTAMP_JU = (preparedQuery, x) -> preparedQuery
+        //        public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_TIMESTAMP_JU = (preparedQuery, x) -> preparedQuery
         //                .setTimestamp(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, byte[]> SET_BYTES = (preparedQuery, x) -> preparedQuery.setBytes(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, byte[]> SET_BYTES = (preparedQuery, x) -> preparedQuery.setBytes(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, InputStream> SET_BINARY_STREAM = (preparedQuery, x) -> preparedQuery
+        //        public static final BiParametersSetter<AbstractQuery, InputStream> SET_BINARY_STREAM = (preparedQuery, x) -> preparedQuery
         //                .setBinaryStream(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Reader> SET_CHARACTER_STREAM = (preparedQuery, x) -> preparedQuery
+        //        public static final BiParametersSetter<AbstractQuery, Reader> SET_CHARACTER_STREAM = (preparedQuery, x) -> preparedQuery
         //                .setCharacterStream(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Blob> SET_BLOB = (preparedQuery, x) -> preparedQuery.setBlob(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, Blob> SET_BLOB = (preparedQuery, x) -> preparedQuery.setBlob(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Clob> SET_CLOB = (preparedQuery, x) -> preparedQuery.setClob(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, Clob> SET_CLOB = (preparedQuery, x) -> preparedQuery.setClob(3, x);
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static final BiParametersSetter<AbstractPreparedQuery, Object> SET_OBJECT = (preparedQuery, x) -> preparedQuery.setObject(3, x);
+        //        public static final BiParametersSetter<AbstractQuery, Object> SET_OBJECT = (preparedQuery, x) -> preparedQuery.setObject(3, x);
         //
         //        private ColumnThree() {
         //            // singleton for utility class
@@ -4764,12 +4764,12 @@ public final class Jdbc {
         //        }
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static <T> BiParametersSetter<AbstractPreparedQuery, T> set(final Class<T> type) {
+        //        public static <T> BiParametersSetter<AbstractQuery, T> set(final Class<T> type) {
         //            return set(N.typeOf(type));
         //        }
         //
         //        @SuppressWarnings("rawtypes")
-        //        public static <T> BiParametersSetter<AbstractPreparedQuery, T> set(final Type<T> type) {
+        //        public static <T> BiParametersSetter<AbstractQuery, T> set(final Type<T> type) {
         //            return (preparedQuery, x) -> type.set(preparedQuery.stmt, 3, x);
         //        }
         //    }

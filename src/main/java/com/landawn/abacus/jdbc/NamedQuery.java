@@ -71,7 +71,7 @@ import com.landawn.abacus.util.ParsedSql;
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html">http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html</a>
  */
-public final class NamedQuery extends AbstractPreparedQuery<PreparedStatement, NamedQuery> {
+public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuery> {
 
     static final int MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP = 5;
 

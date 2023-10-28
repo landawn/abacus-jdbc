@@ -17,7 +17,7 @@ package com.landawn.abacus.jdbc;
 
 /**
  *
- * @see The operations in {@code AbstractPreparedQuery}
+ * @see The operations in {@code AbstractQuery}
  *
  */
 public enum OP {

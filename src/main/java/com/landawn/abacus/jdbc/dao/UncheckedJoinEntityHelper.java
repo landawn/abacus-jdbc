@@ -29,8 +29,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.ContinuableFuture;
-import com.landawn.abacus.util.ExceptionalStream.CheckedStream;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.u.Optional;
@@ -418,10 +418,10 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * 
      *
-     * @param entities 
-     * @param joinEntityPropNames 
+     *
+     * @param entities
+     * @param joinEntityPropNames
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -436,11 +436,11 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * 
      *
-     * @param entities 
-     * @param joinEntityPropNames 
-     * @param inParallel 
+     *
+     * @param entities
+     * @param joinEntityPropNames
+     * @param inParallel
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @SuppressWarnings("deprecation")
@@ -456,11 +456,11 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * 
      *
-     * @param entities 
-     * @param joinEntityPropNames 
-     * @param executor 
+     *
+     * @param entities
+     * @param joinEntityPropNames
+     * @param executor
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Beta
@@ -758,10 +758,10 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * 
      *
-     * @param entities 
-     * @param joinEntityPropNames 
+     *
+     * @param entities
+     * @param joinEntityPropNames
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -776,11 +776,11 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * 
      *
-     * @param entities 
-     * @param joinEntityPropNames 
-     * @param inParallel 
+     *
+     * @param entities
+     * @param joinEntityPropNames
+     * @param inParallel
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @SuppressWarnings("deprecation")
@@ -796,11 +796,11 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * 
      *
-     * @param entities 
-     * @param joinEntityPropNames 
-     * @param executor 
+     *
+     * @param entities
+     * @param joinEntityPropNames
+     * @param executor
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Beta
@@ -981,10 +981,10 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * 
      *
-     * @param entity 
-     * @param joinEntityPropName 
+     *
+     * @param entity
+     * @param joinEntityPropName
      * @return the total count of updated/deleted records.
      * @throws UncheckedSQLException the unchecked SQL exception
      */
@@ -992,10 +992,10 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     int deleteJoinEntities(final T entity, final String joinEntityPropName) throws UncheckedSQLException;
 
     /**
-     * 
      *
-     * @param entities 
-     * @param joinEntityPropName 
+     *
+     * @param entities
+     * @param joinEntityPropName
      * @return the total count of updated/deleted records.
      * @throws UncheckedSQLException the unchecked SQL exception
      */
@@ -1080,10 +1080,10 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * 
      *
-     * @param entities 
-     * @param joinEntityPropNames 
+     *
+     * @param entities
+     * @param joinEntityPropNames
      * @return the total count of updated/deleted records.
      * @throws UncheckedSQLException the unchecked SQL exception
      */
@@ -1114,11 +1114,11 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * 
      *
-     * @param entities 
-     * @param joinEntityPropNames 
-     * @param inParallel 
+     *
+     * @param entities
+     * @param joinEntityPropNames
+     * @param inParallel
      * @return the total count of updated/deleted records.
      * @throws UncheckedSQLException the unchecked SQL exception
      * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
@@ -1136,11 +1136,11 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * 
      *
-     * @param entities 
-     * @param joinEntityPropNames 
-     * @param executor 
+     *
+     * @param entities
+     * @param joinEntityPropNames
+     * @param executor
      * @return the total count of updated/deleted records.
      * @throws UncheckedSQLException the unchecked SQL exception
      * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.

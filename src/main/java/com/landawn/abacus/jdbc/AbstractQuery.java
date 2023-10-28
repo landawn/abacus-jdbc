@@ -54,7 +54,7 @@ import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.DataSet;
-import com.landawn.abacus.util.ExceptionalStream;
+import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.Numbers;
@@ -97,9 +97,9 @@ import com.landawn.abacus.util.u.OptionalShort;
  * @param <This>
  */
 @SuppressWarnings("java:S1192")
-public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This extends AbstractPreparedQuery<Stmt, This>> implements Closeable {
+public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends AbstractQuery<Stmt, This>> implements Closeable {
 
-    static final Logger logger = LoggerFactory.getLogger(AbstractPreparedQuery.class);
+    static final Logger logger = LoggerFactory.getLogger(AbstractQuery.class);
 
     static final Set<Class<?>> stmtParameterClasses = new HashSet<>();
 
@@ -137,7 +137,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
 
     Runnable closeHandler;
 
-    AbstractPreparedQuery(Stmt stmt) {
+    AbstractQuery(Stmt stmt) {
         this.stmt = stmt;
     }
 
@@ -2926,7 +2926,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      *
      * <pre>
      * <code>
-     * final Throwables.Consumer<AbstractPreparedQuery, SQLException> commonStmtConfig = q -> q.setFetchSize(100).setQueryTimeout(60000);
+     * final Throwables.Consumer<AbstractQuery, SQLException> commonStmtConfig = q -> q.setFetchSize(100).setQueryTimeout(60000);
      *
      * JdbcUtil.prepareQuery(sql).configStmt(commonStmtConfig).setParameters(parameters).list...
      * </code>
@@ -2959,7 +2959,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      *
      * <pre>
      * <code>
-     * final Throwables.Consumer<AbstractPreparedQuery, SQLException> commonStmtConfig = (q, stmt) -> q.setFetchSize(100).setQueryTimeout(60000);
+     * final Throwables.Consumer<AbstractQuery, SQLException> commonStmtConfig = (q, stmt) -> q.setFetchSize(100).setQueryTimeout(60000);
      *
      * JdbcUtil.prepareQuery(sql).configStmt(commonStmtConfig).setParameters(parameters).list...
      * </code>
@@ -4234,7 +4234,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @see Jdbc.BiResultExtractor
      */
     @LazyEvaluation
-    public ExceptionalStream<Map<String, Object>, SQLException> stream() {
+    public CheckedStream<Map<String, Object>, SQLException> stream() {
         return stream(Jdbc.BiRowMapper.TO_MAP);
     }
 
@@ -4254,7 +4254,7 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @see Jdbc.BiResultExtractor
      */
     @LazyEvaluation
-    public <T> ExceptionalStream<T, SQLException> stream(final Class<? extends T> targetType) {
+    public <T> CheckedStream<T, SQLException> stream(final Class<? extends T> targetType) {
         return stream(Jdbc.BiRowMapper.to(targetType));
     }
 
@@ -4275,13 +4275,13 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @see Jdbc.BiResultExtractor
      */
     @LazyEvaluation
-    public <T> ExceptionalStream<T, SQLException> stream(final Jdbc.RowMapper<? extends T> rowMapper) {
+    public <T> CheckedStream<T, SQLException> stream(final Jdbc.RowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
-        return ExceptionalStream.just(supplier, SQLException.class).map(Throwables.Supplier::get).flatMap(rs -> {
+        return CheckedStream.just(supplier, SQLException.class).map(Throwables.Supplier::get).flatMap(rs -> {
             JdbcUtil.setCheckDateTypeFlag(rs);
 
             return JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> {
@@ -4309,13 +4309,13 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @see Jdbc.BiResultExtractor
      */
     @LazyEvaluation
-    public <T> ExceptionalStream<T, SQLException> stream(final Jdbc.BiRowMapper<? extends T> rowMapper) {
+    public <T> CheckedStream<T, SQLException> stream(final Jdbc.BiRowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
-        return ExceptionalStream.just(supplier, SQLException.class).map(Throwables.Supplier::get).flatMap(rs -> {
+        return CheckedStream.just(supplier, SQLException.class).map(Throwables.Supplier::get).flatMap(rs -> {
             JdbcUtil.setCheckDateTypeFlag(rs);
 
             return JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> {
@@ -4344,14 +4344,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @see Jdbc.BiResultExtractor
      */
     @LazyEvaluation
-    public <T> ExceptionalStream<T, SQLException> stream(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) {
+    public <T> CheckedStream<T, SQLException> stream(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
-        return ExceptionalStream.just(supplier, SQLException.class).map(Throwables.Supplier::get).flatMap(rs -> {
+        return CheckedStream.just(supplier, SQLException.class).map(Throwables.Supplier::get).flatMap(rs -> {
             JdbcUtil.setCheckDateTypeFlag(rs);
 
             return JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> {
@@ -4380,14 +4380,14 @@ public abstract class AbstractPreparedQuery<Stmt extends PreparedStatement, This
      * @see Jdbc.BiResultExtractor
      */
     @LazyEvaluation
-    public <T> ExceptionalStream<T, SQLException> stream(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) {
+    public <T> CheckedStream<T, SQLException> stream(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
-        return ExceptionalStream.just(supplier, SQLException.class).map(Throwables.Supplier::get).flatMap(rs -> {
+        return CheckedStream.just(supplier, SQLException.class).map(Throwables.Supplier::get).flatMap(rs -> {
             JdbcUtil.setCheckDateTypeFlag(rs);
 
             return JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> {

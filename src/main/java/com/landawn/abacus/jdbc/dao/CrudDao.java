@@ -27,7 +27,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory;
 import com.landawn.abacus.exception.DuplicatedResultException;
-import com.landawn.abacus.jdbc.AbstractPreparedQuery;
+import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
@@ -189,7 +189,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForBoolean()
+     * @see AbstractQuery#queryForBoolean()
      */
     OptionalBoolean queryForBoolean(final String singleSelectPropName, final ID id) throws SQLException;
 
@@ -202,7 +202,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForChar()
+     * @see AbstractQuery#queryForChar()
      */
     OptionalChar queryForChar(final String singleSelectPropName, final ID id) throws SQLException;
 
@@ -215,7 +215,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForByte()
+     * @see AbstractQuery#queryForByte()
      */
     OptionalByte queryForByte(final String singleSelectPropName, final ID id) throws SQLException;
 
@@ -228,7 +228,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForShort()
+     * @see AbstractQuery#queryForShort()
      */
     OptionalShort queryForShort(final String singleSelectPropName, final ID id) throws SQLException;
 
@@ -241,7 +241,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForInt()
+     * @see AbstractQuery#queryForInt()
      */
     OptionalInt queryForInt(final String singleSelectPropName, final ID id) throws SQLException;
 
@@ -254,7 +254,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForLong()
+     * @see AbstractQuery#queryForLong()
      */
     OptionalLong queryForLong(final String singleSelectPropName, final ID id) throws SQLException;
 
@@ -267,7 +267,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForFloat()
+     * @see AbstractQuery#queryForFloat()
      */
     OptionalFloat queryForFloat(final String singleSelectPropName, final ID id) throws SQLException;
 
@@ -280,7 +280,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForDouble()
+     * @see AbstractQuery#queryForDouble()
      */
     OptionalDouble queryForDouble(final String singleSelectPropName, final ID id) throws SQLException;
 
@@ -293,7 +293,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForString()
+     * @see AbstractQuery#queryForString()
      */
     Nullable<String> queryForString(final String singleSelectPropName, final ID id) throws SQLException;
 
@@ -306,7 +306,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForDate()
+     * @see AbstractQuery#queryForDate()
      */
     Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final ID id) throws SQLException;
 
@@ -319,7 +319,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForTime()
+     * @see AbstractQuery#queryForTime()
      */
     Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final ID id) throws SQLException;
 
@@ -332,7 +332,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForTimestamp()
+     * @see AbstractQuery#queryForTimestamp()
      */
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final ID id) throws SQLException;
 
@@ -345,7 +345,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForBytes()
+     * @see AbstractQuery#queryForBytes()
      */
     Nullable<byte[]> queryForBytes(final String singleSelectPropName, final ID id) throws SQLException;
 
@@ -358,7 +358,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForSingleResult(Class)
+     * @see AbstractQuery#queryForSingleResult(Class)
      */
     <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id) throws SQLException;
 
@@ -373,7 +373,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForSingleNonNull(Class)
+     * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id) throws SQLException;
 
@@ -388,7 +388,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForSingleNonNull(Class)
+     * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Beta
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper) throws SQLException;
@@ -406,7 +406,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForUniqueResult(Class)
+     * @see AbstractQuery#queryForUniqueResult(Class)
      */
     <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
             throws DuplicatedResultException, SQLException;
@@ -423,7 +423,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForUniqueNonNull(Class)
+     * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
             throws DuplicatedResultException, SQLException;
@@ -440,7 +440,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForUniqueNonNull(Class)
+     * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Beta
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
@@ -547,7 +547,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id
      * @return true, if successful
      * @throws SQLException
-     * @see AbstractPreparedQuery#exists()
+     * @see AbstractQuery#exists()
      */
     boolean exists(final ID id) throws SQLException;
 
@@ -556,7 +556,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id
      * @return
      * @throws SQLException
-     * @see AbstractPreparedQuery#notExists()
+     * @see AbstractQuery#notExists()
      */
     @Beta
     default boolean notExists(final ID id) throws SQLException {

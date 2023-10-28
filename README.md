@@ -1,7 +1,7 @@
 # abacus-jdbc
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc.svg)](https://maven-badges.herokuapp.com/maven-central/com.landawn/abacus-jdbc/)
-[![Javadocs](https://img.shields.io/badge/javadoc-3.3.19-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/3.3.19/index.html)
+[![Javadocs](https://img.shields.io/badge/javadoc-3.3.20-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/3.3.20/index.html)
 
 Hope it will bring you the programming experiences: coding with SQL/DB is just like coding with Collections.
 
@@ -36,17 +36,17 @@ UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
 
 *  Prepare `Statement` [PreparedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedQuery_view.html), 
 [NamedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/NamedQuery_view.html), 
-[PreparedCallableQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedCallableQuery_view.html) with a `sql` or `Dao` mapped with `sqls`.
+[CallableQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/CallableQuery_view.html) with a `sql` or `Dao` mapped with `sqls`.
 
 ```java
-// sql can be used to create PreparedQuery/NamedQuery/PreparedCallableQuery
+// sql can be used to create PreparedQuery/NamedQuery/CallableQuery
 PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...); 
 			            //.prepareQuery(connection, query...)		
 			            //.prepareNamedQuery(dataSource, namedQuery...)									   
 			            //.prepareCallableQuery(dataSource, query...)									   
 			            //....	
 				      .setString(1, fistName) // Firstly set query parameters, if needed.
-				    //.setLong(paramName, paramValue) // set named parameters for NamedQuery/PreparedCallableQuery.
+				    //.setLong(paramName, paramValue) // set named parameters for NamedQuery/CallableQuery.
 				    //.setParameters(entity) // set named parameters by entity with getter/setter methods
 				    //.setParameters(Map<String, ?>) // set named parameters by Map
 				    //.setParameters(param1, param2...) // set several parameters in one line.
@@ -103,7 +103,7 @@ UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, ...);
 [JdbcUtils](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtils_view.html).
 
 ```java
-// Execute the sql by a PreparedQuery/NamedQuery/PreparedCallableQuery
+// Execute the sql by a PreparedQuery/NamedQuery/CallableQuery
 preparedQuery.findFirst()
            //.findFirst(User.class)/findFirst(rowMapper)/...
            //.findOnlyOne()/findOnlyOne(User.class)/findOnlyOne(rowMapper)/...
@@ -141,7 +141,7 @@ The biggest difference between this library and other data(database) access fram
 <dependency>
 	<groupId>com.landawn</groupId>
 	<artifactId>abacus-jdbc</artifactId>
-	<version>3.3.19</version> 
+	<version>3.3.20</version> 
 <dependency>
 ```
 
@@ -149,7 +149,7 @@ The biggest difference between this library and other data(database) access fram
 
 ```gradle
 // JDK 17 or above:
-compile 'com.landawn:abacus-jdbc:3.3.19'
+compile 'com.landawn:abacus-jdbc:3.3.20'
 ```
 
 ## User Guide:

@@ -76,8 +76,8 @@ import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.EntityId;
-import com.landawn.abacus.util.ExceptionalStream;
-import com.landawn.abacus.util.ExceptionalStream.ExceptionalIterator;
+import com.landawn.abacus.util.CheckedStream;
+import com.landawn.abacus.util.CheckedStream.CheckedIterator;
 import com.landawn.abacus.util.Fn.BiConsumers;
 import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.Holder;
@@ -1984,7 +1984,7 @@ public final class JdbcUtil {
      *
      * @param ds
      * @param sql
-     * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code PreparedQuery/PreparedCallableQuery} is called.
+     * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code PreparedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException
@@ -2114,7 +2114,7 @@ public final class JdbcUtil {
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param sql
-     * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code PreparedQuery/PreparedCallableQuery} is called.
+     * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code PreparedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException
@@ -2313,7 +2313,7 @@ public final class JdbcUtil {
      *
      * @param ds
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/PreparedCallableQuery} is called.
+     * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException
@@ -2451,7 +2451,7 @@ public final class JdbcUtil {
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/PreparedCallableQuery} is called.
+     * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException
@@ -2628,7 +2628,7 @@ public final class JdbcUtil {
      *
      * @param ds
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/PreparedCallableQuery} is called.
+     * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException
@@ -2763,7 +2763,7 @@ public final class JdbcUtil {
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/PreparedCallableQuery} is called.
+     * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException
@@ -2818,7 +2818,7 @@ public final class JdbcUtil {
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static PreparedCallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql) throws SQLException {
+    public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql) throws SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(sql, "sql");
 
@@ -2827,7 +2827,7 @@ public final class JdbcUtil {
         if (tran != null) {
             return prepareCallableQuery(tran.connection(), sql);
         } else {
-            PreparedCallableQuery result = null;
+            CallableQuery result = null;
             Connection conn = null;
 
             try {
@@ -2850,14 +2850,14 @@ public final class JdbcUtil {
      *
      * @param ds
      * @param sql
-     * @param stmtCreator the created {@code CallableStatement} will be closed after any execution methods in {@code PreparedQuery/PreparedCallableQuery} is called.
+     * @param stmtCreator the created {@code CallableStatement} will be closed after any execution methods in {@code PreparedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static PreparedCallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql,
+    public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql,
             final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(sql, "sql");
@@ -2868,7 +2868,7 @@ public final class JdbcUtil {
         if (tran != null) {
             return prepareCallableQuery(tran.connection(), sql, stmtCreator);
         } else {
-            PreparedCallableQuery result = null;
+            CallableQuery result = null;
             Connection conn = null;
 
             try {
@@ -2899,11 +2899,11 @@ public final class JdbcUtil {
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static PreparedCallableQuery prepareCallableQuery(final Connection conn, final String sql) throws SQLException {
+    public static CallableQuery prepareCallableQuery(final Connection conn, final String sql) throws SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(sql, "sql");
 
-        return new PreparedCallableQuery(prepareCallable(conn, sql));
+        return new CallableQuery(prepareCallable(conn, sql));
     }
 
     /**
@@ -2916,18 +2916,18 @@ public final class JdbcUtil {
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param sql
-     * @param stmtCreator the created {@code CallableStatement} will be closed after any execution methods in {@code PreparedQuery/PreparedCallableQuery} is called.
+     * @param stmtCreator the created {@code CallableStatement} will be closed after any execution methods in {@code PreparedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
      * @return
      * @throws SQLException
      */
-    public static PreparedCallableQuery prepareCallableQuery(final Connection conn, final String sql,
+    public static CallableQuery prepareCallableQuery(final Connection conn, final String sql,
             final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(sql, "sql");
         N.checkArgNotNull(stmtCreator, "stmtCreator");
 
-        return new PreparedCallableQuery(prepareCallable(conn, sql, stmtCreator));
+        return new CallableQuery(prepareCallable(conn, sql, stmtCreator));
     }
 
     static PreparedStatement prepareStatement(final Connection conn, final String sql) throws SQLException {
@@ -4131,7 +4131,7 @@ public final class JdbcUtil {
      * @param stmt
      * @return
      */
-    public static ExceptionalStream<DataSet, SQLException> extractAllResultSets(final Statement stmt) {
+    public static CheckedStream<DataSet, SQLException> extractAllResultSets(final Statement stmt) {
         return extractAllResultSets(stmt, ResultExtractor.TO_DATA_SET);
     }
 
@@ -4145,13 +4145,13 @@ public final class JdbcUtil {
      * @param resultExtractor
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> extractAllResultSets(final Statement stmt, final ResultExtractor<T> resultExtractor) {
+    public static <T> CheckedStream<T, SQLException> extractAllResultSets(final Statement stmt, final ResultExtractor<T> resultExtractor) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(resultExtractor, "resultExtractor");
 
-        final Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
+        final Throwables.Supplier<CheckedIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
-        return ExceptionalStream.just(supplier, SQLException.class)
+        return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
                 .map(resultExtractor::apply);
@@ -4167,13 +4167,13 @@ public final class JdbcUtil {
      * @param resultExtractor
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> extractAllResultSets(final Statement stmt, final BiResultExtractor<T> resultExtractor) {
+    public static <T> CheckedStream<T, SQLException> extractAllResultSets(final Statement stmt, final BiResultExtractor<T> resultExtractor) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(resultExtractor, "resultExtractor");
 
-        final Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
+        final Throwables.Supplier<CheckedIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
-        return ExceptionalStream.just(supplier, SQLException.class)
+        return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
                 .map(rs -> resultExtractor.apply(rs, JdbcUtil.getColumnLabelList(rs)));
@@ -4187,7 +4187,7 @@ public final class JdbcUtil {
      * @param resultSet
      * @return
      */
-    public static ExceptionalStream<Object[], SQLException> stream(final ResultSet resultSet) {
+    public static CheckedStream<Object[], SQLException> stream(final ResultSet resultSet) {
         return stream(resultSet, Object[].class);
     }
 
@@ -4201,7 +4201,7 @@ public final class JdbcUtil {
      * @param <T>
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final Class<? extends T> targetClass) {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final Class<? extends T> targetClass) {
         N.checkArgNotNull(targetClass, "targetClass");
         N.checkArgNotNull(resultSet, "resultSet");
 
@@ -4218,16 +4218,16 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final RowMapper<? extends T> rowMapper) {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final RowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
         return InternalUtil.newStream(iterate(resultSet, rowMapper, null));
     }
 
-    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final RowMapper<? extends T> rowMapper,
+    static <T> CheckedIterator<T, SQLException> iterate(final ResultSet resultSet, final RowMapper<? extends T> rowMapper,
             final Throwables.Runnable<SQLException> onClose) {
-        return new ExceptionalIterator<>() {
+        return new CheckedIterator<>() {
             private boolean hasNext;
 
             @Override
@@ -4293,7 +4293,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper) {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -4301,13 +4301,13 @@ public final class JdbcUtil {
         return InternalUtil.newStream(iterate(resultSet, rowFilter, rowMapper, null));
     }
 
-    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper,
+    static <T> CheckedIterator<T, SQLException> iterate(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper,
             final Throwables.Runnable<SQLException> onClose) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
-        return new ExceptionalIterator<>() {
+        return new CheckedIterator<>() {
             private boolean hasNext;
 
             @Override
@@ -4354,16 +4354,16 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final BiRowMapper<? extends T> rowMapper) {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final BiRowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
         return InternalUtil.newStream(iterate(resultSet, rowMapper, null));
     }
 
-    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowMapper<? extends T> rowMapper,
+    static <T> CheckedIterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowMapper<? extends T> rowMapper,
             final Throwables.Runnable<SQLException> onClose) {
-        return new ExceptionalIterator<>() {
+        return new CheckedIterator<>() {
             private List<String> columnLabels = null;
             private boolean hasNext;
 
@@ -4434,7 +4434,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final BiRowFilter rowFilter,
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final BiRowFilter rowFilter,
             final BiRowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowFilter, "rowFilter");
@@ -4443,8 +4443,8 @@ public final class JdbcUtil {
         return InternalUtil.newStream(iterate(resultSet, rowFilter, rowMapper));
     }
 
-    static <T> ExceptionalIterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper) {
-        return new ExceptionalIterator<>() {
+    static <T> CheckedIterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper) {
+        return new CheckedIterator<>() {
             private List<String> columnLabels = null;
             private boolean hasNext;
 
@@ -4489,7 +4489,7 @@ public final class JdbcUtil {
      * @param columnIndex starts from 1, not 0.
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final int columnIndex) {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final int columnIndex) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgPositive(columnIndex, "columnIndex");
 
@@ -4509,7 +4509,7 @@ public final class JdbcUtil {
      * @param columnName
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> stream(final ResultSet resultSet, final String columnName) {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final String columnName) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotEmpty(columnName, "columnName");
 
@@ -4541,7 +4541,7 @@ public final class JdbcUtil {
      * @param targetClass
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final Class<? extends T> targetClass) {
+    public static <T> CheckedStream<T, SQLException> streamAllResultSets(final Statement stmt, final Class<? extends T> targetClass) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(targetClass, "targetClass");
 
@@ -4558,13 +4558,13 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowMapper<? extends T> rowMapper) {
+    public static <T> CheckedStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
-        final Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
+        final Throwables.Supplier<CheckedIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
-        return ExceptionalStream.just(supplier, SQLException.class)
+        return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
                 .flatMap(rs -> {
@@ -4589,15 +4589,15 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowFilter rowFilter,
+    public static <T> CheckedStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowFilter rowFilter,
             final RowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
-        final Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
+        final Throwables.Supplier<CheckedIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
-        return ExceptionalStream.just(supplier, SQLException.class)
+        return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
                 .flatMap(rs -> {
@@ -4621,13 +4621,13 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowMapper<? extends T> rowMapper) {
+    public static <T> CheckedStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
-        final Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
+        final Throwables.Supplier<CheckedIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
-        return ExceptionalStream.just(supplier, SQLException.class)
+        return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
                 .flatMap(rs -> {
@@ -4652,15 +4652,15 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> ExceptionalStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter,
+    public static <T> CheckedStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter,
             final BiRowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
-        final Throwables.Supplier<ExceptionalIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
+        final Throwables.Supplier<CheckedIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
-        return ExceptionalStream.just(supplier, SQLException.class)
+        return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
                 .flatMap(rs -> {
@@ -4674,8 +4674,8 @@ public final class JdbcUtil {
                 });
     }
 
-    static ExceptionalIterator<ResultSet, SQLException> iterateAllResultSets(final Statement stmt) throws SQLException { //NOSONAR
-        return new ExceptionalIterator<>() {
+    static CheckedIterator<ResultSet, SQLException> iterateAllResultSets(final Statement stmt) throws SQLException { //NOSONAR
+        return new CheckedIterator<>() {
             private final Holder<ResultSet> resultSetHolder = new Holder<>();
             private int updateCount = stmt.getUpdateCount();
             private boolean isNextResultSet = updateCount == -1 ? true : false;
@@ -4728,12 +4728,12 @@ public final class JdbcUtil {
      * @return
      */
     @SuppressWarnings("rawtypes")
-    public static ExceptionalStream<DataSet, SQLException> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, DataSet> paramSetter) {
+    public static CheckedStream<DataSet, SQLException> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
+            final Jdbc.BiParametersSetter<? super AbstractQuery, DataSet> paramSetter) {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return ExceptionalStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null)) //
+        return CheckedStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null)) //
                 .cycled()
                 .map(it -> {
                     final DataSet ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
@@ -4761,12 +4761,12 @@ public final class JdbcUtil {
      * @return
      */
     @SuppressWarnings("rawtypes")
-    public static <T> ExceptionalStream<List<T>, SQLException> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, List<T>> paramSetter, final Class<T> entityCalss) {
+    public static <T> CheckedStream<List<T>, SQLException> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
+            final Jdbc.BiParametersSetter<? super AbstractQuery, List<T>> paramSetter, final Class<T> entityCalss) {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return ExceptionalStream.<Holder<List<T>>, SQLException> of(Holder.of((List<T>) null)) //
+        return CheckedStream.<Holder<List<T>>, SQLException> of(Holder.of((List<T>) null)) //
                 .cycled()
                 .map(it -> {
                     final List<T> ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
@@ -4792,12 +4792,12 @@ public final class JdbcUtil {
      * @return
      */
     @SuppressWarnings("rawtypes")
-    public static ExceptionalStream<DataSet, SQLException> queryByPage(final Connection conn, final String query, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, DataSet> paramSetter) {
+    public static CheckedStream<DataSet, SQLException> queryByPage(final Connection conn, final String query, final int pageSize,
+            final Jdbc.BiParametersSetter<? super AbstractQuery, DataSet> paramSetter) {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return ExceptionalStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null)) //
+        return CheckedStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null)) //
                 .cycled()
                 .map(it -> {
                     final DataSet ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
@@ -4825,12 +4825,12 @@ public final class JdbcUtil {
      * @return
      */
     @SuppressWarnings("rawtypes")
-    public static <T> ExceptionalStream<List<T>, SQLException> queryByPage(final Connection conn, final String query, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractPreparedQuery, List<T>> paramSetter, final Class<T> entityCalss) {
+    public static <T> CheckedStream<List<T>, SQLException> queryByPage(final Connection conn, final String query, final int pageSize,
+            final Jdbc.BiParametersSetter<? super AbstractQuery, List<T>> paramSetter, final Class<T> entityCalss) {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return ExceptionalStream.<Holder<List<T>>, SQLException> just(Holder.of((List<T>) null)) //
+        return CheckedStream.<Holder<List<T>>, SQLException> just(Holder.of((List<T>) null)) //
                 .cycled()
                 .map(it -> {
                     final List<T> ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //

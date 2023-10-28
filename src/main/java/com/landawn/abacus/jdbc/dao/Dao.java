@@ -32,13 +32,13 @@ import com.landawn.abacus.annotation.LazyEvaluation;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory;
 import com.landawn.abacus.exception.DuplicatedResultException;
-import com.landawn.abacus.jdbc.AbstractPreparedQuery;
+import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
-import com.landawn.abacus.jdbc.PreparedCallableQuery;
+import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.jdbc.SQLExecutor;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
@@ -48,7 +48,7 @@ import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.AsyncExecutor;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.DataSet;
-import com.landawn.abacus.util.ExceptionalStream;
+import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.ParsedSql;
@@ -99,7 +99,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  *
  * <li>Remember declaring {@code throws SQLException} in the method.</li>
  * <br />
- * <li>Which underline {@code PreparedQuery/PreparedCallableQuery} method to call for SQL methods/operations annotated with {@code @Select/@NamedSelect}:
+ * <li>Which underline {@code PreparedQuery/CallableQuery} method to call for SQL methods/operations annotated with {@code @Select/@NamedSelect}:
  * <ul>
  *   <li>If {@code ResultExtractor/BiResultExtractor} is specified by the last parameter of the method, {@code PreparedQuery#query(ResultExtractor/BiResultExtractor)} will be called.</li>
  *   <li>Or else if {@code RowMapper/BiRowMapper} is specified by the last parameter of the method:</li>
@@ -116,7 +116,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  *          </ul>
  *      </ul>
  *      <ul>
- *          <li>Or else if the return type of the method is {@code ExceptionalStream/Stream}, {@code PreparedQuery#stream(RowMapper/BiRowMapper)} will be called.</li>
+ *          <li>Or else if the return type of the method is {@code CheckedStream/Stream}, {@code PreparedQuery#stream(RowMapper/BiRowMapper)} will be called.</li>
  *      </ul>
  *      <ul>
  *          <li>Or else if the return type of the method is {@code Optional}, {@code PreparedQuery#findFirst(RowMapper/BiRowMapper)} will be called.</li>
@@ -129,7 +129,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  *          <li>If the return type of the method is {@code DataSet}, {@code PreparedQuery#query()} will be called.</li>
  *      </ul>
  *      <ul>
- *          <li>Or else if the return type of the method is {@code ExceptionalStream/Stream}, {@code PreparedQuery#stream(Class)} will be called.</li>
+ *          <li>Or else if the return type of the method is {@code CheckedStream/Stream}, {@code PreparedQuery#stream(Class)} will be called.</li>
  *      </ul>
  *      <ul>
  *          <li>Or else if the return type of the method is {@code Map} or {@code Entity} class with {@code getter/setter} methods, {@code PreparedQuery#findFirst(Class).orElseNull()} will be called.</li>
@@ -603,7 +603,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @Beta
     @NonDBOperation
-    default PreparedCallableQuery prepareCallableQuery(final String query) throws SQLException {
+    default CallableQuery prepareCallableQuery(final String query) throws SQLException {
         return JdbcUtil.prepareCallableQuery(dataSource(), query);
     }
 
@@ -616,7 +616,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @Beta
     @NonDBOperation
-    default PreparedCallableQuery prepareCallableQuery(final String sql,
+    default CallableQuery prepareCallableQuery(final String sql,
             final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
         return JdbcUtil.prepareCallableQuery(dataSource(), sql, stmtCreator);
     }
@@ -857,7 +857,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#exists()
+     * @see AbstractQuery#exists()
      */
     boolean exists(final Condition cond) throws SQLException;
 
@@ -868,7 +868,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#notExists()
+     * @see AbstractQuery#notExists()
      */
     @Beta
     default boolean notExists(final Condition cond) throws SQLException {
@@ -1141,7 +1141,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForBoolean()
+     * @see AbstractQuery#queryForBoolean()
      */
     OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -1154,7 +1154,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForChar()
+     * @see AbstractQuery#queryForChar()
      */
     OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -1167,7 +1167,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForByte()
+     * @see AbstractQuery#queryForByte()
      */
     OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -1180,7 +1180,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForShort()
+     * @see AbstractQuery#queryForShort()
      */
     OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -1193,7 +1193,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForInt()
+     * @see AbstractQuery#queryForInt()
      */
     OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -1206,7 +1206,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForLong()
+     * @see AbstractQuery#queryForLong()
      */
     OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -1219,7 +1219,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForFloat()
+     * @see AbstractQuery#queryForFloat()
      */
     OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -1232,7 +1232,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForDouble()
+     * @see AbstractQuery#queryForDouble()
      */
     OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -1245,7 +1245,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForString()
+     * @see AbstractQuery#queryForString()
      */
     Nullable<String> queryForString(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -1258,7 +1258,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForDate()
+     * @see AbstractQuery#queryForDate()
      */
     Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -1271,7 +1271,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForTime()
+     * @see AbstractQuery#queryForTime()
      */
     Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -1284,7 +1284,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForTimestamp()
+     * @see AbstractQuery#queryForTimestamp()
      */
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -1297,7 +1297,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForBytes()
+     * @see AbstractQuery#queryForBytes()
      */
     Nullable<byte[]> queryForBytes(final String singleSelectPropName, final Condition cond) throws SQLException;
 
@@ -1310,7 +1310,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForSingleResult(Class)
+     * @see AbstractQuery#queryForSingleResult(Class)
      */
     <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
             throws SQLException;
@@ -1326,7 +1326,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForSingleNonNull(Class)
+     * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
             throws SQLException;
@@ -1342,7 +1342,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForSingleNonNull(Class)
+     * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Beta
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
@@ -1361,7 +1361,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForUniqueResult(Class)
+     * @see AbstractQuery#queryForUniqueResult(Class)
      */
     <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
             throws DuplicatedResultException, SQLException;
@@ -1378,7 +1378,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForUniqueNonNull(Class)
+     * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
             throws DuplicatedResultException, SQLException;
@@ -1395,7 +1395,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
-     * @see AbstractPreparedQuery#queryForUniqueNonNull(Class)
+     * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Beta
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
@@ -1671,7 +1671,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    ExceptionalStream<T, SQLException> stream(final Condition cond);
+    CheckedStream<T, SQLException> stream(final Condition cond);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1685,7 +1685,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper);
+    <R> CheckedStream<R, SQLException> stream(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1699,7 +1699,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper);
+    <R> CheckedStream<R, SQLException> stream(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper);
 
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
@@ -1713,7 +1713,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper);
+    <R> CheckedStream<R, SQLException> stream(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper);
 
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
@@ -1727,7 +1727,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> ExceptionalStream<R, SQLException> stream(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper);
+    <R> CheckedStream<R, SQLException> stream(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1740,22 +1740,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    ExceptionalStream<T, SQLException> stream(final Collection<String> selectPropNames, final Condition cond);
-
-    // Will it cause confusion if it's called in transaction?
-    /**
-     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
-     *
-     * @param <R>
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     */
-    @LazyEvaluation
-    <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper);
+    CheckedStream<T, SQLException> stream(final Collection<String> selectPropNames, final Condition cond);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1770,7 +1755,22 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond,
+    <R> CheckedStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper);
+
+    // Will it cause confusion if it's called in transaction?
+    /**
+     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     *
+     * @param <R>
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param cond
+     * @param rowMapper
+     * @return
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     */
+    @LazyEvaluation
+    <R> CheckedStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond,
             final Jdbc.BiRowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
@@ -1787,7 +1787,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, Jdbc.RowFilter rowFilter,
+    <R> CheckedStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, Jdbc.RowFilter rowFilter,
             final Jdbc.RowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
@@ -1804,7 +1804,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> ExceptionalStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
+    <R> CheckedStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
             final Jdbc.BiRowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
@@ -1819,7 +1819,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) {
+    default <R> CheckedStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) {
         final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
         final Jdbc.RowMapper<? extends R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
@@ -1839,7 +1839,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond,
+    default <R> CheckedStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond,
             final Jdbc.RowMapper<? extends R> rowMapper) {
         return stream(N.asList(singleSelectPropName), cond, rowMapper);
     }
@@ -1858,7 +1858,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    default <R> ExceptionalStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
+    default <R> CheckedStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
             final Jdbc.RowMapper<? extends R> rowMapper) {
         return stream(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
     }

@@ -36,7 +36,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.JoinEntityHelper;
 import com.landawn.abacus.samples.dao.handler.UserDaoHandlerA;
 import com.landawn.abacus.samples.entity.User;
-import com.landawn.abacus.util.ExceptionalStream;
+import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder;
@@ -193,7 +193,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     Optional<User> findOneTomergedEntities() throws SQLException;
 
     @Select(value = "select first_name from user where id >= ?", fetchSize = 100)
-    ExceptionalStream<String, SQLException> streamOne(long id);
+    CheckedStream<String, SQLException> streamOne(long id);
 
     @Select(value = "select first_name from user where id >= ?", fetchSize = 100)
     Stream<String> streamOne_2(long id);
