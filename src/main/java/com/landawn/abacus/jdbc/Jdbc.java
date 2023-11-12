@@ -48,6 +48,7 @@ import java.util.stream.Collector;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
+import com.landawn.abacus.jdbc.Jdbc.Columns;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -57,6 +58,7 @@ import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
+import com.landawn.abacus.util.Fn.Factory;
 import com.landawn.abacus.util.Fn.IntFunctions;
 import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.ImmutableList;
@@ -1243,6 +1245,79 @@ public final class Jdbc {
             N.checkArgNotNull(rowMapper3, "rowMapper3");
 
             return rs -> Tuple.of(rowMapper1.apply(rs), rowMapper2.apply(rs), rowMapper3.apply(rs));
+        }
+
+        /**
+         *
+         *
+         * @param columnGetterForAll
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
+        static RowMapper<Object[]> toArray(final ColumnGetter<?> columnGetterForAll) {
+            return new RowMapper<>() {
+                private int columnCount = -1;
+
+                @Override
+                public Object[] apply(final ResultSet rs) throws SQLException {
+                    if (columnCount < 0) {
+                        columnCount = JdbcUtil.getColumnCount(rs);
+                    }
+
+                    final Object[] result = new Object[columnCount];
+
+                    for (int i = 0; i < columnCount; i++) {
+                        result[i] = columnGetterForAll.apply(rs, i + 1);
+                    }
+
+                    return result;
+                }
+            };
+        }
+
+        /**
+         *
+         *
+         * @param columnGetterForAll
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
+        static RowMapper<List<Object>> toList(final ColumnGetter<?> columnGetterForAll) {
+            return toCollection(columnGetterForAll, Factory.<Object> ofList());
+        }
+
+        /**
+         *
+         * @param columnGetterForAll
+         * @param supplier
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
+        static <C extends Collection<?>> RowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<C> supplier) {
+            return new RowMapper<>() {
+                private int columnCount = -1;
+
+                @Override
+                public C apply(final ResultSet rs) throws SQLException {
+                    if (columnCount < 0) {
+                        columnCount = JdbcUtil.getColumnCount(rs);
+                    }
+
+                    final Collection<Object> result = (Collection<Object>) supplier.apply(columnCount);
+
+                    for (int i = 0; i < columnCount; i++) {
+                        result.add(columnGetterForAll.apply(rs, i + 1));
+                    }
+
+                    return (C) result;
+                }
+            };
         }
 
         /**
@@ -2793,6 +2868,72 @@ public final class Jdbc {
         }
 
         /**
+         *
+         *
+         * @param columnGetterForAll
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
+        static BiRowMapper<Object[]> toArray(final ColumnGetter<?> columnGetterForAll) {
+            return new BiRowMapper<>() {
+
+                @Override
+                public Object[] apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                    final int columnCount = columnLabels.size();
+                    final Object[] result = new Object[columnCount];
+
+                    for (int i = 0; i < columnCount; i++) {
+                        result[i] = columnGetterForAll.apply(rs, i + 1);
+                    }
+
+                    return result;
+                }
+            };
+        }
+
+        /**
+         *
+         *
+         * @param columnGetterForAll
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
+        static BiRowMapper<List<Object>> toList(final ColumnGetter<?> columnGetterForAll) {
+            return toCollection(columnGetterForAll, Factory.<Object> ofList());
+        }
+
+        /**
+         *
+         * @param columnGetterForAll
+         * @param supplier
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
+        static <C extends Collection<?>> BiRowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<C> supplier) {
+            return new BiRowMapper<>() {
+
+                @Override
+                public C apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                    final int columnCount = columnLabels.size();
+
+                    final Collection<Object> result = (Collection<Object>) supplier.apply(columnCount);
+
+                    for (int i = 0; i < columnCount; i++) {
+                        result.add(columnGetterForAll.apply(rs, i + 1));
+                    }
+
+                    return (C) result;
+                }
+            };
+        }
+
+        /**
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @return
@@ -3383,6 +3524,34 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
+        static RowConsumer create(Throwables.ObjIntConsumer<ResultSet, SQLException> consumerForAll) {
+            N.checkArgNotNull(consumerForAll, "consumerForAll");
+
+            return new RowConsumer() {
+                private int columnCount = -1;
+
+                @Override
+                public void accept(final ResultSet rs) throws SQLException {
+                    if (columnCount < 0) {
+                        columnCount = JdbcUtil.getColumnCount(rs);
+                    }
+
+                    for (int i = 0; i < columnCount; i++) {
+                        consumerForAll.accept(rs, i + 1);
+                    }
+                }
+            };
+        }
+
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param consumer
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
         static RowConsumer oneOff(final Consumer<DisposableObjArray> consumer) {
             N.checkArgNotNull(consumer, "consumer");
 
@@ -3522,6 +3691,30 @@ public final class Jdbc {
             N.checkArgNotNull(rowConsumer, "rowConsumer");
 
             return (rs, columnLabels) -> rowConsumer.accept(rs);
+        }
+
+        /**
+         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+         *
+         * @param consumer
+         * @return
+         */
+        @Beta
+        @SequentialOnly
+        @Stateful
+        static BiRowConsumer create(Throwables.ObjIntConsumer<ResultSet, SQLException> consumerForAll) {
+            N.checkArgNotNull(consumerForAll, "consumerForAll");
+
+            return new BiRowConsumer() {
+                @Override
+                public void accept(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                    final int columnCount = columnLabels.size();
+
+                    for (int i = 0; i < columnCount; i++) {
+                        consumerForAll.accept(rs, i + 1);
+                    }
+                }
+            };
         }
 
         /**
@@ -3875,6 +4068,16 @@ public final class Jdbc {
                     }
                 }
             };
+        }
+
+        /**
+         *
+         *
+         * @param defaultColumnGetter
+         * @return
+         */
+        static RowExtractorBuilder create(final ColumnGetter<?> defaultColumnGetter) {
+            return new RowExtractorBuilder(defaultColumnGetter);
         }
 
         /**
@@ -4342,19 +4545,16 @@ public final class Jdbc {
             public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_TIME_JU = (preparedQuery, x) -> preparedQuery.setTime(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_TIMESTAMP_JU = (preparedQuery, x) -> preparedQuery.setTimestamp(1,
-                    x);
+            public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_TIMESTAMP_JU = (preparedQuery, x) -> preparedQuery.setTimestamp(1, x);
 
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, byte[]> SET_BYTES = (preparedQuery, x) -> preparedQuery.setBytes(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractQuery, InputStream> SET_BINARY_STREAM = (preparedQuery, x) -> preparedQuery
-                    .setBinaryStream(1, x);
+            public static final BiParametersSetter<AbstractQuery, InputStream> SET_BINARY_STREAM = (preparedQuery, x) -> preparedQuery.setBinaryStream(1, x);
 
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractQuery, Reader> SET_CHARACTER_STREAM = (preparedQuery, x) -> preparedQuery
-                    .setCharacterStream(1, x);
+            public static final BiParametersSetter<AbstractQuery, Reader> SET_CHARACTER_STREAM = (preparedQuery, x) -> preparedQuery.setCharacterStream(1, x);
 
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Blob> SET_BLOB = (preparedQuery, x) -> preparedQuery.setBlob(1, x);
