@@ -2571,7 +2571,7 @@ public final class JdbcUtils {
                     }
 
                     for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
-                        stmt.setObject(columnIndex, rs.getObject(columnIndex));
+                        stmt.setObject(columnIndex, JdbcUtil.getColumnValue(rs, columnIndex));
                     }
                 }
             };
@@ -2626,6 +2626,54 @@ public final class JdbcUtils {
 
             selectSql = JdbcUtil.generateSelectSql(conn, sourceTableName);
             insertSql = JdbcUtil.generateInsertSql(conn, sourceTableName);
+
+            if (!sourceTableName.equals(targetTableName)) {
+                insertSql = Strings.replaceFirstIgnoreCase(insertSql, sourceTableName, targetTableName);
+            }
+        } finally {
+            JdbcUtil.releaseConnection(conn, sourceDataSource);
+        }
+
+        return copy(sourceDataSource, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetDataSource, insertSql, batchSize);
+    }
+
+    /**
+     *
+     * @param sourceDataSource
+     * @param targetDataSource
+     * @param sourceTableName
+     * @param targetTableName
+     * @param selectColumnNames
+     * @return
+     * @throws SQLException
+     */
+    public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
+            final String targetTableName, final Collection<String> selectColumnNames) throws SQLException {
+        return copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, selectColumnNames, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    /**
+    *
+    * @param sourceDataSource
+    * @param targetDataSource
+    * @param sourceTableName
+    * @param targetTableName
+    * @param selectColumnNames
+    * @param batchSize
+    * @return
+    * @throws SQLException
+    */
+    public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
+            final String targetTableName, final Collection<String> selectColumnNames, final int batchSize) throws SQLException {
+        String selectSql = null;
+        String insertSql = null;
+        Connection conn = null;
+
+        try {
+            conn = sourceDataSource.getConnection();
+
+            selectSql = generateSelectSql(conn, sourceTableName, selectColumnNames);
+            insertSql = generateInsertSql(conn, sourceTableName, selectColumnNames);
 
             if (!sourceTableName.equals(targetTableName)) {
                 insertSql = Strings.replaceFirstIgnoreCase(insertSql, sourceTableName, targetTableName);
@@ -2763,6 +2811,93 @@ public final class JdbcUtils {
         }
 
         return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetConn, insertSql, batchSize);
+    }
+
+    /**
+    *
+    * @param sourceConn
+    * @param targetConn
+    * @param sourceTableName
+    * @param targetTableName
+    * @param selectColumnNames
+    * @return
+    * @throws SQLException
+    */
+    public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
+            final Collection<String> selectColumnNames) throws SQLException {
+        return copy(sourceConn, targetConn, sourceTableName, targetTableName, selectColumnNames, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    /**
+    *
+    * @param sourceConn
+    * @param targetConn
+    * @param sourceTableName
+    * @param targetTableName
+    * @param selectColumnNames
+    * @param batchSize
+    * @return
+    * @throws SQLException
+    */
+    public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
+            final Collection<String> selectColumnNames, final int batchSize) throws SQLException {
+        final String selectSql = generateSelectSql(sourceConn, sourceTableName, selectColumnNames);
+        String insertSql = generateInsertSql(sourceConn, sourceTableName, selectColumnNames);
+
+        if (!sourceTableName.equals(targetTableName)) {
+            insertSql = Strings.replaceFirstIgnoreCase(insertSql, sourceTableName, targetTableName);
+        }
+
+        return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetConn, insertSql, batchSize);
+    }
+
+    private static String generateSelectSql(final Connection conn, final String tableName, final Collection<String> selectColumnNames) {
+        if (N.isEmpty(selectColumnNames)) {
+            return JdbcUtil.generateSelectSql(conn, tableName);
+        }
+
+        final StringBuilder sb = new StringBuilder();
+
+        sb.append(WD.SELECT).append(WD._SPACE);
+
+        final Iterator<String> iter = selectColumnNames.iterator();
+        final int lastIdx = selectColumnNames.size() - 1;
+        int cnt = 0;
+
+        while (iter.hasNext() && cnt++ < lastIdx) {
+            sb.append(iter.next()).append(WD.COMMA_SPACE);
+        }
+
+        sb.append(iter.next()).append(WD._SPACE).append(WD.FROM).append(WD._SPACE).append(tableName);
+
+        return sb.toString();
+    }
+
+    private static String generateInsertSql(final Connection conn, final String tableName, final Collection<String> selectColumnNames) {
+        if (N.isEmpty(selectColumnNames)) {
+            return JdbcUtil.generateInsertSql(conn, tableName);
+        }
+
+        final StringBuilder sb = new StringBuilder();
+
+        sb.append(WD.INSERT).append(WD._SPACE).append(WD.INTO).append(WD._SPACE).append(tableName).append(WD._PARENTHESES_L);
+
+        final Iterator<String> iter = selectColumnNames.iterator();
+        final int lastIdx = selectColumnNames.size() - 1;
+        int cnt = 0;
+
+        while (iter.hasNext() && cnt++ < lastIdx) {
+            sb.append(iter.next()).append(WD.COMMA_SPACE);
+        }
+
+        sb.append(iter.next())
+                .append(WD._PARENTHESES_R)
+                .append(WD._SPACE)
+                .append(WD.VALUES)
+                .append(WD._SPACE)
+                .append(Strings.repeat("?", selectColumnNames.size(), ", ", "(", ")"));
+
+        return sb.toString();
     }
 
     /**

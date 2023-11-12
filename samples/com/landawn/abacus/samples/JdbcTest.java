@@ -488,25 +488,46 @@ public class JdbcTest {
 
     @Test
     public void test_copy() throws Exception {
-        JdbcUtil.prepareQuery(dataSource, "delete from user").update();
-        JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
+        {
+            JdbcUtil.prepareQuery(dataSource, "delete from user").update();
+            JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
 
-        List<User> users = IntStream.range(1, 9999)
-                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
-                .toList();
+            List<User> users = IntStream.range(1, 9999)
+                    .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                    .toList();
 
-        List<Long> ids = userDao.batchInsertWithId(users);
-        assertEquals(users.size(), ids.size());
+            List<Long> ids = userDao.batchInsertWithId(users);
+            assertEquals(users.size(), ids.size());
 
-        assertTrue(JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class).size() == 0);
+            assertTrue(JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class).size() == 0);
 
-        JdbcUtils.copy(dataSource, dataSource2, "user", "user2");
+            JdbcUtils.copy(dataSource, dataSource2, "user", "user2");
 
-        assertEquals(JdbcUtil.prepareQuery(dataSource, "select * from user").list(User.class),
-                JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class));
+            assertEquals(JdbcUtil.prepareQuery(dataSource, "select * from user").list(User.class),
+                    JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class));
 
-        JdbcUtil.prepareQuery(dataSource, "delete from user").update();
-        JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
+            JdbcUtil.prepareQuery(dataSource, "delete from user").update();
+            JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
+        }
+
+        {
+            JdbcUtil.prepareQuery(dataSource, "delete from user").update();
+            JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
+
+            List<User> users = IntStream.range(1, 9999)
+                    .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                    .toList();
+
+            List<Long> ids = userDao.batchInsertWithId(users);
+            assertEquals(users.size(), ids.size());
+
+            assertTrue(JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class).size() == 0);
+
+            JdbcUtils.copy(dataSource, dataSource2, "user", "user2", N.asList("first_name", "last_name", "email", "create_time"));
+
+            JdbcUtil.prepareQuery(dataSource, "delete from user").update();
+            JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
+        }
 
     }
 }
