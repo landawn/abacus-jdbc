@@ -42,6 +42,10 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.annotation.SequentialOnly;
+import com.landawn.abacus.annotation.Stateful;
+import com.landawn.abacus.jdbc.Jdbc.ColumnGetter;
 import com.landawn.abacus.parser.JSONSerializationConfig;
 import com.landawn.abacus.parser.JSONSerializationConfig.JSC;
 import com.landawn.abacus.type.Type;
@@ -2577,6 +2581,32 @@ public final class JdbcUtils {
             };
         }
     };
+
+    /**
+     *
+     *
+     * @param columnGetterForAll
+     * @return
+     */
+    @Beta
+    @SequentialOnly
+    @Stateful
+    public static Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> createParamSetter(final ColumnGetter<?> columnGetterForAll) {
+        return new Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException>() {
+            private int columnCount = -1;
+
+            @Override
+            public void accept(final PreparedQuery stmt, final ResultSet rs) throws SQLException {
+                if (columnCount < 0) {
+                    columnCount = JdbcUtil.getColumnCount(rs);
+                }
+
+                for (int i = 1; i <= columnCount; i++) {
+                    stmt.setObject(i, columnGetterForAll.apply(rs, i));
+                }
+            }
+        };
+    }
 
     /**
     *
