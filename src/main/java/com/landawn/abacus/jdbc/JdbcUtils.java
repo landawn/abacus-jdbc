@@ -18,12 +18,9 @@ package com.landawn.abacus.jdbc;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.sql.Connection;
@@ -816,7 +813,7 @@ public final class JdbcUtils {
     public static <E extends Exception> long importData(final File file, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
 
-        try (Reader reader = new FileReader(file)) {
+        try (Reader reader = IOUtil.newFileReader(file)) {
             return importData(reader, offset, count, stmt, batchSize, batchIntervalInMillis, func);
         }
     }
@@ -902,7 +899,7 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> long importData(final InputStream is, final long offset, final long count, final PreparedStatement stmt,
             final int batchSize, final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
-        final Reader reader = new InputStreamReader(is);
+        final Reader reader = IOUtil.newInputStreamReader(is);
 
         return importData(reader, offset, count, stmt, batchSize, batchIntervalInMillis, func);
     }
@@ -1955,7 +1952,7 @@ public final class JdbcUtils {
     public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
             final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E {
-        try (Reader reader = new FileReader(file)) {
+        try (Reader reader = IOUtil.newFileReader(file)) {
             return importCSV(reader, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
         }
     }
@@ -2013,7 +2010,7 @@ public final class JdbcUtils {
     public static <E extends Exception> long importCSV(final InputStream is, long offset, final long count, final Throwables.Predicate<String[], E> filter,
             final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E {
-        final Reader reader = new InputStreamReader(is);
+        final Reader reader = IOUtil.newInputStreamReader(is);
         return importCSV(reader, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
@@ -2377,7 +2374,7 @@ public final class JdbcUtils {
     public static long exportCSV(final OutputStream out, final ResultSet rs, final Collection<String> selectColumnNames, final long offset, final long count,
             final boolean writeTitle, final boolean quoted) throws SQLException, IOException {
 
-        Writer writer = new OutputStreamWriter(out);
+        Writer writer = IOUtil.newOutputStreamWriter(out);
 
         long result = exportCSV(writer, rs, selectColumnNames, offset, count, writeTitle, quoted);
 
@@ -2562,7 +2559,7 @@ public final class JdbcUtils {
         return result;
     }
 
-    private static final Supplier<Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException>> supplierOfStmtSetterByRS = new Supplier<>() {
+    private static final Supplier<Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException>> supplierOfStmtSetterByRS = new Supplier<>() { // NOSONAR
         @Override
         public Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> get() {
             return new Throwables.BiConsumer<>() {
@@ -2591,8 +2588,8 @@ public final class JdbcUtils {
     @Beta
     @SequentialOnly
     @Stateful
-    public static Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> createParamSetter(final ColumnGetter<?> columnGetterForAll) {
-        return new Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException>() {
+    public static Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> createParamSetter(final ColumnGetter<?> columnGetterForAll) {
+        return new Throwables.BiConsumer<>() {
             private int columnCount = -1;
 
             @Override

@@ -94,9 +94,9 @@ public final class SQLTransaction implements Transaction, Closeable {
     }
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     @Override
     public String id() {
@@ -104,18 +104,18 @@ public final class SQLTransaction implements Transaction, Closeable {
     }
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     public Connection connection() {
         return _conn;
     }
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     @Override
     public IsolationLevel isolationLevel() {
@@ -123,9 +123,9 @@ public final class SQLTransaction implements Transaction, Closeable {
     }
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     @Override
     public Transaction.Status status() {
@@ -264,7 +264,7 @@ public final class SQLTransaction implements Transaction, Closeable {
             return;
         }
 
-        if (!(_status.equals(Status.ACTIVE) || _status.equals(Status.MARKED_ROLLBACK) || _status == Status.FAILED_COMMIT)) {
+        if (!(_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK || _status == Status.FAILED_COMMIT)) {
             throw new IllegalStateException("Transaction(id=" + _timedId + ") is already: " + _status);
         }
 
@@ -357,7 +357,7 @@ public final class SQLTransaction implements Transaction, Closeable {
      * @return
      */
     synchronized int incrementAndGetRef(final IsolationLevel isolationLevel, final boolean forUpdateOnly) {
-        if (!_status.equals(Status.ACTIVE)) {
+        if (_status != Status.ACTIVE) {
             throw new IllegalStateException("Transaction(id=" + _timedId + ") is already: " + _status);
         }
 
@@ -514,9 +514,9 @@ public final class SQLTransaction implements Transaction, Closeable {
     }
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     @Override
     public int hashCode() {
@@ -534,9 +534,9 @@ public final class SQLTransaction implements Transaction, Closeable {
     }
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     @Override
     public String toString() {

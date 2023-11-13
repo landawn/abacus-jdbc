@@ -18,14 +18,14 @@ package com.landawn.abacus.jdbc;
 import lombok.Value;
 
 /**
- * 
  *
- * @param productName 
- * @param productVersion 
- * @param version 
+ *
+ * @param productName
+ * @param productVersion
+ * @param version
  */
 @Value
-public class DBProductInfo {
+public class DBProductInfo { // NOSONAR
 
     private String productName;
     private String productVersion;

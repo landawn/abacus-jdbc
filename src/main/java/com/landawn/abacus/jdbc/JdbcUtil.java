@@ -72,6 +72,7 @@ import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.AsyncExecutor;
+import com.landawn.abacus.util.Charsets;
 import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.CheckedStream.CheckedIterator;
 import com.landawn.abacus.util.ClassUtil;
@@ -4434,8 +4435,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final BiRowFilter rowFilter,
-            final BiRowMapper<? extends T> rowMapper) {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -6982,8 +6982,7 @@ public final class JdbcUtil {
      * @throws SQLException
      */
     public static String blob2String(final Blob blob) throws SQLException {
-        return new String(blob.getBytes(1, (int) blob.length()));
-
+        return new String(blob.getBytes(1, (int) blob.length()), Charsets.UTF_8);
     }
 
     /**

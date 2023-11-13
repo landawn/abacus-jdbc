@@ -52,9 +52,9 @@ import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
+import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.DataSet;
-import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.Numbers;
@@ -3559,11 +3559,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @return
     //     * @throws DuplicatedResultException If More than one record found by the query
     //     * @throws SQLException
-    //     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+    //     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
     //     * @deprecated replaced by {@code findOnlyOne}.
     //     */
     //    @Deprecated
-    //    public <T> Optional<T> get(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    //    public <T> Optional<T> get(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException {
     //        return Optional.ofNullable(gett(rowMapper));
     //    }
     //
@@ -3574,11 +3574,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @return
     //     * @throws DuplicatedResultException If More than one record found by the query
     //     * @throws SQLException
-    //     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+    //     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
     //     * @deprecated replaced by {@code findOnlyOne}.
     //     */
     //    @Deprecated
-    //    public <T> Optional<T> get(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    //    public <T> Optional<T> get(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException {
     //        return Optional.ofNullable(gett(rowMapper));
     //    }
     //
@@ -3603,11 +3603,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @return
     //     * @throws DuplicatedResultException If More than one record found by the query
     //     * @throws SQLException
-    //     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+    //     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
     //     * @deprecated replaced by {@code findOnlyOneOrNull}.
     //     */
     //    @Deprecated
-    //    public <T> T gett(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    //    public <T> T gett(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException {
     //        return findOnlyOneOrNull(rowMapper);
     //    }
     //
@@ -3618,11 +3618,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @return
     //     * @throws DuplicatedResultException If More than one record found by the query
     //     * @throws SQLException
-    //     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+    //     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
     //     * @deprecated replaced by {@code findOnlyOneOrNull}.
     //     */
     //    @Deprecated
-    //    public <T> T gett(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    //    public <T> T gett(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException {
     //        return findOnlyOneOrNull(rowMapper);
     //    }
 
@@ -3644,7 +3644,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      */
     public <T> Optional<T> findOnlyOne(final Class<? extends T> targetType) throws DuplicatedResultException, SQLException {
         return Optional.ofNullable(findOnlyOneOrNull(targetType));
@@ -3657,9 +3657,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> Optional<T> findOnlyOne(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    public <T> Optional<T> findOnlyOne(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException {
         return Optional.ofNullable(findOnlyOneOrNull(rowMapper));
     }
 
@@ -3670,9 +3670,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> Optional<T> findOnlyOne(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    public <T> Optional<T> findOnlyOne(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException {
         return Optional.ofNullable(findOnlyOneOrNull(rowMapper));
     }
 
@@ -3722,9 +3722,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> T findOnlyOneOrNull(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    public <T> T findOnlyOneOrNull(Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -3753,9 +3753,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws DuplicatedResultException If More than one record found by the query
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> T findOnlyOneOrNull(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, NullPointerException {
+    public <T> T findOnlyOneOrNull(Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -3803,9 +3803,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> Optional<T> findFirst(Jdbc.RowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
+    public <T> Optional<T> findFirst(Jdbc.RowMapper<? extends T> rowMapper) throws SQLException, IllegalArgumentException {
         return Optional.ofNullable(findFirstOrNull(rowMapper));
     }
 
@@ -3816,11 +3816,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      * @deprecated Use {@link stream(RowFilter, RowMapper).first()} instead.
      */
     @Deprecated
-    public <T> Optional<T> findFirst(final Jdbc.RowFilter rowFilter, Jdbc.RowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
+    public <T> Optional<T> findFirst(final Jdbc.RowFilter rowFilter, Jdbc.RowMapper<? extends T> rowMapper) throws SQLException, IllegalArgumentException {
         return Optional.ofNullable(findFirstOrNull(rowFilter, rowMapper));
     }
 
@@ -3830,9 +3830,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> Optional<T> findFirst(Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
+    public <T> Optional<T> findFirst(Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException, IllegalArgumentException {
         return Optional.ofNullable(findFirstOrNull(rowMapper));
     }
 
@@ -3843,11 +3843,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      * @deprecated Use {@link stream(BiRowFilter, BiRowMapper).first()} instead.
      */
     @Deprecated
-    public <T> Optional<T> findFirst(final Jdbc.BiRowFilter rowFilter, Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
+    public <T> Optional<T> findFirst(final Jdbc.BiRowFilter rowFilter, Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException, IllegalArgumentException {
         return Optional.ofNullable(findFirstOrNull(rowFilter, rowMapper));
     }
 
@@ -3888,9 +3888,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> T findFirstOrNull(Jdbc.RowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
+    public <T> T findFirstOrNull(Jdbc.RowMapper<? extends T> rowMapper) throws SQLException, IllegalArgumentException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -3912,11 +3912,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      * @deprecated Use {@link stream(RowFilter, RowMapper).first()} instead.
      */
     @Deprecated
-    public <T> T findFirstOrNull(final Jdbc.RowFilter rowFilter, Jdbc.RowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
+    public <T> T findFirstOrNull(final Jdbc.RowFilter rowFilter, Jdbc.RowMapper<? extends T> rowMapper) throws SQLException, IllegalArgumentException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -3940,9 +3940,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      */
-    public <T> T findFirstOrNull(Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
+    public <T> T findFirstOrNull(Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException, IllegalArgumentException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -3964,11 +3964,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      * @deprecated Use {@link stream(BiRowFilter, BiRowMapper).first()} instead.
      */
     @Deprecated
-    public <T> T findFirstOrNull(final Jdbc.BiRowFilter rowFilter, Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException, NullPointerException {
+    public <T> T findFirstOrNull(final Jdbc.BiRowFilter rowFilter, Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException, IllegalArgumentException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();

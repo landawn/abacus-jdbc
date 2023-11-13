@@ -4396,7 +4396,7 @@ public final class Jdbc {
         }
     }
 
-    public final class Columns {
+    public static final class Columns {
         private Columns() {
             // singleton for utility class
         }

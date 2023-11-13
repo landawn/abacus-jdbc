@@ -33,12 +33,12 @@ import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.jdbc.AbstractQuery;
+import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
-import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.jdbc.SQLExecutor;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
@@ -46,9 +46,9 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.AsyncExecutor;
+import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.DataSet;
-import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.ParsedSql;
@@ -982,11 +982,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param rowMapper
      * @return
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException, NullPointerException;
+    <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException, IllegalArgumentException;
 
     /**
      *
@@ -996,11 +996,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param rowMapper
      * @return
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
-    <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException, NullPointerException;
+    <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException, IllegalArgumentException;
 
     /**
      *
@@ -1022,12 +1022,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param rowMapper
      * @return
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws SQLException, NullPointerException;
+            throws SQLException, IllegalArgumentException;
 
     /**
      *
@@ -1038,12 +1038,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param rowMapper
      * @return
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws SQLException, NullPointerException;
+            throws SQLException, IllegalArgumentException;
 
     /**
      *
@@ -1065,12 +1065,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws DuplicatedResultException, SQLException, NullPointerException;
+            throws DuplicatedResultException, SQLException, IllegalArgumentException;
 
     /**
      *
@@ -1081,12 +1081,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws DuplicatedResultException, SQLException, NullPointerException;
+            throws DuplicatedResultException, SQLException, IllegalArgumentException;
 
     /**
      *
@@ -1110,10 +1110,10 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      */
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws DuplicatedResultException, SQLException, NullPointerException;
+            throws DuplicatedResultException, SQLException, IllegalArgumentException;
 
     /**
      *
@@ -1125,12 +1125,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
-     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the found record.
+     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws DuplicatedResultException, SQLException, NullPointerException;
+            throws DuplicatedResultException, SQLException, IllegalArgumentException;
 
     /**
      * Returns an {@code OptionalBoolean} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalBoolean}.
