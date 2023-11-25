@@ -786,11 +786,13 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
         final List<T> entitiesToUpdate = map.get(true);
         final List<T> entitiesToInsert = map.get(false);
 
+        final List<T> result = new ArrayList<>(entities.size());
         final SQLTransaction tran = N.notEmpty(entitiesToInsert) && N.notEmpty(entitiesToUpdate) ? JdbcUtil.beginTransaction(dataSource()) : null;
 
         try {
             if (N.notEmpty(entitiesToInsert)) {
                 batchInsert(entitiesToInsert, batchSize);
+                result.addAll(entitiesToInsert);
             }
 
             if (N.notEmpty(entitiesToUpdate)) {
@@ -802,7 +804,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
 
                 batchUpdate(dbEntitiesToUpdate);
 
-                entitiesToInsert.addAll(dbEntitiesToUpdate);
+                result.addAll(dbEntitiesToUpdate);
             }
 
             if (tran != null) {
@@ -814,7 +816,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
             }
         }
 
-        return entitiesToInsert;
+        return result;
     }
 
     /**
