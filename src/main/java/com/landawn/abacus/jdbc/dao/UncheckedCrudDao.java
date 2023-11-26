@@ -25,6 +25,7 @@ import java.util.Set;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory;
+import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.AbstractQuery;
@@ -696,6 +697,41 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
      *
      * @param entity
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    @Override
+    default T upsert(final T entity) throws UncheckedSQLException {
+        N.checkArgNotNull(entity, "entity");
+
+        final Class<?> cls = entity.getClass();
+        @SuppressWarnings("deprecation")
+        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
+
+        return upsert(entity, idPropNameList);
+    }
+
+    /**
+     *
+     * @param entity
+     * @param uniquePropNamesForQuery
+     * @return
+     * @throws UncheckedSQLException
+     */
+    @Override
+    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException {
+        N.checkArgNotNull(entity, "entity");
+        N.checkArgNotEmpty(uniquePropNamesForQuery, "uniquePropNamesForQuery");
+
+        final Condition cond = CF.eqAnd(entity, uniquePropNamesForQuery);
+
+        return upsert(entity, cond);
+    }
+
+    /**
+     * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+     *
+     * @param entity
      * @param cond to verify if the record exists or not.
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -713,31 +749,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
             final Class<?> cls = entity.getClass();
             @SuppressWarnings("deprecation")
             final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);
-            N.merge(entity, dbEntity, false, N.newHashSet(idPropNameList));
-            update(dbEntity);
-            return dbEntity;
-        }
-    }
-
-    /**
-     * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
-     *
-     * @param entity
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     */
-    @Override
-    default T upsert(final T entity) throws UncheckedSQLException {
-        final Class<?> cls = entity.getClass();
-        @SuppressWarnings("deprecation")
-        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
-        final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
-        final T dbEntity = gett(DaoUtil.extractId(entity, idPropNameList, entityInfo));
-
-        if (dbEntity == null) {
-            insert(entity);
-            return entity;
-        } else {
             N.merge(entity, dbEntity, false, N.newHashSet(idPropNameList));
             update(dbEntity);
             return dbEntity;
@@ -770,13 +781,50 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
             return new ArrayList<>();
         }
 
-        final T first = N.firstOrNullIfEmpty(entities);
-        final Class<?> cls = first.getClass();
+        final T entity = N.firstOrNullIfEmpty(entities);
+        final Class<?> cls = entity.getClass();
         @SuppressWarnings("deprecation")
         final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
+
+        return batchUpsert(entities, idPropNameList, batchSize);
+    }
+
+    /**
+     *
+     * @param entities
+     * @param uniquePropNamesForQuery
+     * @return
+     * @throws UncheckedSQLException
+     */
+    @Override
+    default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException {
+        return batchUpsert(entities, uniquePropNamesForQuery, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    /**
+     *
+     * @param entities
+     * @param uniquePropNamesForQuery
+     * @param batchSize
+     * @return
+     * @throws UncheckedSQLException
+     */
+    @Override
+    default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery, final int batchSize)
+            throws UncheckedSQLException {
+        N.checkArgPositive(batchSize, "batchSize");
+        N.checkArgNotEmpty(uniquePropNamesForQuery, "uniquePropNamesForQuery");
+
+        if (N.isEmpty(entities)) {
+            return new ArrayList<>();
+        }
+
+        final T first = N.firstOrNullIfEmpty(entities);
+        final Class<?> cls = first.getClass();
+        final List<String> propNameListForQuery = uniquePropNamesForQuery;
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
-        final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);
+        final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(propNameListForQuery, entityInfo);
         final List<ID> ids = N.map(entities, idExtractorFunc);
 
         final List<T> dbEntities = batchGet(ids, batchSize);
@@ -796,13 +844,20 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
             }
 
             if (N.notEmpty(entitiesToUpdate)) {
-                final Set<String> idPropNameSet = N.newHashSet(idPropNameList);
+                final Set<String> ignoredPropNames = N.newHashSet(propNameListForQuery);
+
+                @SuppressWarnings("deprecation")
+                final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);
+
+                if (N.notEmpty(idPropNameList)) {
+                    ignoredPropNames.addAll(idPropNameList);
+                }
 
                 final List<T> dbEntitiesToUpdate = StreamEx.of(entitiesToUpdate)
-                        .map(it -> N.merge(it, dbIdEntityMap.get(idExtractorFunc.apply(it)), false, idPropNameSet))
+                        .map(it -> N.merge(it, dbIdEntityMap.get(idExtractorFunc.apply(it)), false, ignoredPropNames))
                         .toList();
 
-                batchUpdate(dbEntitiesToUpdate);
+                batchUpdate(dbEntitiesToUpdate, batchSize);
 
                 result.addAll(dbEntitiesToUpdate);
             }

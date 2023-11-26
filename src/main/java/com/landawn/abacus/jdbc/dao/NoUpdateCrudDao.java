@@ -68,14 +68,14 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
     }
 
     /**
-     * 
      *
-     * @param propName 
-     * @param propValue 
-     * @param id 
-     * @return 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     *
+     * @param propName
+     * @param propValue
+     * @param id
+     * @return
+     * @throws UnsupportedOperationException
+     * @throws SQLException
      * @deprecated unsupported Operation
      */
     @Override
@@ -165,6 +165,21 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
      *
      * @param entity
+     * @return
+     * @throws UnsupportedOperationException
+     * @throws SQLException
+     * @deprecated unsupported Operation
+     */
+    @Deprecated
+    @Override
+    default T upsert(final T entity) throws UnsupportedOperationException, SQLException {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+     *
+     * @param entity
      * @param cond to verify if the record exists or not.
      * @return
      * @throws UnsupportedOperationException
@@ -178,9 +193,9 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
     }
 
     /**
-     * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
      *
      * @param entity
+     * @param uniquePropNamesForQuery
      * @return
      * @throws UnsupportedOperationException
      * @throws SQLException
@@ -188,7 +203,7 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      */
     @Deprecated
     @Override
-    default T upsert(final T entity) throws UnsupportedOperationException, SQLException {
+    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException, SQLException {
         throw new UnsupportedOperationException();
     }
 
@@ -218,6 +233,39 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
     @Override
     @Deprecated
     default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException, SQLException {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     *
+     * @param entities
+     * @param uniquePropNamesForQuery
+     * @return
+     * @throws UnsupportedOperationException
+     * @throws SQLException
+     * @deprecated unsupported Operation
+     */
+    @Override
+    @Deprecated
+    default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery)
+            throws UnsupportedOperationException, SQLException {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     *
+     * @param entities
+     * @param uniquePropNamesForQuery
+     * @param batchSize
+     * @return
+     * @throws UnsupportedOperationException
+     * @throws SQLException
+     * @deprecated unsupported Operation
+     */
+    @Override
+    @Deprecated
+    default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery, final int batchSize)
+            throws UnsupportedOperationException, SQLException {
         throw new UnsupportedOperationException();
     }
 

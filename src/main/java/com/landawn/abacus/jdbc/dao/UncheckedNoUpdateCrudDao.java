@@ -68,13 +68,13 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
     }
 
     /**
-     * 
      *
-     * @param propName 
-     * @param propValue 
-     * @param id 
-     * @return 
-     * @throws UnsupportedOperationException 
+     *
+     * @param propName
+     * @param propValue
+     * @param id
+     * @return
+     * @throws UnsupportedOperationException
      * @throws UncheckedSQLException the unchecked SQL exception
      * @deprecated unsupported Operation
      */
@@ -165,6 +165,36 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
      *
      * @param entity
+     * @return
+     * @throws UnsupportedOperationException
+     * @throws UncheckedSQLException
+     * @deprecated unsupported Operation
+     */
+    @Deprecated
+    @Override
+    default T upsert(final T entity) throws UnsupportedOperationException, UncheckedSQLException {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     *
+     * @param entity
+     * @param uniquePropNamesForQuery
+     * @return
+     * @throws UnsupportedOperationException
+     * @throws UncheckedSQLException
+     * @deprecated unsupported Operation
+     */
+    @Deprecated
+    @Override
+    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException, UncheckedSQLException {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+     *
+     * @param entity
      * @param cond to verify if the record exists or not.
      * @return
      * @throws UnsupportedOperationException
@@ -174,21 +204,6 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
     @Deprecated
     @Override
     default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException, UncheckedSQLException {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
-     *
-     * @param entity
-     * @return
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException
-     * @deprecated unsupported Operation
-     */
-    @Deprecated
-    @Override
-    default T upsert(final T entity) throws UnsupportedOperationException, UncheckedSQLException {
         throw new UnsupportedOperationException();
     }
 
@@ -218,6 +233,39 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
     @Override
     @Deprecated
     default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException, UncheckedSQLException {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     *
+     * @param entities
+     * @param uniquePropNamesForQuery
+     * @return
+     * @throws UnsupportedOperationException
+     * @throws UncheckedSQLException
+     * @deprecated unsupported Operation
+     */
+    @Override
+    @Deprecated
+    default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery)
+            throws UnsupportedOperationException, UncheckedSQLException {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     *
+     * @param entities
+     * @param uniquePropNamesForQuery
+     * @param batchSize
+     * @return
+     * @throws UnsupportedOperationException
+     * @throws UncheckedSQLException
+     * @deprecated unsupported Operation
+     */
+    @Override
+    @Deprecated
+    default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery, final int batchSize)
+            throws UnsupportedOperationException, UncheckedSQLException {
         throw new UnsupportedOperationException();
     }
 
