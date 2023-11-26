@@ -82,13 +82,13 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      *
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
-    default ID generateId() throws UnsupportedOperationException, SQLException {
+    default ID generateId() throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 

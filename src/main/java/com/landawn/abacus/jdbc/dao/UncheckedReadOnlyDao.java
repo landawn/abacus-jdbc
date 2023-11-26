@@ -33,141 +33,141 @@ public interface UncheckedReadOnlyDao<T, SB extends SQLBuilder, TD extends Unche
         extends UncheckedNoUpdateDao<T, SB, TD>, ReadOnlyDao<T, SB, TD> {
 
     /**
-     * 
      *
-     * @param entityToSave 
-     * @throws UnsupportedOperationException 
-     * @throws UncheckedSQLException 
+     *
+     * @param entityToSave
+     * @throws UncheckedSQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default void save(final T entityToSave) throws UnsupportedOperationException, UncheckedSQLException {
+    default void save(final T entityToSave) throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
-     * 
      *
-     * @param entityToSave 
-     * @param propNamesToSave 
-     * @throws UnsupportedOperationException 
-     * @throws UncheckedSQLException 
+     *
+     * @param entityToSave
+     * @param propNamesToSave
+     * @throws UncheckedSQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default void save(final T entityToSave, final Collection<String> propNamesToSave) throws UnsupportedOperationException, UncheckedSQLException {
+    default void save(final T entityToSave, final Collection<String> propNamesToSave) throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
-     * 
      *
-     * @param namedInsertSQL 
-     * @param entityToSave 
-     * @throws UnsupportedOperationException 
-     * @throws UncheckedSQLException 
+     *
+     * @param namedInsertSQL
+     * @param entityToSave
+     * @throws UncheckedSQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default void save(final String namedInsertSQL, final T entityToSave) throws UnsupportedOperationException, UncheckedSQLException {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Always throws {@code UnsupportedOperationException}.
-     *
-     * @param entitiesToSave 
-     * @throws UnsupportedOperationException 
-     * @throws UncheckedSQLException 
-     * @deprecated unsupported Operation
-     */
-    @Deprecated
-    @Override
-    default void batchSave(final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException, UncheckedSQLException {
+    default void save(final String namedInsertSQL, final T entityToSave) throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param entitiesToSave 
-     * @param batchSize 
-     * @throws UnsupportedOperationException 
-     * @throws UncheckedSQLException 
+     * @param entitiesToSave
+     * @throws UncheckedSQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws UnsupportedOperationException, UncheckedSQLException {
+    default void batchSave(final Collection<? extends T> entitiesToSave) throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param entitiesToSave 
-     * @param propNamesToSave 
-     * @throws UnsupportedOperationException 
-     * @throws UncheckedSQLException 
+     * @param entitiesToSave
+     * @param batchSize
+     * @throws UncheckedSQLException
+     * @throws UnsupportedOperationException
+     * @deprecated unsupported Operation
+     */
+    @Deprecated
+    @Override
+    default void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws UncheckedSQLException, UnsupportedOperationException {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Always throws {@code UnsupportedOperationException}.
+     *
+     * @param entitiesToSave
+     * @param propNamesToSave
+     * @throws UncheckedSQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave)
-            throws UnsupportedOperationException, UncheckedSQLException {
+            throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param entitiesToSave 
-     * @param propNamesToSave 
-     * @param batchSize 
-     * @throws UnsupportedOperationException 
-     * @throws UncheckedSQLException 
+     * @param entitiesToSave
+     * @param propNamesToSave
+     * @param batchSize
+     * @throws UncheckedSQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize)
-            throws UnsupportedOperationException, UncheckedSQLException {
+            throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param namedInsertSQL 
-     * @param entitiesToSave 
-     * @throws UnsupportedOperationException 
-     * @throws UncheckedSQLException 
+     * @param namedInsertSQL
+     * @param entitiesToSave
+     * @throws UncheckedSQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
     default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave)
-            throws UnsupportedOperationException, UncheckedSQLException {
+            throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param namedInsertSQL 
-     * @param entitiesToSave 
-     * @param batchSize 
-     * @throws UnsupportedOperationException 
-     * @throws UncheckedSQLException 
+     * @param namedInsertSQL
+     * @param entitiesToSave
+     * @param batchSize
+     * @throws UncheckedSQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
     default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave, final int batchSize)
-            throws UnsupportedOperationException, UncheckedSQLException {
+            throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }

@@ -41,12 +41,12 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      *
      * @param query
      * @return
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select} sql statement.
      * @throws SQLException
+     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select} sql statement.
      */
     @NonDBOperation
     @Override
-    default PreparedQuery prepareQuery(final String query) throws UnsupportedOperationException, SQLException {
+    default PreparedQuery prepareQuery(final String query) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isSelectQuery(query)) {
             throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
         }
@@ -59,14 +59,14 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param query
      * @param generateKeys
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
+    default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -75,31 +75,31 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param query
      * @param returnColumnIndexes
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
+    default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
-     * 
      *
-     * @param query 
-     * @param returnColumnNames 
-     * @return 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     *
+     * @param query
+     * @param returnColumnNames
+     * @return
+     * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
+    default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -107,12 +107,12 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      *
      * @param namedQuery
      * @return
-     * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a {@code select} sql statement.
      * @throws SQLException
+     * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a {@code select} sql statement.
      */
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final String namedQuery) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final String namedQuery) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isSelectQuery(namedQuery)) {
             throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
         }
@@ -125,14 +125,14 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param namedQuery
      * @param generateKeys
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -141,14 +141,14 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param namedQuery
      * @param returnColumnIndexes
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -157,14 +157,14 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param namedQuery
      * @param returnColumnNames
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -172,12 +172,12 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      *
      * @param namedQuery the named query
      * @return
-     * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a {@code select} sql statement.
      * @throws SQLException
+     * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a {@code select} sql statement.
      */
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isSelectQuery(namedQuery.sql())) {
             throw new UnsupportedOperationException("Only select query is supported in read-only Dao");
         }
@@ -190,14 +190,14 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param namedQuery the named query
      * @param generateKeys
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final boolean generateKeys) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -206,14 +206,14 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param namedQuery
      * @param returnColumnIndexes
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -222,152 +222,152 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param namedQuery
      * @param returnColumnNames
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
-     * 
      *
-     * @param entityToSave 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     *
+     * @param entityToSave
+     * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default void save(final T entityToSave) throws UnsupportedOperationException, SQLException {
+    default void save(final T entityToSave) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
-     * 
      *
-     * @param entityToSave 
-     * @param propNamesToSave 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     *
+     * @param entityToSave
+     * @param propNamesToSave
+     * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default void save(final T entityToSave, final Collection<String> propNamesToSave) throws UnsupportedOperationException, SQLException {
+    default void save(final T entityToSave, final Collection<String> propNamesToSave) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
-     * 
      *
-     * @param namedInsertSQL 
-     * @param entityToSave 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     *
+     * @param namedInsertSQL
+     * @param entityToSave
+     * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default void save(final String namedInsertSQL, final T entityToSave) throws UnsupportedOperationException, SQLException {
+    default void save(final String namedInsertSQL, final T entityToSave) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param entitiesToSave 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     * @param entitiesToSave
+     * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default void batchSave(final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException, SQLException {
+    default void batchSave(final Collection<? extends T> entitiesToSave) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param entitiesToSave 
-     * @param batchSize 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     * @param entitiesToSave
+     * @param batchSize
+     * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws UnsupportedOperationException, SQLException {
+    default void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param entitiesToSave 
-     * @param propNamesToSave 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     * @param entitiesToSave
+     * @param propNamesToSave
+     * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave)
-            throws UnsupportedOperationException, SQLException {
+            throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param entitiesToSave 
-     * @param propNamesToSave 
-     * @param batchSize 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     * @param entitiesToSave
+     * @param propNamesToSave
+     * @param batchSize
+     * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize)
-            throws UnsupportedOperationException, SQLException {
+            throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param namedInsertSQL 
-     * @param entitiesToSave 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     * @param namedInsertSQL
+     * @param entitiesToSave
+     * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException, SQLException {
+    default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param namedInsertSQL 
-     * @param entitiesToSave 
-     * @param batchSize 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     * @param namedInsertSQL
+     * @param entitiesToSave
+     * @param batchSize
+     * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
     default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave, final int batchSize)
-            throws UnsupportedOperationException, SQLException {
+            throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }

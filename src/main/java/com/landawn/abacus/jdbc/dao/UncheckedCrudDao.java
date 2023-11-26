@@ -74,14 +74,14 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      *
      * @return
-     * @throws UnsupportedOperationException
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedSQLException
+     * @throws UnsupportedOperationException the unchecked SQL exception
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default ID generateId() throws UnsupportedOperationException, UncheckedSQLException {
+    default ID generateId() throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 

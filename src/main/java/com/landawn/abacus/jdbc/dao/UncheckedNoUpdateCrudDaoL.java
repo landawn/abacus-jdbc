@@ -32,13 +32,13 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends 
      * @param propValue 
      * @param id 
      * @return 
-     * @throws UnsupportedOperationException 
      * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default int update(final String propName, final Object propValue, final long id) throws UnsupportedOperationException, UncheckedSQLException {
+    default int update(final String propName, final Object propValue, final long id) throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -48,13 +48,13 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends 
      * @param updateProps 
      * @param id 
      * @return 
-     * @throws UnsupportedOperationException 
      * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default int update(final Map<String, Object> updateProps, final long id) throws UnsupportedOperationException, UncheckedSQLException {
+    default int update(final Map<String, Object> updateProps, final long id) throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -63,13 +63,13 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends 
      *
      * @param id 
      * @return 
-     * @throws UnsupportedOperationException 
      * @throws UncheckedSQLException 
+     * @throws UnsupportedOperationException 
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default int deleteById(final long id) throws UnsupportedOperationException, UncheckedSQLException {
+    default int deleteById(final long id) throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }

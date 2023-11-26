@@ -26,50 +26,50 @@ public interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateC
         extends NoUpdateCrudDao<T, Long, SB, TD>, CrudDaoL<T, SB, TD> {
 
     /**
-     * 
      *
-     * @param propName 
-     * @param propValue 
-     * @param id 
-     * @return 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     *
+     * @param propName
+     * @param propValue
+     * @param id
+     * @return
+     * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default int update(final String propName, final Object propValue, final long id) throws UnsupportedOperationException, SQLException {
+    default int update(final String propName, final Object propValue, final long id) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
-     * 
      *
-     * @param updateProps 
-     * @param id 
-     * @return 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     *
+     * @param updateProps
+     * @param id
+     * @return
+     * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default int update(final Map<String, Object> updateProps, final long id) throws UnsupportedOperationException, SQLException {
+    default int update(final Map<String, Object> updateProps, final long id) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
-     * 
      *
-     * @param id 
-     * @return 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     *
+     * @param id
+     * @return
+     * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default int deleteById(final long id) throws UnsupportedOperationException, SQLException {
+    default int deleteById(final long id) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }

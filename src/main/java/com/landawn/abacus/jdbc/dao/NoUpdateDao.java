@@ -24,9 +24,9 @@ import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.condition.Condition;
+import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
-import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.util.ParsedSql;
@@ -48,13 +48,13 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      *
      * @param query
      * @return
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      * @throws SQLException
+     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      */
     @Beta
     @NonDBOperation
     @Override
-    default PreparedQuery prepareQuery(final String query) throws UnsupportedOperationException, SQLException {
+    default PreparedQuery prepareQuery(final String query) throws SQLException, UnsupportedOperationException {
         if (!(DaoUtil.isSelectQuery(query) || DaoUtil.isInsertQuery(query))) {
             throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
         }
@@ -67,13 +67,13 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param query
      * @param generateKeys
      * @return
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      * @throws SQLException
+     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      */
     @Beta
     @NonDBOperation
     @Override
-    default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
+    default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws SQLException, UnsupportedOperationException {
         if (!(DaoUtil.isSelectQuery(query) || DaoUtil.isInsertQuery(query))) {
             throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
         }
@@ -86,13 +86,13 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param query
      * @param returnColumnIndexes
      * @return
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      * @throws SQLException
+     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      */
     @Beta
     @NonDBOperation
     @Override
-    default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
+    default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException {
         if (!(DaoUtil.isSelectQuery(query) || DaoUtil.isInsertQuery(query))) {
             throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
         }
@@ -101,18 +101,18 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * 
      *
-     * @param query 
-     * @param returnColumnNames 
-     * @return 
+     *
+     * @param query
+     * @param returnColumnNames
+     * @return
+     * @throws SQLException
      * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
-     * @throws SQLException 
      */
     @Beta
     @NonDBOperation
     @Override
-    default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
+    default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException {
         if (!(DaoUtil.isSelectQuery(query) || DaoUtil.isInsertQuery(query))) {
             throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
         }
@@ -125,15 +125,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param query
      * @param stmtCreator
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
     @Override
     default PreparedQuery prepareQuery(final String query, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws UnsupportedOperationException, SQLException {
+            throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -141,12 +141,12 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      *
      * @param namedQuery
      * @return
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      * @throws SQLException
+     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      */
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final String namedQuery) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final String namedQuery) throws SQLException, UnsupportedOperationException {
         if (!(DaoUtil.isSelectQuery(namedQuery) || DaoUtil.isInsertQuery(namedQuery))) {
             throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
         }
@@ -159,13 +159,13 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param namedQuery
      * @param generateKeys
      * @return
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      * @throws SQLException
+     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      */
     @Beta
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws SQLException, UnsupportedOperationException {
         if (!(DaoUtil.isSelectQuery(namedQuery) || DaoUtil.isInsertQuery(namedQuery))) {
             throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
         }
@@ -178,13 +178,13 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param namedQuery
      * @param returnColumnIndexes
      * @return
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      * @throws SQLException
+     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      */
     @Beta
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException {
         if (!(DaoUtil.isSelectQuery(namedQuery) || DaoUtil.isInsertQuery(namedQuery))) {
             throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
         }
@@ -197,13 +197,13 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param namedQuery
      * @param returnColumnNames
      * @return
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      * @throws SQLException
+     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      */
     @Beta
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException {
         if (!(DaoUtil.isSelectQuery(namedQuery) || DaoUtil.isInsertQuery(namedQuery))) {
             throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
         }
@@ -216,15 +216,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param namedQuery
      * @param stmtCreator
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final String namedQuery, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws UnsupportedOperationException, SQLException {
+            throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -232,13 +232,13 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      *
      * @param namedQuery the named query
      * @return
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      * @throws SQLException
+     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      */
     @Beta
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
         if (!(DaoUtil.isSelectQuery(namedQuery.sql()) || DaoUtil.isInsertQuery(namedQuery.sql()))) {
             throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
         }
@@ -251,13 +251,13 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param namedQuery the named query
      * @param generateKeys
      * @return
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      * @throws SQLException
+     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      */
     @Beta
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final boolean generateKeys) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final boolean generateKeys) throws SQLException, UnsupportedOperationException {
         if (!(DaoUtil.isSelectQuery(namedQuery.sql()) || DaoUtil.isInsertQuery(namedQuery.sql()))) {
             throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
         }
@@ -270,13 +270,13 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param namedQuery
      * @param returnColumnIndexes
      * @return
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      * @throws SQLException
+     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      */
     @Beta
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException {
         if (!(DaoUtil.isSelectQuery(namedQuery.sql()) || DaoUtil.isInsertQuery(namedQuery.sql()))) {
             throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
         }
@@ -289,13 +289,13 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param namedQuery
      * @param returnColumnNames
      * @return
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      * @throws SQLException
+     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
      */
     @Beta
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException, SQLException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException {
         if (!(DaoUtil.isSelectQuery(namedQuery.sql()) || DaoUtil.isInsertQuery(namedQuery.sql()))) {
             throw new UnsupportedOperationException("Only select/insert query is supported in non-update Dao");
         }
@@ -308,15 +308,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param namedQuery the named query
      * @param stmtCreator
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery,
-            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws UnsupportedOperationException, SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -324,14 +324,14 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      *
      * @param query
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default CallableQuery prepareCallableQuery(final String query) throws UnsupportedOperationException, SQLException {
+    default CallableQuery prepareCallableQuery(final String query) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -340,32 +340,32 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param query
      * @param stmtCreator
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default CallableQuery prepareCallableQuery(final String query,
-            final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws UnsupportedOperationException, SQLException {
+    default CallableQuery prepareCallableQuery(final String query, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
+            throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
-     * 
      *
-     * @param propName 
-     * @param propValue 
-     * @param cond 
-     * @return 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     *
+     * @param propName
+     * @param propValue
+     * @param cond
+     * @return
+     * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Override
     @Deprecated
-    default int update(final String propName, final Object propValue, final Condition cond) throws UnsupportedOperationException, SQLException {
+    default int update(final String propName, final Object propValue, final Condition cond) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -374,13 +374,13 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param updateProps
      * @param cond
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default int update(final Map<String, Object> updateProps, final Condition cond) throws UnsupportedOperationException, SQLException {
+    default int update(final Map<String, Object> updateProps, final Condition cond) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -389,30 +389,30 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param entity
      * @param cond to verify if the record exists or not.
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default int update(final T entity, final Condition cond) throws UnsupportedOperationException, SQLException {
+    default int update(final T entity, final Condition cond) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Update all the records found by specified {@code cond} with specified {@code propNamesToUpdate} from specified {@code entity}.
      *
-     * @param entity 
-     * @param propNamesToUpdate 
-     * @param cond 
-     * @return 
-     * @throws UnsupportedOperationException 
-     * @throws SQLException 
+     * @param entity
+     * @param propNamesToUpdate
+     * @param cond
+     * @return
+     * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws UnsupportedOperationException, SQLException {
+    default int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -422,13 +422,13 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param entity
      * @param cond to verify if the record exists or not.
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException, SQLException {
+    default T upsert(final T entity, final Condition cond) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -436,13 +436,13 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      *
      * @param cond
      * @return
-     * @throws UnsupportedOperationException
      * @throws SQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default int delete(final Condition cond) throws UnsupportedOperationException, SQLException {
+    default int delete(final Condition cond) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }

@@ -37,19 +37,19 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
         extends UncheckedDao<T, SB, TD>, NoUpdateDao<T, SB, TD> {
 
     /**
-     * 
      *
-     * @param propName 
-     * @param propValue 
-     * @param cond 
-     * @return 
-     * @throws UnsupportedOperationException 
+     *
+     * @param propName
+     * @param propValue
+     * @param cond
+     * @return
+     * @throws UnsupportedOperationException
      * @throws UncheckedSQLException the unchecked SQL exception
      * @deprecated unsupported Operation
      */
     @Override
     @Deprecated
-    default int update(final String propName, final Object propValue, final Condition cond) throws UnsupportedOperationException, UncheckedSQLException {
+    default int update(final String propName, final Object propValue, final Condition cond) throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -58,13 +58,13 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      * @param updateProps
      * @param cond
      * @return
-     * @throws UnsupportedOperationException
      * @throws UncheckedSQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default int update(final Map<String, Object> updateProps, final Condition cond) throws UnsupportedOperationException, UncheckedSQLException {
+    default int update(final Map<String, Object> updateProps, final Condition cond) throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -72,31 +72,31 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      * @param entity
      * @param cond to verify if the record exists or not.
      * @return
+     * @throws UncheckedSQLException
+     * @throws UnsupportedOperationException
+     * @deprecated unsupported Operation
+     */
+    @Deprecated
+    @Override
+    default int update(final T entity, final Condition cond) throws UncheckedSQLException, UnsupportedOperationException {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     *
+     *
+     * @param entity
+     * @param propNamesToUpdate
+     * @param cond
+     * @return
      * @throws UnsupportedOperationException
      * @throws UncheckedSQLException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default int update(final T entity, final Condition cond) throws UnsupportedOperationException, UncheckedSQLException {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * 
-     *
-     * @param entity 
-     * @param propNamesToUpdate 
-     * @param cond 
-     * @return 
-     * @throws UnsupportedOperationException 
-     * @throws UncheckedSQLException 
-     * @deprecated unsupported Operation
-     */
-    @Deprecated
-    @Override
     default int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond)
-            throws UnsupportedOperationException, UncheckedSQLException {
+            throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -106,13 +106,13 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      * @param entity
      * @param cond to verify if the record exists or not.
      * @return
-     * @throws UnsupportedOperationException
      * @throws UncheckedSQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException, UncheckedSQLException {
+    default T upsert(final T entity, final Condition cond) throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -120,13 +120,13 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      *
      * @param cond
      * @return
-     * @throws UnsupportedOperationException
      * @throws UncheckedSQLException
+     * @throws UnsupportedOperationException
      * @deprecated unsupported Operation
      */
     @Deprecated
     @Override
-    default int delete(final Condition cond) throws UnsupportedOperationException, UncheckedSQLException {
+    default int delete(final Condition cond) throws UncheckedSQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }

@@ -616,8 +616,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @Beta
     @NonDBOperation
-    default CallableQuery prepareCallableQuery(final String sql,
-            final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
+    default CallableQuery prepareCallableQuery(final String sql, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
+            throws SQLException {
         return JdbcUtil.prepareCallableQuery(dataSource(), sql, stmtCreator);
     }
 
@@ -1770,8 +1770,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> CheckedStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond,
-            final Jdbc.BiRowMapper<? extends R> rowMapper);
+    <R> CheckedStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1839,8 +1838,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    default <R> CheckedStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond,
-            final Jdbc.RowMapper<? extends R> rowMapper) {
+    default <R> CheckedStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) {
         return stream(N.asList(singleSelectPropName), cond, rowMapper);
     }
 
