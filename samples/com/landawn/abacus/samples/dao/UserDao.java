@@ -60,43 +60,43 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
         return System.currentTimeMillis();
     }
 
-    @Insert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
+    @Insert("INSERT INTO user1 (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
     void insertWithId(User user) throws SQLException;
 
-    @Update("UPDATE user SET first_name = :firstName, last_name = :lastName WHERE id = :id")
+    @Update("UPDATE user1 SET first_name = :firstName, last_name = :lastName WHERE id = :id")
     int updateFirstAndLastName(@Bind("firstName") String newFirstName, @Bind("lastName") String newLastName, @Bind("id") long id) throws SQLException;
 
     @SqlLogEnabled
-    @Select("SELECT first_name, last_name FROM user WHERE id = :id")
+    @Select("SELECT first_name, last_name FROM user1 WHERE id = :id")
     User getFirstAndLastNameBy(@Bind("id") long id) throws SQLException;
 
     @SqlLogEnabled(false)
-    @Select("SELECT id, first_name, last_name, email FROM user")
+    @Select("SELECT id, first_name, last_name, email FROM user1")
     Stream<User> allUsers();
 
-    @Insert(sql = "INSERT INTO user (id, first_name, last_name, prop1, email) VALUES (:id, :firstName, :lastName, :nickName, :email)", isBatch = true)
+    @Insert(sql = "INSERT INTO user1 (id, first_name, last_name, prop1, email) VALUES (:id, :firstName, :lastName, :nickName, :email)", isBatch = true)
     List<Long> batchInsertWithId(List<User> users) throws SQLException;
 
-    @Insert(sql = "INSERT INTO user (first_name, last_name, email) VALUES (:firstName, :lastName, :email)", isBatch = true, batchSize = 123)
+    @Insert(sql = "INSERT INTO user1 (first_name, last_name, email) VALUES (:firstName, :lastName, :email)", isBatch = true, batchSize = 123)
     List<Long> batchInsertWithoutId(List<User> users) throws SQLException;
 
-    @Update(sql = "UPDATE user SET first_name = :firstName, last_name = :lastName WHERE id = :id", isBatch = true)
+    @Update(sql = "UPDATE user1 SET first_name = :firstName, last_name = :lastName WHERE id = :id", isBatch = true)
     int batchUpdate(List<User> users) throws SQLException;
 
-    @Delete(sql = "DELETE FROM user where id = :id", isBatch = true)
+    @Delete(sql = "DELETE FROM user1 where id = :id", isBatch = true)
     int batchDelete(List<User> users) throws SQLException;
 
-    @Delete(sql = "DELETE FROM user where id = :id", isBatch = true, batchSize = 10000)
+    @Delete(sql = "DELETE FROM user1 where id = :id", isBatch = true, batchSize = 10000)
     int batchDeleteByIds(List<Long> userIds) throws SQLException;
 
-    @Delete(sql = "DELETE FROM user where id = ?", isBatch = true, batchSize = 10000)
+    @Delete(sql = "DELETE FROM user1 where id = ?", isBatch = true, batchSize = 10000)
     int batchDeleteByIds_1(List<Long> userIds) throws SQLException;
 
     default int[] batchDeleteByIds_2(List<Long> userIds) throws SQLException {
-        return prepareNamedQuery("DELETE FROM user where id = :id").addBatchParameters(userIds, long.class).batchUpdate();
+        return prepareNamedQuery("DELETE FROM user1 where id = :id").addBatchParameters(userIds, long.class).batchUpdate();
     }
 
-    @Sqls({ "SELECT * FROM user where id >= :id", "SELECT * FROM user where id >= :id" })
+    @Sqls({ "SELECT * FROM user1 where id >= :id", "SELECT * FROM user1 where id >= :id" })
     default List<User> listUserByAnnoSql(long id, String... sqls) {
         try {
             return prepareNamedQuery(sqls[0]).setLong(1, id).list(User.class);
@@ -106,7 +106,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     }
 
     @Transactional
-    @Sqls({ "update user set first_name = ? where id = -1", "SELECT * FROM user where id >= :id" })
+    @Sqls({ "update user1 set first_name = ? where id = -1", "SELECT * FROM user1 where id >= :id" })
     default List<User> listUserByAnnoSql2(String firstName, long id, String... sqls) {
         try {
             prepareQuery(sqls[0]).setString(1, firstName).update();
@@ -117,7 +117,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     }
 
     @Transactional(propagation = Propagation.SUPPORTS)
-    @Sqls("DELETE from user where id = ?")
+    @Sqls("DELETE FROM user1 where id = ?")
     default boolean delete_propagation_SUPPORTS(long id, String... sqls) {
         N.sleep(1001);
 
@@ -130,7 +130,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Handler(qualifier = "handler2")
-    @Sqls("DELETE from user where id = ?")
+    @Sqls("DELETE FROM user1 where id = ?")
     default boolean delete_propagation_REQUIRES_NEW(long id, String... sqls) {
         try {
             return prepareQuery(sqls[0]).setLong(1, id).update() > 0;
@@ -168,59 +168,59 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     @Select(id = "sql_listToSet")
     Set<User> listToSet(int id) throws SQLException;
 
-    @Select("select * from user where id > ?")
+    @Select("select * FROM user1 where id > ?")
     Queue<User> listToCollection(int id) throws SQLException;
 
-    @Select(sql = "select * from user where id > ?")
+    @Select(sql = "select * FROM user1 where id > ?")
     @MappedByKey("id")
     Map<Long, User> mappedById(int id) throws SQLException;
 
-    @Select(sql = "select user.id as \"id\", first_name, last_name, device.id as \"devices.id\", device.manufacture as \"devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.id as \"address.id\", address.street as \"address.street\", address.city as \"address.city\" from user left join device on user.id = device.user_id left join address on user.id = address.user_id")
+    @Select(sql = "select user1.id as \"id\", first_name, last_name, device.id as \"devices.id\", device.manufacture as \"devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.id as \"address.id\", address.street as \"address.street\", address.city as \"address.city\" FROM user1 left join device on user1.id = device.user_id left join address on user1.id = address.user_id")
     @MergedById("id")
     Collection<User> listTomergedEntities() throws SQLException;
 
-    @Select(sql = "select user.id as \"id\", first_name, last_name, device.id as \"devices.id\", device.manufacture as \"devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.id as \"address.id\", address.street as \"address.street\", address.city as \"address.city\" from user left join device on user.id = device.user_id left join address on user.id = address.user_id")
+    @Select(sql = "select user1.id as \"id\", first_name, last_name, device.id as \"devices.id\", device.manufacture as \"devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.id as \"address.id\", address.street as \"address.street\", address.city as \"address.city\" FROM user1 left join device on user1.id = device.user_id left join address on user1.id = address.user_id")
     @MergedById("ID, firstName")
     Collection<User> listTomergedEntities_2() throws SQLException;
 
-    @Select(sql = "select user.id as \"id\", first_name, last_name, device.id as \"ds.id\", device.manufacture as \"ds.manufacture\", device.model as \"ds.model\", device.user_id as \"ds.user_id\", address.id as \"address.id\", address.street as \"address.street\", address.city as \"address.city\" from user left join device on user.id = device.user_id left join address on user.id = address.user_id")
+    @Select(sql = "select user1.id as \"id\", first_name, last_name, device.id as \"ds.id\", device.manufacture as \"ds.manufacture\", device.model as \"ds.model\", device.user_id as \"ds.user_id\", address.id as \"address.id\", address.street as \"address.street\", address.city as \"address.city\" FROM user1 left join device on user1.id = device.user_id left join address on user1.id = address.user_id")
     @MergedById("ID, firstName")
     @PrefixFieldMapping("ds = devices, as = address")
     Collection<User> listTomergedEntities_3() throws SQLException;
 
-    @Select(sql = "select user.id as \"id\", first_name, last_name, device.id as \"devices.id\", device.manufacture as \"devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.id as \"address.id\", address.street as \"address.street\", address.city as \"address.city\" from user left join device on user.id = device.user_id left join address on user.id = address.user_id")
+    @Select(sql = "select user1.id as \"id\", first_name, last_name, device.id as \"devices.id\", device.manufacture as \"devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.id as \"address.id\", address.street as \"address.street\", address.city as \"address.city\" FROM user1 left join device on user1.id = device.user_id left join address on user1.id = address.user_id")
     @MergedById("id")
     Optional<User> findOneTomergedEntities() throws SQLException;
 
-    @Select(value = "select first_name from user where id >= ?", fetchSize = 100)
+    @Select(value = "select first_name FROM user1 where id >= ?", fetchSize = 100)
     CheckedStream<String, SQLException> streamOne(long id);
 
-    @Select(value = "select first_name from user where id >= ?", fetchSize = 100)
+    @Select(value = "select first_name FROM user1 where id >= ?", fetchSize = 100)
     Stream<String> streamOne_2(long id);
 
-    @Select(value = "select first_name from user where id >= ?", fetchSize = 100)
+    @Select(value = "select first_name FROM user1 where id >= ?", fetchSize = 100)
     Optional<String> getOne(long id) throws SQLException;
 
-    //    @Select(value = "select first_name from user where id >= ?", fetchSize = 100)
+    //    @Select(value = "select first_name FROM user1 where id >= ?", fetchSize = 100)
     //    java.util.Optional<String> getOne_2(long id);
 
-    @Select("select * from user where id > ?")
+    @Select("select * FROM user1 where id > ?")
     @Handler(qualifier = "innerHandler_1")
     Queue<User> testInnerHandler(int id) throws SQLException;
 
-    //    @Select("select * from user where id > ?")
+    //    @Select("select * FROM user1 where id > ?")
     //    Queue<List<Object>> list(int id, RowFilter rowFilter, RowMapper<List<Object>> rowMapper) throws SQLException;
 
-    @Select("select * from user where id in ({ids})")
+    @Select("select * FROM user1 where id in ({ids})")
     Queue<User> listByIds(@BindList("ids") int[] ids) throws SQLException;
 
-    @Select("select * from user where first_name != ? and id in ({ids}) and last_name != ?")
+    @Select("select * FROM user1 where first_name != ? and id in ({ids}) and last_name != ?")
     Queue<User> listByIds_01(String firstNameToExclude, @BindList("ids") long[] ids, String LastNameToExclude) throws SQLException;
 
-    @Select("select * from user where id in ({ids}) and last_name != ?")
+    @Select("select * FROM user1 where id in ({ids}) and last_name != ?")
     Queue<User> listByIds_02(@BindList("ids") Object[] ids, String LastNameToExclude) throws SQLException;
 
-    @Select("select * from user where id in ({ids}) and last_name not in ({lastNames})")
+    @Select("select * FROM user1 where id in ({ids}) and last_name not in ({lastNames})")
     Queue<User> listByIds_03(@BindList("ids") Collection<Long> ids, @BindList("lastNames") Collection<String> lastNamesToExclude) throws SQLException;
 
     static final class SqlTable {

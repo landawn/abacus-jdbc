@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -40,6 +41,7 @@ import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Holder;
+import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.SQLBuilder.NSC;
@@ -92,14 +94,14 @@ public class JdbcTest {
 
             final String sql_address_drop_table = "DROP TABLE IF EXISTS address";
             final String sql_device_drop_table = "DROP TABLE IF EXISTS device";
-            final String sql_user_drop_table = "DROP TABLE IF EXISTS user";
+            final String sql_user_drop_table = "DROP TABLE IF EXISTS user1";
 
             JdbcUtil.executeUpdate(dataSource, sql_address_drop_table);
             JdbcUtil.executeUpdate(dataSource, sql_device_drop_table);
             JdbcUtil.executeUpdate(dataSource, sql_user_drop_table);
 
-            final String sql_user_creat_table = "CREATE TABLE IF NOT EXISTS user (" //
-                    + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
+            final String sql_user_creat_table = "CREATE TABLE IF NOT EXISTS user1 (" //
+                    + "id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
                     + "first_name varchar(32) NOT NULL, " //
                     + "last_name varchar(32) NOT NULL, " //
                     + "prop1 varchar(32), " //
@@ -109,7 +111,7 @@ public class JdbcTest {
             JdbcUtil.executeUpdate(dataSource, sql_user_creat_table);
 
             final String sql_user2_creat_table = "CREATE TABLE IF NOT EXISTS user2 (" //
-                    + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
+                    + "id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
                     + "first_name varchar(32) NOT NULL, " //
                     + "last_name varchar(32) NOT NULL, " //
                     + "prop1 varchar(32), " //
@@ -119,20 +121,20 @@ public class JdbcTest {
             JdbcUtil.executeUpdate(dataSource, sql_user2_creat_table);
 
             final String sql_device_creat_table = "CREATE TABLE IF NOT EXISTS device (" //
-                    + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
+                    + "id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
                     + "manufacture varchar(64) NOT NULL, " //
                     + "model varchar(32) NOT NULL, " //
-                    + "user_id bigint(20), " //
-                    + "FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE)";
+                    + "user_id bigint, " //
+                    + "FOREIGN KEY (user_id) REFERENCES user1(id) ON DELETE CASCADE)";
 
             JdbcUtil.executeUpdate(dataSource, sql_device_creat_table);
 
             final String sql_address_creat_table = "CREATE TABLE IF NOT EXISTS address (" //
-                    + "id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
+                    + "id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
                     + "street varchar(64) NOT NULL, " //
                     + "city varchar(32) NOT NULL, " //
-                    + "user_id bigint(20), " //
-                    + "FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE)";
+                    + "user_id bigint, " //
+                    + "FOREIGN KEY (user_id) REFERENCES user1(id) ON DELETE CASCADE)";
 
             JdbcUtil.executeUpdate(dataSource, sql_address_creat_table);
 
@@ -140,7 +142,7 @@ public class JdbcTest {
 
             final String sql_employee_drop_table = "DROP TABLE IF EXISTS employee";
             final String sql_employee_creat_table = "CREATE TABLE IF NOT EXISTS employee (" //
-                    + "employee_id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
+                    + "employee_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
                     + "first_name varchar(50) DEFAULT NULL, " //
                     + "last_name varchar(50) DEFAULT NULL)";
 
@@ -149,7 +151,7 @@ public class JdbcTest {
 
             final String sql_project_drop_table = "DROP TABLE IF EXISTS project";
             final String sql_project_creat_table = "CREATE TABLE IF NOT EXISTS project (" //
-                    + "project_id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
+                    + "project_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
                     + "title varchar(50) DEFAULT NULL)";
 
             JdbcUtil.executeUpdate(dataSource, sql_project_drop_table);
@@ -157,8 +159,8 @@ public class JdbcTest {
 
             final String sql_employee_dept_relationship_drop_table = "DROP TABLE IF EXISTS employee_project";
             final String sql_employee_dept_relationship_creat_table = "CREATE TABLE IF NOT EXISTS employee_project (" //
-                    + "employee_id int(11) NOT NULL, " //
-                    + "project_id int(11) NOT NULL, " //
+                    + "employee_id int NOT NULL, " //
+                    + "project_id int NOT NULL, " //
                     + "create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)";
 
             JdbcUtil.executeUpdate(dataSource, sql_employee_dept_relationship_drop_table);
@@ -382,7 +384,7 @@ public class JdbcTest {
                 .generateBuilder(true)
                 .build();
 
-        String str = JdbcUtil.generateEntityClass(dataSource, "user", ecc);
+        String str = JdbcUtil.generateEntityClass(dataSource, "user1", ecc);
         System.out.println(str);
 
         ecc = EntityCodeConfig.builder()
@@ -411,7 +413,7 @@ public class JdbcTest {
                         .build())
                 .build();
 
-        str = JdbcUtil.generateEntityClass(dataSource, "user", ecc);
+        str = JdbcUtil.generateEntityClass(dataSource, "user1", ecc);
         System.out.println(str);
 
         String additionalLines = """
@@ -423,25 +425,27 @@ public class JdbcTest {
 
         ecc.setClassName("UserQueryAllResult");
         ecc.setAdditionalFieldsOrLines(additionalLines);
-        str = JdbcUtil.generateEntityClass(dataSource, "UserQueryAllResult", "select * from user", ecc);
+        str = JdbcUtil.generateEntityClass(dataSource, "UserQueryAllResult", "select * from user1", ecc);
         System.out.println(str);
+
+        IOUtil.deleteIfExists(new File("./samples/codes/entity/User1.java"));
     }
 
     @Test
     public void test_generateSql() {
-        String sql = JdbcUtil.generateSelectSql(dataSource, "user");
+        String sql = JdbcUtil.generateSelectSql(dataSource, "user1");
         N.println(sql);
 
-        sql = JdbcUtil.generateInsertSql(dataSource, "user");
+        sql = JdbcUtil.generateInsertSql(dataSource, "user1");
         N.println(sql);
 
-        sql = JdbcUtil.generateNamedInsertSql(dataSource, "user");
+        sql = JdbcUtil.generateNamedInsertSql(dataSource, "user1");
         N.println(sql);
 
-        sql = JdbcUtil.generateUpdateSql(dataSource, "user");
+        sql = JdbcUtil.generateUpdateSql(dataSource, "user1");
         N.println(sql);
 
-        sql = JdbcUtil.generateNamedUpdateSql(dataSource, "user");
+        sql = JdbcUtil.generateNamedUpdateSql(dataSource, "user1");
         N.println(sql);
     }
 
@@ -465,12 +469,12 @@ public class JdbcTest {
         long nextStartId = 0; //  0 => start id
 
         List<List<User>> list1 = JdbcUtil
-                .queryByPage(dataSource, "select * from user where id > ? order by id limit 10", 10,
+                .queryByPage(dataSource, "select * from user1 where id > ? order by id limit 10", 10,
                         (stmt, ret) -> stmt.setLong(1, ret == null ? 0 : N.lastElement(ret).get().getId()), User.class)
                 .toList();
 
         List<List<User>> list2 = Stream.of(Holder.of(nextStartId)).cycled().mapE(it -> {
-            List<User> page = JdbcUtil.prepareQuery(dataSource, "select * from user where id > ?  order by id limit 10")
+            List<User> page = JdbcUtil.prepareQuery(dataSource, "select * from user1 where id > ?  order by id limit 10")
                     .setFetchDirectionToForward()
                     .setFetchSize(10)
                     .setLong(1, it.value())
@@ -489,7 +493,7 @@ public class JdbcTest {
     @Test
     public void test_copy() throws Exception {
         {
-            JdbcUtil.prepareQuery(dataSource, "delete from user").update();
+            JdbcUtil.prepareQuery(dataSource, "delete from user1").update();
             JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
 
             List<User> users = IntStream.range(1, 9999)
@@ -501,17 +505,17 @@ public class JdbcTest {
 
             assertTrue(JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class).size() == 0);
 
-            JdbcUtils.copy(dataSource, dataSource2, "user", "user2");
+            JdbcUtils.copy(dataSource, dataSource2, "user1", "user2");
 
-            assertEquals(JdbcUtil.prepareQuery(dataSource, "select * from user").list(User.class),
+            assertEquals(JdbcUtil.prepareQuery(dataSource, "select * from user1").list(User.class),
                     JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class));
 
-            JdbcUtil.prepareQuery(dataSource, "delete from user").update();
+            JdbcUtil.prepareQuery(dataSource, "delete from user1").update();
             JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
         }
 
         {
-            JdbcUtil.prepareQuery(dataSource, "delete from user").update();
+            JdbcUtil.prepareQuery(dataSource, "delete from user1").update();
             JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
 
             List<User> users = IntStream.range(1, 9999)
@@ -523,9 +527,9 @@ public class JdbcTest {
 
             assertTrue(JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class).size() == 0);
 
-            JdbcUtils.copy(dataSource, dataSource2, "user", "user2", N.asList("first_name", "last_name", "email", "create_time"));
+            JdbcUtils.copy(dataSource, dataSource2, "user1", "user2", N.asList("first_name", "last_name", "email", "create_time"));
 
-            JdbcUtil.prepareQuery(dataSource, "delete from user").update();
+            JdbcUtil.prepareQuery(dataSource, "delete from user1").update();
             JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
         }
 

@@ -34,7 +34,7 @@ public class PreparedQueryTest {
 
         Long id = userDao.insert(user);
 
-        List<String> firstNameV = JdbcUtil.prepareQuery(dataSource, "select first_name from user where id = ?") //
+        List<String> firstNameV = JdbcUtil.prepareQuery(dataSource, "select first_name from user1 where id = ?") //
                 .setLong(1, id)
                 .queryForSingleResult(Type.ofList(String.class))
                 .orElseNull();
@@ -60,7 +60,7 @@ public class PreparedQueryTest {
 
         long minId = N.min(ids);
 
-        String sql = "SELECT acc.id AS \"acc.id\", acc.FIRST_NAME AS \"acc.firstName\", acc.last_name AS \"lastName\", acc.prop1 AS \"nickName\", acc.email AS \"email\", acc.create_time AS \"createTime\" FROM user acc";
+        String sql = "SELECT acc.id AS \"acc.id\", acc.FIRST_NAME AS \"acc.firstName\", acc.last_name AS \"lastName\", acc.prop1 AS \"nickName\", acc.email AS \"email\", acc.create_time AS \"createTime\" FROM user1 acc";
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .query()
@@ -169,8 +169,8 @@ public class PreparedQueryTest {
                         Jdbc.BiRowMapper.builder().get("id", ResultSet::getLong).get("firstName", ResultSet::getString).getDate("createTime").to(Map.class))
                 .ifPresent(System.out::println);
 
-        JdbcUtil.prepareQuery(dataSource, "select id from user").queryForBigInteger().ifPresent(Fn.println());
-        JdbcUtil.prepareQuery(dataSource, "select id from user").queryForBigDecimal().ifPresent(Fn.println());
+        JdbcUtil.prepareQuery(dataSource, "select id from user1").queryForBigInteger().ifPresent(Fn.println());
+        JdbcUtil.prepareQuery(dataSource, "select id from user1").queryForBigDecimal().ifPresent(Fn.println());
 
         sql = PSC.deleteFrom(User.class).where("id = ?").sql();
         JdbcUtil.prepareQuery(dataSource, sql) //

@@ -220,7 +220,7 @@ public class DaoTest {
         userDao.batchInsertWithId(users);
 
         try (Connection conn = JdbcTest.dataSource.getConnection();
-                PreparedStatement stmt = conn.prepareStatement("select * from user");
+                PreparedStatement stmt = conn.prepareStatement("select * from user1");
                 ResultSet rs = stmt.executeQuery()) {
             JdbcUtils.exportCSV(System.out, rs);
         }
@@ -229,7 +229,7 @@ public class DaoTest {
         N.println(Strings.repeat("=", 80));
 
         try (Connection conn = JdbcTest.dataSource.getConnection();
-                PreparedStatement stmt = conn.prepareStatement("select * from user");
+                PreparedStatement stmt = conn.prepareStatement("select * from user1");
                 ResultSet rs = stmt.executeQuery()) {
             JdbcUtils.exportCSV(System.out, rs, 0, 10, true, false);
         }
@@ -275,24 +275,24 @@ public class DaoTest {
         List<Long> ids = userDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
-        assertNotNull(userDao.selectByIdWithDefine("user", "last_name", ids.get(0)));
-        assertEquals(ids.size(), userDao.selectByIdWithDefine_2("user", "id", ids.get(0)).size());
+        assertNotNull(userDao.selectByIdWithDefine("user1", "last_name", ids.get(0)));
+        assertEquals(ids.size(), userDao.selectByIdWithDefine_2("user1", "id", ids.get(0)).size());
 
-        assertEquals(ids.size(), userDao.selectByIdWithDefine_3("user", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
+        assertEquals(ids.size(), userDao.selectByIdWithDefine_3("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
 
-        assertEquals(ids.size(), userDao.selectByIdWithDefine_4("user", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
+        assertEquals(ids.size(), userDao.selectByIdWithDefine_4("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
 
-        assertTrue(userDao.exists("user", "last_name", ids.get(0)));
-        assertTrue(userDao.isThere("user", "last_name", ids.get(0)));
+        assertTrue(userDao.exists("user1", "last_name", ids.get(0)));
+        assertTrue(userDao.isThere("user1", "last_name", ids.get(0)));
 
-        assertEquals(1, userDao.deleteByIdWithDefine("user", ids.get(0)));
-        assertEquals(ids.size() - 1, userDao.deleteByIdsWithDefine("user", ids));
+        assertEquals(1, userDao.deleteByIdWithDefine("user1", ids.get(0)));
+        assertEquals(ids.size() - 1, userDao.deleteByIdsWithDefine("user1", ids));
 
-        assertNull(userDao.selectByIdWithDefine("user", "last_name", ids.get(0)));
-        assertEquals(0, userDao.selectByIdWithDefine_2("user", "id", ids.get(0)).size());
+        assertNull(userDao.selectByIdWithDefine("user1", "last_name", ids.get(0)));
+        assertEquals(0, userDao.selectByIdWithDefine_2("user1", "id", ids.get(0)).size());
 
-        assertFalse(userDao.exists("user", "last_name", ids.get(0)));
-        assertFalse(userDao.isThere("user", "last_name", ids.get(0)));
+        assertFalse(userDao.exists("user1", "last_name", ids.get(0)));
+        assertFalse(userDao.isThere("user1", "last_name", ids.get(0)));
     }
 
     @Test
@@ -315,8 +315,8 @@ public class DaoTest {
 
         assertEquals(ids.size(), userDao.listByIds_03(ids, N.asList("xxx")).size());
 
-        assertEquals(1, userDao.deleteByIdWithDefine("user", ids.get(0)));
-        assertEquals(ids.size() - 1, userDao.deleteByIdsWithDefine("user", ids));
+        assertEquals(1, userDao.deleteByIdWithDefine("user1", ids.get(0)));
+        assertEquals(ids.size() - 1, userDao.deleteByIdsWithDefine("user1", ids));
 
         userDao.delete(CB.where(CF.ge("id", 0)).limit(10000));
     }
@@ -598,7 +598,7 @@ public class DaoTest {
             //
         }
 
-        readOnlyUserDao.prepareQuery("select * from user").stream(List.class).forEach(Fn.println());
+        readOnlyUserDao.prepareQuery("select * from user1").stream(List.class).forEach(Fn.println());
 
         try {
             readOnlyUserDao.prepareQuery("delete from user").execute();
@@ -765,8 +765,8 @@ public class DaoTest {
             userDao.findFirst(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).ifPresent(Fn.println());
         }
 
-        userDao.prepareQuery("select * from user").list(ImmutableUser.class).forEach(Fn.println());
-        userDao.prepareQuery("select * from user").list(Jdbc.BiRowMapper.to(ImmutableUser.class)).forEach(Fn.println());
+        userDao.prepareQuery("select * from user1").list(ImmutableUser.class).forEach(Fn.println());
+        userDao.prepareQuery("select * from user1").list(Jdbc.BiRowMapper.to(ImmutableUser.class)).forEach(Fn.println());
 
         userDao.getOne(0).ifPresent(Fn.println());
 
@@ -882,7 +882,7 @@ public class DaoTest {
 
         userDao.deleteById(100L);
 
-        assertEquals(1, JdbcUtil.executeUpdate(dataSource, "delete from user where id = ? ", 101));
+        assertEquals(1, JdbcUtil.executeUpdate(dataSource, "delete from user1 where id = ? ", 101));
     }
 
     @Test
@@ -911,7 +911,7 @@ public class DaoTest {
         userDao.loadAllJoinEntities(userFromDB);
         System.out.println(userFromDB);
 
-        final String query = "select first_name, last_name, device.manufacture as \" devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.street as \"address.street\", address.city as \"address.city\" from user left join device on user.id = device.user_id left join address on user.id = address.user_id";
+        final String query = "select first_name, last_name, device.manufacture as \" devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.street as \"address.street\", address.city as \"address.city\" from user1 left join device on user1.id = device.user_id left join address on user1.id = address.user_id";
 
         userDao.prepareQuery(query).list(User.class).forEach(Fn.println());
         userDao.prepareQuery(query).query(Jdbc.ResultExtractor.toDataSet(User.class)).println();

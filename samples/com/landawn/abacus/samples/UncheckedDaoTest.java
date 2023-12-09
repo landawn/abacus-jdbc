@@ -58,24 +58,24 @@ public class UncheckedDaoTest {
         List<Long> ids = uncheckedUserDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
-        assertNotNull(uncheckedUserDao.selectByIdWithDefine("user", N.asList("last_name", "first_name"), ids.get(0)));
-        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithDefine_2("user", "id", ids.get(0)).size());
+        assertNotNull(uncheckedUserDao.selectByIdWithDefine("user1", N.asList("last_name", "first_name"), ids.get(0)));
+        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithDefine_2("user1", "id", ids.get(0)).size());
 
-        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithDefine_3("user", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
+        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithDefine_3("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
 
-        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithDefine_4("user", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
+        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithDefine_4("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
 
-        assertTrue(uncheckedUserDao.exists("user", "last_name", ids.get(0)));
-        assertTrue(JdbcUtil.call(() -> uncheckedUserDao.isThere("user", "last_name", ids.get(0))));
+        assertTrue(uncheckedUserDao.exists("user1", "last_name", ids.get(0)));
+        assertTrue(JdbcUtil.call(() -> uncheckedUserDao.isThere("user1", "last_name", ids.get(0))));
 
-        assertEquals(1, uncheckedUserDao.deleteByIdWithDefine("user", ids.get(0)));
-        assertEquals(ids.size() - 1, uncheckedUserDao.deleteByIdsWithDefine("user", ids));
+        assertEquals(1, uncheckedUserDao.deleteByIdWithDefine("user1", ids.get(0)));
+        assertEquals(ids.size() - 1, uncheckedUserDao.deleteByIdsWithDefine("user1", ids));
 
-        assertNull(uncheckedUserDao.selectByIdWithDefine("user", N.asList("last_name", "first_name"), ids.get(0)));
-        assertEquals(0, uncheckedUserDao.selectByIdWithDefine_2("user", "id", ids.get(0)).size());
+        assertNull(uncheckedUserDao.selectByIdWithDefine("user1", N.asList("last_name", "first_name"), ids.get(0)));
+        assertEquals(0, uncheckedUserDao.selectByIdWithDefine_2("user1", "id", ids.get(0)).size());
 
-        assertFalse(uncheckedUserDao.exists("user", "last_name", ids.get(0)));
-        assertFalse(JdbcUtil.call(() -> uncheckedUserDao.isThere("user", "last_name", ids.get(0))));
+        assertFalse(uncheckedUserDao.exists("user1", "last_name", ids.get(0)));
+        assertFalse(JdbcUtil.call(() -> uncheckedUserDao.isThere("user1", "last_name", ids.get(0))));
     }
 
     //    @Test
@@ -540,7 +540,7 @@ public class UncheckedDaoTest {
 
         uncheckedUserDao.deleteById(100L);
 
-        assertEquals(1, JdbcUtil.executeUpdate(dataSource, "delete from user where id = ? ", 101));
+        assertEquals(1, JdbcUtil.executeUpdate(dataSource, "delete from user1 where id = ? ", 101));
     }
 
     @Test

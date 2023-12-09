@@ -28,43 +28,43 @@ import com.landawn.abacus.util.stream.Stream;
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
 public interface UncheckedUserDao
         extends UncheckedCrudDao<User, Long, SQLBuilder.PSC, UncheckedUserDao>, UncheckedJoinEntityHelper<User, SQLBuilder.PSC, UncheckedUserDao> {
-    @Insert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
+    @Insert("INSERT INTO user1 (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
     void insertWithId(User user);
 
-    @Update("UPDATE user SET first_name = :firstName, last_name = :lastName WHERE id = :id")
+    @Update("UPDATE user1 SET first_name = :firstName, last_name = :lastName WHERE id = :id")
     int updateFirstAndLastName(@Bind("firstName") String newFirstName, @Bind("lastName") String newLastName, @Bind("id") long id);
 
     @SqlLogEnabled
-    @Select("SELECT first_name, last_name FROM user WHERE id = :id")
+    @Select("SELECT first_name, last_name FROM user1 WHERE id = :id")
     User getFirstAndLastNameBy(@Bind("id") long id);
 
     @SqlLogEnabled(false)
-    @Select("SELECT id, first_name, last_name, email FROM user")
+    @Select("SELECT id, first_name, last_name, email FROM user1")
     Stream<User> allUsers();
 
-    @Insert(sql = "INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)", isBatch = true)
+    @Insert(sql = "INSERT INTO user1 (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)", isBatch = true)
     List<Long> batchInsertWithId(List<User> users);
 
-    @Insert(sql = "INSERT INTO user (first_name, last_name, email) VALUES (:firstName, :lastName, :email)", isBatch = true, batchSize = 123)
+    @Insert(sql = "INSERT INTO user1 (first_name, last_name, email) VALUES (:firstName, :lastName, :email)", isBatch = true, batchSize = 123)
     List<Long> batchInsertWithoutId(List<User> users);
 
-    @Update(sql = "UPDATE user SET first_name = :firstName, last_name = :lastName WHERE id = :id", isBatch = true)
+    @Update(sql = "UPDATE user1 SET first_name = :firstName, last_name = :lastName WHERE id = :id", isBatch = true)
     int batchUpdate(List<User> users);
 
-    @Delete(sql = "DELETE FROM user where id = :id", isBatch = true)
+    @Delete(sql = "DELETE FROM user1 where id = :id", isBatch = true)
     int batchDelete(List<User> users);
 
-    @Delete(sql = "DELETE FROM user where id = :id", isBatch = true, batchSize = 10000)
+    @Delete(sql = "DELETE FROM user1 where id = :id", isBatch = true, batchSize = 10000)
     int batchDeleteByIds(List<Long> userIds);
 
-    @Delete(sql = "DELETE FROM user where id = ?", isBatch = true, batchSize = 10000)
+    @Delete(sql = "DELETE FROM user1 where id = ?", isBatch = true, batchSize = 10000)
     int batchDeleteByIds_1(List<Long> userIds);
 
     default int[] batchDeleteByIds_2(List<Long> userIds) throws SQLException {
-        return prepareNamedQuery("DELETE FROM user where id = :id").addBatchParameters(userIds, long.class).batchUpdate();
+        return prepareNamedQuery("DELETE FROM user1 where id = :id").addBatchParameters(userIds, long.class).batchUpdate();
     }
 
-    @Sqls({ "SELECT * FROM user where id >= :id", "SELECT * FROM user where id >= :id" })
+    @Sqls({ "SELECT * FROM user1 where id >= :id", "SELECT * FROM user1 where id >= :id" })
     default List<User> listUserByAnnoSql(long id, String... sqls) {
         try {
             return prepareNamedQuery(sqls[0]).setLong(1, id).list(User.class);
@@ -74,7 +74,7 @@ public interface UncheckedUserDao
     }
 
     @Transactional
-    @Sqls({ "update user set first_name = ? where id = -1", "SELECT * FROM user where id >= :id" })
+    @Sqls({ "update user1 set first_name = ? where id = -1", "SELECT * FROM user1 where id >= :id" })
     default List<User> listUserByAnnoSql2(String firstName, long id, String... sqls) {
         try {
             prepareQuery(sqls[0]).setString(1, firstName).update();
@@ -85,7 +85,7 @@ public interface UncheckedUserDao
     }
 
     @Transactional(propagation = Propagation.SUPPORTS)
-    @Sqls("DELETE from user where id = ?")
+    @Sqls("DELETE from user1 where id = ?")
     default boolean delete_propagation_SUPPORTS(long id, String... sqls) {
         N.sleep(1001);
 
@@ -98,7 +98,7 @@ public interface UncheckedUserDao
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Handler(qualifier = "handler2")
-    @Sqls("DELETE from user where id = ?")
+    @Sqls("DELETE from user1 where id = ?")
     default boolean delete_propagation_REQUIRES_NEW(long id, String... sqls) {
         try {
             return prepareQuery(sqls[0]).setLong(1, id).update() > 0;
