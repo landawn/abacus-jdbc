@@ -6534,7 +6534,116 @@ public final class JdbcUtil {
         //        entityDaoPool.put(getTargetEntityClass(daoInterface), dao);
         //    }
 
-        return DaoImpl.createDao(daoInterface, ds, sqlMapper, cache, executor);
+        return DaoImpl.createDao(daoInterface, null, ds, sqlMapper, cache, executor);
+    }
+
+    /**
+     *
+     * @param <TD>
+     * @param daoInterface
+     * @param targetTableName
+     * @param ds
+     * @return
+     */
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds) {
+        return createDao(daoInterface, targetTableName, ds, asyncExecutor.getExecutor());
+    }
+
+    /**
+     *
+     * @param <TD>
+     * @param daoInterface
+     * @param targetTableName
+     * @param ds
+     * @param sqlMapper
+     * @return
+     */
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
+            final SQLMapper sqlMapper) {
+        return createDao(daoInterface, targetTableName, ds, sqlMapper, asyncExecutor.getExecutor());
+    }
+
+    /**
+     *
+     * @param <TD>
+     * @param daoInterface
+     * @param targetTableName
+     * @param ds
+     * @param sqlMapper
+     * @param cache don't share cache between Dao instances.
+     * @return
+     * @deprecated
+     */
+    @Deprecated
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
+            final SQLMapper sqlMapper, final Cache<String, Object> cache) {
+        return createDao(daoInterface, targetTableName, ds, sqlMapper, cache, asyncExecutor.getExecutor());
+    }
+
+    /**
+     *
+     * @param <TD>
+     * @param daoInterface
+     * @param targetTableName
+     * @param ds
+     * @param executor
+     * @return
+     */
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
+            final Executor executor) {
+        return createDao(daoInterface, targetTableName, ds, null, executor);
+    }
+
+    /**
+     *
+     * @param <TD>
+     * @param daoInterface
+     * @param targetTableName
+     * @param ds
+     * @param sqlMapper
+     * @param executor
+     * @return
+     */
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
+            final SQLMapper sqlMapper, final Executor executor) {
+        return createDao(daoInterface, targetTableName, ds, sqlMapper, null, executor);
+    }
+
+    /**
+     *
+     * @param <TD>
+     * @param daoInterface
+     * @param targetTableName
+     * @param ds
+     * @param sqlMapper
+     * @param cache don't share cache between Dao instances.
+     * @param executor
+     * @return
+     * @deprecated
+     */
+    @Deprecated
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
+            final SQLMapper sqlMapper, final Cache<String, Object> cache, final Executor executor) {
+
+        //    synchronized (dsEntityDaoPool) {
+        //        @SuppressWarnings("rawtypes")
+        //        Map<Class<?>, Dao> entityDaoPool = dsEntityDaoPool.get(ds);
+        //
+        //        if (entityDaoPool == null) {
+        //            entityDaoPool = new HashMap<>();
+        //            dsEntityDaoPool.put(ds, entityDaoPool);
+        //        }
+        //
+        //        entityDaoPool.put(getTargetEntityClass(daoInterface), dao);
+        //    }
+
+        return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlMapper, cache, executor);
     }
 
     //    /**

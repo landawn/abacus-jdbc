@@ -258,6 +258,16 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      *
+     * @return
+     * @deprecated for internal use only.
+     */
+    @Deprecated
+    @NonDBOperation
+    @Internal
+    String targetTableName();
+
+    /**
+     *
      *
      * @return
      * @deprecated for internal use only.
