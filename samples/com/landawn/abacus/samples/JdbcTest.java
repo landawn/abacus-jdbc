@@ -69,6 +69,7 @@ public class JdbcTest {
     static final DataSource dataSource = JdbcUtil.createHikariDataSource("jdbc:h2:~/test", "sa", "");
     static final DataSource dataSource2 = JdbcUtil.createC3p0DataSource("jdbc:h2:~/test", "sa", "");
     static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
+    static final UserDao userDao12 = JdbcUtil.createDao(UserDao.class, "user2", dataSource);
     static final UserDaoL userDao2 = JdbcUtil.createDao(UserDaoL.class, dataSource);
     static final MyUserDaoA myUserDaoA = JdbcUtil.createDao(MyUserDaoA.class, dataSource);
     static final UncheckedUserDao uncheckedUserDao = JdbcUtil.createDao(UncheckedUserDao.class, dataSource);
@@ -334,6 +335,32 @@ public class JdbcTest {
         userDao.allUsers().map(e -> e.getFirstName() + " " + e.getLastName()).forEach(Fn.println());
 
         userDao.deleteById(100L);
+
+        // How about transaction?
+        // See last sample.
+    }
+
+    @Test
+    public void crud_by_UsreDao12() throws SQLException {
+        userDao12.delete(CF.alwaysTrue());
+
+        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        userDao12.insert(user);
+
+        List<User> entities = userDao12.prepareQuery("select * from user2").list(User.class);
+        assertEquals(user.getEmail(), entities.get(0).getEmail());
+
+        User userFromDB = userDao12.gett(100L);
+        System.out.println(userFromDB);
+
+        // There are so much more can be done by findFirst/list/stream/
+        // userDao.stream(CF.eq("firstName", "Forrest")).filter(u -> u.getId() > 10).map(e -> e).groupBy(keyMapper);
+
+        userDao12.updateFirstAndLastName("Tom", "Hanks", 100);
+
+        userDao12.allUsers().map(e -> e.getFirstName() + " " + e.getLastName()).forEach(Fn.println());
+
+        userDao12.batchDelete(entities);
 
         // How about transaction?
         // See last sample.
