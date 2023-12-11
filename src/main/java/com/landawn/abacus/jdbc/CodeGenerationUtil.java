@@ -175,9 +175,12 @@ final class CodeGenerationUtil {
 
         final Class<? extends Annotation> idAnnotationClass = configToUse.getIdAnnotationClass() == null ? Id.class : configToUse.getIdAnnotationClass();
 
-        final boolean isJavaPersistenceTable = "javax.persistence.Table".equals(ClassUtil.getCanonicalClassName(tableAnnotationClass));
-        final boolean isJavaPersistenceColumn = "javax.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass));
-        final boolean isJavaPersistenceId = "javax.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass));
+        final boolean isJavaPersistenceTable = "javax.persistence.Table".equals(ClassUtil.getCanonicalClassName(tableAnnotationClass))
+                || "jakarta.persistence.Table".equals(ClassUtil.getCanonicalClassName(tableAnnotationClass));
+        final boolean isJavaPersistenceColumn = "javax.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass))
+                || "jakarta.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass));
+        final boolean isJavaPersistenceId = "javax.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass))
+                || "jakarta.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass));
 
         final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = Maps.create(N.nullToEmpty(configToUse.getCustomizedFields()), tp -> tp._1);
         final Map<String, Tuple2<String, String>> customizedFieldDbTypeMap = Maps.create(N.nullToEmpty(configToUse.getCustomizedFieldDbTypes()), tp -> tp._1);
