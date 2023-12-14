@@ -94,6 +94,30 @@ public final class JdbcUtils {
      * Imports the data from <code>DataSet</code> to database.
      *
      * @param dataset
+     * @param sourceDataSource
+     * @param insertSQL the column order in the sql must be consistent with the column order in the DataSet. Here is sample about how to create the sql:
+     * <pre><code>
+     *         List<String> columnNameList = new ArrayList<>(dataset.columnNameList());
+     *         columnNameList.retainAll(yourSelectColumnNames);
+     *         String sql = RE.insert(columnNameList).into(tableName).sql();
+     * </code></pre>
+     * @return
+     * @throws SQLException
+     */
+    public static int importData(final DataSet dataset, final javax.sql.DataSource sourceDataSource, final String insertSQL) throws SQLException {
+        final Connection conn = sourceDataSource.getConnection();
+
+        try {
+            return importData(dataset, conn, insertSQL);
+        } finally {
+            JdbcUtil.releaseConnection(conn, sourceDataSource);
+        }
+    }
+
+    /**
+     * Imports the data from <code>DataSet</code> to database.
+     *
+     * @param dataset
      * @param conn
      * @param insertSQL the column order in the sql must be consistent with the column order in the DataSet. Here is sample about how to create the sql:
      * <pre><code>
@@ -199,14 +223,9 @@ public final class JdbcUtils {
     public static <E extends Exception> int importData(final DataSet dataset, final Collection<String> selectColumnNames, final int offset, final int count,
             final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize,
             final long batchIntervalInMillis) throws SQLException, E {
-        PreparedStatement stmt = null;
 
-        try {
-            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
-
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importData(dataset, selectColumnNames, offset, count, filter, stmt, batchSize, batchIntervalInMillis);
-        } finally {
-            JdbcUtil.closeQuietly(stmt);
         }
     }
 
@@ -305,14 +324,9 @@ public final class JdbcUtils {
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
             final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize,
             final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException, E {
-        PreparedStatement stmt = null;
 
-        try {
-            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
-
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importData(dataset, offset, count, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
-        } finally {
-            JdbcUtil.closeQuietly(stmt);
         }
     }
 
@@ -409,14 +423,9 @@ public final class JdbcUtils {
             final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSQL, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter)
             throws SQLException, E {
-        PreparedStatement stmt = null;
 
-        try {
-            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
-
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importData(dataset, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
-        } finally {
-            JdbcUtil.closeQuietly(stmt);
         }
     }
 
@@ -736,6 +745,29 @@ public final class JdbcUtils {
      *
      * @param <E>
      * @param file
+     * @param sourceDataSource
+     * @param insertSQL
+     * @param func
+     * @return
+     * @throws SQLException
+     * @throws IOException
+     * @throws E
+     */
+    public static <E extends Exception> long importData(final File file, final javax.sql.DataSource sourceDataSource, final String insertSQL,
+            final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
+        final Connection conn = sourceDataSource.getConnection();
+
+        try {
+            return importData(file, conn, insertSQL, func);
+        } finally {
+            JdbcUtil.releaseConnection(conn, sourceDataSource);
+        }
+    }
+
+    /**
+     *
+     * @param <E>
+     * @param file
      * @param conn
      * @param insertSQL
      * @param func
@@ -767,14 +799,9 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> long importData(final File file, final long offset, final long count, final Connection conn, final String insertSQL,
             final int batchSize, final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
-        PreparedStatement stmt = null;
 
-        try {
-            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
-
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importData(file, offset, count, stmt, batchSize, batchIntervalInMillis, func);
-        } finally {
-            JdbcUtil.closeQuietly(stmt);
         }
     }
 
@@ -822,6 +849,29 @@ public final class JdbcUtils {
      *
      * @param <E>
      * @param is
+     * @param sourceDataSource
+     * @param insertSQL
+     * @param func
+     * @return
+     * @throws SQLException
+     * @throws IOException
+     * @throws E
+     */
+    public static <E extends Exception> long importData(final InputStream is, final javax.sql.DataSource sourceDataSource, final String insertSQL,
+            final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
+        final Connection conn = sourceDataSource.getConnection();
+
+        try {
+            return importData(is, conn, insertSQL, func);
+        } finally {
+            JdbcUtil.releaseConnection(conn, sourceDataSource);
+        }
+    }
+
+    /**
+     *
+     * @param <E>
+     * @param is
      * @param conn
      * @param insertSQL
      * @param func
@@ -854,14 +904,8 @@ public final class JdbcUtils {
     public static <E extends Exception> long importData(final InputStream is, final long offset, final long count, final Connection conn,
             final String insertSQL, final int batchSize, final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func)
             throws SQLException, IOException, E {
-        PreparedStatement stmt = null;
-
-        try {
-            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
-
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importData(is, offset, count, stmt, batchSize, batchIntervalInMillis, func);
-        } finally {
-            JdbcUtil.closeQuietly(stmt);
         }
     }
 
@@ -908,6 +952,29 @@ public final class JdbcUtils {
      *
      * @param <E>
      * @param reader
+     * @param sourceDataSource
+     * @param insertSQL
+     * @param func
+     * @return
+     * @throws SQLException
+     * @throws IOException
+     * @throws E
+     */
+    public static <E extends Exception> long importData(final Reader reader, final javax.sql.DataSource sourceDataSource, final String insertSQL,
+            final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
+        final Connection conn = sourceDataSource.getConnection();
+
+        try {
+            return importData(reader, conn, insertSQL, func);
+        } finally {
+            JdbcUtil.releaseConnection(conn, sourceDataSource);
+        }
+    }
+
+    /**
+     *
+     * @param <E>
+     * @param reader
      * @param conn
      * @param insertSQL
      * @param func
@@ -939,14 +1006,8 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> long importData(final Reader reader, final long offset, final long count, final Connection conn, final String insertSQL,
             final int batchSize, final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
-        PreparedStatement stmt = null;
-
-        try {
-            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
-
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importData(reader, offset, count, stmt, batchSize, batchIntervalInMillis, func);
-        } finally {
-            JdbcUtil.closeQuietly(stmt);
         }
     }
 
@@ -1086,14 +1147,8 @@ public final class JdbcUtils {
     public static <T, E extends Exception> long importData(final Iterator<? extends T> iter, final long offset, final long count,
             final Throwables.Predicate<? super T, E> filter, final Connection conn, final String insertSQL, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException, E {
-        PreparedStatement stmt = null;
-
-        try {
-            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
-
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importData(iter, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
-        } finally {
-            JdbcUtil.closeQuietly(stmt);
         }
     }
 
@@ -1247,14 +1302,9 @@ public final class JdbcUtils {
     //    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final boolean skipTitle,
     //            final Throwables.Predicate<String[], E> filter, final Connection conn, final String insertSQL, final int batchSize,
     //            final long batchIntervalInMillis, final List<? extends Type> columnTypeList) throws SQLException, IOException, E {
-    //        PreparedStatement stmt = null;
     //
-    //        try {
-    //            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
-    //
+    //        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
     //            return importCSV(file, offset, count, skipTitle, filter, stmt, batchSize, batchIntervalInMillis, columnTypeList);
-    //        } finally {
-    //            JdbcUtil.closeQuietly(stmt);
     //        }
     //    }
     //
@@ -1561,14 +1611,9 @@ public final class JdbcUtils {
     //    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
     //            final Connection conn, final String insertSQL, final int batchSize, final long batchIntervalInMillis,
     //            final Map<String, ? extends Type> columnTypeMap) throws SQLException, IOException, E {
-    //        PreparedStatement stmt = null;
     //
-    //        try {
-    //            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
-    //
+    //        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
     //            return importCSV(file, offset, count, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
-    //        } finally {
-    //            JdbcUtil.closeQuietly(stmt);
     //        }
     //    }
     //
@@ -1843,6 +1888,28 @@ public final class JdbcUtils {
      * @throws SQLException
      * @throws IOException
      */
+    public static long importCSV(final File file, final javax.sql.DataSource sourceDataSource, final String insertSQL,
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
+        final Connection conn = sourceDataSource.getConnection();
+
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
+            return importCSV(file, stmt, stmtSetter);
+        } finally {
+            JdbcUtil.releaseConnection(conn, sourceDataSource);
+        }
+    }
+
+    /**
+     * Imports the data from CSV to database.
+     *
+     * @param file
+     * @param conn
+     * @param insertSQL the column order in the sql should be consistent with the column order in the CSV file.
+     * @param stmtSetter
+     * @return
+     * @throws SQLException
+     * @throws IOException
+     */
     public static long importCSV(final File file, final Connection conn, final String insertSQL,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
         return importCSV(file, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
@@ -1888,14 +1955,9 @@ public final class JdbcUtils {
     public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
             final Connection conn, final String insertSQL, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E {
-        PreparedStatement stmt = null;
 
-        try {
-            stmt = JdbcUtil.prepareStatement(conn, insertSQL);
-
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importCSV(file, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
-        } finally {
-            JdbcUtil.closeQuietly(stmt);
         }
     }
 
@@ -1958,6 +2020,28 @@ public final class JdbcUtils {
     }
 
     /**
+     * Imports the data from CSV to database.
+     *
+     * @param is
+     * @param conn
+     * @param insertSQL the column order in the sql should be consistent with the column order in the CSV file.
+     * @param stmtSetter
+     * @return
+     * @throws SQLException
+     * @throws IOException
+     */
+    public static long importCSV(final InputStream is, final javax.sql.DataSource sourceDataSource, final String insertSQL,
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
+        final Connection conn = sourceDataSource.getConnection();
+
+        try (PreparedStatement stmt = conn.prepareStatement(insertSQL)) {
+            return importCSV(is, stmt, stmtSetter);
+        } finally {
+            JdbcUtil.releaseConnection(conn, sourceDataSource);
+        }
+    }
+
+    /**
      *
      * @param is
      * @param stmt
@@ -2012,6 +2096,28 @@ public final class JdbcUtils {
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E {
         final Reader reader = IOUtil.newInputStreamReader(is);
         return importCSV(reader, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+    }
+
+    /**
+     * Imports the data from CSV to database.
+     *
+     * @param reader
+     * @param conn
+     * @param insertSQL the column order in the sql should be consistent with the column order in the CSV file.
+     * @param stmtSetter
+     * @return
+     * @throws SQLException
+     * @throws IOException
+     */
+    public static long importCSV(final Reader reader, final javax.sql.DataSource sourceDataSource, final String insertSQL,
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
+        final Connection conn = sourceDataSource.getConnection();
+
+        try (PreparedStatement stmt = conn.prepareStatement(insertSQL)) {
+            return importCSV(reader, stmt, stmtSetter);
+        } finally {
+            JdbcUtil.releaseConnection(conn, sourceDataSource);
+        }
     }
 
     /**
@@ -2126,6 +2232,28 @@ public final class JdbcUtils {
      * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
+     * @param sourceDataSource
+     * @param querySQL
+     * @return
+     * @throws SQLException
+     * @throws IOException
+     */
+    public static long exportCSV(final File out, final javax.sql.DataSource sourceDataSource, final String querySQL) throws SQLException, IOException {
+        final Connection conn = sourceDataSource.getConnection();
+
+        try {
+            return exportCSV(out, conn, querySQL);
+        } finally {
+            JdbcUtil.releaseConnection(conn, sourceDataSource);
+        }
+    }
+
+    /**
+     * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
      * @param conn
      * @param querySQL
      * @return
@@ -2177,16 +2305,12 @@ public final class JdbcUtils {
     public static long exportCSV(final File out, final Connection conn, final String querySQL, final Collection<String> selectColumnNames, final long offset,
             final long count, final boolean writeTitle, final boolean quoted) throws SQLException, IOException {
         final ParsedSql sql = ParsedSql.parse(querySQL);
-        PreparedStatement stmt = null;
 
-        try {
-            stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
 
             setFetchForBigResult(conn, stmt);
 
             return exportCSV(out, stmt, selectColumnNames, offset, count, writeTitle, quoted);
-        } finally {
-            JdbcUtil.closeQuietly(stmt);
         }
     }
 
@@ -2326,6 +2450,52 @@ public final class JdbcUtils {
      * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
      * @param out
+     * @param sourceDataSource
+     * @param querySQL
+     * @return
+     * @throws SQLException
+     * @throws IOException
+     */
+    public static long exportCSV(final OutputStream out, final javax.sql.DataSource sourceDataSource, final String querySQL) throws SQLException, IOException {
+        final Connection conn = sourceDataSource.getConnection();
+
+        try {
+            return exportCSV(out, conn, querySQL);
+        } finally {
+            JdbcUtil.releaseConnection(conn, sourceDataSource);
+        }
+    }
+
+    /**
+     * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param conn
+     * @param querySQL
+     * @return
+     * @throws SQLException
+     * @throws IOException
+     */
+    public static long exportCSV(final OutputStream out, final Connection conn, final String querySQL) throws SQLException, IOException {
+        final ParsedSql sql = ParsedSql.parse(querySQL);
+
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+                ResultSet rs = JdbcUtil.executeQuery(stmt)) {
+
+            setFetchForBigResult(conn, stmt);
+
+            return exportCSV(out, rs);
+        }
+    }
+
+    /**
+     * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
      * @param rs
      * @return
      * @throws SQLException
@@ -2381,6 +2551,52 @@ public final class JdbcUtils {
         writer.flush();
 
         return result;
+    }
+
+    /**
+     * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param sourceDataSource
+     * @param querySQL
+     * @return
+     * @throws SQLException
+     * @throws IOException
+     */
+    public static long exportCSV(final Writer out, final javax.sql.DataSource sourceDataSource, final String querySQL) throws SQLException, IOException {
+        final Connection conn = sourceDataSource.getConnection();
+
+        try {
+            return exportCSV(out, conn, querySQL);
+        } finally {
+            JdbcUtil.releaseConnection(conn, sourceDataSource);
+        }
+    }
+
+    /**
+     * Exports the data from database to CVS. Title will be added at the first line and columns will be quoted.
+     * <br />
+     * Each line in the output file/Writer is an array of JSON String without root bracket.
+     *
+     * @param out
+     * @param conn
+     * @param querySQL
+     * @return
+     * @throws SQLException
+     * @throws IOException
+     */
+    public static long exportCSV(final Writer out, final Connection conn, final String querySQL) throws SQLException, IOException {
+        final ParsedSql sql = ParsedSql.parse(querySQL);
+
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+                ResultSet rs = JdbcUtil.executeQuery(stmt)) {
+
+            setFetchForBigResult(conn, stmt);
+
+            return exportCSV(out, rs);
+        }
     }
 
     /**
@@ -3440,15 +3656,11 @@ public final class JdbcUtils {
     //    public static <E extends Exception, E2 extends Exception> void parse(final Connection conn, final String sql, final long offset, final long count,
     //            final int processThreadNum, final int queueSize, final Throwables.Consumer<ResultSet, E> rowParser, final Throwables.Runnable<E2> onComplete)
     //            throws SQLException, E, E2 {
-    //        PreparedStatement stmt = null;
-    //        try {
-    //            stmt = JdbcUtil.prepareStatement(conn, sql);
+    //        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql)) {
     //
     //            setFetchForBigResult(conn, stmt);
     //
     //            parse(stmt, offset, count, processThreadNum, queueSize, rowParser, onComplete);
-    //        } finally {
-    //            JdbcUtil.closeQuietly(stmt);
     //        }
     //    }
     //
