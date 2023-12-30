@@ -1030,6 +1030,60 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Sets the string.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException the SQL exception
+     */
+    public NamedQuery setNString(String parameterName, CharSequence x) throws SQLException {
+        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
+            int cnt = 0;
+
+            for (int i = 0; i < parameterCount; i++) {
+                if (parameterNames.get(i).equals(parameterName)) {
+                    setNString(i + 1, x);
+                    cnt++;
+                }
+            }
+
+            if (cnt == 0) {
+                close();
+                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+            }
+        } else {
+            if (paramNameIndexMap == null) {
+                initParamNameIndexMap();
+            }
+
+            final IntList indexes = paramNameIndexMap.get(parameterName);
+
+            if (indexes == null) {
+                close();
+                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+            } else {
+                if (indexes.size() == 1) {
+                    setNString(indexes.get(0), x);
+                } else if (indexes.size() == 2) {
+                    setNString(indexes.get(0), x);
+                    setNString(indexes.get(1), x);
+                } else if (indexes.size() == 3) {
+                    setNString(indexes.get(0), x);
+                    setNString(indexes.get(1), x);
+                    setNString(indexes.get(2), x);
+                } else {
+                    for (int i = 0, size = indexes.size(); i < size; i++) {
+                        setNString(indexes.get(i), x);
+                    }
+                }
+            }
+        }
+
+        return this;
+    }
+
+    /**
      * Sets the date.
      *
      * @param parameterName
