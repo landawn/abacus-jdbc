@@ -2444,7 +2444,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     @Beta
-    public <T> This addBatchParameters(final Collection<? extends T> batchParameters) throws SQLException {
+    public This addBatchParameters(final Collection<?> batchParameters) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
 
         if (N.isEmpty(batchParameters)) {
@@ -2483,10 +2483,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     @SuppressWarnings("rawtypes")
-    public <T> This addBatchParameters(final Iterator<? extends T> batchParameters) throws SQLException {
+    public This addBatchParameters(final Iterator<?> batchParameters) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
 
-        final Iterator<? extends T> iter = batchParameters;
+        final Iterator<?> iter = batchParameters;
         boolean noException = false;
 
         try {
@@ -2494,7 +2494,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 return (This) this;
             }
 
-            final T first = iter.next();
+            final Object first = iter.next();
 
             if (first instanceof Collection) {
                 setParameters((Collection) first);
@@ -2534,7 +2534,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         }
 
         return (This) this;
-
     }
 
     /**

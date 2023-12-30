@@ -27,6 +27,7 @@ import java.sql.SQLType;
 import java.sql.Types;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -2833,6 +2834,14 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         return this;
     }
 
+    void setParameters(EntityId entityId) throws SQLException {
+        for (String paramName : parameterNames) {
+            if (entityId.containsKey(paramName)) {
+                setObject(paramName, entityId.get(paramName));
+            }
+        }
+    }
+
     /**
      * Sets the parameters.
      *
@@ -2863,12 +2872,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             return setParameters((Collection) parameters);
         } else if (parameters instanceof Object[]) {
             return setParameters((Object[]) parameters);
-        } else if (parameters instanceof EntityId entityId) {
-            for (String paramName : parameterNames) {
-                if (entityId.containsKey(paramName)) {
-                    setObject(paramName, entityId.get(paramName));
-                }
-            }
+        } else if (parameters instanceof EntityId) {
+            setParameters((EntityId) parameters);
         } else if (parameterCount == 1) {
             setObject(1, parameters);
         } else {
@@ -2985,28 +2990,50 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws SQLException
      */
     @Override
-    @SuppressWarnings("rawtypes")
-    public <T> NamedQuery addBatchParameters(final Collection<? extends T> batchParameters) throws SQLException {
+    public NamedQuery addBatchParameters(final Collection<?> batchParameters) throws SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
 
         if (N.isEmpty(batchParameters)) {
             return this;
         }
 
+        return addBatchParameters(batchParameters.iterator());
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param batchParameters
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    @Override
+    @SuppressWarnings("rawtypes")
+    public NamedQuery addBatchParameters(final Iterator<?> batchParameters) throws SQLException {
+        checkArgNotNull(batchParameters, "batchParameters");
+
+        final Iterator<?> iter = batchParameters;
         boolean noException = false;
 
         try {
-            final T first = N.firstNonNull(batchParameters).orElseNull();
+            if (!iter.hasNext()) {
+                return this;
+            }
+
+            final Object first = iter.next();
 
             if (first == null) {
-                if (parameterCount == 1) {
-                    for (int i = 0, size = batchParameters.size(); i < size; i++) {
-                        stmt.setObject(1, null);
-
-                        stmt.addBatch();
-                    }
-                } else {
+                if (parameterCount != 1) {
                     throw new IllegalArgumentException("Unsupported named parameter type: null for named sql: " + namedSql.sql());
+                }
+
+                stmt.setObject(1, first);
+                stmt.addBatch();
+
+                while (iter.hasNext()) {
+                    stmt.setObject(1, iter.next());
+                    stmt.addBatch();
                 }
             } else {
                 final Class<?> cls = first.getClass();
@@ -3021,52 +3048,77 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
                     PropInfo propInfo = null;
 
-                    for (Object entity : batchParameters) {
+                    for (int i = 0; i < parameterCount; i++) {
+                        propInfo = propInfos[i];
+
+                        if (propInfo != null) {
+                            propInfo.dbType.set(stmt, i + 1, propInfo.getPropValue(first));
+                        }
+                    }
+
+                    stmt.addBatch();
+
+                    Object params = null;
+                    while (iter.hasNext()) {
+                        params = iter.next();
+
                         for (int i = 0; i < parameterCount; i++) {
                             propInfo = propInfos[i];
 
                             if (propInfo != null) {
-                                propInfo.dbType.set(stmt, i + 1, propInfo.getPropValue(entity));
+                                propInfo.dbType.set(stmt, i + 1, propInfo.getPropValue(params));
                             }
                         }
 
                         stmt.addBatch();
                     }
                 } else if (Map.class.isAssignableFrom(cls)) {
-                    for (Object map : batchParameters) {
-                        setParameters((Map<String, ?>) map);
+                    setParameters((Map<String, ?>) first);
+                    stmt.addBatch();
 
+                    Map<String, ?> params = null;
+
+                    while (iter.hasNext()) {
+                        params = (Map<String, ?>) iter.next();
+                        setParameters(params);
                         stmt.addBatch();
                     }
-
                 } else if (first instanceof Collection) {
-                    for (Object parameters : batchParameters) {
-                        setParameters((Collection) parameters);
+                    setParameters((Collection) first);
+                    stmt.addBatch();
 
+                    Collection params = null;
+                    while (iter.hasNext()) {
+                        params = (Collection) iter.next();
+                        setParameters(params);
                         stmt.addBatch();
                     }
                 } else if (first instanceof Object[]) {
-                    for (Object parameters : batchParameters) {
-                        setParameters((Object[]) parameters);
+                    setParameters((Object[]) first);
+                    stmt.addBatch();
 
+                    Object[] params = null;
+                    while (iter.hasNext()) {
+                        params = (Object[]) iter.next();
+                        setParameters(params);
                         stmt.addBatch();
                     }
                 } else if (first instanceof EntityId) {
-                    for (Object parameters : batchParameters) {
-                        final EntityId entityId = (EntityId) parameters;
+                    setParameters((EntityId) first);
+                    stmt.addBatch();
 
-                        for (String paramName : parameterNames) {
-                            if (entityId.containsKey(paramName)) {
-                                setObject(paramName, entityId.get(paramName));
-                            }
-                        }
-
+                    EntityId params = null;
+                    while (iter.hasNext()) {
+                        params = (EntityId) iter.next();
+                        setParameters(params);
                         stmt.addBatch();
                     }
                 } else if (parameterCount == 1) {
-                    for (Object obj : batchParameters) {
-                        setObject(1, obj);
+                    stmt.setObject(1, first);
+                    stmt.addBatch();
 
+                    while (iter.hasNext()) {
+                        stmt.setObject(1, iter.next());
                         stmt.addBatch();
                     }
                 } else {
@@ -3074,8 +3126,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 }
             }
 
-            isBatch = batchParameters.size() > 0;
-
+            isBatch = true;
             noException = true;
         } finally {
             if (!noException) {

@@ -3802,7 +3802,7 @@ public final class JdbcUtil {
             try {
                 stmt.clearParameters();
             } catch (SQLException e) {
-                logger.error("Failed to clear parameters after executeUpdate", e);
+                logger.error("Failed to clear parameters after execution", e);
             }
         }
     }
