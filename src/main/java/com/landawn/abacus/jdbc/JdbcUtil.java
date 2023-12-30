@@ -1052,40 +1052,40 @@ public final class JdbcUtil {
     private static Object getColumnValue(final ResultSet rs, final int columnIndex, final int checkDateType) throws SQLException {
         // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
 
-        Object obj = rs.getObject(columnIndex);
+        Object ret = rs.getObject(columnIndex);
 
-        if (obj == null || obj instanceof String || obj instanceof Number || obj instanceof java.sql.Timestamp || obj instanceof Boolean) {
-            return obj;
+        if (ret == null || ret instanceof String || ret instanceof Number || ret instanceof java.sql.Timestamp || ret instanceof Boolean) {
+            return ret;
         }
 
-        if (obj instanceof Blob blob) {
-            obj = blob.getBytes(1, (int) blob.length());
-        } else if (obj instanceof Clob clob) {
-            obj = clob.getSubString(1, (int) clob.length());
+        if (ret instanceof Blob blob) {
+            ret = blob.getBytes(1, (int) blob.length());
+        } else if (ret instanceof Clob clob) {
+            ret = clob.getSubString(1, (int) clob.length());
         } else if (checkDateType == 1 || (checkDateType == 0 && checkDateType_TL.get())) {
-            final String className = obj.getClass().getName();
+            final String className = ret.getClass().getName();
 
             if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
-                obj = oracleTimestampToJavaTimestamp.apply(obj);
+                ret = oracleTimestampToJavaTimestamp.apply(ret);
             } else if (className.startsWith("oracle.sql.DATE")) {
                 final ResultSetMetaData metaData = rs.getMetaData();
                 final String metaDataClassName = metaData.getColumnClassName(columnIndex);
 
                 if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                    obj = oracleTimestampToJavaTimestamp.apply(obj);
+                    ret = oracleTimestampToJavaTimestamp.apply(ret);
                 } else {
-                    obj = oracleTimestampToJavaDate.apply(obj);
+                    ret = oracleTimestampToJavaDate.apply(ret);
                 }
-            } else if ((obj instanceof java.sql.Date)) {
+            } else if ((ret instanceof java.sql.Date)) {
                 final ResultSetMetaData metaData = rs.getMetaData();
 
                 if ("java.sql.Timestamp".equals(metaData.getColumnClassName(columnIndex))) {
-                    obj = rs.getTimestamp(columnIndex);
+                    ret = rs.getTimestamp(columnIndex);
                 }
             }
         }
 
-        return obj;
+        return ret;
     }
 
     /**
@@ -3796,6 +3796,7 @@ public final class JdbcUtil {
     }
 
     static void clearParameters(final PreparedStatement stmt) {
+        // calling clearParameters() will impact/remove registered out parameters in CallableStatement.
         if (stmt == null || stmt instanceof CallableStatement) {
             // no
         } else {

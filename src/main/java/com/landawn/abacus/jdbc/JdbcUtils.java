@@ -1096,6 +1096,27 @@ public final class JdbcUtils {
      *
      * @param <T>
      * @param iter
+     * @param sourceDataSource
+     * @param insertSQL
+     * @param stmtSetter
+     * @return
+     * @throws SQLException
+     */
+    public static <T> long importData(final Iterator<? extends T> iter, final javax.sql.DataSource sourceDataSource, final String insertSQL,
+            final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
+        final Connection conn = sourceDataSource.getConnection();
+
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
+            return importData(iter, stmt, stmtSetter);
+        } finally {
+            JdbcUtil.releaseConnection(conn, sourceDataSource);
+        }
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param iter
      * @param conn
      * @param insertSQL
      * @param stmtSetter
