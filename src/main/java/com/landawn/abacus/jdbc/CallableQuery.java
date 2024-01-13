@@ -38,10 +38,9 @@ import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.util.CheckedStream.CheckedIterator;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.DataSet;
-import com.landawn.abacus.util.CheckedStream;
-import com.landawn.abacus.util.CheckedStream.CheckedIterator;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
@@ -1390,87 +1389,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      *
-     * @return a list of {@code DataSet} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
-     */
-    public List<DataSet> queryAll() throws SQLException {
-        return queryAll(Jdbc.ResultExtractor.TO_DATA_SET);
-    }
-
-    /**
-     *
-     * @param <R>
-     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
-     */
-    public <R> List<R> queryAll(final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException {
-        checkArgNotNull(resultExtractor, "resultExtractor");
-        assertNotClosed();
-
-        CheckedIterator<ResultSet, SQLException> iter = null;
-
-        try {
-            JdbcUtil.execute(cstmt);
-
-            iter = JdbcUtil.iterateAllResultSets(cstmt);
-
-            final List<R> result = new ArrayList<>();
-
-            while (iter.hasNext()) {
-                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor));
-            }
-
-            return result;
-        } finally {
-            try {
-                if (iter != null) {
-                    iter.close();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
-        }
-    }
-
-    /**
-     *
-     * @param <R>
-     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
-     */
-    public <R> List<R> queryAll(final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException {
-        checkArgNotNull(resultExtractor, "resultExtractor");
-        assertNotClosed();
-
-        CheckedIterator<ResultSet, SQLException> iter = null;
-
-        try {
-            JdbcUtil.execute(cstmt);
-
-            iter = JdbcUtil.iterateAllResultSets(cstmt);
-
-            final List<R> result = new ArrayList<>();
-
-            while (iter.hasNext()) {
-                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor));
-            }
-
-            return result;
-        } finally {
-            try {
-                if (iter != null) {
-                    iter.close();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
-        }
-    }
-
-    /**
-     *
      * @return the {@code DataSet} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -1615,54 +1533,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param <R2>
      * @param resultExtractor1 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param resultExtractor2 Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return {@code R1/R2} extracted from the first two {@code ResultSets} returned by the executed procedure.
-     * @throws SQLException
-     */
-    public <R1, R2> Tuple2<R1, R2> query2(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
-            final Jdbc.BiResultExtractor<? extends R2> resultExtractor2) throws SQLException {
-        checkArgNotNull(resultExtractor1, "resultExtractor1");
-        checkArgNotNull(resultExtractor2, "resultExtractor2");
-        assertNotClosed();
-
-        CheckedIterator<ResultSet, SQLException> iter = null;
-
-        try {
-            JdbcUtil.execute(cstmt);
-
-            iter = JdbcUtil.iterateAllResultSets(cstmt);
-
-            R1 result1 = null;
-            R2 result2 = null;
-
-            if (iter.hasNext()) {
-                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1);
-            }
-
-            if (iter.hasNext()) {
-                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2);
-            }
-
-            return Tuple.of(result1, result2);
-        } finally {
-            try {
-                if (iter != null) {
-                    iter.close();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
-        }
-    }
-
-    /**
-     *
-     * @param <R1>
-     * @param <R2>
-     * @param resultExtractor1 Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @param resultExtractor2 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return {@code R1/R2} extracted from the first two {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
+    @Beta
     public <R1, R2> Tuple3<R1, R2, Jdbc.OutParamResult> query2AndGetOutParameters(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
             final Jdbc.BiResultExtractor<? extends R2> resultExtractor2) throws SQLException {
         checkArgNotNull(resultExtractor1, "resultExtractor1");
@@ -1707,62 +1581,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param resultExtractor1 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param resultExtractor2 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param resultExtractor3 Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return {@code R1/R2/R3} extracted from the first three {@code ResultSets} returned by the executed procedure.
-     * @throws SQLException
-     */
-    public <R1, R2, R3> Tuple3<R1, R2, R3> query3(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
-            final Jdbc.BiResultExtractor<? extends R2> resultExtractor2, final Jdbc.BiResultExtractor<? extends R3> resultExtractor3) throws SQLException {
-        checkArgNotNull(resultExtractor1, "resultExtractor1");
-        checkArgNotNull(resultExtractor2, "resultExtractor2");
-        checkArgNotNull(resultExtractor3, "resultExtractor3");
-        assertNotClosed();
-
-        CheckedIterator<ResultSet, SQLException> iter = null;
-
-        try {
-            JdbcUtil.execute(cstmt);
-
-            iter = JdbcUtil.iterateAllResultSets(cstmt);
-
-            R1 result1 = null;
-            R2 result2 = null;
-            R3 result3 = null;
-
-            if (iter.hasNext()) {
-                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1);
-            }
-
-            if (iter.hasNext()) {
-                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2);
-            }
-
-            if (iter.hasNext()) {
-                result3 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor3);
-            }
-
-            return Tuple.of(result1, result2, result3);
-        } finally {
-            try {
-                if (iter != null) {
-                    iter.close();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
-        }
-    }
-
-    /**
-     *
-     * @param <R1>
-     * @param <R2>
-     * @param <R3>
-     * @param resultExtractor1 Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @param resultExtractor2 Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @param resultExtractor3 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return {@code R1/R2/R3} extracted from the first three {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
+    @Beta
     public <R1, R2, R3> Tuple4<R1, R2, R3, Jdbc.OutParamResult> query3AndGetOutParameters(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
             final Jdbc.BiResultExtractor<? extends R2> resultExtractor2, final Jdbc.BiResultExtractor<? extends R3> resultExtractor3) throws SQLException {
         checkArgNotNull(resultExtractor1, "resultExtractor1");
@@ -1960,103 +1782,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param <T>
      * @param targetType
-     * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure.
-     * @throws SQLException
-     */
-    public <T> List<T> listAll(final Class<? extends T> targetType) throws SQLException {
-        checkArgNotNull(targetType, "targetType");
-
-        return listAll(Jdbc.BiRowMapper.to(targetType));
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param rowMapper
-     * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure.
-     * @throws SQLException
-     */
-    public <T> List<T> listAll(final Jdbc.RowMapper<? extends T> rowMapper) throws SQLException {
-        checkArgNotNull(rowMapper, "rowMapper");
-        assertNotClosed();
-
-        try {
-            JdbcUtil.execute(cstmt);
-
-            return JdbcUtil.<T> streamAllResultSets(cstmt, rowMapper).toList();
-        } finally {
-            closeAfterExecutionIfAllowed();
-        }
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param rowFilter
-     * @param rowMapper
-     * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure.
-     * @throws SQLException
-     */
-    public <T> List<T> listAll(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) throws SQLException {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowMapper, "rowMapper");
-        assertNotClosed();
-
-        try {
-            JdbcUtil.execute(cstmt);
-
-            return JdbcUtil.<T> streamAllResultSets(cstmt, rowFilter, rowMapper).toList();
-        } finally {
-            closeAfterExecutionIfAllowed();
-        }
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param rowMapper
-     * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure.
-     * @throws SQLException
-     */
-    public <T> List<T> listAll(final Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException {
-        checkArgNotNull(rowMapper, "rowMapper");
-        assertNotClosed();
-
-        try {
-            JdbcUtil.execute(cstmt);
-
-            return JdbcUtil.<T> streamAllResultSets(cstmt, rowMapper).toList();
-        } finally {
-            closeAfterExecutionIfAllowed();
-        }
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param rowFilter
-     * @param rowMapper
-     * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure.
-     * @throws SQLException
-     */
-    public <T> List<T> listAll(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowMapper, "rowMapper");
-        assertNotClosed();
-
-        try {
-            JdbcUtil.execute(cstmt);
-
-            return JdbcUtil.<T> streamAllResultSets(cstmt, rowFilter, rowMapper).toList();
-        } finally {
-            closeAfterExecutionIfAllowed();
-        }
-    }
-
-    /**
-     *
-     * @param <T>
-     * @param targetType
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
@@ -2158,95 +1883,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         } finally {
             closeAfterExecutionIfAllowed();
         }
-    }
-
-    /**
-     *
-     *
-     * @param <T>
-     * @param targetType
-     * @return the {@code CheckedStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
-     */
-    public <T> CheckedStream<T, SQLException> streamAll(final Class<? extends T> targetType) {
-        checkArgNotNull(targetType, "targetType");
-
-        return streamAll(Jdbc.BiRowMapper.to(targetType));
-    }
-
-    /**
-     *
-     *
-     * @param <T>
-     * @param rowMapper
-     * @return the {@code CheckedStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
-     */
-    public <T> CheckedStream<T, SQLException> streamAll(final Jdbc.RowMapper<? extends T> rowMapper) {
-        checkArgNotNull(rowMapper, "rowMapper");
-        assertNotClosed();
-
-        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(cstmt);
-
-        return CheckedStream.just(supplier, SQLException.class)
-                .flatMap(it -> JdbcUtil.<T> streamAllResultSets(cstmt, rowMapper))
-                .onClose(this::closeAfterExecutionIfAllowed);
-    }
-
-    /**
-     *
-     *
-     * @param <T>
-     * @param rowFilter
-     * @param rowMapper
-     * @return the {@code CheckedStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
-     */
-    public <T> CheckedStream<T, SQLException> streamAll(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowMapper, "rowMapper");
-        assertNotClosed();
-
-        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(cstmt);
-
-        return CheckedStream.just(supplier, SQLException.class)
-                .flatMap(it -> JdbcUtil.<T> streamAllResultSets(cstmt, rowFilter, rowMapper))
-                .onClose(this::closeAfterExecutionIfAllowed);
-    }
-
-    /**
-     *
-     *
-     * @param <T>
-     * @param rowMapper
-     * @return the {@code CheckedStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
-     */
-    public <T> CheckedStream<T, SQLException> streamAll(final Jdbc.BiRowMapper<? extends T> rowMapper) {
-        checkArgNotNull(rowMapper, "rowMapper");
-        assertNotClosed();
-
-        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(cstmt);
-
-        return CheckedStream.just(supplier, SQLException.class)
-                .flatMap(it -> JdbcUtil.<T> streamAllResultSets(cstmt, rowMapper))
-                .onClose(this::closeAfterExecutionIfAllowed);
-    }
-
-    /**
-     *
-     *
-     * @param <T>
-     * @param rowFilter
-     * @param rowMapper
-     * @return the {@code CheckedStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
-     */
-    public <T> CheckedStream<T, SQLException> streamAll(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowMapper, "rowMapper");
-        assertNotClosed();
-
-        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(cstmt);
-
-        return CheckedStream.just(supplier, SQLException.class)
-                .flatMap(it -> JdbcUtil.<T> streamAllResultSets(cstmt, rowFilter, rowMapper))
-                .onClose(this::closeAfterExecutionIfAllowed);
     }
 
     /**
