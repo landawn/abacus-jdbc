@@ -4542,7 +4542,8 @@ public final class JdbcUtil {
      * @param targetClass
      * @return
      */
-    public static <T> CheckedStream<T, SQLException> streamAllResultSets(final Statement stmt, final Class<? extends T> targetClass) {
+    public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt,
+            final Class<? extends T> targetClass) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(targetClass, "targetClass");
 
@@ -4559,7 +4560,8 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> CheckedStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowMapper<? extends T> rowMapper) {
+    public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt,
+            final RowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
@@ -4568,10 +4570,10 @@ public final class JdbcUtil {
         return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
-                .flatMap(rs -> {
+                .map(rs -> {
                     JdbcUtil.setCheckDateTypeFlag(rs);
 
-                    return JdbcUtil.stream(rs, rowMapper).onClose(() -> {
+                    return JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> {
                         JdbcUtil.resetCheckDateTypeFlag();
 
                         JdbcUtil.closeQuietly(rs);
@@ -4590,7 +4592,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> CheckedStream<T, SQLException> streamAllResultSets(final Statement stmt, final RowFilter rowFilter,
+    public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt, final RowFilter rowFilter,
             final RowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowFilter, "rowFilter");
@@ -4601,10 +4603,10 @@ public final class JdbcUtil {
         return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
-                .flatMap(rs -> {
+                .map(rs -> {
                     JdbcUtil.setCheckDateTypeFlag(rs);
 
-                    return JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> {
+                    return JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> {
                         JdbcUtil.resetCheckDateTypeFlag();
 
                         JdbcUtil.closeQuietly(rs);
@@ -4622,7 +4624,8 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> CheckedStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowMapper<? extends T> rowMapper) {
+    public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt,
+            final BiRowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
@@ -4631,10 +4634,10 @@ public final class JdbcUtil {
         return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
-                .flatMap(rs -> {
+                .map(rs -> {
                     JdbcUtil.setCheckDateTypeFlag(rs);
 
-                    return JdbcUtil.stream(rs, rowMapper).onClose(() -> {
+                    return JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> {
                         JdbcUtil.resetCheckDateTypeFlag();
 
                         JdbcUtil.closeQuietly(rs);
@@ -4653,7 +4656,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
-    public static <T> CheckedStream<T, SQLException> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter,
+    public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter,
             final BiRowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowFilter, "rowFilter");
@@ -4664,10 +4667,10 @@ public final class JdbcUtil {
         return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
-                .flatMap(rs -> {
+                .map(rs -> {
                     JdbcUtil.setCheckDateTypeFlag(rs);
 
-                    return JdbcUtil.stream(rs, rowFilter, rowMapper).onClose(() -> {
+                    return JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> {
                         JdbcUtil.resetCheckDateTypeFlag();
 
                         JdbcUtil.closeQuietly(rs);

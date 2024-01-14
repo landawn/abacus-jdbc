@@ -3495,7 +3495,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     @Beta
-    public <R1, R2> Tuple2<R1, R2> query2(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
+    public <R1, R2> Tuple2<R1, R2> query2Resultsets(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
             final Jdbc.BiResultExtractor<? extends R2> resultExtractor2) throws SQLException {
         checkArgNotNull(resultExtractor1, "resultExtractor1");
         checkArgNotNull(resultExtractor2, "resultExtractor2");
@@ -3544,7 +3544,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     @Beta
-    public <R1, R2, R3> Tuple3<R1, R2, R3> query3(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
+    public <R1, R2, R3> Tuple3<R1, R2, R3> query3Resultsets(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
             final Jdbc.BiResultExtractor<? extends R2> resultExtractor2, final Jdbc.BiResultExtractor<? extends R3> resultExtractor3) throws SQLException {
         checkArgNotNull(resultExtractor1, "resultExtractor1");
         checkArgNotNull(resultExtractor2, "resultExtractor2");
@@ -3592,8 +3592,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return a list of {@code DataSet} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public List<DataSet> queryAll() throws SQLException {
-        return queryAll(Jdbc.ResultExtractor.TO_DATA_SET);
+    public List<DataSet> queryMultiResultsets() throws SQLException {
+        return queryMultiResultsets(Jdbc.ResultExtractor.TO_DATA_SET);
     }
 
     /**
@@ -3604,7 +3604,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <R> List<R> queryAll(final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException {
+    public <R> List<R> queryMultiResultsets(final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException {
         checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
@@ -3641,7 +3641,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
      */
-    public <R> List<R> queryAll(final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException {
+    public <R> List<R> queryMultiResultsets(final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException {
         checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
@@ -4377,10 +4377,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      * @throws SQLException
      */
-    public <T> List<T> listAll(final Class<? extends T> targetType) throws SQLException {
+    public <T> List<List<T>> listMultiResultsets(final Class<? extends T> targetType) throws SQLException {
         checkArgNotNull(targetType, "targetType");
 
-        return listAll(Jdbc.BiRowMapper.to(targetType));
+        return listMultiResultsets(Jdbc.BiRowMapper.to(targetType));
     }
 
     /**
@@ -4391,14 +4391,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      * @throws SQLException
      */
-    public <T> List<T> listAll(final Jdbc.RowMapper<? extends T> rowMapper) throws SQLException {
+    public <T> List<List<T>> listMultiResultsets(final Jdbc.RowMapper<? extends T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
         try {
             JdbcUtil.execute(stmt);
 
-            return JdbcUtil.<T> streamAllResultSets(stmt, rowMapper).toList();
+            return JdbcUtil.<T> streamAllResultSets(stmt, rowMapper).map(CheckedStream::toList).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4413,7 +4413,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      * @throws SQLException
      */
-    public <T> List<T> listAll(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) throws SQLException {
+    public <T> List<List<T>> listMultiResultsets(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -4421,7 +4421,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         try {
             JdbcUtil.execute(stmt);
 
-            return JdbcUtil.<T> streamAllResultSets(stmt, rowFilter, rowMapper).toList();
+            return JdbcUtil.<T> streamAllResultSets(stmt, rowFilter, rowMapper).map(CheckedStream::toList).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4435,14 +4435,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      * @throws SQLException
      */
-    public <T> List<T> listAll(final Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException {
+    public <T> List<List<T>> listMultiResultsets(final Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
         try {
             JdbcUtil.execute(stmt);
 
-            return JdbcUtil.<T> streamAllResultSets(stmt, rowMapper).toList();
+            return JdbcUtil.<T> streamAllResultSets(stmt, rowMapper).map(CheckedStream::toList).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4457,7 +4457,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      * @throws SQLException
      */
-    public <T> List<T> listAll(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException {
+    public <T> List<List<T>> listMultiResultsets(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -4465,10 +4465,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         try {
             JdbcUtil.execute(stmt);
 
-            return JdbcUtil.<T> streamAllResultSets(stmt, rowFilter, rowMapper).toList();
+            return JdbcUtil.<T> streamAllResultSets(stmt, rowFilter, rowMapper).map(CheckedStream::toList).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
+
     }
 
     /**
@@ -4591,15 +4592,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
-        return CheckedStream.just(supplier, SQLException.class).map(Throwables.Supplier::get).flatMap(rs -> {
-            JdbcUtil.setCheckDateTypeFlag(rs);
-
-            return JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> {
-                JdbcUtil.resetCheckDateTypeFlag();
-
-                JdbcUtil.closeQuietly(rs);
-            });
-        }).onClose(this::closeAfterExecutionIfAllowed);
+        return CheckedStream.just(supplier, SQLException.class)
+                .map(Throwables.Supplier::get)
+                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper))
+                .onClose(this::closeAfterExecutionIfAllowed);
     }
 
     // Will it cause confusion if it's called in transaction?
@@ -4628,15 +4624,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
-        return CheckedStream.just(supplier, SQLException.class).map(Throwables.Supplier::get).flatMap(rs -> {
-            JdbcUtil.setCheckDateTypeFlag(rs);
-
-            return JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> {
-                JdbcUtil.resetCheckDateTypeFlag();
-
-                JdbcUtil.closeQuietly(rs);
-            });
-        }).onClose(this::closeAfterExecutionIfAllowed);
+        return CheckedStream.just(supplier, SQLException.class)
+                .map(Throwables.Supplier::get)
+                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper))
+                .onClose(this::closeAfterExecutionIfAllowed);
     }
 
     // Will it cause confusion if it's called in transaction?
@@ -4667,15 +4658,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
-        return CheckedStream.just(supplier, SQLException.class).map(Throwables.Supplier::get).flatMap(rs -> {
-            JdbcUtil.setCheckDateTypeFlag(rs);
-
-            return JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> {
-                JdbcUtil.resetCheckDateTypeFlag();
-
-                JdbcUtil.closeQuietly(rs);
-            });
-        }).onClose(this::closeAfterExecutionIfAllowed);
+        return CheckedStream.just(supplier, SQLException.class)
+                .map(Throwables.Supplier::get)
+                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper))
+                .onClose(this::closeAfterExecutionIfAllowed);
     }
 
     // Will it cause confusion if it's called in transaction?
@@ -4706,15 +4692,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
 
-        return CheckedStream.just(supplier, SQLException.class).map(Throwables.Supplier::get).flatMap(rs -> {
-            JdbcUtil.setCheckDateTypeFlag(rs);
-
-            return JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> {
-                JdbcUtil.resetCheckDateTypeFlag();
-
-                JdbcUtil.closeQuietly(rs);
-            });
-        }).onClose(this::closeAfterExecutionIfAllowed);
+        return CheckedStream.just(supplier, SQLException.class)
+                .map(Throwables.Supplier::get)
+                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper))
+                .onClose(this::closeAfterExecutionIfAllowed);
     }
 
     /**
@@ -4728,10 +4709,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType
      * @return the {@code CheckedStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      */
-    public <T> CheckedStream<T, SQLException> streamAll(final Class<? extends T> targetType) {
+    public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Class<? extends T> targetType) {
         checkArgNotNull(targetType, "targetType");
 
-        return streamAll(Jdbc.BiRowMapper.to(targetType));
+        return streamMultiResultsets(Jdbc.BiRowMapper.to(targetType));
     }
 
     /**
@@ -4744,7 +4725,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return the {@code CheckedStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      */
-    public <T> CheckedStream<T, SQLException> streamAll(final Jdbc.RowMapper<? extends T> rowMapper) {
+    public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Jdbc.RowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -4766,7 +4747,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return the {@code CheckedStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      */
-    public <T> CheckedStream<T, SQLException> streamAll(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) {
+    public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Jdbc.RowFilter rowFilter,
+            final Jdbc.RowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -4788,7 +4770,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return the {@code CheckedStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      */
-    public <T> CheckedStream<T, SQLException> streamAll(final Jdbc.BiRowMapper<? extends T> rowMapper) {
+    public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Jdbc.BiRowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -4810,7 +4792,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return the {@code CheckedStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      */
-    public <T> CheckedStream<T, SQLException> streamAll(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) {
+    public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Jdbc.BiRowFilter rowFilter,
+            final Jdbc.BiRowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
