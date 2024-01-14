@@ -3416,6 +3416,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Retrieves the first {@code ResultSet}.
      *
      * @return
      * @throws SQLException
@@ -3425,6 +3426,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Retrieves the first {@code ResultSet}.
      *
      * @param entityClass used to fetch fields from columns
      * @return
@@ -3436,6 +3438,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Retrieves the first {@code ResultSet}.
      *
      * @param <R>
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
@@ -3458,6 +3461,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Retrieves the first {@code ResultSet}.
      *
      * @param <R>
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
@@ -3481,6 +3485,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Retrieves at most two {@code ResultSets}.
      *
      * @param <R1>
      * @param <R2>
@@ -3527,6 +3532,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Retrieves at most three {@code ResultSets}.
      *
      * @param <R1>
      * @param <R2>
@@ -3581,6 +3587,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Retrieves all the {@code ResultSets}.
      *
      * @return a list of {@code DataSet} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
      * @throws SQLException
@@ -3590,6 +3597,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Retrieves all the {@code ResultSets}.
      *
      * @param <R>
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
@@ -3626,6 +3634,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Retrieves all the {@code ResultSets}.
      *
      * @param <R>
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
@@ -4171,6 +4180,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists the rows in the first {@code ResultSet}.
      *
      * @return
      * @throws SQLException
@@ -4180,6 +4190,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists the rows in the first {@code ResultSet}.
      *
      * @param <T>
      * @param targetType
@@ -4191,6 +4202,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists the rows in the first {@code ResultSet}.
      *
      * @param <T>
      * @param targetType
@@ -4205,6 +4217,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists the rows in the first {@code ResultSet}.
      *
      * @param <T>
      * @param rowMapper
@@ -4216,6 +4229,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists the rows in the first {@code ResultSet}.
      *
      * @param <T>
      * @param rowMapper
@@ -4230,6 +4244,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists the rows in the first {@code ResultSet}.
      *
      * @param <T>
      * @param rowFilter
@@ -4242,6 +4257,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists the rows in the first {@code ResultSet}.
      *
      * @param <T>
      * @param rowFilter
@@ -4277,6 +4293,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists the rows in the first {@code ResultSet}.
      *
      * @param <T>
      * @param rowMapper
@@ -4288,6 +4305,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists the rows in the first {@code ResultSet}.
      *
      * @param <T>
      * @param rowMapper
@@ -4302,6 +4320,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists the rows in the first {@code ResultSet}.
      *
      * @param <T>
      * @param rowFilter
@@ -4314,6 +4333,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists the rows in the first {@code ResultSet}.
      *
      * @param <T>
      * @param rowFilter
@@ -4350,6 +4370,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists all the {@code ResultSets}.
      *
      * @param <T>
      * @param targetType
@@ -4363,6 +4384,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists all the {@code ResultSets}.
      *
      * @param <T>
      * @param rowMapper
@@ -4383,6 +4405,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists all the {@code ResultSets}.
      *
      * @param <T>
      * @param rowFilter
@@ -4405,6 +4428,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists all the {@code ResultSets}.
      *
      * @param <T>
      * @param rowMapper
@@ -4425,6 +4449,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Lists all the {@code ResultSets}.
      *
      * @param <T>
      * @param rowFilter
@@ -4500,6 +4525,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     // Will it cause confusion if it's called in transaction?
 
     /**
+     * Streams the rows in the first {@code ResultSet}.
+     *
+     * <br />
      * lazy-execution, lazy-fetch.
      *
      * <br />
@@ -4539,6 +4567,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     // Will it cause confusion if it's called in transaction?
     /**
+     * Streams the rows in the first {@code ResultSet}.
+     *
+     * <br />
      * lazy-execution, lazy-fetch.
      *
      * <br />
@@ -4573,6 +4604,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     // Will it cause confusion if it's called in transaction?
     /**
+     * Streams the rows in the first {@code ResultSet}.
+     *
+     * <br />
      * lazy-execution, lazy-fetch.
      *
      * <br />
@@ -4607,6 +4641,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     // Will it cause confusion if it's called in transaction?
     /**
+     * Streams the rows in the first {@code ResultSet}.
+     *
+     * <br />
      * lazy-execution, lazy-fetch.
      *
      * <br />
@@ -4643,6 +4680,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     // Will it cause confusion if it's called in transaction?
     /**
+     * Streams the rows in the first {@code ResultSet}.
+     *
+     * <br />
      * lazy-execution, lazy-fetch.
      *
      * <br />
@@ -4678,6 +4718,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Streams all the {@code ResultSets}.
+     *
+     * <br />
+     * lazy-execution, lazy-fetch.
      *
      *
      * @param <T>
@@ -4691,7 +4735,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Streams all the {@code ResultSets}.
      *
+     * <br />
+     * lazy-execution, lazy-fetch.
      *
      * @param <T>
      * @param rowMapper
@@ -4709,7 +4756,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Streams all the {@code ResultSets}.
      *
+     * <br />
+     * lazy-execution, lazy-fetch.
      *
      * @param <T>
      * @param rowFilter
@@ -4729,7 +4779,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Streams all the {@code ResultSets}.
      *
+     * <br />
+     * lazy-execution, lazy-fetch.
      *
      * @param <T>
      * @param rowMapper
@@ -4747,7 +4800,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Streams all the {@code ResultSets}.
      *
+     * <br />
+     * lazy-execution, lazy-fetch.
      *
      * @param <T>
      * @param rowFilter
