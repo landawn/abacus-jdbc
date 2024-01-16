@@ -1,3 +1,7 @@
+### 3.5.0
+
+* Improvements and bug fix.
+
 ### 3.3.26
 
 * Improvements and bug fix.

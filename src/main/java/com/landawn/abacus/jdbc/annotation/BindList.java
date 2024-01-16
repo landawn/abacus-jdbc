@@ -28,4 +28,8 @@ import java.lang.annotation.Target;
 public @interface BindList {
 
     String value() default "";
+
+    String prefixForNonEmpty() default "";
+
+    String suffixForNonEmpty() default "";
 }

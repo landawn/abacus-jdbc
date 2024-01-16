@@ -351,6 +351,10 @@ public class DaoTest {
 
         assertEquals(ids.size(), userDao.listByIds_03(ids, N.asList("xxx")).size());
 
+        assertEquals(ids.size(), userDao.listByIds_04(ids, N.asList("xxx")).size());
+
+        assertEquals(ids.size(), userDao.listByIds_04(N.emptyList(), N.asList("xxx")).size());
+
         assertEquals(1, userDao.deleteByIdWithDefine("user1", ids.get(0)));
         assertEquals(ids.size() - 1, userDao.deleteByIdsWithDefine("user1", ids));
 

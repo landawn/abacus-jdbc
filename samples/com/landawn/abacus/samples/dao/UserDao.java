@@ -223,6 +223,10 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     @Select("select * FROM user1 where id in ({ids}) and last_name not in ({lastNames})")
     Queue<User> listByIds_03(@BindList("ids") Collection<Long> ids, @BindList("lastNames") Collection<String> lastNamesToExclude) throws SQLException;
 
+    @Select("select * FROM user1 where {id in (ids) and} last_name not in ({lastNames})")
+    Queue<User> listByIds_04(@BindList(value = "{id in (ids) and}", prefixForNonEmpty = "id in (", suffixForNonEmpty = ") and") Collection<Long> ids,
+            @BindList("lastNames") Collection<String> lastNamesToExclude) throws SQLException;
+
     static final class SqlTable {
 
         @SqlField
