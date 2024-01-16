@@ -5640,8 +5640,9 @@ public final class JdbcUtil {
         final long elapsedTime = endTime - startTime;
         String sql = null;
 
+        final Throwables.Function<Statement, String, SQLException> sqlExtractor = N.defaultIfNull(JdbcUtil._sqlExtractor, JdbcUtil.DEFAULT_SQL_EXTRACTOR);
+
         if (isSqlPerfLogAllowed && sqlLogger.isInfoEnabled() && elapsedTime >= sqlLogConfig.minExecutionTimeForSqlPerfLog) {
-            final Throwables.Function<Statement, String, SQLException> sqlExtractor = N.defaultIfNull(JdbcUtil._sqlExtractor, JdbcUtil.DEFAULT_SQL_EXTRACTOR);
             sql = sqlExtractor.apply(stmt);
 
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
@@ -5651,14 +5652,14 @@ public final class JdbcUtil {
             }
         }
 
-        if (_sqlLogHandler != null) {
+        final TriConsumer<String, Long, Long> sqlLogHandler = _sqlLogHandler;
+
+        if (sqlLogHandler != null) {
             if (sql == null) {
-                final Throwables.Function<Statement, String, SQLException> sqlExtractor = N.defaultIfNull(JdbcUtil._sqlExtractor,
-                        JdbcUtil.DEFAULT_SQL_EXTRACTOR);
                 sql = sqlExtractor.apply(stmt);
             }
 
-            _sqlLogHandler.accept(sql, startTime, endTime);
+            sqlLogHandler.accept(sql, startTime, endTime);
         }
     }
 
