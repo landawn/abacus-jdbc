@@ -54,6 +54,7 @@ import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.CheckedStream.CheckedIterator;
+import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.N;
@@ -119,9 +120,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         for (Class<?> cls : primitiveTypes) {
             stmtParameterClasses.add(cls);
-            stmtParameterClasses.add(N.wrap(cls));
+            stmtParameterClasses.add(ClassUtil.wrap(cls));
             stmtParameterClasses.add(N.newArray(cls, 0).getClass());
-            stmtParameterClasses.add(N.newArray(N.wrap(cls), 0).getClass());
+            stmtParameterClasses.add(N.newArray(ClassUtil.wrap(cls), 0).getClass());
         }
 
         stmtParameterClasses.remove(Object.class);
@@ -3450,7 +3451,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(rs);
+            JdbcUtil.setCheckDateTypeFlag(stmt);
 
             return JdbcUtil.checkNotResultSet(resultExtractor.apply(rs));
         } finally {
@@ -3473,7 +3474,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(rs);
+            JdbcUtil.setCheckDateTypeFlag(stmt);
 
             return JdbcUtil.checkNotResultSet(resultExtractor.apply(rs, JdbcUtil.getColumnLabelList(rs)));
         } finally {
@@ -4273,7 +4274,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(rs);
+            JdbcUtil.setCheckDateTypeFlag(stmt);
 
             final List<T> result = new ArrayList<>();
 
@@ -4349,7 +4350,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(rs);
+            JdbcUtil.setCheckDateTypeFlag(stmt);
 
             final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
             final List<T> result = new ArrayList<>();
@@ -5123,7 +5124,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(rs);
+            JdbcUtil.setCheckDateTypeFlag(stmt);
 
             while (rs.next()) {
                 rowConsumer.accept(rs);
@@ -5148,7 +5149,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(rs);
+            JdbcUtil.setCheckDateTypeFlag(stmt);
 
             while (rs.next()) {
                 if (rowFilter.test(rs)) {
@@ -5172,7 +5173,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(rs);
+            JdbcUtil.setCheckDateTypeFlag(stmt);
 
             final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
@@ -5199,7 +5200,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(rs);
+            JdbcUtil.setCheckDateTypeFlag(stmt);
 
             final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 

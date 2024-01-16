@@ -5,7 +5,7 @@
 
 	<groupId>com.landawn</groupId>
 	<artifactId>abacus-jdbc</artifactId>
-	<version>3.3.26</version>
+	<version>3.3.27</version>
 	<packaging>jar</packaging>
 
 	<name>abacus-jdbc</name>
@@ -32,7 +32,7 @@
 		<dependency>
 			<groupId>com.landawn</groupId>
 			<artifactId>abacus-common</artifactId>
-			<version>3.9.11</version>
+			<version>3.10.0</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -209,7 +209,7 @@
 						<configuration>
 							<sources>
 								<source>./src/main/java</source>
-								<source>../../abacus-core/src/jdbc</source>
+								<source>../abacus-core/src/jdbc</source>
 							</sources>
 						</configuration>
 					</execution>

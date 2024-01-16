@@ -62,6 +62,42 @@ import com.landawn.abacus.util.stream.Stream;
 public class DaoTest {
 
     @Test
+    public void test_paginate() throws Exception {
+
+        List<User> users = IntStream.range(0, 20)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                .toList();
+
+        userDao.batchInsertWithId(users);
+
+        userDao.paginate(CB.where(CF.gt("id", 0)).orderBy("id"), 9, (q, r) -> {
+            if (r == null) {
+                q.setLong(1, -1);
+            } else {
+                q.setLong(1, (Long) N.lastOrNullIfEmpty(r.getColumn("id")));
+            }
+        }).forEach(N::println);
+
+        userDao.paginate(CB.where(CF.gt("id", 0).and(CF.ne("firstName", "aaaa"))).orderBy("id"), 9, (q, r) -> {
+            if (r == null) {
+                q.setLong(1, -1);
+            } else {
+                q.setLong(1, (Long) N.lastOrNullIfEmpty(r.getColumn("id")));
+            }
+        }).forEach(N::println);
+
+        userDao.paginate(CF.expr("id > ? and firstName != 'aaaa' order by id"), 9, (q, r) -> {
+            if (r == null) {
+                q.setLong(1, -1);
+            } else {
+                q.setLong(1, (Long) N.lastOrNullIfEmpty(r.getColumn("id")));
+            }
+        }).forEach(N::println);
+
+        userDao.delete(CF.ge("id", 0));
+    }
+
+    @Test
     public void test_setStringForMultiPositions() throws Exception {
 
     }

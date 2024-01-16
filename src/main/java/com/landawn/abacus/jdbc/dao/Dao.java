@@ -1873,6 +1873,89 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      *
+     * @param cond must have {@code orderBy}
+     * @param pageSize
+     * @param paramSetter
+     * @return
+     */
+    @Beta
+    @LazyEvaluation
+    CheckedStream<DataSet, SQLException> paginate(final Condition cond, final int pageSize,
+            final Jdbc.BiParametersSetter<? super PreparedQuery, DataSet> paramSetter);
+
+    /**
+     *
+     * @param <R>
+     * @param cond must have {@code orderBy}
+     * @param pageSize
+     * @param paramSetter
+     * @param resultExtractor
+     * @return
+     */
+    @Beta
+    @LazyEvaluation
+    <R> CheckedStream<R, SQLException> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter,
+            final Jdbc.ResultExtractor<? extends R> resultExtractor);
+
+    /**
+     *
+     * @param <R>
+     * @param cond must have {@code orderBy}
+     * @param pageSize
+     * @param paramSetter
+     * @param resultExtractor
+     * @return
+     */
+    @Beta
+    @LazyEvaluation
+    <R> CheckedStream<R, SQLException> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter,
+            final Jdbc.BiResultExtractor<? extends R> resultExtractor);
+
+    /**
+     *
+     * @param selectPropNames
+     * @param cond must have {@code orderBy}
+     * @param pageSize
+     * @param paramSetter
+     * @return
+     */
+    @Beta
+    @LazyEvaluation
+    CheckedStream<DataSet, SQLException> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
+            final Jdbc.BiParametersSetter<? super PreparedQuery, DataSet> paramSetter);
+
+    /**
+     *
+     * @param <R>
+     * @param selectPropNames
+     * @param cond must have {@code orderBy}
+     * @param pageSize
+     * @param paramSetter
+     * @param resultExtractor
+     * @return
+     */
+    @Beta
+    @LazyEvaluation
+    <R> CheckedStream<R, SQLException> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
+            final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter, final Jdbc.ResultExtractor<? extends R> resultExtractor);
+
+    /**
+     *
+     * @param <R>
+     * @param selectPropNames
+     * @param cond must have {@code orderBy}
+     * @param pageSize
+     * @param paramSetter
+     * @param resultExtractor
+     * @return
+     */
+    @Beta
+    @LazyEvaluation
+    <R> CheckedStream<R, SQLException> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
+            final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter, final Jdbc.BiResultExtractor<? extends R> resultExtractor);
+
+    /**
+     *
      *
      * @param cond
      * @param rowConsumer

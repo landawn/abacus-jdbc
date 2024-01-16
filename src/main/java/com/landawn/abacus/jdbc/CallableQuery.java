@@ -1659,7 +1659,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final ResultSet rs = executeQuery();
 
             if (rs != null) {
-                JdbcUtil.setCheckDateTypeFlag(rs);
+                JdbcUtil.setCheckDateTypeFlag(cstmt);
 
                 while (rs.next()) {
                     result.add(rowMapper.apply(rs));
@@ -1693,7 +1693,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final ResultSet rs = executeQuery();
 
             if (rs != null) {
-                JdbcUtil.setCheckDateTypeFlag(rs);
+                JdbcUtil.setCheckDateTypeFlag(cstmt);
 
                 while (rs.next()) {
                     if (rowFilter.test(rs)) {
@@ -1726,7 +1726,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final ResultSet rs = executeQuery();
 
             if (rs != null) {
-                JdbcUtil.setCheckDateTypeFlag(rs);
+                JdbcUtil.setCheckDateTypeFlag(cstmt);
 
                 final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
@@ -1762,7 +1762,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final ResultSet rs = executeQuery();
 
             if (rs != null) {
-                JdbcUtil.setCheckDateTypeFlag(rs);
+                JdbcUtil.setCheckDateTypeFlag(cstmt);
 
                 final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 

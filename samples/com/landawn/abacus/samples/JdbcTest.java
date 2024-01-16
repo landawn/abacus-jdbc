@@ -21,6 +21,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.EntityCodeConfig;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
+import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JdbcUtils;
 import com.landawn.abacus.jdbc.SQLTransaction;
@@ -497,7 +498,7 @@ public class JdbcTest {
 
         List<List<User>> list1 = JdbcUtil
                 .queryByPage(dataSource, "select * from user1 where id > ? order by id limit 10", 10,
-                        (stmt, ret) -> stmt.setLong(1, ret == null ? 0 : N.lastElement(ret).get().getId()), User.class)
+                        (stmt, ret) -> stmt.setLong(1, ret == null ? 0 : N.lastElement(ret).get().getId()), ResultExtractor.toList(User.class))
                 .toList();
 
         List<List<User>> list2 = Stream.of(Holder.of(nextStartId)).cycled().mapE(it -> {

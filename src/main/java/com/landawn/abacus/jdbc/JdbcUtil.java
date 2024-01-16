@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -1014,6 +1015,14 @@ public final class JdbcUtil {
         }
 
         setCheckDateTypeFlag(checkDateType(rs));
+    }
+
+    static void setCheckDateTypeFlag(final Statement stmt) {
+        if (stmt == null) {
+            return;
+        }
+
+        setCheckDateTypeFlag(checkDateType(stmt));
     }
 
     static void resetCheckDateTypeFlag() {
@@ -4565,13 +4574,15 @@ public final class JdbcUtil {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
+        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
+
         final Throwables.Supplier<CheckedIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
         return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
                 .map(rs -> {
-                    JdbcUtil.setCheckDateTypeFlag(rs);
+                    JdbcUtil.setCheckDateTypeFlag(checkDateType);
 
                     return JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> {
                         JdbcUtil.resetCheckDateTypeFlag();
@@ -4598,13 +4609,15 @@ public final class JdbcUtil {
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
+        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
+
         final Throwables.Supplier<CheckedIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
         return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
                 .map(rs -> {
-                    JdbcUtil.setCheckDateTypeFlag(rs);
+                    JdbcUtil.setCheckDateTypeFlag(checkDateType);
 
                     return JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> {
                         JdbcUtil.resetCheckDateTypeFlag();
@@ -4629,13 +4642,15 @@ public final class JdbcUtil {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
+        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
+
         final Throwables.Supplier<CheckedIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
         return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
                 .map(rs -> {
-                    JdbcUtil.setCheckDateTypeFlag(rs);
+                    JdbcUtil.setCheckDateTypeFlag(checkDateType);
 
                     return JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> {
                         JdbcUtil.resetCheckDateTypeFlag();
@@ -4662,13 +4677,15 @@ public final class JdbcUtil {
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
+        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
+
         final Throwables.Supplier<CheckedIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
         return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
                 .map(rs -> {
-                    JdbcUtil.setCheckDateTypeFlag(rs);
+                    JdbcUtil.setCheckDateTypeFlag(checkDateType);
 
                     return JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> {
                         JdbcUtil.resetCheckDateTypeFlag();
@@ -4734,23 +4751,7 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static CheckedStream<DataSet, SQLException> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, DataSet> paramSetter) {
-
-        final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
-
-        return CheckedStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null)) //
-                .cycled()
-                .map(it -> {
-                    final DataSet ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
-                            .setFetchDirectionToForward()
-                            .setFetchSize(pageSize)
-                            .settParameters(it.value(), paramSetter)
-                            .query();
-
-                    it.setValue(ret);
-
-                    return ret;
-                })
-                .takeWhile(N::notEmpty);
+        return queryByPage(ds, query, pageSize, paramSetter, Jdbc.ResultExtractor.TO_DATA_SET);
     }
 
     /**
@@ -4759,31 +4760,64 @@ public final class JdbcUtil {
      * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
      * @param pageSize
      * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
-     * @param entityCalss
+     * @param resultExtractor
      *
      * @param <T>
      * @return
      */
     @SuppressWarnings("rawtypes")
-    public static <T> CheckedStream<List<T>, SQLException> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, List<T>> paramSetter, final Class<T> entityCalss) {
+    public static <R> CheckedStream<R, SQLException> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
+            final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.ResultExtractor<R> resultExtractor) {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return CheckedStream.<Holder<List<T>>, SQLException> of(Holder.of((List<T>) null)) //
+        return CheckedStream.<Holder<R>, SQLException> of(Holder.of((R) null)) //
                 .cycled()
                 .map(it -> {
-                    final List<T> ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
+                    final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
                             .setFetchDirectionToForward()
                             .setFetchSize(pageSize)
                             .settParameters(it.value(), paramSetter)
-                            .list(entityCalss);
+                            .query(resultExtractor);
 
                     it.setValue(ret);
 
                     return ret;
                 })
-                .takeWhile(N::notEmpty);
+                .takeWhile(JdbcUtil::isNotEmptyResult);
+    }
+
+    /**
+     * Runs a {@code Stream} with each element(page) is loaded from database table by running sql {@code query}.
+     * @param ds
+     * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
+     * @param pageSize
+     * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
+     * @param resultExtractor
+     *
+     * @param <T>
+     * @return
+     */
+    @SuppressWarnings("rawtypes")
+    public static <R> CheckedStream<R, SQLException> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
+            final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.BiResultExtractor<R> resultExtractor) {
+
+        final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
+
+        return CheckedStream.<Holder<R>, SQLException> of(Holder.of((R) null)) //
+                .cycled()
+                .map(it -> {
+                    final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
+                            .setFetchDirectionToForward()
+                            .setFetchSize(pageSize)
+                            .settParameters(it.value(), paramSetter)
+                            .query(resultExtractor);
+
+                    it.setValue(ret);
+
+                    return ret;
+                })
+                .takeWhile(JdbcUtil::isNotEmptyResult);
     }
 
     /**
@@ -4798,23 +4832,39 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static CheckedStream<DataSet, SQLException> queryByPage(final Connection conn, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, DataSet> paramSetter) {
+        return queryByPage(conn, query, pageSize, paramSetter, Jdbc.ResultExtractor.TO_DATA_SET);
+    }
+
+    /**
+     * Runs a {@code Stream} with each element(page) is loaded from database table by running sql {@code query}.
+     *
+     * @param conn
+     * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
+     * @param pageSize
+     * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
+     * @param resultExtractor the second parameter is the result set for previous page. it's {@code null} for first page.
+     * @return
+     */
+    @SuppressWarnings("rawtypes")
+    public static <R> CheckedStream<R, SQLException> queryByPage(final Connection conn, final String query, final int pageSize,
+            final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.ResultExtractor<R> resultExtractor) {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return CheckedStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null)) //
+        return CheckedStream.<Holder<R>, SQLException> of(Holder.of((R) null)) //
                 .cycled()
                 .map(it -> {
-                    final DataSet ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
+                    final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
                             .setFetchDirectionToForward()
                             .setFetchSize(pageSize)
                             .settParameters(it.value(), paramSetter)
-                            .query();
+                            .query(resultExtractor);
 
                     it.setValue(ret);
 
                     return ret;
                 })
-                .takeWhile(N::notEmpty);
+                .takeWhile(JdbcUtil::isNotEmptyResult);
     }
 
     /**
@@ -4823,31 +4873,52 @@ public final class JdbcUtil {
      * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
      * @param pageSize
      * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
-     * @param entityCalss
+     * @param resultExtractor
      *
      * @param <T>
      * @return
      */
     @SuppressWarnings("rawtypes")
-    public static <T> CheckedStream<List<T>, SQLException> queryByPage(final Connection conn, final String query, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, List<T>> paramSetter, final Class<T> entityCalss) {
+    public static <R> CheckedStream<R, SQLException> queryByPage(final Connection conn, final String query, final int pageSize,
+            final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.BiResultExtractor<R> resultExtractor) {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return CheckedStream.<Holder<List<T>>, SQLException> just(Holder.of((List<T>) null)) //
+        return CheckedStream.<Holder<R>, SQLException> of(Holder.of((R) null)) //
                 .cycled()
                 .map(it -> {
-                    final List<T> ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
+                    final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
                             .setFetchDirectionToForward()
                             .setFetchSize(pageSize)
                             .settParameters(it.value(), paramSetter)
-                            .list(entityCalss);
+                            .query(resultExtractor);
 
                     it.setValue(ret);
 
                     return ret;
                 })
-                .takeWhile(N::notEmpty);
+                .takeWhile(JdbcUtil::isNotEmptyResult);
+    }
+
+    @SuppressWarnings("rawtypes")
+    static boolean isNotEmptyResult(Object ret) {
+        if (ret == null) {
+            return false;
+        }
+
+        if (ret instanceof DataSet) {
+            return N.notEmpty((DataSet) ret);
+        } else if (ret instanceof Collection) {
+            return N.notEmpty((Collection) ret);
+        } else if (ret instanceof Map) {
+            return N.notEmpty((Map) ret);
+        } else if (ret instanceof Iterable) {
+            return N.notEmpty((Iterable) ret);
+        } else if (ret instanceof Iterator) {
+            return N.notEmpty((Iterator) ret);
+        }
+
+        return true;
     }
 
     static <R> R checkNotResultSet(R result) {
@@ -4860,7 +4931,15 @@ public final class JdbcUtil {
 
     static boolean checkDateType(final ResultSet rs) {
         try {
-            return Strings.containsIgnoreCase(JdbcUtil.getDBProductInfo(rs.getStatement().getConnection()).getProductName(), "Oracle");
+            return checkDateType(rs.getStatement());
+        } catch (SQLException e) {
+            return true;
+        }
+    }
+
+    static boolean checkDateType(final Statement stmt) {
+        try {
+            return Strings.containsIgnoreCase(JdbcUtil.getDBProductInfo(stmt.getConnection()).getProductName(), "Oracle");
         } catch (SQLException e) {
             return true;
         }
@@ -5192,10 +5271,13 @@ public final class JdbcUtil {
         for (OutParam outParam : outParams) {
             outParameterGetter = sqlTypeGetterMap.getOrDefault(outParam.getSqlType(), objOutParameterGetter);
 
-            key = outParam.getParameterIndex() > 0 ? outParam.getParameterIndex() : outParam.getParameterName();
-
-            value = outParam.getParameterIndex() > 0 ? outParameterGetter.getOutParameter(stmt, outParam.getParameterIndex())
-                    : outParameterGetter.getOutParameter(stmt, outParam.getParameterName());
+            if (outParam.getParameterIndex() > 0) {
+                key = outParam.getParameterIndex();
+                value = outParameterGetter.getOutParameter(stmt, outParam.getParameterIndex());
+            } else {
+                key = outParam.getParameterName();
+                value = outParameterGetter.getOutParameter(stmt, outParam.getParameterName());
+            }
 
             if (value instanceof ResultSet rs) {
                 try {
@@ -6471,7 +6553,7 @@ public final class JdbcUtil {
      * @param daoInterface
      * @param ds
      * @param sqlMapper
-     * @param cache don't share cache between Dao instances.
+     * @param cache It's better to not share cache between Dao instances.
      * @return
      * @deprecated
      */
@@ -6516,7 +6598,7 @@ public final class JdbcUtil {
      * @param daoInterface
      * @param ds
      * @param sqlMapper
-     * @param cache don't share cache between Dao instances.
+     * @param cache It's better to not share cache between Dao instances.
      * @param executor
      * @return
      * @deprecated
@@ -6576,7 +6658,7 @@ public final class JdbcUtil {
      * @param targetTableName
      * @param ds
      * @param sqlMapper
-     * @param cache don't share cache between Dao instances.
+     * @param cache It's better to not share cache between Dao instances.
      * @return
      * @deprecated
      */
@@ -6625,7 +6707,7 @@ public final class JdbcUtil {
      * @param targetTableName
      * @param ds
      * @param sqlMapper
-     * @param cache don't share cache between Dao instances.
+     * @param cache It's better to not share cache between Dao instances.
      * @param executor
      * @return
      * @deprecated

@@ -308,7 +308,7 @@ public final class Jdbc {
          * @return
          */
         default BiResultExtractor<T> toBiResultExtractor() {
-            return BiResultExtractor.from(this);
+            return (rs, columnLabels) -> this.apply(rs);
         }
 
         /**
@@ -792,18 +792,18 @@ public final class Jdbc {
             return (rs, columnLabels) -> after.apply(apply(rs, columnLabels));
         }
 
-        /**
-         *
-         *
-         * @param <R>
-         * @param resultExtractor
-         * @return
-         */
-        static <R> BiResultExtractor<R> from(final ResultExtractor<? extends R> resultExtractor) {
-            N.checkArgNotNull(resultExtractor);
-
-            return (rs, columnLabels) -> resultExtractor.apply(rs);
-        }
+        //    /**
+        //     *
+        //     *
+        //     * @param <R>
+        //     * @param resultExtractor
+        //     * @return
+        //     */
+        //    static <R> BiResultExtractor<R> from(final ResultExtractor<? extends R> resultExtractor) {
+        //        N.checkArgNotNull(resultExtractor);
+        //
+        //        return (rs, columnLabels) -> resultExtractor.apply(rs);
+        //    }
 
         /**
          *
@@ -1178,37 +1178,37 @@ public final class Jdbc {
          * @return
          */
         default BiRowMapper<T> toBiRowMapper() {
-            return BiRowMapper.from(this);
+            return (rs, columnLabels) -> this.apply(rs);
         }
 
-        /**
-         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
-         *
-         * @param <T>
-         * @param biRowMapper
-         * @return
-         * @deprecated because it's stateful and may be misused easily&frequently
-         */
-        @Beta
-        @Deprecated
-        @SequentialOnly
-        @Stateful
-        static <T> RowMapper<T> from(final BiRowMapper<? extends T> biRowMapper) {
-            N.checkArgNotNull(biRowMapper, "biRowMapper");
-
-            return new RowMapper<>() {
-                private List<String> cls = null;
-
-                @Override
-                public T apply(ResultSet rs) throws SQLException {
-                    if (cls == null) {
-                        cls = JdbcUtil.getColumnLabelList(rs);
-                    }
-
-                    return biRowMapper.apply(rs, cls);
-                }
-            };
-        }
+        //    /**
+        //     * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+        //     *
+        //     * @param <T>
+        //     * @param biRowMapper
+        //     * @return
+        //     * @deprecated because it's stateful and may be misused easily&frequently
+        //     */
+        //    @Beta
+        //    @Deprecated
+        //    @SequentialOnly
+        //    @Stateful
+        //    static <T> RowMapper<T> from(final BiRowMapper<? extends T> biRowMapper) {
+        //        N.checkArgNotNull(biRowMapper, "biRowMapper");
+        //
+        //        return new RowMapper<>() {
+        //            private List<String> cls = null;
+        //
+        //            @Override
+        //            public T apply(ResultSet rs) throws SQLException {
+        //                if (cls == null) {
+        //                    cls = JdbcUtil.getColumnLabelList(rs);
+        //                }
+        //
+        //                return biRowMapper.apply(rs, cls);
+        //            }
+        //        };
+        //    }
 
         /**
          *
@@ -2045,21 +2045,34 @@ public final class Jdbc {
         @Deprecated
         @Stateful
         default RowMapper<T> toRowMapper() {
-            return RowMapper.from(this);
+            final BiRowMapper<T> biRowMapper = this;
+
+            return new RowMapper<>() {
+                private List<String> cls = null;
+
+                @Override
+                public T apply(ResultSet rs) throws SQLException {
+                    if (cls == null) {
+                        cls = JdbcUtil.getColumnLabelList(rs);
+                    }
+
+                    return biRowMapper.apply(rs, cls);
+                }
+            };
         }
 
-        /**
-         *
-         *
-         * @param <T>
-         * @param rowMapper
-         * @return
-         */
-        static <T> BiRowMapper<T> from(final RowMapper<? extends T> rowMapper) {
-            N.checkArgNotNull(rowMapper, "rowMapper");
-
-            return (rs, columnLabels) -> rowMapper.apply(rs);
-        }
+        //    /**
+        //     *
+        //     *
+        //     * @param <T>
+        //     * @param rowMapper
+        //     * @return
+        //     */
+        //    static <T> BiRowMapper<T> from(final RowMapper<? extends T> rowMapper) {
+        //        N.checkArgNotNull(rowMapper, "rowMapper");
+        //
+        //        return (rs, columnLabels) -> rowMapper.apply(rs);
+        //    }
 
         /**
          *
@@ -3511,7 +3524,7 @@ public final class Jdbc {
          * @return
          */
         default BiRowConsumer toBiRowConsumer() {
-            return BiRowConsumer.from(this);
+            return (rs, columnLabels) -> this.accept(rs);
         }
 
         /**
@@ -3680,17 +3693,17 @@ public final class Jdbc {
             };
         }
 
-        /**
-         *
-         *
-         * @param rowConsumer
-         * @return
-         */
-        static BiRowConsumer from(final RowConsumer rowConsumer) {
-            N.checkArgNotNull(rowConsumer, "rowConsumer");
-
-            return (rs, columnLabels) -> rowConsumer.accept(rs);
-        }
+        //    /**
+        //     *
+        //     *
+        //     * @param rowConsumer
+        //     * @return
+        //     */
+        //    static BiRowConsumer from(final RowConsumer rowConsumer) {
+        //        N.checkArgNotNull(rowConsumer, "rowConsumer");
+        //
+        //        return (rs, columnLabels) -> rowConsumer.accept(rs);
+        //    }
 
         /**
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
@@ -3871,7 +3884,7 @@ public final class Jdbc {
          * @return
          */
         default BiRowFilter toBiRowFilter() {
-            return BiRowFilter.from(this);
+            return (rs, columnLabels) -> this.test(rs);
         }
     }
 
@@ -3921,17 +3934,17 @@ public final class Jdbc {
             return (rs, cls) -> test(rs, cls) && other.test(rs, cls);
         }
 
-        /**
-         *
-         *
-         * @param rowFilter
-         * @return
-         */
-        static BiRowFilter from(final RowFilter rowFilter) {
-            N.checkArgNotNull(rowFilter, "rowFilter");
-
-            return (rs, columnLabels) -> rowFilter.test(rs);
-        }
+        //    /**
+        //     *
+        //     *
+        //     * @param rowFilter
+        //     * @return
+        //     */
+        //    static BiRowFilter from(final RowFilter rowFilter) {
+        //        N.checkArgNotNull(rowFilter, "rowFilter");
+        //
+        //        return (rs, columnLabels) -> rowFilter.test(rs);
+        //    }
     }
 
     @FunctionalInterface
@@ -5004,18 +5017,7 @@ public final class Jdbc {
         private int scale;
     }
 
-    /**
-     *
-     *
-     * @return
-     */
     @EqualsAndHashCode
-
-    /**
-     *
-     *
-     * @return
-     */
     @ToString
     public static final class OutParamResult {
         private final List<OutParam> outParams;
