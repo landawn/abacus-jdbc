@@ -4630,7 +4630,23 @@ public final class JdbcUtil {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(targetClass, "targetClass");
 
-        return streamAllResultSets(stmt, BiRowMapper.to(targetClass));
+        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
+
+        final Throwables.Supplier<CheckedIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
+
+        return CheckedStream.just(supplier, SQLException.class)
+                .onClose(() -> supplier.get().close())
+                .flatMap(it -> InternalUtil.newStream(it.get()))
+                .map(rs -> {
+                    final BiRowMapper<T> rowMapper = BiRowMapper.to(targetClass);
+                    JdbcUtil.setCheckDateTypeFlag(checkDateType);
+
+                    return JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> {
+                        JdbcUtil.resetCheckDateTypeFlag();
+
+                        JdbcUtil.closeQuietly(rs);
+                    });
+                });
     }
 
     /**

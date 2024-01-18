@@ -1794,8 +1794,17 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listMultiResultsetsAndGetOutParameters(final Class<? extends T> targetType) throws SQLException {
         checkArgNotNull(targetType, "targetType");
+        assertNotClosed();
 
-        return listMultiResultsetsAndGetOutParameters(Jdbc.BiRowMapper.to(targetType));
+        try {
+            JdbcUtil.execute(cstmt);
+
+            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, targetType).map(CheckedStream::toList).toList();
+
+            return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
+        } finally {
+            closeAfterExecutionIfAllowed();
+        }
     }
 
     /**

@@ -4384,8 +4384,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <T> List<List<T>> listMultiResultsets(final Class<? extends T> targetType) throws SQLException {
         checkArgNotNull(targetType, "targetType");
+        assertNotClosed();
 
-        return listMultiResultsets(Jdbc.BiRowMapper.to(targetType));
+        try {
+            JdbcUtil.execute(stmt);
+
+            return JdbcUtil.<T> streamAllResultSets(stmt, targetType).map(CheckedStream::toList).toList();
+        } finally {
+            closeAfterExecutionIfAllowed();
+        }
     }
 
     /**
@@ -4716,8 +4723,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Class<? extends T> targetType) {
         checkArgNotNull(targetType, "targetType");
+        assertNotClosed();
 
-        return streamMultiResultsets(Jdbc.BiRowMapper.to(targetType));
+        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(stmt);
+
+        return CheckedStream.just(supplier, SQLException.class)
+                .flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, targetType))
+                .onClose(this::closeAfterExecutionIfAllowed);
+
     }
 
     /**
