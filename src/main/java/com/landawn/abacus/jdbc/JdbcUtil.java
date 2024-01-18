@@ -3951,17 +3951,6 @@ public final class JdbcUtil {
     /**
      *
      * @param rs
-     * @param closeResultSet
-     * @return
-     * @throws SQLException
-     */
-    public static DataSet extractData(final ResultSet rs, final boolean closeResultSet) throws SQLException {
-        return extractData(rs, 0, Integer.MAX_VALUE, closeResultSet);
-    }
-
-    /**
-     *
-     * @param rs
      * @param offset
      * @param count
      * @return
@@ -3969,6 +3958,40 @@ public final class JdbcUtil {
      */
     public static DataSet extractData(final ResultSet rs, final int offset, final int count) throws SQLException {
         return extractData(rs, offset, count, false);
+    }
+
+    /**
+     *
+     * @param rs
+     * @param rowExtractor
+     * @return
+     * @throws SQLException
+     */
+    public static DataSet extractData(final ResultSet rs, final RowExtractor rowExtractor) throws SQLException {
+        return extractData(rs, 0, Integer.MAX_VALUE, INTERNAL_DUMMY_ROW_FILTER, rowExtractor, false);
+    }
+
+    /**
+     *
+     * @param rs
+     * @param filter
+     * @param rowExtractor
+     * @return
+     * @throws SQLException
+     */
+    public static DataSet extractData(final ResultSet rs, final RowFilter filter, final RowExtractor rowExtractor) throws SQLException {
+        return extractData(rs, 0, Integer.MAX_VALUE, filter, rowExtractor, false);
+    }
+
+    /**
+     *
+     * @param rs
+     * @param closeResultSet
+     * @return
+     * @throws SQLException
+     */
+    public static DataSet extractData(final ResultSet rs, final boolean closeResultSet) throws SQLException {
+        return extractData(rs, 0, Integer.MAX_VALUE, closeResultSet);
     }
 
     /**
