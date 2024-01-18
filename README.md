@@ -72,9 +72,9 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     List<User> selectUserByFirstName(String firstName) throws SQLException;
     
     // Multiple updates within transaction.
+    @Transactional
     @Sqls({ "update user set first_name = ? where id = ?", 
             "update user set last_name = ? where id = :id" })
-    @Transactional
     default void updateFirstNameLastNameByIds(long idForUpdateFirstName, long idForUpdateLastName, String... sqls) throws SQLException { // Last parameter must be String[]. It will be automatically filled with sqls in @Sql.
         prepareQuery(sqls[0]).setLong(1, idForUpdateFirstName).update();
         prepareNamedQuery(sqls[1]).setLong(1, idForUpdateLastName).update();
