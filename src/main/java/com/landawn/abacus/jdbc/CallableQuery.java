@@ -1453,7 +1453,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException
      */
     public Tuple2<List<DataSet>, Jdbc.OutParamResult> queryMultiResultsetsAndGetOutParameters() throws SQLException {
-        return queryMultiResultsetsAndGetOutParameters(Jdbc.ResultExtractor.TO_DATA_SET);
+        return queryMultiResultsetsAndGetOutParameters(JdbcUtil.TO_DATA_SET);
     }
 
     /**
@@ -1468,6 +1468,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
+        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
         CheckedIterator<ResultSet, SQLException> iter = null;
 
         try {
@@ -1478,7 +1479,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final List<R> resultList = new ArrayList<>();
 
             while (iter.hasNext()) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor));
+                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor, checkDateType));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -1505,6 +1506,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
+        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
         CheckedIterator<ResultSet, SQLException> iter = null;
 
         try {
@@ -1515,7 +1517,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final List<R> resultList = new ArrayList<>();
 
             while (iter.hasNext()) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor));
+                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor, checkDateType));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -1546,6 +1548,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor2, "resultExtractor2");
         assertNotClosed();
 
+        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
         CheckedIterator<ResultSet, SQLException> iter = null;
 
         try {
@@ -1557,11 +1560,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             R2 result2 = null;
 
             if (iter.hasNext()) {
-                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1);
+                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1, checkDateType);
             }
 
             if (iter.hasNext()) {
-                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2);
+                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2, checkDateType);
             }
 
             return Tuple.of(result1, result2, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -1595,6 +1598,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor3, "resultExtractor3");
         assertNotClosed();
 
+        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
         CheckedIterator<ResultSet, SQLException> iter = null;
 
         try {
@@ -1607,15 +1611,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             R3 result3 = null;
 
             if (iter.hasNext()) {
-                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1);
+                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1, checkDateType);
             }
 
             if (iter.hasNext()) {
-                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2);
+                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2, checkDateType);
             }
 
             if (iter.hasNext()) {
-                result3 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor3);
+                result3 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor3, checkDateType);
             }
 
             return Tuple.of(result1, result2, result3, JdbcUtil.getOutParameters(cstmt, outParams));

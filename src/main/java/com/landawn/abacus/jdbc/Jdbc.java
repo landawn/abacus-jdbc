@@ -625,7 +625,6 @@ public final class Jdbc {
          * @return
          */
         @SequentialOnly
-        @Stateful
         static <T> ResultExtractor<List<T>> toList(final Class<? extends T> targetClass) {
             N.checkArgNotNull(targetClass, "targetClass");
 
@@ -652,7 +651,6 @@ public final class Jdbc {
          * @see DataSet#toMergedEntities(Class)
          */
         @SequentialOnly
-        @Stateful
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass) {
             N.checkArgNotNull(targetClass, "targetClass");
 
@@ -673,7 +671,6 @@ public final class Jdbc {
          * @see DataSet#toMergedEntities(Class, Collection, Collection)
          */
         @SequentialOnly
-        @Stateful
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, Collection<String> idPropNamesForMerge) {
             N.checkArgNotNull(targetClass, "targetClass");
 
@@ -693,7 +690,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static ResultExtractor<DataSet> toDataSet(final Class<?> entityClass) {
-            return toDataSet(RowExtractor.createBy(entityClass));
+            return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClass));
         }
 
         /**
@@ -706,7 +703,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static ResultExtractor<DataSet> toDataSet(final Class<?> entityClass, final Map<String, String> prefixAndFieldNameMap) {
-            return toDataSet(RowExtractor.createBy(entityClass, prefixAndFieldNameMap));
+            return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClass, prefixAndFieldNameMap));
         }
 
         /**
@@ -716,7 +713,7 @@ public final class Jdbc {
          * @return
          */
         static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter) {
-            return rs -> JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowFilter, false);
+            return rs -> JdbcUtil.extractData(rs, rowFilter);
         }
 
         /**
@@ -726,7 +723,7 @@ public final class Jdbc {
          * @return
          */
         static ResultExtractor<DataSet> toDataSet(final RowExtractor rowExtractor) {
-            return rs -> JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowExtractor, false);
+            return rs -> JdbcUtil.extractData(rs, rowExtractor);
         }
 
         /**
@@ -1120,7 +1117,6 @@ public final class Jdbc {
          * @return
          */
         @SequentialOnly
-        @Stateful
         static <T> BiResultExtractor<List<T>> toList(final Class<? extends T> targetClass) {
             N.checkArgNotNull(targetClass, "targetClass");
 

@@ -3963,6 +3963,18 @@ public final class JdbcUtil {
     /**
      *
      * @param rs
+     * @param filter
+     * @param rowExtractor
+     * @return
+     * @throws SQLException
+     */
+    public static DataSet extractData(final ResultSet rs, final RowFilter filter) throws SQLException {
+        return extractData(rs, 0, Integer.MAX_VALUE, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, false);
+    }
+
+    /**
+     *
+     * @param rs
      * @param rowExtractor
      * @return
      * @throws SQLException
@@ -4054,76 +4066,11 @@ public final class JdbcUtil {
         N.checkArgNotNegative(count, "count");
         N.checkArgNotNull(filter, "filter");
         N.checkArgNotNull(rowExtractor, "rowExtractor");
+        final boolean checkDateType = checkDateType(rs);
 
         try {
-            // TODO [performance improvement]. it will improve performance a lot if MetaData is cached.
-            final boolean checkDateType = checkDateType(rs);
             JdbcUtil.setCheckDateTypeFlag(checkDateType);
-
-            final ResultSetMetaData rsmd = rs.getMetaData();
-            final int columnCount = rsmd.getColumnCount();
-            final List<String> columnNameList = new ArrayList<>(columnCount);
-            final List<List<Object>> columnList = new ArrayList<>(columnCount);
-
-            for (int i = 0; i < columnCount;) {
-                columnNameList.add(JdbcUtil.getColumnLabel(rsmd, ++i));
-                columnList.add(new ArrayList<>());
-            }
-
-            JdbcUtil.skip(rs, offset);
-
-            if (filter == INTERNAL_DUMMY_ROW_FILTER) {
-                if (rowExtractor == INTERNAL_DUMMY_ROW_EXTRACTOR) {
-                    while (count > 0 && rs.next()) {
-                        for (int i = 0; i < columnCount;) {
-                            columnList.get(i).add(JdbcUtil.getColumnValue(rs, ++i, checkDateType));
-                        }
-
-                        count--;
-                    }
-                } else {
-                    final Object[] outputRow = new Object[columnCount];
-
-                    while (count > 0 && rs.next()) {
-                        rowExtractor.accept(rs, outputRow);
-
-                        for (int i = 0; i < columnCount; i++) {
-                            columnList.get(i).add(outputRow[i]);
-                        }
-
-                        count--;
-                    }
-                }
-            } else {
-                if (rowExtractor == INTERNAL_DUMMY_ROW_EXTRACTOR) {
-                    while (count > 0 && rs.next()) {
-                        if (filter.test(rs)) {
-                            for (int i = 0; i < columnCount;) {
-                                columnList.get(i).add(JdbcUtil.getColumnValue(rs, ++i, checkDateType));
-                            }
-
-                            count--;
-                        }
-                    }
-                } else {
-                    final Object[] outputRow = new Object[columnCount];
-
-                    while (count > 0 && rs.next()) {
-                        if (filter.test(rs)) {
-                            rowExtractor.accept(rs, outputRow);
-
-                            for (int i = 0; i < columnCount; i++) {
-                                columnList.get(i).add(outputRow[i]);
-                            }
-
-                            count--;
-                        }
-                    }
-                }
-            }
-
-            // return new RowDataSet(null, entityClass, columnNameList, columnList);
-            return new RowDataSet(columnNameList, columnList);
+            return JdbcUtil.extractResultSetToDataSet(rs, offset, count, filter, rowExtractor, checkDateType);
         } finally {
             JdbcUtil.resetCheckDateTypeFlag();
 
@@ -4133,9 +4080,89 @@ public final class JdbcUtil {
         }
     }
 
+    static DataSet extractResultSetToDataSet(final ResultSet rs, int offset, int count, final RowFilter filter, final RowExtractor rowExtractor,
+            final boolean checkDateType) throws SQLException {
+        final ResultSetMetaData rsmd = rs.getMetaData();
+        final int columnCount = rsmd.getColumnCount();
+        final List<String> columnNameList = new ArrayList<>(columnCount);
+        final List<List<Object>> columnList = new ArrayList<>(columnCount);
+
+        for (int i = 0; i < columnCount;) {
+            columnNameList.add(JdbcUtil.getColumnLabel(rsmd, ++i));
+            columnList.add(new ArrayList<>());
+        }
+
+        JdbcUtil.skip(rs, offset);
+
+        if (filter == INTERNAL_DUMMY_ROW_FILTER) {
+            if (rowExtractor == INTERNAL_DUMMY_ROW_EXTRACTOR) {
+                while (count > 0 && rs.next()) {
+                    for (int i = 0; i < columnCount;) {
+                        columnList.get(i).add(JdbcUtil.getColumnValue(rs, ++i, checkDateType));
+                    }
+
+                    count--;
+                }
+            } else {
+                final Object[] outputRow = new Object[columnCount];
+
+                while (count > 0 && rs.next()) {
+                    rowExtractor.accept(rs, outputRow);
+
+                    for (int i = 0; i < columnCount; i++) {
+                        columnList.get(i).add(outputRow[i]);
+                    }
+
+                    count--;
+                }
+            }
+        } else {
+            if (rowExtractor == INTERNAL_DUMMY_ROW_EXTRACTOR) {
+                while (count > 0 && rs.next()) {
+                    if (filter.test(rs)) {
+                        for (int i = 0; i < columnCount;) {
+                            columnList.get(i).add(JdbcUtil.getColumnValue(rs, ++i, checkDateType));
+                        }
+
+                        count--;
+                    }
+                }
+            } else {
+                final Object[] outputRow = new Object[columnCount];
+
+                while (count > 0 && rs.next()) {
+                    if (filter.test(rs)) {
+                        rowExtractor.accept(rs, outputRow);
+
+                        for (int i = 0; i < columnCount; i++) {
+                            columnList.get(i).add(outputRow[i]);
+                        }
+
+                        count--;
+                    }
+                }
+            }
+        }
+
+        // return new RowDataSet(null, entityClass, columnNameList, columnList);
+        return new RowDataSet(columnNameList, columnList);
+    }
+
     static <R> R extractAndCloseResultSet(ResultSet rs, final ResultExtractor<? extends R> resultExtractor) throws SQLException {
         try {
             JdbcUtil.setCheckDateTypeFlag(rs);
+
+            return checkNotResultSet(resultExtractor.apply(rs));
+        } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
+            closeQuietly(rs);
+        }
+    }
+
+    static <R> R extractAndCloseResultSet(ResultSet rs, final ResultExtractor<? extends R> resultExtractor, final boolean checkDateType) throws SQLException {
+        try {
+            JdbcUtil.setCheckDateTypeFlag(checkDateType);
 
             return checkNotResultSet(resultExtractor.apply(rs));
         } finally {
@@ -4157,6 +4184,26 @@ public final class JdbcUtil {
         }
     }
 
+    static <R> R extractAndCloseResultSet(ResultSet rs, final BiResultExtractor<? extends R> resultExtractor, final boolean checkDateType) throws SQLException {
+        try {
+            JdbcUtil.setCheckDateTypeFlag(checkDateType);
+
+            return checkNotResultSet(resultExtractor.apply(rs, getColumnLabelList(rs)));
+        } finally {
+            JdbcUtil.resetCheckDateTypeFlag();
+
+            closeQuietly(rs);
+        }
+    }
+
+    static final ResultExtractor<DataSet> TO_DATA_SET = rs -> {
+        if (rs == null) {
+            return N.newEmptyDataSet();
+        }
+
+        return JdbcUtil.extractResultSetToDataSet(rs, 0, Integer.MAX_VALUE, INTERNAL_DUMMY_ROW_FILTER, INTERNAL_DUMMY_ROW_EXTRACTOR, checkDateType_TL.get());
+    };
+
     /**
      * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
      * <br />
@@ -4166,7 +4213,7 @@ public final class JdbcUtil {
      * @return
      */
     public static CheckedStream<DataSet, SQLException> extractAllResultSets(final Statement stmt) {
-        return extractAllResultSets(stmt, ResultExtractor.TO_DATA_SET);
+        return extractAllResultSets(stmt, JdbcUtil.TO_DATA_SET);
     }
 
     /**
@@ -4183,12 +4230,14 @@ public final class JdbcUtil {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(resultExtractor, "resultExtractor");
 
+        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
+
         final Throwables.Supplier<CheckedIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
         return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
-                .map(resultExtractor::apply);
+                .map(rs -> extractAndCloseResultSet(rs, resultExtractor, checkDateType));
     }
 
     /**
@@ -4205,12 +4254,14 @@ public final class JdbcUtil {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(resultExtractor, "resultExtractor");
 
+        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
+
         final Throwables.Supplier<CheckedIterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
 
         return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> InternalUtil.newStream(it.get()))
-                .map(rs -> resultExtractor.apply(rs, JdbcUtil.getColumnLabelList(rs)));
+                .map(rs -> extractAndCloseResultSet(rs, resultExtractor, checkDateType));
     }
 
     /**
@@ -4955,7 +5006,7 @@ public final class JdbcUtil {
     static boolean checkDateType(final ResultSet rs) {
         try {
             return checkDateType(rs.getStatement());
-        } catch (SQLException e) {
+        } catch (Exception e) {
             return true;
         }
     }
