@@ -3451,12 +3451,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(stmt);
-
             return JdbcUtil.checkNotResultSet(resultExtractor.apply(rs));
         } finally {
-            JdbcUtil.resetCheckDateTypeFlag();
-
             closeAfterExecutionIfAllowed();
         }
     }
@@ -3474,12 +3470,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(stmt);
-
             return JdbcUtil.checkNotResultSet(resultExtractor.apply(rs, JdbcUtil.getColumnLabelList(rs)));
         } finally {
-            JdbcUtil.resetCheckDateTypeFlag();
-
             closeAfterExecutionIfAllowed();
 
         }
@@ -3502,7 +3494,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor2, "resultExtractor2");
         assertNotClosed();
 
-        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
         CheckedIterator<ResultSet, SQLException> iter = null;
 
         try {
@@ -3514,11 +3505,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             R2 result2 = null;
 
             if (iter.hasNext()) {
-                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1, checkDateType);
+                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1);
             }
 
             if (iter.hasNext()) {
-                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2, checkDateType);
+                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2);
             }
 
             return Tuple.of(result1, result2);
@@ -3553,7 +3544,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor3, "resultExtractor3");
         assertNotClosed();
 
-        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
         CheckedIterator<ResultSet, SQLException> iter = null;
 
         try {
@@ -3566,15 +3556,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             R3 result3 = null;
 
             if (iter.hasNext()) {
-                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1, checkDateType);
+                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1);
             }
 
             if (iter.hasNext()) {
-                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2, checkDateType);
+                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2);
             }
 
             if (iter.hasNext()) {
-                result3 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor3, checkDateType);
+                result3 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor3);
             }
 
             return Tuple.of(result1, result2, result3);
@@ -3611,7 +3601,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
-        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
         CheckedIterator<ResultSet, SQLException> iter = null;
 
         try {
@@ -3622,7 +3611,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             final List<R> result = new ArrayList<>();
 
             while (iter.hasNext()) {
-                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor, checkDateType));
+                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor));
             }
 
             return result;
@@ -3649,7 +3638,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
-        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
         CheckedIterator<ResultSet, SQLException> iter = null;
 
         try {
@@ -3660,7 +3648,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             final List<R> result = new ArrayList<>();
 
             while (iter.hasNext()) {
-                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor, checkDateType));
+                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor));
             }
 
             return result;
@@ -4278,8 +4266,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(stmt);
-
             final List<T> result = new ArrayList<>();
 
             while (maxResult > 0 && rs.next()) {
@@ -4291,8 +4277,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             return result;
         } finally {
-            JdbcUtil.resetCheckDateTypeFlag();
-
             closeAfterExecutionIfAllowed();
         }
     }
@@ -4354,8 +4338,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(stmt);
-
             final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
             final List<T> result = new ArrayList<>();
 
@@ -4368,8 +4350,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             return result;
         } finally {
-            JdbcUtil.resetCheckDateTypeFlag();
-
             closeAfterExecutionIfAllowed();
         }
     }
@@ -5141,15 +5121,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(stmt);
-
             while (rs.next()) {
                 rowConsumer.accept(rs);
             }
 
         } finally {
-            JdbcUtil.resetCheckDateTypeFlag();
-
             closeAfterExecutionIfAllowed();
         }
     }
@@ -5166,7 +5142,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(stmt);
 
             while (rs.next()) {
                 if (rowFilter.test(rs)) {
@@ -5174,8 +5149,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 }
             }
         } finally {
-            JdbcUtil.resetCheckDateTypeFlag();
-
             closeAfterExecutionIfAllowed();
         }
     }
@@ -5190,8 +5163,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(stmt);
-
             final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
             while (rs.next()) {
@@ -5199,8 +5170,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
         } finally {
-            JdbcUtil.resetCheckDateTypeFlag();
-
             closeAfterExecutionIfAllowed();
         }
     }
@@ -5217,8 +5186,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            JdbcUtil.setCheckDateTypeFlag(stmt);
-
             final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
             while (rs.next()) {
@@ -5228,8 +5195,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
         } finally {
-            JdbcUtil.resetCheckDateTypeFlag();
-
             closeAfterExecutionIfAllowed();
         }
     }

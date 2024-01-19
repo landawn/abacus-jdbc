@@ -1468,7 +1468,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
-        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
         CheckedIterator<ResultSet, SQLException> iter = null;
 
         try {
@@ -1479,7 +1478,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final List<R> resultList = new ArrayList<>();
 
             while (iter.hasNext()) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor, checkDateType));
+                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -1506,7 +1505,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
-        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
         CheckedIterator<ResultSet, SQLException> iter = null;
 
         try {
@@ -1517,7 +1515,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final List<R> resultList = new ArrayList<>();
 
             while (iter.hasNext()) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor, checkDateType));
+                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -1548,7 +1546,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor2, "resultExtractor2");
         assertNotClosed();
 
-        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
         CheckedIterator<ResultSet, SQLException> iter = null;
 
         try {
@@ -1560,11 +1557,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             R2 result2 = null;
 
             if (iter.hasNext()) {
-                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1, checkDateType);
+                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1);
             }
 
             if (iter.hasNext()) {
-                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2, checkDateType);
+                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2);
             }
 
             return Tuple.of(result1, result2, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -1598,7 +1595,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor3, "resultExtractor3");
         assertNotClosed();
 
-        final boolean checkDateType = JdbcUtil.checkDateType(stmt);
         CheckedIterator<ResultSet, SQLException> iter = null;
 
         try {
@@ -1611,15 +1607,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             R3 result3 = null;
 
             if (iter.hasNext()) {
-                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1, checkDateType);
+                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1);
             }
 
             if (iter.hasNext()) {
-                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2, checkDateType);
+                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2);
             }
 
             if (iter.hasNext()) {
-                result3 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor3, checkDateType);
+                result3 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor3);
             }
 
             return Tuple.of(result1, result2, result3, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -1663,8 +1659,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final ResultSet rs = executeQuery();
 
             if (rs != null) {
-                JdbcUtil.setCheckDateTypeFlag(cstmt);
-
                 while (rs.next()) {
                     result.add(rowMapper.apply(rs));
                 }
@@ -1672,8 +1666,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
-            JdbcUtil.resetCheckDateTypeFlag();
-
             closeAfterExecutionIfAllowed();
         }
     }
@@ -1697,8 +1689,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final ResultSet rs = executeQuery();
 
             if (rs != null) {
-                JdbcUtil.setCheckDateTypeFlag(cstmt);
-
                 while (rs.next()) {
                     if (rowFilter.test(rs)) {
                         result.add(rowMapper.apply(rs));
@@ -1708,8 +1698,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
-            JdbcUtil.resetCheckDateTypeFlag();
-
             closeAfterExecutionIfAllowed();
         }
     }
@@ -1730,8 +1718,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final ResultSet rs = executeQuery();
 
             if (rs != null) {
-                JdbcUtil.setCheckDateTypeFlag(cstmt);
-
                 final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
                 while (rs.next()) {
@@ -1741,8 +1727,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
-            JdbcUtil.resetCheckDateTypeFlag();
-
             closeAfterExecutionIfAllowed();
         }
     }
@@ -1766,8 +1750,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final ResultSet rs = executeQuery();
 
             if (rs != null) {
-                JdbcUtil.setCheckDateTypeFlag(cstmt);
-
                 final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
                 while (rs.next()) {
@@ -1779,8 +1761,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
-            JdbcUtil.resetCheckDateTypeFlag();
-
             closeAfterExecutionIfAllowed();
         }
     }

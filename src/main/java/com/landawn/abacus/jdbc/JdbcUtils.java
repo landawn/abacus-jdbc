@@ -2693,7 +2693,6 @@ public final class JdbcUtils {
 
         try {
             final boolean checkDateType = JdbcUtil.checkDateType(rs);
-            JdbcUtil.setCheckDateTypeFlag(checkDateType);
 
             final ResultSetMetaData rsmd = rs.getMetaData();
             final int columnCount = rsmd.getColumnCount();
@@ -2786,8 +2785,6 @@ public final class JdbcUtils {
 
             bw.flush();
         } finally {
-            JdbcUtil.resetCheckDateTypeFlag();
-
             if (bw != out) {
                 Objectory.recycle(bw);
             }
