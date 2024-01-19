@@ -4152,14 +4152,6 @@ public final class JdbcUtil {
         }
     }
 
-    static final ResultExtractor<DataSet> TO_DATA_SET = rs -> {
-        if (rs == null) {
-            return N.newEmptyDataSet();
-        }
-
-        return JdbcUtil.extractData(rs);
-    };
-
     /**
      * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
      * <br />
@@ -4169,7 +4161,7 @@ public final class JdbcUtil {
      * @return
      */
     public static CheckedStream<DataSet, SQLException> extractAllResultSets(final Statement stmt) {
-        return extractAllResultSets(stmt, JdbcUtil.TO_DATA_SET);
+        return extractAllResultSets(stmt, ResultExtractor.TO_DATA_SET);
     }
 
     /**

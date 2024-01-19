@@ -3586,7 +3586,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public List<DataSet> queryMultiResultsets() throws SQLException {
-        return queryMultiResultsets(JdbcUtil.TO_DATA_SET);
+        return queryMultiResultsets(ResultExtractor.TO_DATA_SET);
     }
 
     /**

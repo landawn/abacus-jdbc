@@ -34,6 +34,7 @@ import java.util.Set;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
+import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
@@ -1453,7 +1454,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException
      */
     public Tuple2<List<DataSet>, Jdbc.OutParamResult> queryMultiResultsetsAndGetOutParameters() throws SQLException {
-        return queryMultiResultsetsAndGetOutParameters(JdbcUtil.TO_DATA_SET);
+        return queryMultiResultsetsAndGetOutParameters(ResultExtractor.TO_DATA_SET);
     }
 
     /**
