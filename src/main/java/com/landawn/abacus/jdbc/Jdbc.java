@@ -169,7 +169,6 @@ public final class Jdbc {
          * @return
          */
         @Beta
-        @Stateful
         static <T> BiParametersSetter<PreparedStatement, T[]> createForArray(final List<String> fieldNameList, final Class<?> entityClass) {
             N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
             N.checkArgument(ClassUtil.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
@@ -183,11 +182,14 @@ public final class Jdbc {
                 public void accept(PreparedStatement stmt, T[] params) throws SQLException {
                     if (fieldTypes == null) {
                         final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
-                        fieldTypes = new Type[len];
+                        @SuppressWarnings("rawtypes")
+                        final Type[] localFieldTypes = new Type[len];
 
                         for (int i = 0; i < len; i++) {
-                            fieldTypes[i] = entityInfo.getPropInfo(fieldNameList.get(i)).dbType;
+                            localFieldTypes[i] = entityInfo.getPropInfo(fieldNameList.get(i)).dbType;
                         }
+
+                        this.fieldTypes = localFieldTypes;
                     }
 
                     for (int i = 0; i < len; i++) {
@@ -206,7 +208,6 @@ public final class Jdbc {
          * @return
          */
         @Beta
-        @Stateful
         static <T> BiParametersSetter<PreparedStatement, List<T>> createForList(final List<String> fieldNameList, final Class<?> entityClass) {
             N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
             N.checkArgument(ClassUtil.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
@@ -220,11 +221,14 @@ public final class Jdbc {
                 public void accept(PreparedStatement stmt, List<T> params) throws SQLException {
                     if (fieldTypes == null) {
                         final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
-                        fieldTypes = new Type[len];
+                        @SuppressWarnings("rawtypes")
+                        final Type[] localFieldTypes = new Type[len];
 
                         for (int i = 0; i < len; i++) {
-                            fieldTypes[i] = entityInfo.getPropInfo(fieldNameList.get(i)).dbType;
+                            localFieldTypes[i] = entityInfo.getPropInfo(fieldNameList.get(i)).dbType;
                         }
+
+                        this.fieldTypes = localFieldTypes;
                     }
 
                     for (int i = 0; i < len; i++) {
@@ -688,7 +692,6 @@ public final class Jdbc {
          * @return
          */
         @SequentialOnly
-        @Stateful
         static ResultExtractor<DataSet> toDataSet(final Class<?> entityClass) {
             return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClass));
         }
@@ -701,7 +704,6 @@ public final class Jdbc {
          * @return
          */
         @SequentialOnly
-        @Stateful
         static ResultExtractor<DataSet> toDataSet(final Class<?> entityClass, final Map<String, String> prefixAndFieldNameMap) {
             return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClass, prefixAndFieldNameMap));
         }
@@ -1437,7 +1439,6 @@ public final class Jdbc {
         //    }
 
         @SequentialOnly
-        @Stateful
         public static class RowMapperBuilder {
             private final Map<Integer, ColumnGetter<?>> columnGetterMap;
 
@@ -2035,6 +2036,7 @@ public final class Jdbc {
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @return
+         * @see RowMapper#toBiRowMapper()
          * @deprecated because it's stateful and may be misused easily&frequently
          */
         @Beta
@@ -2188,7 +2190,6 @@ public final class Jdbc {
 
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-
                             if (columnLabels == null) {
                                 columnCount = columnLabelList.size();
 
@@ -2882,8 +2883,6 @@ public final class Jdbc {
          * @return
          */
         @Beta
-        @SequentialOnly
-        @Stateful
         static BiRowMapper<Object[]> toArray(final ColumnGetter<?> columnGetterForAll) {
             return new BiRowMapper<>() {
 
@@ -2908,8 +2907,6 @@ public final class Jdbc {
          * @return
          */
         @Beta
-        @SequentialOnly
-        @Stateful
         static BiRowMapper<List<Object>> toList(final ColumnGetter<?> columnGetterForAll) {
             return toCollection(columnGetterForAll, Factory.<Object> ofList());
         }
@@ -2921,8 +2918,6 @@ public final class Jdbc {
          * @return
          */
         @Beta
-        @SequentialOnly
-        @Stateful
         static <C extends Collection<?>> BiRowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<C> supplier) {
             return new BiRowMapper<>() {
 
@@ -3061,7 +3056,6 @@ public final class Jdbc {
         //    }
 
         @SequentialOnly
-        @Stateful
         public static class BiRowMapperBuilder {
             private final ColumnGetter<?> defaultColumnGetter;
             private final Map<String, ColumnGetter<?>> columnGetterMap;
@@ -3702,14 +3696,11 @@ public final class Jdbc {
         //    }
 
         /**
-         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param consumer
          * @return
          */
         @Beta
-        @SequentialOnly
-        @Stateful
         static BiRowConsumer create(Throwables.ObjIntConsumer<ResultSet, SQLException> consumerForAll) {
             N.checkArgNotNull(consumerForAll, "consumerForAll");
 
@@ -4107,8 +4098,6 @@ public final class Jdbc {
             return new RowExtractorBuilder(defaultColumnGetter);
         }
 
-        @SequentialOnly
-        @Stateful
         public static class RowExtractorBuilder {
             private final Map<Integer, ColumnGetter<?>> columnGetterMap;
 
