@@ -59,6 +59,7 @@ public class UncheckedDaoTest {
         assertEquals(users.size(), ids.size());
 
         assertNotNull(uncheckedUserDao.selectByIdWithDefine("user1", N.asList("last_name", "first_name"), ids.get(0)));
+        assertNotNull(uncheckedUserDao.selectByIdWithDefine2("user1", N.asArray("last_name", "first_name"), ids.get(0)));
         assertEquals(ids.size(), uncheckedUserDao.selectByIdWithDefine_2("user1", "id", ids.get(0)).size());
 
         assertEquals(ids.size(), uncheckedUserDao.selectByIdWithDefine_3("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());

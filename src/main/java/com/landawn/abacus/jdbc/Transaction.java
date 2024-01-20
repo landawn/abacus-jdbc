@@ -14,6 +14,7 @@
 
 package com.landawn.abacus.jdbc;
 
+import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
 
 // TODO: Auto-generated Javadoc
@@ -32,9 +33,9 @@ public interface Transaction {
     String id();
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     IsolationLevel isolationLevel();
 
@@ -58,10 +59,31 @@ public interface Transaction {
     void commit() throws UncheckedSQLException;
 
     /**
+     * @param actoinAfterCommit
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    @Beta
+    void commit(Runnable actoinAfterCommit) throws UncheckedSQLException;
+
+    /**
      *
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     void rollback() throws UncheckedSQLException;
+
+    /**
+     *
+     * @param actionAfterRollback
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
+    @Beta
+    void rollback(Runnable actionAfterRollback) throws UncheckedSQLException;
+
+    /**
+     *
+     * @throws UncheckedSQLException
+     */
+    void rollbackIfNotCommitted() throws UncheckedSQLException;
 
     /**
      * The Enum Status.

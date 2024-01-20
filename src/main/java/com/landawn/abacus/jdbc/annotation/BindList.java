@@ -20,6 +20,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.landawn.abacus.annotation.Beta;
+
 /**
  * The Interface BindList.
  */
@@ -29,7 +31,17 @@ public @interface BindList {
 
     String value() default "";
 
-    String prefixForNonEmpty() default "";
+    /**
+     *
+     * @return
+     */
+    @Beta
+    String prefixForNonEmpty() default ""; // Should use @Define when prefixForNonEmpty or suffixForNonEmpty is used?
 
-    String suffixForNonEmpty() default "";
+    /**
+     *
+     * @return
+     */
+    @Beta
+    String suffixForNonEmpty() default ""; // Should use @Define when prefixForNonEmpty or suffixForNonEmpty is used?
 }

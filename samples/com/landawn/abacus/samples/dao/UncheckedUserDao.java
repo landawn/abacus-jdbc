@@ -116,6 +116,9 @@ public interface UncheckedUserDao
     @Select(sql = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
     User selectByIdWithDefine(@Define("tableName") String tableName, @DefineList("{{orderBy}}") List<String> orderByFields, @Bind("id") long id);
 
+    @Select(sql = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
+    User selectByIdWithDefine2(@Define("tableName") String tableName, @DefineList("{{orderBy}}") String[] orderByFields, @Bind("id") long id);
+
     @Select(sql = "SELECT * FROM {tableName} where id >= ? ORDER BY {whatever -> orderBy{{P}}")
     List<User> selectByIdWithDefine_2(@Define("tableName") String tableName, @Define("{whatever -> orderBy{{P}}") String orderBy, long id);
 

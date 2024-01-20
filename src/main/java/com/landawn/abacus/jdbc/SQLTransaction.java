@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
+import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
@@ -183,6 +184,11 @@ public final class SQLTransaction implements Transaction, Closeable {
      */
     @Override
     public void commit() throws UncheckedSQLException {
+        commit(Fn.emptyAction());
+    }
+
+    @Override
+    public void commit(Runnable actoinAfterCommit) throws UncheckedSQLException {
         final int refCount = decrementAndGetRef();
         _isMarkedByCommitPreviously = true;
 
@@ -220,6 +226,8 @@ public final class SQLTransaction implements Transaction, Closeable {
                 logger.info("Transaction(id={}) has been committed successfully", _timedId);
 
                 resetAndCloseConnection();
+
+                actoinAfterCommit.run();
             } else {
                 logger.warn("Failed to commit transaction(id={}). It will automatically be rolled back ", _timedId);
                 executeRollback();
@@ -253,6 +261,14 @@ public final class SQLTransaction implements Transaction, Closeable {
     @Deprecated
     @Override
     public void rollback() throws UncheckedSQLException {
+        rollback(Fn.emptyAction());
+    }
+
+    /**
+     *
+     */
+    @Override
+    public void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
         final int refCount = decrementAndGetRef();
         _isMarkedByCommitPreviously = true;
 
@@ -268,7 +284,7 @@ public final class SQLTransaction implements Transaction, Closeable {
             throw new IllegalStateException("Transaction(id=" + _timedId + ") is already: " + _status);
         }
 
-        executeRollback();
+        executeRollback(actionAfterRollback);
     }
 
     /**
@@ -276,6 +292,7 @@ public final class SQLTransaction implements Transaction, Closeable {
      *
      * @throws UncheckedSQLException the unchecked SQL exception
      */
+    @Override
     public void rollbackIfNotCommitted() throws UncheckedSQLException {
         if (_isMarkedByCommitPreviously) { // Do nothing. It happened in finally block.
             _isMarkedByCommitPreviously = false;
@@ -305,11 +322,15 @@ public final class SQLTransaction implements Transaction, Closeable {
         executeRollback();
     }
 
+    private void executeRollback() throws UncheckedSQLException {
+        executeRollback(Fn.emptyAction());
+    }
+
     /**
      *
      * @throws UncheckedSQLException the unchecked SQL exception
      */
-    private void executeRollback() throws UncheckedSQLException {
+    private void executeRollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
         logger.warn("Rolling back transaction(id={})", _timedId);
 
         _status = Status.FAILED_ROLLBACK;
@@ -330,6 +351,8 @@ public final class SQLTransaction implements Transaction, Closeable {
             }
 
             resetAndCloseConnection();
+
+            actionAfterRollback.run();
         }
     }
 

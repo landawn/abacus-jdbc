@@ -622,13 +622,10 @@ public final class Jdbc {
         }
 
         /**
-         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
-         *
          * @param <T>
          * @param targetClass
          * @return
          */
-        @SequentialOnly
         static <T> ResultExtractor<List<T>> toList(final Class<? extends T> targetClass) {
             N.checkArgNotNull(targetClass, "targetClass");
 
@@ -647,14 +644,11 @@ public final class Jdbc {
         }
 
         /**
-         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
-         *
          * @param <T>
          * @param targetClass
          * @return
          * @see DataSet#toMergedEntities(Class)
          */
-        @SequentialOnly
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass) {
             N.checkArgNotNull(targetClass, "targetClass");
 
@@ -666,15 +660,29 @@ public final class Jdbc {
         }
 
         /**
-         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
-         *
+         * @param <T>
+         * @param targetClass
+         * @param idPropNameForMerge
+         * @return
+         * @see DataSet#toMergedEntities(Class, Collection, Collection)
+         */
+        static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, final String idPropNameForMerge) {
+            N.checkArgNotNull(targetClass, "targetClass");
+
+            return rs -> {
+                final RowExtractor rowExtractor = RowExtractor.createBy(targetClass);
+
+                return JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowExtractor, false).toMergedEntities(targetClass, idPropNameForMerge);
+            };
+        }
+
+        /**
          * @param <T>
          * @param targetClass
          * @param idPropNamesForMerge
          * @return
          * @see DataSet#toMergedEntities(Class, Collection, Collection)
          */
-        @SequentialOnly
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, Collection<String> idPropNamesForMerge) {
             N.checkArgNotNull(targetClass, "targetClass");
 
@@ -686,12 +694,9 @@ public final class Jdbc {
         }
 
         /**
-         * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
-         *
          * @param entityClass
          * @return
          */
-        @SequentialOnly
         static ResultExtractor<DataSet> toDataSet(final Class<?> entityClass) {
             return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClass));
         }
@@ -703,7 +708,6 @@ public final class Jdbc {
          * @param prefixAndFieldNameMap
          * @return
          */
-        @SequentialOnly
         static ResultExtractor<DataSet> toDataSet(final Class<?> entityClass, final Map<String, String> prefixAndFieldNameMap) {
             return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClass, prefixAndFieldNameMap));
         }
