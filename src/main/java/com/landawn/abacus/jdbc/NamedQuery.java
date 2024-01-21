@@ -3083,11 +3083,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 }
 
                 stmt.setObject(1, first);
-                stmt.addBatch();
+                addBatch();
 
                 while (iter.hasNext()) {
                     stmt.setObject(1, iter.next());
-                    stmt.addBatch();
+                    addBatch();
                 }
             } else {
                 final Class<?> cls = first.getClass();
@@ -3110,7 +3110,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                         }
                     }
 
-                    stmt.addBatch();
+                    addBatch();
 
                     Object params = null;
                     while (iter.hasNext()) {
@@ -3124,63 +3124,62 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                             }
                         }
 
-                        stmt.addBatch();
+                        addBatch();
                     }
                 } else if (Map.class.isAssignableFrom(cls)) {
                     setParameters((Map<String, ?>) first);
-                    stmt.addBatch();
+                    addBatch();
 
                     Map<String, ?> params = null;
 
                     while (iter.hasNext()) {
                         params = (Map<String, ?>) iter.next();
                         setParameters(params);
-                        stmt.addBatch();
+                        addBatch();
                     }
                 } else if (first instanceof Collection) {
                     setParameters((Collection) first);
-                    stmt.addBatch();
+                    addBatch();
 
                     Collection params = null;
                     while (iter.hasNext()) {
                         params = (Collection) iter.next();
                         setParameters(params);
-                        stmt.addBatch();
+                        addBatch();
                     }
                 } else if (first instanceof Object[]) {
                     setParameters((Object[]) first);
-                    stmt.addBatch();
+                    addBatch();
 
                     Object[] params = null;
                     while (iter.hasNext()) {
                         params = (Object[]) iter.next();
                         setParameters(params);
-                        stmt.addBatch();
+                        addBatch();
                     }
                 } else if (first instanceof EntityId) {
                     setParameters((EntityId) first);
-                    stmt.addBatch();
+                    addBatch();
 
                     EntityId params = null;
                     while (iter.hasNext()) {
                         params = (EntityId) iter.next();
                         setParameters(params);
-                        stmt.addBatch();
+                        addBatch();
                     }
                 } else if (parameterCount == 1) {
                     stmt.setObject(1, first);
-                    stmt.addBatch();
+                    addBatch();
 
                     while (iter.hasNext()) {
                         stmt.setObject(1, iter.next());
-                        stmt.addBatch();
+                        addBatch();
                     }
                 } else {
                     throw new IllegalArgumentException("Unsupported named parameter type: " + cls + " for named sql: " + namedSql.sql());
                 }
             }
 
-            isBatch = true;
             noException = true;
         } finally {
             if (!noException) {
@@ -3221,7 +3220,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     //                for (Object obj : batchParameters) {
     //                    setObject(1, obj);
     //
-    //                    stmt.addBatch();
+    //                    addBatch();
     //                }
     //
     //                isBatch = batchParameters.size() > 0;

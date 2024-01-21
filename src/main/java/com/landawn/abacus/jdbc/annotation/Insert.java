@@ -80,4 +80,12 @@ public @interface Insert {
 
     @Beta
     boolean hasDefineWithNamedParameter() default false;
+
+    /**
+     * Set named parameter {@code :now} to current system time if it's {@code true}
+     *
+     * @return
+     */
+    @Beta
+    boolean timestamped() default false;
 }

@@ -83,6 +83,14 @@ public @interface Update {
     boolean hasDefineWithNamedParameter() default false;
 
     /**
+     * Set named parameter {@code :now} to current system time if it's {@code true}
+     *
+     * @return
+     */
+    @Beta
+    boolean timestamped() default false;
+
+    /**
      * It should only be set with {@code OP.update} or {@code OP.largeUpdate}
      * @return
      */

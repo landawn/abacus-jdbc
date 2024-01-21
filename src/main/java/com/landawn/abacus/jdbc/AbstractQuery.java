@@ -128,6 +128,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         stmtParameterClasses.remove(Object.class);
     }
 
+    @SuppressWarnings("rawtypes")
+    static final Throwables.BiConsumer<AbstractQuery, PreparedStatement, SQLException> defaultAddBatchAction = (q, s) -> s.addBatch();
+
+    Throwables.BiConsumer<? super This, ? super Stmt, SQLException> addBatchAction = defaultAddBatchAction;
+
     final Stmt stmt;
 
     boolean isFetchDirectionSet = false;
@@ -2425,7 +2430,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //
     //            while (iter.hasNext()) {
     //                parametersSetter.accept((Q) this, iter.next());
-    //                stmt.addBatch();
+    //                addBatch();
     //                isBatch = true;
     //            }
     //
@@ -2501,34 +2506,33 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             if (first instanceof Collection) {
                 setParameters((Collection) first);
-                stmt.addBatch();
+                addBatch();
 
                 while (iter.hasNext()) {
                     setParameters((Collection) iter.next());
 
-                    stmt.addBatch();
+                    addBatch();
                 }
             } else if (first instanceof Object[]) {
                 setParameters((Object[]) first);
-                stmt.addBatch();
+                addBatch();
 
                 while (iter.hasNext()) {
                     setParameters((Object[]) iter.next());
 
-                    stmt.addBatch();
+                    addBatch();
                 }
             } else {
                 stmt.setObject(1, first);
-                stmt.addBatch();
+                addBatch();
 
                 while (iter.hasNext()) {
                     stmt.setObject(1, iter.next());
 
-                    stmt.addBatch();
+                    addBatch();
                 }
             }
 
-            isBatch = true;
             noException = true;
         } finally {
             if (!noException) {
@@ -2563,10 +2567,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             while (iter.hasNext()) {
                 setter.set(stmt, 1, iter.next());
-                stmt.addBatch();
+                addBatch();
             }
 
-            isBatch = true;
             noException = true;
         } finally {
             if (!noException) {
@@ -2596,7 +2599,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //            for (Object obj : batchParameters) {
     //                setObject(1, obj);
     //
-    //                stmt.addBatch();
+    //                addBatch();
     //            }
     //
     //            isBatch = batchParameters.size() > 0;
@@ -2661,8 +2664,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             while (iter.hasNext()) {
                 parametersSetter.accept(it, iter.next());
-                stmt.addBatch();
-                isBatch = true;
+                addBatch();
             }
 
             noException = true;
@@ -2710,7 +2712,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //
     //            while (iter.hasNext()) {
     //                parametersSetter.accept(stmt, iter.next());
-    //                stmt.addBatch();
+    //                addBatch();
     //                isBatch = true;
     //            }
     //
@@ -2762,8 +2764,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             while (iter.hasNext()) {
                 parametersSetter.accept(it, stmt, iter.next());
-                stmt.addBatch();
-                isBatch = true;
+                addBatch();
             }
 
             noException = true;
@@ -2812,8 +2813,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public This addBatch() throws SQLException {
-        stmt.addBatch();
+        addBatchAction.accept((This) this, stmt);
+
         isBatch = true;
+
+        return (This) this;
+    }
+
+    This configAddBatchAction(final Throwables.BiConsumer<? super This, ? super Stmt, SQLException> addBatchAction) {
+        this.addBatchAction = addBatchAction;
 
         return (This) this;
     }

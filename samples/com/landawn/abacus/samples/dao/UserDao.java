@@ -60,7 +60,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
         return System.currentTimeMillis();
     }
 
-    @Insert("INSERT INTO user1 (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
+    @Insert(sql = "INSERT INTO user1 (id, first_name, last_name, email, create_time) VALUES (:id, :firstName, :lastName, :email, :now)", timestamped = true)
     void insertWithId(User user) throws SQLException;
 
     @Update("UPDATE user1 SET first_name = :firstName, last_name = :lastName WHERE id = :id")
@@ -77,7 +77,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     @Insert(sql = "INSERT INTO user1 (id, first_name, last_name, prop1, email) VALUES (:id, :firstName, :lastName, :nickName, :email)", isBatch = true)
     List<Long> batchInsertWithId(List<User> users) throws SQLException;
 
-    @Insert(sql = "INSERT INTO user1 (first_name, last_name, email) VALUES (:firstName, :lastName, :email)", isBatch = true, batchSize = 123)
+    @Insert(sql = "INSERT INTO user1 (first_name, last_name, email, create_time) VALUES (:firstName, :lastName, :email, :now)", isBatch = true, batchSize = 123, timestamped = true)
     List<Long> batchInsertWithoutId(List<User> users) throws SQLException;
 
     @Update(sql = "UPDATE user1 SET first_name = :firstName, last_name = :lastName WHERE id = :id", isBatch = true)
