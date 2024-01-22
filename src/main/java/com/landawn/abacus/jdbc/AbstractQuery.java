@@ -2110,7 +2110,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     @Beta
-    public This setBooleanForMultiPositions(final boolean parameterValue, final int... parameterIndices) throws SQLException {
+    public This setBooleanForMultiPositions(final Boolean parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (int parameterIndex : parameterIndices) {
@@ -2129,7 +2129,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     @Beta
-    public This setIntForMultiPositions(final int parameterValue, final int... parameterIndices) throws SQLException {
+    public This setIntForMultiPositions(final Integer parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (int parameterIndex : parameterIndices) {
@@ -2139,43 +2139,44 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return (This) this;
     }
 
-    /**
-     * Note: The reason for giving name: {@code setIntegerForMultiPositions}, not {@code setIntForMultiPositions} is because of error: <i>The method setIntForMultiPositions(int, int[]) is ambiguous for the type</i>.
-     *
-     * @param parameterValue
-     * @param parameterIndices
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    public This setIntegerForMultiPositions(final Integer parameterValue, final int... parameterIndices) throws SQLException {
-        checkParameterIndices(parameterIndices);
+    //    /**
+    //     * Note: The reason for giving name: {@code setIntegerForMultiPositions}, not {@code setIntForMultiPositions} is because of error: <i>The method setIntForMultiPositions(int, int[]) is ambiguous for the type</i>.
+    //     *
+    //     * @param parameterValue
+    //     * @param parameterIndices
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    @Beta
+    //    public This setIntegerForMultiPositions(final Integer parameterValue, final int... parameterIndices) throws SQLException {
+    //        checkParameterIndices(parameterIndices);
+    //
+    //        for (int parameterIndex : parameterIndices) {
+    //            setInt(parameterIndex, parameterValue);
+    //        }
+    //
+    //        return (This) this;
+    //    }
 
-        for (int parameterIndex : parameterIndices) {
-            setInt(parameterIndex, parameterValue);
-        }
-
-        return (This) this;
-    }
-
-    /**
-     *
-     *
-     * @param parameterValue
-     * @param parameterIndices
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    public This setLongForMultiPositions(final long parameterValue, final int... parameterIndices) throws SQLException {
-        checkParameterIndices(parameterIndices);
-
-        for (int parameterIndex : parameterIndices) {
-            setLong(parameterIndex, parameterValue);
-        }
-
-        return (This) this;
-    }
+    // ambiguous
+    //    /**
+    //     *
+    //     *
+    //     * @param parameterValue
+    //     * @param parameterIndices
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    @Beta
+    //    public This setLongForMultiPositions(final long parameterValue, final int... parameterIndices) throws SQLException {
+    //        checkParameterIndices(parameterIndices);
+    //
+    //        for (int parameterIndex : parameterIndices) {
+    //            setLong(parameterIndex, parameterValue);
+    //        }
+    //
+    //        return (This) this;
+    //    }
 
     /**
      *
@@ -2196,24 +2197,24 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return (This) this;
     }
 
-    /**
-     *
-     *
-     * @param parameterValue
-     * @param parameterIndices
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    public This setDoubleForMultiPositions(final double parameterValue, final int... parameterIndices) throws SQLException {
-        checkParameterIndices(parameterIndices);
-
-        for (int parameterIndex : parameterIndices) {
-            setDouble(parameterIndex, parameterValue);
-        }
-
-        return (This) this;
-    }
+    //    /**
+    //     *
+    //     *
+    //     * @param parameterValue
+    //     * @param parameterIndices
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    @Beta
+    //    public This setDoubleForMultiPositions(final double parameterValue, final int... parameterIndices) throws SQLException {
+    //        checkParameterIndices(parameterIndices);
+    //
+    //        for (int parameterIndex : parameterIndices) {
+    //            setDouble(parameterIndex, parameterValue);
+    //        }
+    //
+    //        return (This) this;
+    //    }
 
     /**
      *

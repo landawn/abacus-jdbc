@@ -1,3 +1,7 @@
+### 3.5.4
+
+* Improvements and bug fix.
+
 ### 3.5.3
 
 * Improvements and bug fix.
