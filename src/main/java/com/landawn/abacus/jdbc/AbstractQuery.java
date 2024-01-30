@@ -4524,6 +4524,51 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return func.apply(list(rowMapper));
     }
 
+    /**
+     *
+     * @param <T>
+     * @param <E>
+     * @param targetType
+     * @param consumer
+     * @throws SQLException
+     * @throws E
+     */
+    @Beta
+    public <T, E extends Exception> void listThenAccept(final Class<? extends T> targetType, final Throwables.Consumer<? super List<T>, E> consumer)
+            throws SQLException, E {
+        consumer.accept(list(targetType));
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param <E>
+     * @param rowMapper
+     * @param consumer
+     * @throws SQLException
+     * @throws E
+     */
+    @Beta
+    public <T, E extends Exception> void listThenAccept(final Jdbc.RowMapper<? extends T> rowMapper, final Throwables.Consumer<? super List<T>, E> consumer)
+            throws SQLException, E {
+        consumer.accept(list(rowMapper));
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param <E>
+     * @param rowMapper
+     * @param consumer
+     * @throws SQLException
+     * @throws E
+     */
+    @Beta
+    public <T, E extends Exception> void listThenAccept(final Jdbc.BiRowMapper<? extends T> rowMapper, final Throwables.Consumer<? super List<T>, E> consumer)
+            throws SQLException, E {
+        consumer.accept(list(rowMapper));
+    }
+
     // Will it cause confusion if it's called in transaction?
 
     /**
