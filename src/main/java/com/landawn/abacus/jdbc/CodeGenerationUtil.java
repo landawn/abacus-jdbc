@@ -44,7 +44,6 @@ import com.landawn.abacus.util.BiMap;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IOUtil;
-import com.landawn.abacus.util.Maps;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Splitter;
 import com.landawn.abacus.util.Strings;
@@ -182,8 +181,8 @@ final class CodeGenerationUtil {
         final boolean isJavaPersistenceId = "javax.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass))
                 || "jakarta.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass));
 
-        final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = Maps.create(N.nullToEmpty(configToUse.getCustomizedFields()), tp -> tp._1);
-        final Map<String, Tuple2<String, String>> customizedFieldDbTypeMap = Maps.create(N.nullToEmpty(configToUse.getCustomizedFieldDbTypes()), tp -> tp._1);
+        final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = N.toMap(N.nullToEmpty(configToUse.getCustomizedFields()), tp -> tp._1);
+        final Map<String, Tuple2<String, String>> customizedFieldDbTypeMap = N.toMap(N.nullToEmpty(configToUse.getCustomizedFieldDbTypes()), tp -> tp._1);
 
         try {
             String finalClassName = Strings.isEmpty(className) ? Strings.capitalize(Strings.toCamelCase(entityName)) : className;
