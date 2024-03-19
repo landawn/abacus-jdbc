@@ -4631,6 +4631,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Jdbc.ResultExtractor
      * @see Jdbc.BiResultExtractor
      */
+    @SuppressWarnings("resource")
     @LazyEvaluation
     public <T> CheckedStream<T, SQLException> stream(final Jdbc.RowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowMapper, "rowMapper");
@@ -4663,6 +4664,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Jdbc.ResultExtractor
      * @see Jdbc.BiResultExtractor
      */
+    @SuppressWarnings("resource")
     @LazyEvaluation
     public <T> CheckedStream<T, SQLException> stream(final Jdbc.BiRowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowMapper, "rowMapper");
@@ -4696,6 +4698,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Jdbc.ResultExtractor
      * @see Jdbc.BiResultExtractor
      */
+    @SuppressWarnings("resource")
     @LazyEvaluation
     public <T> CheckedStream<T, SQLException> stream(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowFilter, "rowFilter");
@@ -4730,6 +4733,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Jdbc.ResultExtractor
      * @see Jdbc.BiResultExtractor
      */
+    @SuppressWarnings("resource")
     @LazyEvaluation
     public <T> CheckedStream<T, SQLException> stream(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowFilter, "rowFilter");
@@ -4755,6 +4759,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType
      * @return the {@code CheckedStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      */
+    @SuppressWarnings("resource")
     public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Class<? extends T> targetType) {
         checkArgNotNull(targetType, "targetType");
         assertNotClosed();
@@ -4777,6 +4782,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return the {@code CheckedStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      */
+    @SuppressWarnings("resource")
     public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Jdbc.RowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -4799,6 +4805,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return the {@code CheckedStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      */
+    @SuppressWarnings("resource")
     public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Jdbc.RowFilter rowFilter,
             final Jdbc.RowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowFilter, "rowFilter");
@@ -4822,6 +4829,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return the {@code CheckedStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      */
+    @SuppressWarnings("resource")
     public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Jdbc.BiRowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -4844,6 +4852,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper
      * @return the {@code CheckedStream<T>} extracted from all {@code ResultSets} returned by the executed procedure.
      */
+    @SuppressWarnings("resource")
     public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Jdbc.BiRowFilter rowFilter,
             final Jdbc.BiRowMapper<? extends T> rowMapper) {
         checkArgNotNull(rowFilter, "rowFilter");

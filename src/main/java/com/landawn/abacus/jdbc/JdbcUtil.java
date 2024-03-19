@@ -4174,6 +4174,7 @@ public final class JdbcUtil {
      * @param resultExtractor
      * @return
      */
+    @SuppressWarnings("resource")
     public static <T> CheckedStream<T, SQLException> extractAllResultSets(final Statement stmt, final ResultExtractor<T> resultExtractor) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(resultExtractor, "resultExtractor");
@@ -4196,6 +4197,7 @@ public final class JdbcUtil {
      * @param resultExtractor
      * @return
      */
+    @SuppressWarnings("resource")
     public static <T> CheckedStream<T, SQLException> extractAllResultSets(final Statement stmt, final BiResultExtractor<T> resultExtractor) {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(resultExtractor, "resultExtractor");
@@ -4569,6 +4571,7 @@ public final class JdbcUtil {
      * @param targetClass
      * @return
      */
+    @SuppressWarnings("resource")
     public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt,
             final Class<? extends T> targetClass) {
         N.checkArgNotNull(stmt, "stmt");
@@ -4598,6 +4601,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
+    @SuppressWarnings("resource")
     public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt,
             final RowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
@@ -4624,6 +4628,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
+    @SuppressWarnings("resource")
     public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt, final RowFilter rowFilter,
             final RowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
@@ -4650,6 +4655,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
+    @SuppressWarnings("resource")
     public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt,
             final BiRowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
@@ -4676,6 +4682,7 @@ public final class JdbcUtil {
      * @param rowMapper
      * @return
      */
+    @SuppressWarnings("resource")
     public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter,
             final BiRowMapper<? extends T> rowMapper) {
         N.checkArgNotNull(stmt, "stmt");
