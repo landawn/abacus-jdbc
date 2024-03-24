@@ -1314,10 +1314,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Returns a {@code Nullable<V>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws SQLException
+     * @param <V> 
+     * @param targetValueClass 
+     * @param singleSelectPropName 
+     * @param cond 
+     * @return 
+     * @throws SQLException 
      * @see ConditionFactory
      * @see ConditionFactory.CF
      * @see AbstractQuery#queryForSingleResult(Class)

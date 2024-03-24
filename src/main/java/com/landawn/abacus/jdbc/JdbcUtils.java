@@ -1901,13 +1901,13 @@ public final class JdbcUtils {
     /**
      * Imports the data from CSV to database.
      *
-     * @param file
-     * @param conn
+     * @param file 
+     * @param sourceDataSource 
      * @param insertSQL the column order in the sql should be consistent with the column order in the CSV file.
-     * @param stmtSetter
-     * @return
-     * @throws SQLException
-     * @throws IOException
+     * @param stmtSetter 
+     * @return 
+     * @throws SQLException 
+     * @throws IOException 
      */
     public static long importCSV(final File file, final javax.sql.DataSource sourceDataSource, final String insertSQL,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
@@ -2043,13 +2043,13 @@ public final class JdbcUtils {
     /**
      * Imports the data from CSV to database.
      *
-     * @param is
-     * @param conn
+     * @param is 
+     * @param sourceDataSource 
      * @param insertSQL the column order in the sql should be consistent with the column order in the CSV file.
-     * @param stmtSetter
-     * @return
-     * @throws SQLException
-     * @throws IOException
+     * @param stmtSetter 
+     * @return 
+     * @throws SQLException 
+     * @throws IOException 
      */
     public static long importCSV(final InputStream is, final javax.sql.DataSource sourceDataSource, final String insertSQL,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
@@ -2122,13 +2122,13 @@ public final class JdbcUtils {
     /**
      * Imports the data from CSV to database.
      *
-     * @param reader
-     * @param conn
+     * @param reader 
+     * @param sourceDataSource 
      * @param insertSQL the column order in the sql should be consistent with the column order in the CSV file.
-     * @param stmtSetter
-     * @return
-     * @throws SQLException
-     * @throws IOException
+     * @param stmtSetter 
+     * @return 
+     * @throws SQLException 
+     * @throws IOException 
      */
     public static long importCSV(final Reader reader, final javax.sql.DataSource sourceDataSource, final String insertSQL,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {

@@ -31,8 +31,19 @@ import com.landawn.abacus.jdbc.dao.Dao;
 @Target(value = { ElementType.METHOD, ElementType.TYPE })
 @Repeatable(HandlerList.class)
 public @interface Handler {
+    
+    /**
+     * 
+     *
+     * @return 
+     */
     String qualifier() default "";
 
+    /**
+     * 
+     *
+     * @return 
+     */
     @SuppressWarnings("rawtypes")
     Class<? extends Jdbc.Handler<? extends Dao>> type() default EmptyHandler.class; //NOSONAR
 

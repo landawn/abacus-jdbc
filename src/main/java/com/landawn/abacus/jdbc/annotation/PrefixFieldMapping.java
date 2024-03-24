@@ -25,9 +25,10 @@ import java.lang.annotation.Target;
 public @interface PrefixFieldMapping {
 
     /**
-     * <code> @PrefixFieldMapping("d=device, c=contact") </code>
-     * @return
-     * @deprecated
+     * <code> @PrefixFieldMapping("d=device, c=contact") </code>.
+     *
+     * @return 
+     * @deprecated 
      */
     @Deprecated
     String value() default "";

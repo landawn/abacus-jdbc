@@ -3952,12 +3952,12 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     * @param rs
-     * @param filter
-     * @param rowExtractor
-     * @return
-     * @throws SQLException
+     * @param rs 
+     * @param filter 
+     * @return 
+     * @throws SQLException 
      */
     public static DataSet extractData(final ResultSet rs, final RowFilter filter) throws SQLException {
         return extractData(rs, 0, Integer.MAX_VALUE, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, false);
@@ -4226,11 +4226,11 @@ public final class JdbcUtil {
      * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
-     * @param resultSet
-     * @param targetClass Array/List/Map or Entity with getter/setter methods.
      *
-     * @param <T>
-     * @return
+     * @param <T> 
+     * @param resultSet 
+     * @param targetClass Array/List/Map or Entity with getter/setter methods.
+     * @return 
      */
     public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final Class<? extends T> targetClass) {
         N.checkArgNotNull(targetClass, "targetClass");
@@ -4760,14 +4760,14 @@ public final class JdbcUtil {
 
     /**
      * Runs a {@code Stream} with each element(page) is loaded from database table by running sql {@code query}.
-     * @param ds
-     * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
-     * @param pageSize
-     * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
-     * @param resultExtractor
      *
-     * @param <T>
-     * @return
+     * @param <R> 
+     * @param ds 
+     * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
+     * @param pageSize 
+     * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
+     * @param resultExtractor 
+     * @return 
      */
     @SuppressWarnings("rawtypes")
     public static <R> CheckedStream<R, SQLException> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
@@ -4793,14 +4793,14 @@ public final class JdbcUtil {
 
     /**
      * Runs a {@code Stream} with each element(page) is loaded from database table by running sql {@code query}.
-     * @param ds
-     * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
-     * @param pageSize
-     * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
-     * @param resultExtractor
      *
-     * @param <T>
-     * @return
+     * @param <R> 
+     * @param ds 
+     * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
+     * @param pageSize 
+     * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
+     * @param resultExtractor 
+     * @return 
      */
     @SuppressWarnings("rawtypes")
     public static <R> CheckedStream<R, SQLException> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
@@ -4842,12 +4842,13 @@ public final class JdbcUtil {
     /**
      * Runs a {@code Stream} with each element(page) is loaded from database table by running sql {@code query}.
      *
-     * @param conn
+     * @param <R> 
+     * @param conn 
      * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
-     * @param pageSize
+     * @param pageSize 
      * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
      * @param resultExtractor the second parameter is the result set for previous page. it's {@code null} for first page.
-     * @return
+     * @return 
      */
     @SuppressWarnings("rawtypes")
     public static <R> CheckedStream<R, SQLException> queryByPage(final Connection conn, final String query, final int pageSize,
@@ -4873,14 +4874,14 @@ public final class JdbcUtil {
 
     /**
      * Runs a {@code Stream} with each element(page) is loaded from database table by running sql {@code query}.
-     * @param conn
-     * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
-     * @param pageSize
-     * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
-     * @param resultExtractor
      *
-     * @param <T>
-     * @return
+     * @param <R> 
+     * @param conn 
+     * @param query this query must be ordered by at least one key/id and has the result size limitation: for example {@code LIMIT pageSize}, {@code ROWS FETCH NEXT pageSize ROWS ONLY}
+     * @param pageSize 
+     * @param paramSetter the second parameter is the result set for previous page. it's {@code null} for first page.
+     * @param resultExtractor 
+     * @return 
      */
     @SuppressWarnings("rawtypes")
     public static <R> CheckedStream<R, SQLException> queryByPage(final Connection conn, final String query, final int pageSize,

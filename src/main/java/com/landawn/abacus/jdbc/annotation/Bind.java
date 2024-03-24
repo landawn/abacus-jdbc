@@ -27,5 +27,10 @@ import java.lang.annotation.Target;
 @Target(ElementType.PARAMETER)
 public @interface Bind {
 
+    /**
+     * 
+     *
+     * @return 
+     */
     String value() default "";
 }

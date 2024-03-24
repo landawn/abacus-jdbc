@@ -368,10 +368,12 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns a {@code Nullable<V>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws UncheckedSQLException
+     * @param <V> 
+     * @param targetValueClass 
+     * @param singleSelectPropName 
+     * @param id 
+     * @return 
+     * @throws UncheckedSQLException 
      * @see ConditionFactory
      * @see ConditionFactory.CF
      * @see AbstractQuery#queryForSingleResult(Class)

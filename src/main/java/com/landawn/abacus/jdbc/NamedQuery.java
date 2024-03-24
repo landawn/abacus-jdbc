@@ -3036,12 +3036,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * 
      *
-     *
-     * @param <T>
-     * @param batchParameters
-     * @return
-     * @throws SQLException
+     * @param batchParameters 
+     * @return 
+     * @throws SQLException 
      */
     @Override
     public NamedQuery addBatchParameters(final Collection<?> batchParameters) throws SQLException {
@@ -3055,11 +3054,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param batchParameters
-     * @return
-     * @throws SQLException
+     * @param batchParameters 
+     * @return 
+     * @throws SQLException 
      */
     @Beta
     @Override

@@ -32,7 +32,6 @@ import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.SQLExecutor;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
@@ -63,7 +62,6 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
  * @see Dao
- * @see SQLExecutor.Mapper
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
  */
@@ -353,10 +351,12 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      * Returns a {@code Nullable<V>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param <V> 
+     * @param targetValueClass 
+     * @param singleSelectPropName 
+     * @param id 
+     * @return 
+     * @throws SQLException 
      * @see ConditionFactory
      * @see ConditionFactory.CF
      * @see AbstractQuery#queryForSingleResult(Class)

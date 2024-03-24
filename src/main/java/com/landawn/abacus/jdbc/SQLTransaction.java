@@ -187,6 +187,12 @@ public final class SQLTransaction implements Transaction, Closeable {
         commit(Fn.emptyAction());
     }
 
+    /**
+     * 
+     *
+     * @param actoinAfterCommit 
+     * @throws UncheckedSQLException 
+     */
     @Override
     public void commit(Runnable actoinAfterCommit) throws UncheckedSQLException {
         final int refCount = decrementAndGetRef();
@@ -265,7 +271,10 @@ public final class SQLTransaction implements Transaction, Closeable {
     }
 
     /**
+     * 
      *
+     * @param actionAfterRollback 
+     * @throws UncheckedSQLException 
      */
     @Override
     public void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {

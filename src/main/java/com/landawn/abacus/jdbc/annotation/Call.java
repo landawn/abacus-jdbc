@@ -73,6 +73,7 @@ public @interface Call {
      * Set it to true if want to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/listAll/streamAll}.
      * It is false by default. The reason is all the query methods extended from {@code AbstractQuery} only retrieve the first {@code ResultSet}.
      *
+     * @return 
      */
     OP op() default OP.DEFAULT;
 }

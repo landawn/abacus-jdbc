@@ -24,5 +24,10 @@ import java.lang.annotation.Target;
 @Target(value = { ElementType.METHOD })
 public @interface FetchColumnByEntityClass {
 
+    /**
+     * 
+     *
+     * @return 
+     */
     boolean value() default true;
 }

@@ -78,13 +78,18 @@ public @interface Insert {
      */
     boolean isSingleParameter() default false;
 
+    /**
+     * 
+     *
+     * @return 
+     */
     @Beta
     boolean hasDefineWithNamedParameter() default false;
 
     /**
-     * Set named parameter {@code :now} to current system time if it's {@code true}
+     * Set named parameter {@code :now} to current system time if it's {@code true}.
      *
-     * @return
+     * @return 
      */
     @Beta
     boolean timestamped() default false;

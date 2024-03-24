@@ -865,6 +865,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param parameterIndex starts from 1, not 0.
      * @param x
+     * @param cal
      * @return
      * @throws SQLException
      */
@@ -2447,7 +2448,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      *
-     * @param <T>
+     *
      * @param batchParameters
      * @return
      * @throws SQLException
@@ -2485,7 +2486,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      *
-     * @param <T>
+     *
      * @param batchParameters
      * @return
      * @throws SQLException
@@ -3705,9 +3706,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      *
+     *
      * @param <E>
      * @param action
-     * @return
      * @throws SQLException
      * @throws E
      */
@@ -3718,10 +3719,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      *
+     *
      * @param <E>
      * @param entityClass used to fetch fields from columns
      * @param action
-     * @return
      * @throws SQLException
      * @throws E
      * @see {@link Jdbc.ResultExtractor#toDataSet(Class)}
@@ -4010,7 +4011,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
-     * @deprecated Use {@link stream(RowFilter, RowMapper).first()} instead.
+     * @deprecated Use {@code stream(RowFilter, RowMapper).first()} instead.
      */
     @Deprecated
     public <T> Optional<T> findFirst(final Jdbc.RowFilter rowFilter, Jdbc.RowMapper<? extends T> rowMapper) throws SQLException, IllegalArgumentException {
@@ -4037,7 +4038,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
-     * @deprecated Use {@link stream(BiRowFilter, BiRowMapper).first()} instead.
+     * @deprecated Use {@code stream(BiRowFilter, BiRowMapper).first()} instead.
      */
     @Deprecated
     public <T> Optional<T> findFirst(final Jdbc.BiRowFilter rowFilter, Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException, IllegalArgumentException {
@@ -4106,7 +4107,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
-     * @deprecated Use {@link stream(RowFilter, RowMapper).first()} instead.
+     * @deprecated Use {@code stream(RowFilter, RowMapper).first()} instead.
      */
     @Deprecated
     public <T> T findFirstOrNull(final Jdbc.RowFilter rowFilter, Jdbc.RowMapper<? extends T> rowMapper) throws SQLException, IllegalArgumentException {
@@ -4158,7 +4159,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
-     * @deprecated Use {@link stream(BiRowFilter, BiRowMapper).first()} instead.
+     * @deprecated Use {@code stream(BiRowFilter, BiRowMapper).first()} instead.
      */
     @Deprecated
     public <T> T findFirstOrNull(final Jdbc.BiRowFilter rowFilter, Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException, IllegalArgumentException {

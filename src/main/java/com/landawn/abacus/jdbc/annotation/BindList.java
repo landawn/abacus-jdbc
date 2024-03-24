@@ -29,6 +29,11 @@ import com.landawn.abacus.annotation.Beta;
 @Target(ElementType.PARAMETER)
 public @interface BindList {
 
+    /**
+     * 
+     *
+     * @return 
+     */
     String value() default "";
 
     /**

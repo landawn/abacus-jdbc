@@ -46,29 +46,8 @@ import lombok.NoArgsConstructor;
  * @see <a href="https://gitee.com/troyzhxu/bean-searcher">bean-searcher in gitee</a>
  */
 
-/**
- *
- *
- * @return
- */
 @Data
-
-/**
- *
- */
 @NoArgsConstructor
-
-/**
- *
- *
- * @param select
- * @param where
- * @param having
- * @param orderBy
- * @param distinct
- * @param offset
- * @param limit
- */
 @AllArgsConstructor
 public class QueryBean {
 
@@ -96,29 +75,8 @@ public class QueryBean {
         throw new UnsupportedOperationException();
     }
 
-    /**
-     *
-     *
-     * @return
-     */
     @Data
-
-    /**
-     *
-     */
     @NoArgsConstructor
-
-    /**
-     *
-     *
-     * @param fieldName
-     * @param fieldType
-     * @param operator
-     * @param parameter
-     * @param caseInsensitive
-     * @param and
-     * @param or
-     */
     @AllArgsConstructor
     public static final class FilterField {
         private String fieldName;
@@ -261,25 +219,8 @@ public class QueryBean {
         }
     }
 
-    /**
-     *
-     *
-     * @return
-     */
     @Data
-
-    /**
-     *
-     */
     @NoArgsConstructor
-
-    /**
-     *
-     *
-     * @param fieldName
-     * @param fieldNames
-     * @param sortDirection
-     */
     @AllArgsConstructor
     public static final class OrderByField {
         private String fieldName;

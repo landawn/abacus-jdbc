@@ -641,10 +641,12 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     /**
      * Returns a {@code Nullable<V>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws UncheckedSQLException
+     * @param <V> 
+     * @param targetValueClass 
+     * @param singleSelectPropName 
+     * @param cond 
+     * @return 
+     * @throws UncheckedSQLException 
      * @see ConditionFactory
      * @see ConditionFactory.CF
      * @see AbstractQuery#queryForSingleResult(Class)

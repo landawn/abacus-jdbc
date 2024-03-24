@@ -1189,7 +1189,7 @@ public final class Jdbc {
         //     * @param <T>
         //     * @param biRowMapper
         //     * @return
-        //     * @deprecated because it's stateful and may be misused easily&frequently
+        //     * @deprecated because it's stateful and may be misused easily and frequently
         //     */
         //    @Beta
         //    @Deprecated
@@ -1293,6 +1293,8 @@ public final class Jdbc {
 
         /**
          *
+         *
+         * @param <C>
          * @param columnGetterForAll
          * @param supplier
          * @return
@@ -2041,7 +2043,7 @@ public final class Jdbc {
          *
          * @return
          * @see RowMapper#toBiRowMapper()
-         * @deprecated because it's stateful and may be misused easily&frequently
+         * @deprecated because it's stateful and may be misused easily and frequently
          */
         @Beta
         @Deprecated
@@ -2917,6 +2919,8 @@ public final class Jdbc {
 
         /**
          *
+         *
+         * @param <C>
          * @param columnGetterForAll
          * @param supplier
          * @return
@@ -3524,7 +3528,7 @@ public final class Jdbc {
         /**
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
-         * @param consumer
+         * @param consumerForAll
          * @return
          */
         @Beta
@@ -3701,7 +3705,8 @@ public final class Jdbc {
 
         /**
          *
-         * @param consumer
+         *
+         * @param consumerForAll
          * @return
          */
         @Beta
@@ -4976,27 +4981,8 @@ public final class Jdbc {
         //    }
     }
 
-    /**
-     *
-     */
     @NoArgsConstructor
-
-    /**
-     *
-     *
-     * @param parameterIndex
-     * @param parameterName
-     * @param sqlType
-     * @param typeName
-     * @param scale
-     */
     @AllArgsConstructor
-
-    /**
-     *
-     *
-     * @return
-     */
     @Data
     public static final class OutParam {
         private int parameterIndex;

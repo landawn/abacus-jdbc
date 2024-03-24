@@ -31,5 +31,11 @@ import com.landawn.abacus.jdbc.OnDeleteAction;
 @Target(value = { ElementType.METHOD })
 @Deprecated
 public @interface OnDelete {
+    
+    /**
+     * 
+     *
+     * @return 
+     */
     OnDeleteAction action() default OnDeleteAction.NO_ACTION;
 }

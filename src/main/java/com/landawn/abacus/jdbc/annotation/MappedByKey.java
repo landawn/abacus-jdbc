@@ -51,8 +51,18 @@ public @interface MappedByKey {
     @Deprecated
     String value() default "";
 
+    /**
+     * 
+     *
+     * @return 
+     */
     String keyName() default "";
 
+    /**
+     * 
+     *
+     * @return 
+     */
     @SuppressWarnings("rawtypes")
     Class<? extends Map> mapClass() default HashMap.class;
 }

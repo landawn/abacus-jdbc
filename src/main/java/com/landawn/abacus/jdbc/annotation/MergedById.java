@@ -40,10 +40,10 @@ import java.lang.annotation.Target;
 public @interface MergedById {
 
     /**
-     * <code> @MergedById("id, date") </code>
+     * <code> @MergedById("id, date") </code>.
      *
-     * @return
-     * @deprecated
+     * @return 
+     * @deprecated 
      */
     @Deprecated
     String value() default "";

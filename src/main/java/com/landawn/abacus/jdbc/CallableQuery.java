@@ -1269,7 +1269,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param getter
      * @return
      * @throws SQLException the SQL exception
-     * @see JdbcUtil#getOutParameters(CallableStatement, int)
+     * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */
@@ -1285,7 +1285,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param getter
      * @return
      * @throws SQLException the SQL exception
-     * @see JdbcUtil#getOutParameters(CallableStatement, int)
+     * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */
@@ -1301,7 +1301,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param getter the first parameter is {@code isFirstResultSet}, the second one is {@code outParametes} and third one is the executed {@code CallableStatement}.
      * @return
      * @throws SQLException the SQL exception
-     * @see JdbcUtil#getOutParameters(CallableStatement, int)
+     * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */
@@ -1325,7 +1325,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param consumer
      * @throws SQLException the SQL exception
-     * @see JdbcUtil#getOutParameters(CallableStatement, int)
+     * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */
@@ -1339,7 +1339,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param consumer
      * @throws SQLException the SQL exception
-     * @see JdbcUtil#getOutParameters(CallableStatement, int)
+     * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */
@@ -1353,7 +1353,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param consumer the first parameter is {@code isFirstResultSet}, the second one is {@code outParametes} and third one is the executed {@code CallableStatement}.
      * @throws SQLException the SQL exception
-     * @see JdbcUtil#getOutParameters(CallableStatement, int)
+     * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
      */

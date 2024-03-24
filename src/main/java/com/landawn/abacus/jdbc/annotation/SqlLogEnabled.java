@@ -28,8 +28,19 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD, ElementType.TYPE })
 public @interface SqlLogEnabled {
+    
+    /**
+     * 
+     *
+     * @return 
+     */
     boolean value() default true;
 
+    /**
+     * 
+     *
+     * @return 
+     */
     int maxSqlLogLength() default JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH; // 1024
 
     /**

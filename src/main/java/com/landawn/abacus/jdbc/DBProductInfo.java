@@ -17,13 +17,6 @@ package com.landawn.abacus.jdbc;
 
 import lombok.Value;
 
-/**
- *
- *
- * @param productName
- * @param productVersion
- * @param version
- */
 @Value
 public class DBProductInfo { // NOSONAR
 

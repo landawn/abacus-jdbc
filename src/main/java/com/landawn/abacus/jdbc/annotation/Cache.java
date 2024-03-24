@@ -30,7 +30,18 @@ import com.landawn.abacus.annotation.Beta;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.TYPE })
 public @interface Cache {
+    
+    /**
+     * 
+     *
+     * @return 
+     */
     int capacity() default 1000;
 
+    /**
+     * 
+     *
+     * @return 
+     */
     long evictDelay() default 3000; // unit milliseconds.
 }
