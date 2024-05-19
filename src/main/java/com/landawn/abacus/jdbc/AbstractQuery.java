@@ -303,6 +303,25 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the short.
      *
+     * @param parameterIndex
+     * @param x
+     * @param defaultValueForNull
+     * @return
+     * @throws SQLException
+     */
+    public This setByte(int parameterIndex, Byte x, byte defaultValueForNull) throws SQLException {
+        if (x == null) {
+            stmt.setByte(parameterIndex, defaultValueForNull);
+        } else {
+            stmt.setByte(parameterIndex, x);
+        }
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the short.
+     *
      * @param parameterIndex starts from 1, not 0.
      * @param x
      * @return
@@ -325,6 +344,25 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This setShort(int parameterIndex, Short x) throws SQLException {
         if (x == null) {
             stmt.setNull(parameterIndex, java.sql.Types.SMALLINT);
+        } else {
+            stmt.setShort(parameterIndex, x);
+        }
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the short.
+     *
+     * @param parameterIndex
+     * @param x
+     * @param defaultValueForNull
+     * @return
+     * @throws SQLException
+     */
+    public This setShort(int parameterIndex, Short x, short defaultValueForNull) throws SQLException {
+        if (x == null) {
+            stmt.setShort(parameterIndex, defaultValueForNull);
         } else {
             stmt.setShort(parameterIndex, x);
         }
@@ -565,6 +603,25 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Sets the float.
+     *
+     * @param parameterIndex
+     * @param x
+     * @param defaultValueForNull
+     * @return
+     * @throws SQLException
+     */
+    public This setFloat(int parameterIndex, Float x, float defaultValueForNull) throws SQLException {
+        if (x == null) {
+            stmt.setFloat(parameterIndex, defaultValueForNull);
+        } else {
+            stmt.setFloat(parameterIndex, x);
+        }
+
+        return (This) this;
+    }
+
+    /**
      * Sets the double.
      *
      * @param parameterIndex starts from 1, not 0.
@@ -573,7 +630,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public This setDouble(int parameterIndex, double x) throws SQLException {
-        stmt.setDouble(parameterIndex, N.defaultIfNull(x));
+        stmt.setDouble(parameterIndex, x);
 
         return (This) this;
     }
@@ -589,6 +646,25 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This setDouble(int parameterIndex, Double x) throws SQLException {
         if (x == null) {
             stmt.setNull(parameterIndex, java.sql.Types.DOUBLE);
+        } else {
+            stmt.setDouble(parameterIndex, x);
+        }
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the double.
+     *
+     * @param parameterIndex
+     * @param x
+     * @param defaultValueForNull
+     * @return
+     * @throws SQLException
+     */
+    public This setDouble(int parameterIndex, Double x, double defaultValueForNull) throws SQLException {
+        if (x == null) {
+            stmt.setDouble(parameterIndex, defaultValueForNull);
         } else {
             stmt.setDouble(parameterIndex, x);
         }
