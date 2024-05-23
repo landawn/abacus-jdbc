@@ -4656,7 +4656,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <br />
      *
-     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @return
      * @see {@link #query(ResultExtractor)}
@@ -4674,7 +4674,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <br />
      *
-     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param targetType
@@ -4698,7 +4698,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <br />
      *
-     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param rowMapper
@@ -4731,7 +4731,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <br />
      *
-     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param rowMapper
@@ -4764,7 +4764,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <br />
      *
-     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param rowFilter
@@ -4799,7 +4799,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <br />
      *
-     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T>
      * @param rowFilter
@@ -5850,7 +5850,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code sqlAction} is completed by another thread.
+     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code sqlAction} is completed by another thread.
      *
      * @param <R>
      * @param sqlAction
@@ -5867,7 +5867,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code sqlAction} is completed by another thread.
+     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code sqlAction} is completed by another thread.
      *
      * @param <R>
      * @param sqlAction
@@ -5886,7 +5886,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code sqlAction} is completed by another thread.
+     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code sqlAction} is completed by another thread.
      *
      * @param sqlAction
      * @return
@@ -5902,7 +5902,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Note: The opened {@code Connection} and {@code Statement} will be held on till {@code sqlAction} is completed by another thread.
+     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code sqlAction} is completed by another thread.
      *
      * @param sqlAction
      * @param executor
