@@ -1,7 +1,7 @@
 # abacus-jdbc
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc.svg)](https://maven-badges.herokuapp.com/maven-central/com.landawn/abacus-jdbc/)
-[![Javadocs](https://img.shields.io/badge/javadoc-3.5.13-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/3.5.13/index.html)
+[![Javadocs](https://img.shields.io/badge/javadoc-3.5.14-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/3.5.14/index.html)
 
 Hope it will bring you the programming experiences: coding with SQL/DB is just like coding with Collections.
 
@@ -141,7 +141,7 @@ The biggest difference between this library and other data(database) access fram
 <dependency>
 	<groupId>com.landawn</groupId>
 	<artifactId>abacus-jdbc</artifactId>
-	<version>3.5.13</version> 
+	<version>3.5.14</version> 
 <dependency>
 ```
 
@@ -149,7 +149,7 @@ The biggest difference between this library and other data(database) access fram
 
 ```gradle
 // JDK 17 or above:
-compile 'com.landawn:abacus-jdbc:3.5.13'
+compile 'com.landawn:abacus-jdbc:3.5.14'
 ```
 
 ## User Guide:
