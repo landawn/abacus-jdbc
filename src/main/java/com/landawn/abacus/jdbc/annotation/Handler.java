@@ -31,7 +31,7 @@ import com.landawn.abacus.jdbc.dao.Dao;
 @Target(value = { ElementType.METHOD, ElementType.TYPE })
 @Repeatable(HandlerList.class)
 public @interface Handler {
-    
+
     /**
      * 
      *

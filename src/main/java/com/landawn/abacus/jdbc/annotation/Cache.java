@@ -30,7 +30,7 @@ import com.landawn.abacus.annotation.Beta;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.TYPE })
 public @interface Cache {
-    
+
     /**
      * 
      *

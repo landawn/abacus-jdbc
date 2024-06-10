@@ -28,7 +28,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD, ElementType.TYPE })
 public @interface SqlLogEnabled {
-    
+
     /**
      * 
      *

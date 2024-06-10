@@ -29,7 +29,7 @@ import java.util.Collection;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.PARAMETER })
 public @interface DefineList {
-    
+
     /**
      * 
      *

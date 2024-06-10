@@ -139,6 +139,13 @@ public class DaoTest {
         assertEquals(users.size(), userDao.count(ids));
         assertEquals(users.size(), userDao.list(CF.criteria().distinct()).size());
 
+        assertEquals(users.size(), userDao.list(CF.criteria().where(CF.notEqual("firstName", "aaaaaa")).orderBy("firstName", "lastName").distinct()).size());
+
+        assertEquals(users.size(),
+                userDao.prepareNamedQueryForBigResult(CF.criteria().where(CF.notEqual("firstName", "aaaaaa")).orderBy("firstName", "lastName").distinct())
+                        .list()
+                        .size());
+
         assertEquals(users.size(), userDao.batchDelete(users));
 
         assertEquals(0, userDao.batchDeleteByIds(ids));

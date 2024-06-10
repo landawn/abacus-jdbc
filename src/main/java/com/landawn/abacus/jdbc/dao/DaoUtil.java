@@ -280,13 +280,13 @@ final class DaoUtil {
             if (PSC.class.isAssignableFrom(sbc)) {
                 tp = Tuple.of((selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? PSC.selectFrom(targetEntityClass) : PSC.select(selectPropNames).from(targetEntityClass))
-                            .where(cond)
+                            .append(cond)
                             .pair();
 
                     return prepareQueryFunc.apply(dao.dataSource(), sp);
                 }, (selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? NSC.selectFrom(targetEntityClass) : NSC.select(selectPropNames).from(targetEntityClass))
-                            .where(cond)
+                            .append(cond)
                             .pair();
 
                     return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
@@ -294,13 +294,13 @@ final class DaoUtil {
             } else if (PAC.class.isAssignableFrom(sbc)) {
                 tp = Tuple.of((selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? PAC.selectFrom(targetEntityClass) : PAC.select(selectPropNames).from(targetEntityClass))
-                            .where(cond)
+                            .append(cond)
                             .pair();
 
                     return prepareQueryFunc.apply(dao.dataSource(), sp);
                 }, (selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? NAC.selectFrom(targetEntityClass) : NAC.select(selectPropNames).from(targetEntityClass))
-                            .where(cond)
+                            .append(cond)
                             .pair();
 
                     return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
@@ -308,13 +308,13 @@ final class DaoUtil {
             } else if (PLC.class.isAssignableFrom(sbc)) {
                 tp = Tuple.of((selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? PLC.selectFrom(targetEntityClass) : PLC.select(selectPropNames).from(targetEntityClass))
-                            .where(cond)
+                            .append(cond)
                             .pair();
 
                     return prepareQueryFunc.apply(dao.dataSource(), sp);
                 }, (selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? NLC.selectFrom(targetEntityClass) : NLC.select(selectPropNames).from(targetEntityClass))
-                            .where(cond)
+                            .append(cond)
                             .pair();
 
                     return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
@@ -322,13 +322,13 @@ final class DaoUtil {
             } else if (PSB.class.isAssignableFrom(sbc)) {
                 tp = Tuple.of((selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? PSB.selectFrom(targetEntityClass) : PSB.select(selectPropNames).from(targetEntityClass))
-                            .where(cond)
+                            .append(cond)
                             .pair();
 
                     return prepareQueryFunc.apply(dao.dataSource(), sp);
                 }, (selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? NSB.selectFrom(targetEntityClass) : NSB.select(selectPropNames).from(targetEntityClass))
-                            .where(cond)
+                            .append(cond)
                             .pair();
 
                     return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
