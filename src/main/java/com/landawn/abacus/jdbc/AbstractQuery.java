@@ -3492,13 +3492,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      *
-     * @param <T>
-     * @param targetType
      * @param rs
+     * @param targetType
+     * @param <T>
      * @return
      * @throws SQLException
      */
-    private static <T> T getRow(final Class<? extends T> targetType, ResultSet rs) throws SQLException {
+    private static <T> T getRow(ResultSet rs, final Class<? extends T> targetType) throws SQLException {
         final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
         return Jdbc.BiRowMapper.to(targetType).apply(rs, columnLabels);
@@ -3972,7 +3972,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             if (rs.next()) {
-                final T result = Objects.requireNonNull(getRow(targetType, rs));
+                final T result = Objects.requireNonNull(getRow(rs, targetType));
 
                 if (rs.next()) {
                     throw new DuplicatedResultException("More than one record found by the query");
@@ -4145,7 +4145,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             if (rs.next()) {
-                return Objects.requireNonNull(getRow(targetType, rs));
+                return Objects.requireNonNull(getRow(rs, targetType));
             }
 
             return null;

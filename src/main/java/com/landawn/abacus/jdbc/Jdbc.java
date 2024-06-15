@@ -664,7 +664,7 @@ public final class Jdbc {
          * @param targetClass
          * @param idPropNameForMerge
          * @return
-         * @see DataSet#toMergedEntities(Class, Collection, Collection)
+         * @see DataSet#toMergedEntities(Collection, Collection, Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, final String idPropNameForMerge) {
             N.checkArgNotNull(targetClass, "targetClass");
@@ -672,7 +672,7 @@ public final class Jdbc {
             return rs -> {
                 final RowExtractor rowExtractor = RowExtractor.createBy(targetClass);
 
-                return JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowExtractor, false).toMergedEntities(targetClass, idPropNameForMerge);
+                return JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowExtractor, false).toMergedEntities(idPropNameForMerge, targetClass);
             };
         }
 
@@ -681,7 +681,7 @@ public final class Jdbc {
          * @param targetClass
          * @param idPropNamesForMerge
          * @return
-         * @see DataSet#toMergedEntities(Class, Collection, Collection)
+         * @see DataSet#toMergedEntities(Collection, Collection, Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, Collection<String> idPropNamesForMerge) {
             N.checkArgNotNull(targetClass, "targetClass");
@@ -689,7 +689,7 @@ public final class Jdbc {
             return rs -> {
                 final RowExtractor rowExtractor = RowExtractor.createBy(targetClass);
 
-                return JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowExtractor, false).toMergedEntities(targetClass, idPropNamesForMerge);
+                return JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowExtractor, false).toMergedEntities(idPropNamesForMerge, targetClass);
             };
         }
 
@@ -4626,7 +4626,7 @@ public final class Jdbc {
              * @return
              */
             public static <T> RowMapper<T> readJson(final Class<? extends T> targetType) {
-                return rs -> N.fromJSON(targetType, rs.getString(1));
+                return rs -> N.fromJSON(rs.getString(1), targetType);
             }
 
             /**
@@ -4637,7 +4637,7 @@ public final class Jdbc {
              * @return
              */
             public static <T> RowMapper<T> readXml(final Class<? extends T> targetType) {
-                return rs -> N.fromXML(targetType, rs.getString(1));
+                return rs -> N.fromXML(rs.getString(1), targetType);
             }
 
             /**

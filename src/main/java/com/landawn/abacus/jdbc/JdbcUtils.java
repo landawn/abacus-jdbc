@@ -1901,13 +1901,13 @@ public final class JdbcUtils {
     /**
      * Imports the data from CSV to database.
      *
-     * @param file 
-     * @param sourceDataSource 
+     * @param file
+     * @param sourceDataSource
      * @param insertSQL the column order in the sql should be consistent with the column order in the CSV file.
-     * @param stmtSetter 
-     * @return 
-     * @throws SQLException 
-     * @throws IOException 
+     * @param stmtSetter
+     * @return
+     * @throws SQLException
+     * @throws IOException
      */
     public static long importCSV(final File file, final javax.sql.DataSource sourceDataSource, final String insertSQL,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
@@ -2043,13 +2043,13 @@ public final class JdbcUtils {
     /**
      * Imports the data from CSV to database.
      *
-     * @param is 
-     * @param sourceDataSource 
+     * @param is
+     * @param sourceDataSource
      * @param insertSQL the column order in the sql should be consistent with the column order in the CSV file.
-     * @param stmtSetter 
-     * @return 
-     * @throws SQLException 
-     * @throws IOException 
+     * @param stmtSetter
+     * @return
+     * @throws SQLException
+     * @throws IOException
      */
     public static long importCSV(final InputStream is, final javax.sql.DataSource sourceDataSource, final String insertSQL,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
@@ -2122,13 +2122,13 @@ public final class JdbcUtils {
     /**
      * Imports the data from CSV to database.
      *
-     * @param reader 
-     * @param sourceDataSource 
+     * @param reader
+     * @param sourceDataSource
      * @param insertSQL the column order in the sql should be consistent with the column order in the CSV file.
-     * @param stmtSetter 
-     * @return 
-     * @throws SQLException 
-     * @throws IOException 
+     * @param stmtSetter
+     * @return
+     * @throws SQLException
+     * @throws IOException
      */
     public static long importCSV(final Reader reader, final javax.sql.DataSource sourceDataSource, final String insertSQL,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
@@ -2202,7 +2202,7 @@ public final class JdbcUtils {
 
         final PreparedQuery stmtForSetter = new PreparedQuery(stmt);
         final Function<String, String[]> headerParser = CSVUtil.getCurrentHeaderParser();
-        final BiConsumer<String[], String> lineParser = CSVUtil.getCurrentLineParser();
+        final BiConsumer<String, String[]> lineParser = CSVUtil.getCurrentLineParser();
         long result = 0;
         final BufferedReader br = Objectory.createBufferedReader(reader);
 
@@ -2214,16 +2214,16 @@ public final class JdbcUtils {
                 // continue
             }
 
-            final String[] strs = new String[titles.length];
+            final String[] output = new String[titles.length];
 
             while (result < count && (line = br.readLine()) != null) {
-                lineParser.accept(strs, line);
+                lineParser.accept(line, output);
 
-                if (filter != null && !filter.test(strs)) {
+                if (filter != null && !filter.test(output)) {
                     continue;
                 }
 
-                stmtSetter.accept(stmtForSetter, strs);
+                stmtSetter.accept(stmtForSetter, output);
                 stmtForSetter.addBatch();
 
                 if ((++result % batchSize) == 0) {
@@ -2234,7 +2234,7 @@ public final class JdbcUtils {
                     }
                 }
 
-                N.fill(strs, null);
+                N.fill(output, null);
             }
 
             if ((result % batchSize) > 0) {

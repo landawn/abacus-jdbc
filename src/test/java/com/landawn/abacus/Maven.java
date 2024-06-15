@@ -49,7 +49,7 @@ public class Maven {
                     for (String line : lines) {
                         newLines.add(line.replaceAll(sourceVersion, targetVersion));
                     }
-                    IOUtil.writeLines(file, newLines);
+                    IOUtil.writeLines(newLines, file);
                 });
 
         System.exit(0);

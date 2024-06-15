@@ -454,7 +454,7 @@ final class CodeGenerationUtil {
 
                 IOUtil.createIfNotExists(file);
 
-                IOUtil.write(file, result);
+                IOUtil.write(result, file);
             }
 
             return result;
