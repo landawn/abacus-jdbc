@@ -10,11 +10,26 @@ import com.landawn.abacus.util.Tuple.Tuple3;
 
 public class UserDaoHandlerA implements Jdbc.Handler<UserDao> {
 
+    /**
+     * 
+     *
+     * @param userDao 
+     * @param args 
+     * @param methodSignature 
+     */
     @Override
     public void beforeInvoke(final UserDao userDao, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
         N.println(">>>UserDaoHandlerA.beforeInvoke: method: " + methodSignature._1.getName());
     }
 
+    /**
+     * 
+     *
+     * @param result 
+     * @param userDao 
+     * @param args 
+     * @param methodSignature 
+     */
     @Override
     public void afterInvoke(final Object result, final UserDao userDao, final Object[] args,
             final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {

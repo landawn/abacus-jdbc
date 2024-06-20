@@ -178,6 +178,11 @@ public class JdbcTest {
     //        NSC.selectFrom(User.class).where(CF.gt("id", 1)).toNamedQuery(dataSource).list().forEach(Fn.println());
     //    }
 
+    /**
+     * 
+     *
+     * @throws SQLException 
+     */
     @Test
     public void test_perf_log() throws SQLException {
         // JdbcUtil.setMinExecutionTimeForSqlPerfLog(1);
@@ -202,6 +207,11 @@ public class JdbcTest {
 
     }
 
+    /**
+     * 
+     *
+     * @throws SQLException 
+     */
     @Test
     public void crud_by_Jdbc() throws SQLException {
         Connection conn = null;
@@ -282,6 +292,11 @@ public class JdbcTest {
         // A lot of efforts will have to be paid to write the codes and maintain (add/update/delete/rename/... tables/columns).
     }
 
+    /**
+     * 
+     *
+     * @throws SQLException 
+     */
     // A bit(lot of?) improvements:
     @Test
     public void crud_by_PreparedQuery() throws SQLException {
@@ -320,6 +335,11 @@ public class JdbcTest {
         // But still need to manually set parameters to Statement.
     }
 
+    /**
+     * 
+     *
+     * @throws SQLException 
+     */
     @Test
     public void crud_by_Dao() throws SQLException {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -341,6 +361,11 @@ public class JdbcTest {
         // See last sample.
     }
 
+    /**
+     * 
+     *
+     * @throws SQLException 
+     */
     @Test
     public void crud_by_UsreDao12() throws SQLException {
         userDao12.delete(CF.alwaysTrue());
@@ -367,6 +392,11 @@ public class JdbcTest {
         // See last sample.
     }
 
+    /**
+     * 
+     *
+     * @throws SQLException 
+     */
     @Test
     public void test_transaction() throws SQLException {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -401,6 +431,9 @@ public class JdbcTest {
         // then don't need to call beginTransaction because Spring transaction is integrated and supported.
     }
 
+    /**
+     * 
+     */
     @Test
     public void test_generateEntityClass() {
         EntityCodeConfig ecc = EntityCodeConfig.builder()
@@ -459,6 +492,9 @@ public class JdbcTest {
         IOUtil.deleteIfExists(new File("./samples/codes/entity/User1.java"));
     }
 
+    /**
+     * 
+     */
     @Test
     public void test_generateSql() {
         String sql = JdbcUtil.generateSelectSql(dataSource, "user1");
@@ -477,6 +513,11 @@ public class JdbcTest {
         N.println(sql);
     }
 
+    /**
+     * 
+     *
+     * @throws Exception 
+     */
     @Test
     public void test_cycled() throws Exception {
         CheckedStream.of(1).cycled(1000).map(it -> "a").println();
@@ -484,6 +525,11 @@ public class JdbcTest {
 
     }
 
+    /**
+     * 
+     *
+     * @throws SQLException 
+     */
     @Test
     public void test_page() throws SQLException {
 
@@ -518,6 +564,11 @@ public class JdbcTest {
         userDao.batchDelete(users);
     }
 
+    /**
+     * 
+     *
+     * @throws Exception 
+     */
     @Test
     public void test_copy() throws Exception {
         {

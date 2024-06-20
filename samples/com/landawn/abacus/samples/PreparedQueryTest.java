@@ -25,6 +25,11 @@ import com.landawn.abacus.util.stream.IntStream;
 
 public class PreparedQueryTest {
 
+    /**
+     * 
+     *
+     * @throws SQLException 
+     */
     @Test
     public void test_queryForSingleResult() throws SQLException {
 
@@ -48,6 +53,11 @@ public class PreparedQueryTest {
 
     }
 
+    /**
+     * 
+     *
+     * @throws SQLException 
+     */
     @Test
     public void test_alias() throws SQLException {
 
@@ -76,6 +86,11 @@ public class PreparedQueryTest {
                 .update();
     }
 
+    /**
+     * 
+     *
+     * @throws SQLException 
+     */
     @Test
     public void test_listToMap() throws SQLException {
 
@@ -115,6 +130,11 @@ public class PreparedQueryTest {
                 .update();
     }
 
+    /**
+     * 
+     *
+     * @throws SQLException 
+     */
     @Test
     public void test_ColumnGetter() throws SQLException {
 
