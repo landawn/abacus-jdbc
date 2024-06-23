@@ -1,3 +1,7 @@
+### 3.5.19
+
+* Improvements and bug fix.
+
 ### 3.5.18
 
 * Improvements and bug fix.
