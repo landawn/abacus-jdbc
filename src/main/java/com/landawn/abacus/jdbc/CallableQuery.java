@@ -40,7 +40,6 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.util.CheckedStream;
-import com.landawn.abacus.util.CheckedStream.CheckedIterator;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.N;
@@ -1469,7 +1468,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
-        CheckedIterator<ResultSet, SQLException> iter = null;
+        Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
             JdbcUtil.execute(cstmt);
@@ -1506,7 +1505,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
-        CheckedIterator<ResultSet, SQLException> iter = null;
+        Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
             JdbcUtil.execute(cstmt);
@@ -1547,7 +1546,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor2, "resultExtractor2");
         assertNotClosed();
 
-        CheckedIterator<ResultSet, SQLException> iter = null;
+        Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
             JdbcUtil.execute(cstmt);
@@ -1596,7 +1595,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor3, "resultExtractor3");
         assertNotClosed();
 
-        CheckedIterator<ResultSet, SQLException> iter = null;
+        Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
             JdbcUtil.execute(cstmt);

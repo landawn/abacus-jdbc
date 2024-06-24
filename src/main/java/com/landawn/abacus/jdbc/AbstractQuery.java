@@ -53,7 +53,6 @@ import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.CheckedStream;
-import com.landawn.abacus.util.CheckedStream.CheckedIterator;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.DataSet;
@@ -3582,7 +3581,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor2, "resultExtractor2");
         assertNotClosed();
 
-        CheckedIterator<ResultSet, SQLException> iter = null;
+        Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
             JdbcUtil.execute(stmt);
@@ -3632,7 +3631,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor3, "resultExtractor3");
         assertNotClosed();
 
-        CheckedIterator<ResultSet, SQLException> iter = null;
+        Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
             JdbcUtil.execute(stmt);
@@ -3689,7 +3688,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
-        CheckedIterator<ResultSet, SQLException> iter = null;
+        Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
             JdbcUtil.execute(stmt);
@@ -3726,7 +3725,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
-        CheckedIterator<ResultSet, SQLException> iter = null;
+        Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
             JdbcUtil.execute(stmt);

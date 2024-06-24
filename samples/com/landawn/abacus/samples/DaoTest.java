@@ -62,9 +62,9 @@ import com.landawn.abacus.util.stream.Stream;
 public class DaoTest {
 
     /**
-     * 
      *
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     @Test
     public void test_paginate() throws Exception {
@@ -103,9 +103,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     @Test
     public void test_setStringForMultiPositions() throws Exception {
@@ -137,9 +137,9 @@ public class DaoTest {
     //    }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_distinct() throws SQLException {
@@ -169,9 +169,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_count() throws SQLException {
@@ -230,9 +230,9 @@ public class DaoTest {
     //    }
 
     /**
-     * 
      *
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     @Test
     public void test_parallel() throws Exception {
@@ -258,9 +258,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     @Test
     public void test_batchUpsert() throws Exception {
@@ -285,9 +285,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     @Test
     public void test_exportCSV() throws Exception {
@@ -316,9 +316,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     @Test
     public void test_refresh() throws Exception {
@@ -349,9 +349,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     @Test
     public void test_define() throws Exception {
@@ -384,9 +384,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     @Test
     public void test_BindList() throws Exception {
@@ -430,9 +430,9 @@ public class DaoTest {
     //    }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_orderBy() throws SQLException {
@@ -458,9 +458,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_cache() throws SQLException {
@@ -485,9 +485,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_handler() throws SQLException {
@@ -512,9 +512,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_sql_log() throws SQLException {
@@ -546,9 +546,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_operation_log() throws SQLException {
@@ -560,9 +560,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_propagation() throws SQLException {
@@ -612,9 +612,9 @@ public class DaoTest {
     //    }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_batch() throws SQLException {
@@ -643,9 +643,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_save_insert() throws SQLException {
@@ -672,9 +672,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_save_insert_2() throws SQLException {
@@ -697,9 +697,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @SuppressWarnings("deprecation")
     @Test
@@ -758,9 +758,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_update() throws SQLException {
@@ -803,9 +803,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_queryForSingle() throws SQLException {
@@ -837,9 +837,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_batchGet() throws SQLException {
@@ -873,9 +873,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_batchDelete() throws SQLException {
@@ -911,9 +911,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_findFirst() throws SQLException {
@@ -950,9 +950,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_list() throws SQLException {
@@ -1012,9 +1012,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_stream() throws SQLException {
@@ -1068,9 +1068,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     @SuppressWarnings("deprecation")
@@ -1108,9 +1108,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     @SuppressWarnings("deprecation")
@@ -1153,9 +1153,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     @SuppressWarnings("deprecation")
@@ -1207,9 +1207,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_joinedBy_2() throws SQLException {
@@ -1267,7 +1267,7 @@ public class DaoTest {
     }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_SQLParser() {
@@ -1276,9 +1276,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_many_to_many() throws SQLException {
@@ -1374,9 +1374,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_mergedEntity() throws SQLException {
@@ -1427,9 +1427,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_innerHandler() throws SQLException {
@@ -1442,9 +1442,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_toDisposableObjArray() throws SQLException {
@@ -1467,9 +1467,9 @@ public class DaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_myUserDao() throws SQLException {
