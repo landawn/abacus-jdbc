@@ -20,6 +20,7 @@ import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.EntityCodeConfig;
 import com.landawn.abacus.jdbc.IsolationLevel;
+import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
 import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
 import com.landawn.abacus.jdbc.JdbcUtil;
@@ -40,6 +41,7 @@ import com.landawn.abacus.samples.dao.UserDao;
 import com.landawn.abacus.samples.dao.UserDaoL;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.CheckedStream;
+import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Holder;
 import com.landawn.abacus.util.IOUtil;
@@ -47,7 +49,9 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
+import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Tuple;
+import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.Stream;
 
@@ -178,10 +182,51 @@ public class JdbcTest {
     //        NSC.selectFrom(User.class).where(CF.gt("id", 1)).toNamedQuery(dataSource).list().forEach(Fn.println());
     //    }
 
+    @Test
+    public void test_iterateAllResultSets() throws SQLException {
+        // JdbcUtil.setMinExecutionTimeForSqlPerfLog(1);
+
+        List<User> users = IntStream.range(1, 1000)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                .toList();
+
+        final String sql = NSC.insertInto(User.class).sql();
+        JdbcUtil.prepareNamedQuery(dataSource, sql).addBatchParameters(users).batchInsert();
+
+        //        try (Connection conn = dataSource.getConnection()) {
+        //            Statement stmt = conn.createStatement();
+        //            stmt.addBatch("select * from user1 where id < 10");
+        //            stmt.addBatch("select * from user1 where id > 990");
+        //            stmt.executeBatch();
+        //
+        //            JdbcUtil.extractAllResultSets(stmt).forEach(DataSet::println);
+        //
+        //        }
+
+        assertEquals(users.size(), userDao.batchUpdate(users));
+
+        String query1 = NSC.selectFrom(User.class).where(CF.lt("id", 0)).sql();
+        String query2 = NSC.selectFrom(User.class).where(CF.gt("id", 200)).sql();
+
+        Tuple2<DataSet, DataSet> result = JdbcUtil.prepareNamedQuery(dataSource, Strings.concat(query1 + "; " + query2))
+                .setInt(1, 10)
+                .setInt(2, 300)
+                .query2Resultsets(BiResultExtractor.TO_DATA_SET, BiResultExtractor.TO_DATA_SET);
+
+        result._1.println();
+        // result._2.println();
+
+        N.println(result._1.size());
+        // N.println(result._2.size());
+
+        assertEquals(users.size(), userDao.batchDelete(users));
+
+    }
+
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_perf_log() throws SQLException {
@@ -208,9 +253,9 @@ public class JdbcTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void crud_by_Jdbc() throws SQLException {
@@ -293,9 +338,9 @@ public class JdbcTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     // A bit(lot of?) improvements:
     @Test
@@ -336,9 +381,9 @@ public class JdbcTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void crud_by_Dao() throws SQLException {
@@ -362,9 +407,9 @@ public class JdbcTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void crud_by_UsreDao12() throws SQLException {
@@ -393,9 +438,9 @@ public class JdbcTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_transaction() throws SQLException {
@@ -432,7 +477,7 @@ public class JdbcTest {
     }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_generateEntityClass() {
@@ -493,7 +538,7 @@ public class JdbcTest {
     }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_generateSql() {
@@ -514,9 +559,9 @@ public class JdbcTest {
     }
 
     /**
-     * 
      *
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     @Test
     public void test_cycled() throws Exception {
@@ -526,9 +571,9 @@ public class JdbcTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_page() throws SQLException {
@@ -565,9 +610,9 @@ public class JdbcTest {
     }
 
     /**
-     * 
      *
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     @Test
     public void test_copy() throws Exception {

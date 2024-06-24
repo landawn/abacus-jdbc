@@ -3584,9 +3584,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
-            JdbcUtil.execute(stmt);
+            final boolean isResultSet = JdbcUtil.execute(stmt);
 
-            iter = JdbcUtil.iterateAllResultSets(stmt);
+            iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
 
             R1 result1 = null;
             R2 result2 = null;
@@ -3634,9 +3634,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
-            JdbcUtil.execute(stmt);
+            final boolean isResultSet = JdbcUtil.execute(stmt);
 
-            iter = JdbcUtil.iterateAllResultSets(stmt);
+            iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
 
             R1 result1 = null;
             R2 result2 = null;
@@ -3691,9 +3691,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
-            JdbcUtil.execute(stmt);
+            final boolean isResultSet = JdbcUtil.execute(stmt);
 
-            iter = JdbcUtil.iterateAllResultSets(stmt);
+            iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
 
             final List<R> result = new ArrayList<>();
 
@@ -3728,9 +3728,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
-            JdbcUtil.execute(stmt);
+            final boolean isResultSet = JdbcUtil.execute(stmt);
 
-            iter = JdbcUtil.iterateAllResultSets(stmt);
+            iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
 
             final List<R> result = new ArrayList<>();
 

@@ -39,7 +39,6 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.EntityId;
-import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IntList;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.ParsedSql;
@@ -3051,8 +3050,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             return this;
         }
 
-        batchParameters.stream().filter(it -> it == null).forEach(Fn.println());
-
         return addBatchParameters(batchParameters.iterator());
     }
 
@@ -3117,15 +3114,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     Object params = null;
                     while (iter.hasNext()) {
                         params = iter.next();
-                        N.println(params);
 
                         for (int i = 0; i < parameterCount; i++) {
                             propInfo = propInfos[i];
 
                             if (propInfo != null) {
-                                if (params == null) {
-                                    N.println(propInfo);
-                                }
                                 propInfo.dbType.set(stmt, i + 1, propInfo.getPropValue(params));
                             }
                         }

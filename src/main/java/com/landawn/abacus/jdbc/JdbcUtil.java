@@ -47,6 +47,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import javax.sql.DataSource;
 
@@ -82,7 +83,6 @@ import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.BiConsumers;
-import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.Holder;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.ImmutableMap;
@@ -4179,10 +4179,10 @@ public final class JdbcUtil {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(resultExtractor, "resultExtractor");
 
-        final Throwables.Supplier<Throwables.Iterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
+        final Supplier<Throwables.Iterator<ResultSet, SQLException>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
         return CheckedStream.just(supplier, SQLException.class)
-                .onClose(Fn.rr(() -> supplier.get().close()))
+                .onClose(() -> supplier.get().close())
                 .flatMap(it -> CheckedStream.of(it.get()))
                 .map(rs -> extractAndCloseResultSet(rs, resultExtractor));
     }
@@ -4202,10 +4202,10 @@ public final class JdbcUtil {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(resultExtractor, "resultExtractor");
 
-        final Throwables.Supplier<Throwables.Iterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
+        final Supplier<Throwables.Iterator<ResultSet, SQLException>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
         return CheckedStream.just(supplier, SQLException.class)
-                .onClose(Fn.rr(() -> supplier.get().close()))
+                .onClose(() -> supplier.get().close())
                 .flatMap(it -> CheckedStream.of(it.get()))
                 .map(rs -> extractAndCloseResultSet(rs, resultExtractor));
     }
@@ -4577,10 +4577,10 @@ public final class JdbcUtil {
 
         JdbcUtil.checkDateType(stmt);
 
-        final Throwables.Supplier<Throwables.Iterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
+        final Supplier<Throwables.Iterator<ResultSet, SQLException>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
-        return CheckedStream.just(supplier, SQLException.class)
-                .onClose(Fn.rr(() -> supplier.get().close()))
+        return CheckedStream.just(supplier, SQLException.class) //
+                .onClose(() -> supplier.get().close())
                 .flatMap(it -> CheckedStream.of(it.get()))
                 .map(rs -> {
                     final BiRowMapper<T> rowMapper = BiRowMapper.to(targetClass);
@@ -4607,10 +4607,10 @@ public final class JdbcUtil {
 
         JdbcUtil.checkDateType(stmt);
 
-        final Throwables.Supplier<Throwables.Iterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
+        final Supplier<Throwables.Iterator<ResultSet, SQLException>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
         return CheckedStream.just(supplier, SQLException.class)
-                .onClose(Fn.rr(() -> supplier.get().close()))
+                .onClose(() -> supplier.get().close())
                 .flatMap(it -> CheckedStream.of(it.get()))
                 .map(rs -> JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
     }
@@ -4635,10 +4635,10 @@ public final class JdbcUtil {
 
         JdbcUtil.checkDateType(stmt);
 
-        final Throwables.Supplier<Throwables.Iterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
+        final Supplier<Throwables.Iterator<ResultSet, SQLException>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
         return CheckedStream.just(supplier, SQLException.class)
-                .onClose(Fn.rr(() -> supplier.get().close()))
+                .onClose(() -> supplier.get().close())
                 .flatMap(it -> CheckedStream.of(it.get()))
                 .map(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
     }
@@ -4661,10 +4661,10 @@ public final class JdbcUtil {
 
         JdbcUtil.checkDateType(stmt);
 
-        final Throwables.Supplier<Throwables.Iterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
+        final Supplier<Throwables.Iterator<ResultSet, SQLException>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
         return CheckedStream.just(supplier, SQLException.class)
-                .onClose(Fn.rr(() -> supplier.get().close()))
+                .onClose(() -> supplier.get().close())
                 .flatMap(it -> CheckedStream.of(it.get()))
                 .map(rs -> JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
     }
@@ -4689,33 +4689,34 @@ public final class JdbcUtil {
 
         JdbcUtil.checkDateType(stmt);
 
-        final Throwables.Supplier<Throwables.Iterator<ResultSet, SQLException>, SQLException> supplier = Fnn.memoize(() -> iterateAllResultSets(stmt));
+        final Supplier<Throwables.Iterator<ResultSet, SQLException>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
         return CheckedStream.just(supplier, SQLException.class)
-                .onClose(Fn.rr(() -> supplier.get().close()))
+                .onClose(() -> supplier.get().close())
                 .flatMap(it -> CheckedStream.of(it.get()))
                 .map(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
     }
 
-    static Throwables.Iterator<ResultSet, SQLException> iterateAllResultSets(final Statement stmt) throws SQLException { //NOSONAR
+    static Throwables.Iterator<ResultSet, SQLException> iterateAllResultSets(final Statement stmt, final boolean isFirstResultSet) { //NOSONAR
         return new Throwables.Iterator<>() {
             private final Holder<ResultSet> resultSetHolder = new Holder<>();
-            private int updateCount = stmt.getUpdateCount();
-            private boolean isNextResultSet = updateCount == -1 ? true : false;
+            private boolean isNextResultSet = isFirstResultSet;
+            private boolean noMoreResult = false;
 
             @Override
             public boolean hasNext() throws SQLException {
-                if (resultSetHolder.isNull()) {
-                    while (isNextResultSet || updateCount != -1) {
+                if (resultSetHolder.isNull() && noMoreResult == false) {
+                    while (true) {
                         if (isNextResultSet) {
                             resultSetHolder.setValue(stmt.getResultSet());
                             isNextResultSet = false;
-                            updateCount = 0; // for next loop.
+                            break;
+                        } else if (stmt.getUpdateCount() != -1) {
+                            isNextResultSet = stmt.getMoreResults();
+                        } else {
+                            noMoreResult = true;
 
                             break;
-                        } else {
-                            isNextResultSet = stmt.getMoreResults();
-                            updateCount = stmt.getUpdateCount();
                         }
                     }
                 }

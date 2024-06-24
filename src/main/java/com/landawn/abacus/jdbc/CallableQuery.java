@@ -1471,9 +1471,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
-            JdbcUtil.execute(cstmt);
+            final boolean isResultSet = JdbcUtil.execute(cstmt);
 
-            iter = JdbcUtil.iterateAllResultSets(cstmt);
+            iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
             final List<R> resultList = new ArrayList<>();
 
@@ -1508,9 +1508,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
-            JdbcUtil.execute(cstmt);
+            final boolean isResultSet = JdbcUtil.execute(cstmt);
 
-            iter = JdbcUtil.iterateAllResultSets(cstmt);
+            iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
             final List<R> resultList = new ArrayList<>();
 
@@ -1549,9 +1549,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
-            JdbcUtil.execute(cstmt);
+            final boolean isResultSet = JdbcUtil.execute(cstmt);
 
-            iter = JdbcUtil.iterateAllResultSets(cstmt);
+            iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
             R1 result1 = null;
             R2 result2 = null;
@@ -1598,9 +1598,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
-            JdbcUtil.execute(cstmt);
+            final boolean isResultSet = JdbcUtil.execute(cstmt);
 
-            iter = JdbcUtil.iterateAllResultSets(cstmt);
+            iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
             R1 result1 = null;
             R2 result2 = null;
