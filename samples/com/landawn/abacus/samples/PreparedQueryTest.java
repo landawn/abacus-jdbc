@@ -33,7 +33,7 @@ public class PreparedQueryTest {
     @Test
     public void test_queryForSingleResult() throws SQLException {
 
-        String firstName = N.toJSON(N.asList("a", "b", "c"));
+        String firstName = N.toJson(N.asList("a", "b", "c"));
 
         User user = User.builder().firstName(firstName).lastName("Gump").email("123@email.com").build();
 

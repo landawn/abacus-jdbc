@@ -4626,7 +4626,7 @@ public final class Jdbc {
              * @return
              */
             public static <T> RowMapper<T> readJson(final Class<? extends T> targetType) {
-                return rs -> N.fromJSON(rs.getString(1), targetType);
+                return rs -> N.fromJson(rs.getString(1), targetType);
             }
 
             /**
@@ -4637,7 +4637,7 @@ public final class Jdbc {
              * @return
              */
             public static <T> RowMapper<T> readXml(final Class<? extends T> targetType) {
-                return rs -> N.fromXML(rs.getString(1), targetType);
+                return rs -> N.fromXml(rs.getString(1), targetType);
             }
 
             /**
