@@ -172,14 +172,16 @@ public final class DBLock {
     }
 
     /**
+     * 
      *
-     * @param target
-     * @param liveTime
-     * @param timeout
+     * @param target 
+     * @param liveTime 
+     * @param timeout 
      * @param retryPeriod the period to retry inserting record in database table to lock the target.
      * @return <code>null</code> if the target can't be locked in the period specified by <code>timeout</code>
+     * @throws IllegalStateException if this is closed 
      */
-    public String lock(String target, long liveTime, long timeout, long retryPeriod) {
+    public String lock(String target, long liveTime, long timeout, long retryPeriod) throws IllegalStateException {
         assertNotClosed();
 
         try {
@@ -221,12 +223,14 @@ public final class DBLock {
     }
 
     /**
+     * 
      *
-     * @param target
-     * @param code
+     * @param target 
+     * @param code 
      * @return true, if successful
+     * @throws IllegalStateException if this is closed 
      */
-    public boolean unlock(String target, String code) {
+    public boolean unlock(String target, String code) throws IllegalStateException {
         assertNotClosed();
 
         if (N.equals(targetCodePool.get(target), code)) {

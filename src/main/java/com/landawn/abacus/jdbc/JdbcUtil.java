@@ -1533,16 +1533,19 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param <E>
-     * @param dataSource
-     * @param cmd
-     * @return
-     * @throws E
+     * @param <T> 
+     * @param <E> 
+     * @param dataSource 
+     * @param cmd 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws E 
      */
     @Beta
-    public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd) throws E {
+    public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd)
+            throws IllegalArgumentException, E {
         N.checkArgNotNull(dataSource, "dataSource");
         N.checkArgNotNull(cmd, "cmd");
 
@@ -1588,15 +1591,17 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     *
-     * @param <E>
-     * @param dataSource
-     * @param cmd
-     * @throws E
+     * @param <E> 
+     * @param dataSource 
+     * @param cmd 
+     * @throws IllegalArgumentException 
+     * @throws E 
      */
     @Beta
-    public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd) throws E {
+    public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd)
+            throws IllegalArgumentException, E {
         N.checkArgNotNull(dataSource, "dataSource");
         N.checkArgNotNull(cmd, "cmd");
 
@@ -1611,15 +1616,17 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     *
-     * @param <E>
-     * @param dataSource
-     * @param cmd
-     * @throws E
+     * @param <E> 
+     * @param dataSource 
+     * @param cmd 
+     * @throws IllegalArgumentException 
+     * @throws E 
      */
     @Beta
-    public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Consumer<Connection, E> cmd) throws E {
+    public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Consumer<Connection, E> cmd)
+            throws IllegalArgumentException, E {
         N.checkArgNotNull(dataSource, "dataSource");
         N.checkArgNotNull(cmd, "cmd");
 
@@ -1634,16 +1641,19 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param <E>
-     * @param dataSource
-     * @param cmd
-     * @return
-     * @throws E
+     * @param <T> 
+     * @param <E> 
+     * @param dataSource 
+     * @param cmd 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws E 
      */
     @Beta
-    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd) throws E {
+    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd)
+            throws IllegalArgumentException, E {
         N.checkArgNotNull(dataSource, "dataSource");
         N.checkArgNotNull(cmd, "cmd");
 
@@ -1673,17 +1683,19 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param <E>
-     * @param dataSource
-     * @param cmd
-     * @return
-     * @throws E
+     * @param <T> 
+     * @param <E> 
+     * @param dataSource 
+     * @param cmd 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws E 
      */
     @Beta
     public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource,
-            final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws E {
+            final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E {
         N.checkArgNotNull(dataSource, "dataSource");
         N.checkArgNotNull(cmd, "cmd");
 
@@ -1713,15 +1725,17 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     *
-     * @param <E>
-     * @param dataSource
-     * @param cmd
-     * @throws E
+     * @param <E> 
+     * @param dataSource 
+     * @param cmd 
+     * @throws IllegalArgumentException 
+     * @throws E 
      */
     @Beta
-    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd) throws E {
+    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd)
+            throws IllegalArgumentException, E {
         N.checkArgNotNull(dataSource, "dataSource");
         N.checkArgNotNull(cmd, "cmd");
 
@@ -1751,16 +1765,17 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     *
-     * @param <E>
-     * @param dataSource
-     * @param cmd
-     * @throws E
+     * @param <E> 
+     * @param dataSource 
+     * @param cmd 
+     * @throws IllegalArgumentException 
+     * @throws E 
      */
     @Beta
     public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource,
-            final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws E {
+            final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E {
         N.checkArgNotNull(dataSource, "dataSource");
         N.checkArgNotNull(cmd, "cmd");
 
@@ -1839,14 +1854,15 @@ public final class JdbcUtil {
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
      *
-     * @param ds
-     * @param sql
-     * @return
-     * @throws SQLException
+     * @param ds 
+     * @param sql 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql) throws SQLException {
+    public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(sql, "sql");
 
@@ -1876,15 +1892,17 @@ public final class JdbcUtil {
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
      *
-     * @param ds
-     * @param sql
-     * @param autoGeneratedKeys
-     * @return
-     * @throws SQLException
+     * @param ds 
+     * @param sql 
+     * @param autoGeneratedKeys 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final boolean autoGeneratedKeys) throws SQLException {
+    public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final boolean autoGeneratedKeys)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(sql, "sql");
 
@@ -1910,14 +1928,17 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     * @param ds
-     * @param sql
-     * @param returnColumnIndexes
-     * @return
-     * @throws SQLException
+     * @param ds 
+     * @param sql 
+     * @param returnColumnIndexes 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final int[] returnColumnIndexes) throws SQLException {
+    public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final int[] returnColumnIndexes)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(sql, "sql");
         N.checkArgNotEmpty(returnColumnIndexes, "returnColumnIndexes");
@@ -1944,14 +1965,17 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     * @param ds
-     * @param sql
-     * @param returnColumnNames
-     * @return
-     * @throws SQLException
+     * @param ds 
+     * @param sql 
+     * @param returnColumnNames 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final String[] returnColumnNames) throws SQLException {
+    public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final String[] returnColumnNames)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(sql, "sql");
         N.checkArgNotEmpty(returnColumnNames, "returnColumnNames");
@@ -1978,22 +2002,22 @@ public final class JdbcUtil {
     }
 
     /**
-     *
      * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction} or in {@code Spring} with the same {@code DataSource} in the same thread,
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
      *
-     * @param ds
-     * @param sql
+     * @param ds 
+     * @param sql 
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code PreparedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
-     * @return
-     * @throws SQLException
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql,
-            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(sql, "sql");
         N.checkArgNotNull(stmtCreator, "stmtCreator");
@@ -2028,11 +2052,12 @@ public final class JdbcUtil {
      * </pre>
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
-     * @param sql
-     * @return
-     * @throws SQLException
+     * @param sql 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static PreparedQuery prepareQuery(final Connection conn, final String sql) throws SQLException {
+    public static PreparedQuery prepareQuery(final Connection conn, final String sql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(sql, "sql");
 
@@ -2040,7 +2065,6 @@ public final class JdbcUtil {
     }
 
     /**
-     *
      * Never write below code because it will definitely cause {@code Connection} leak:
      * <pre>
      * <code>
@@ -2049,12 +2073,14 @@ public final class JdbcUtil {
      * </pre>
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
-     * @param sql
-     * @param autoGeneratedKeys
-     * @return
-     * @throws SQLException
+     * @param sql 
+     * @param autoGeneratedKeys 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static PreparedQuery prepareQuery(final Connection conn, final String sql, final boolean autoGeneratedKeys) throws SQLException {
+    public static PreparedQuery prepareQuery(final Connection conn, final String sql, final boolean autoGeneratedKeys)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(sql, "sql");
 
@@ -2069,13 +2095,15 @@ public final class JdbcUtil {
      * </code>
      * </pre>
      *
-     * @param conn
-     * @param sql
-     * @param returnColumnIndexes
-     * @return
-     * @throws SQLException
+     * @param conn 
+     * @param sql 
+     * @param returnColumnIndexes 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static PreparedQuery prepareQuery(final Connection conn, final String sql, final int[] returnColumnIndexes) throws SQLException {
+    public static PreparedQuery prepareQuery(final Connection conn, final String sql, final int[] returnColumnIndexes)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(sql, "sql");
         N.checkArgNotEmpty(returnColumnIndexes, "returnColumnIndexes");
@@ -2091,13 +2119,15 @@ public final class JdbcUtil {
      * </code>
      * </pre>
      *
-     * @param conn
-     * @param sql
-     * @param returnColumnNames
-     * @return
-     * @throws SQLException
+     * @param conn 
+     * @param sql 
+     * @param returnColumnNames 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static PreparedQuery prepareQuery(final Connection conn, final String sql, final String[] returnColumnNames) throws SQLException {
+    public static PreparedQuery prepareQuery(final Connection conn, final String sql, final String[] returnColumnNames)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(sql, "sql");
         N.checkArgNotEmpty(returnColumnNames, "returnColumnNames");
@@ -2114,14 +2144,15 @@ public final class JdbcUtil {
      * </pre>
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
-     * @param sql
+     * @param sql 
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code PreparedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
-     * @return
-     * @throws SQLException
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql,
-            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(sql, "sql");
         N.checkArgNotNull(stmtCreator, "stmtCreator");
@@ -2162,14 +2193,15 @@ public final class JdbcUtil {
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
      *
-     * @param ds
+     * @param ds 
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @return
-     * @throws SQLException
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(namedSql, "namedSql");
 
@@ -2199,15 +2231,17 @@ public final class JdbcUtil {
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
      *
-     * @param ds
+     * @param ds 
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param autoGeneratedKeys
-     * @return
-     * @throws SQLException
+     * @param autoGeneratedKeys 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final boolean autoGeneratedKeys) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final boolean autoGeneratedKeys)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(namedSql, "namedSql");
 
@@ -2237,13 +2271,15 @@ public final class JdbcUtil {
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
      *
-     * @param ds
+     * @param ds 
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnIndexes
-     * @return
-     * @throws SQLException
+     * @param returnColumnIndexes 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final int[] returnColumnIndexes) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final int[] returnColumnIndexes)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(namedSql, "namedSql");
         N.checkArgNotEmpty(returnColumnIndexes, "returnColumnIndexes");
@@ -2274,13 +2310,15 @@ public final class JdbcUtil {
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
      *
-     * @param ds
+     * @param ds 
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnNames
-     * @return
-     * @throws SQLException
+     * @param returnColumnNames 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final String[] returnColumnNames) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final String[] returnColumnNames)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(namedSql, "namedSql");
         N.checkArgNotEmpty(returnColumnNames, "returnColumnNames");
@@ -2307,22 +2345,22 @@ public final class JdbcUtil {
     }
 
     /**
-     *
      * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction} or in {@code Spring} with the same {@code DataSource} in the same thread,
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
      *
-     * @param ds
+     * @param ds 
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
-     * @return
-     * @throws SQLException
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql,
-            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(namedSql, "namedSql");
         N.checkArgNotNull(stmtCreator, "stmtCreator");
@@ -2358,10 +2396,11 @@ public final class JdbcUtil {
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @return
-     * @throws SQLException
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(namedSql, "namedSql");
 
@@ -2371,7 +2410,6 @@ public final class JdbcUtil {
     }
 
     /**
-     *
      * Never write below code because it will definitely cause {@code Connection} leak:
      * <pre>
      * <code>
@@ -2381,11 +2419,13 @@ public final class JdbcUtil {
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param autoGeneratedKeys
-     * @return
-     * @throws SQLException
+     * @param autoGeneratedKeys 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final boolean autoGeneratedKeys) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final boolean autoGeneratedKeys)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(namedSql, "namedSql");
 
@@ -2404,11 +2444,13 @@ public final class JdbcUtil {
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnIndexes
-     * @return
-     * @throws SQLException
+     * @param returnColumnIndexes 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final int[] returnColumnIndexes) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final int[] returnColumnIndexes)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(namedSql, "namedSql");
         N.checkArgNotEmpty(returnColumnIndexes, "returnColumnIndexes");
@@ -2428,11 +2470,13 @@ public final class JdbcUtil {
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnNames
-     * @return
-     * @throws SQLException
+     * @param returnColumnNames 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final String[] returnColumnNames) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final String[] returnColumnNames)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(namedSql, "namedSql");
         N.checkArgNotEmpty(returnColumnNames, "returnColumnNames");
@@ -2454,11 +2498,12 @@ public final class JdbcUtil {
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
-     * @return
-     * @throws SQLException
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql,
-            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(namedSql, "namedSql");
         N.checkArgNotNull(stmtCreator, "stmtCreator");
@@ -2473,14 +2518,15 @@ public final class JdbcUtil {
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
      *
-     * @param ds
+     * @param ds 
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @return
-     * @throws SQLException
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotNull(namedSql, "namedSql");
         validateNamedSql(namedSql);
@@ -2511,15 +2557,17 @@ public final class JdbcUtil {
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
      *
-     * @param ds
+     * @param ds 
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param autoGeneratedKeys
-     * @return
-     * @throws SQLException
+     * @param autoGeneratedKeys 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final boolean autoGeneratedKeys) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final boolean autoGeneratedKeys)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotNull(namedSql, "namedSql");
         validateNamedSql(namedSql);
@@ -2550,13 +2598,15 @@ public final class JdbcUtil {
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
      *
-     * @param ds
+     * @param ds 
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnIndexes
-     * @return
-     * @throws SQLException
+     * @param returnColumnIndexes 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final int[] returnColumnIndexes) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final int[] returnColumnIndexes)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotNull(namedSql, "namedSql");
         N.checkArgNotEmpty(returnColumnIndexes, "returnColumnIndexes");
@@ -2588,13 +2638,15 @@ public final class JdbcUtil {
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
      *
-     * @param ds
+     * @param ds 
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnNames
-     * @return
-     * @throws SQLException
+     * @param returnColumnNames 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final String[] returnColumnNames) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final String[] returnColumnNames)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotNull(namedSql, "namedSql");
         N.checkArgNotEmpty(returnColumnNames, "returnColumnNames");
@@ -2622,22 +2674,22 @@ public final class JdbcUtil {
     }
 
     /**
-     *
      * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction} or in {@code Spring} with the same {@code DataSource} in the same thread,
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
      *
-     * @param ds
+     * @param ds 
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
-     * @return
-     * @throws SQLException
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql,
-            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotNull(namedSql, "namedSql");
         N.checkArgNotNull(stmtCreator, "stmtCreator");
@@ -2674,10 +2726,11 @@ public final class JdbcUtil {
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @return
-     * @throws SQLException
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotNull(namedSql, "namedSql");
         validateNamedSql(namedSql);
@@ -2686,7 +2739,6 @@ public final class JdbcUtil {
     }
 
     /**
-     *
      * Never write below code because it will definitely cause {@code Connection} leak:
      * <pre>
      * <code>
@@ -2696,11 +2748,13 @@ public final class JdbcUtil {
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param autoGeneratedKeys
-     * @return
-     * @throws SQLException
+     * @param autoGeneratedKeys 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final boolean autoGeneratedKeys) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final boolean autoGeneratedKeys)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotNull(namedSql, "namedSql");
         validateNamedSql(namedSql);
@@ -2718,11 +2772,13 @@ public final class JdbcUtil {
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnIndexes
-     * @return
-     * @throws SQLException
+     * @param returnColumnIndexes 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final int[] returnColumnIndexes) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final int[] returnColumnIndexes)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotNull(namedSql, "namedSql");
         N.checkArgNotEmpty(returnColumnIndexes, "returnColumnIndexes");
@@ -2741,11 +2797,13 @@ public final class JdbcUtil {
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnNames
-     * @return
-     * @throws SQLException
+     * @param returnColumnNames 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final String[] returnColumnNames) throws SQLException {
+    public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final String[] returnColumnNames)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotNull(namedSql, "namedSql");
         N.checkArgNotEmpty(returnColumnNames, "returnColumnNames");
@@ -2766,11 +2824,12 @@ public final class JdbcUtil {
      * @param namedSql for example {@code SELECT first_name, last_name FROM account where id = :id}
      * @param stmtCreator the created {@code PreparedStatement} will be closed after any execution methods in {@code NamedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
-     * @return
-     * @throws SQLException
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql,
-            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotNull(namedSql, "namedSql");
         N.checkArgNotNull(stmtCreator, "stmtCreator");
@@ -2812,14 +2871,15 @@ public final class JdbcUtil {
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
      *
-     * @param ds
-     * @param sql
-     * @return
-     * @throws SQLException
+     * @param ds 
+     * @param sql 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql) throws SQLException {
+    public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(sql, "sql");
 
@@ -2849,17 +2909,18 @@ public final class JdbcUtil {
      * the {@code Connection} started the Transaction will be used here.
      * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
      *
-     * @param ds
-     * @param sql
+     * @param ds 
+     * @param sql 
      * @param stmtCreator the created {@code CallableStatement} will be closed after any execution methods in {@code PreparedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
-     * @return
-     * @throws SQLException
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql,
-            final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(sql, "sql");
         N.checkArgNotNull(stmtCreator, "stmtCreator");
@@ -2894,13 +2955,14 @@ public final class JdbcUtil {
      * </pre>
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
-     * @param sql
-     * @return
-     * @throws SQLException
+     * @param sql 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static CallableQuery prepareCallableQuery(final Connection conn, final String sql) throws SQLException {
+    public static CallableQuery prepareCallableQuery(final Connection conn, final String sql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(sql, "sql");
 
@@ -2916,14 +2978,15 @@ public final class JdbcUtil {
      * </pre>
      *
      * @param conn the specified {@code conn} won't be close after this query is executed.
-     * @param sql
+     * @param sql 
      * @param stmtCreator the created {@code CallableStatement} will be closed after any execution methods in {@code PreparedQuery/CallableQuery} is called.
      * An execution method is a method which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/....
-     * @return
-     * @throws SQLException
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
     public static CallableQuery prepareCallableQuery(final Connection conn, final String sql,
-            final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
+            final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(sql, "sql");
         N.checkArgNotNull(stmtCreator, "stmtCreator");
@@ -3174,15 +3237,18 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     * @param ds
-     * @param sql
-     * @param parameters
-     * @return
-     * @throws SQLException
+     * @param ds 
+     * @param sql 
+     * @param parameters 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
     @SafeVarargs
-    public static DataSet executeQuery(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws SQLException {
+    public static DataSet executeQuery(final javax.sql.DataSource ds, final String sql, final Object... parameters)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(sql, "sql");
 
@@ -3202,15 +3268,17 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     * @param conn
-     * @param sql
-     * @param parameters
-     * @return
-     * @throws SQLException
+     * @param conn 
+     * @param sql 
+     * @param parameters 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
     @SafeVarargs
-    public static DataSet executeQuery(final Connection conn, final String sql, final Object... parameters) throws SQLException {
+    public static DataSet executeQuery(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(sql, "sql");
 
@@ -3249,15 +3317,17 @@ public final class JdbcUtil {
     //    }
 
     /**
+     * 
      *
-     * @param ds
-     * @param sql
-     * @param parameters
-     * @return
-     * @throws SQLException
+     * @param ds 
+     * @param sql 
+     * @param parameters 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
     @SafeVarargs
-    public static int executeUpdate(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws SQLException {
+    public static int executeUpdate(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(sql, "sql");
 
@@ -3277,15 +3347,17 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     * @param conn
-     * @param sql
-     * @param parameters
-     * @return
-     * @throws SQLException
+     * @param conn 
+     * @param sql 
+     * @param parameters 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
     @SafeVarargs
-    public static int executeUpdate(final Connection conn, final String sql, final Object... parameters) throws SQLException {
+    public static int executeUpdate(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(sql, "sql");
 
@@ -3370,14 +3442,16 @@ public final class JdbcUtil {
     /**
      * Execute batch update.
      *
-     * @param conn
-     * @param sql
-     * @param listOfParameters
-     * @param batchSize
-     * @return
-     * @throws SQLException
+     * @param conn 
+     * @param sql 
+     * @param listOfParameters 
+     * @param batchSize 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static int executeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters, final int batchSize) throws SQLException {
+    public static int executeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters, final int batchSize)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn);
         N.checkArgNotNull(sql);
         N.checkArgPositive(batchSize, "batchSize");
@@ -3584,15 +3658,17 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     * @param ds
-     * @param sql
-     * @param parameters
-     * @return
-     * @throws SQLException
+     * @param ds 
+     * @param sql 
+     * @param parameters 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
     @SafeVarargs
-    public static boolean execute(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws SQLException {
+    public static boolean execute(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, "dataSource");
         N.checkArgNotEmpty(sql, "sql");
 
@@ -3612,15 +3688,17 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     * @param conn
-     * @param sql
-     * @param parameters
+     * @param conn 
+     * @param sql 
+     * @param parameters 
      * @return true, if successful
-     * @throws SQLException
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
     @SafeVarargs
-    public static boolean execute(final Connection conn, final String sql, final Object... parameters) throws SQLException {
+    public static boolean execute(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotEmpty(sql, "sql");
 
@@ -4040,18 +4118,20 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     * @param rs
-     * @param offset
-     * @param count
-     * @param filter
-     * @param rowExtractor
-     * @param closeResultSet
-     * @return
-     * @throws SQLException
+     * @param rs 
+     * @param offset 
+     * @param count 
+     * @param filter 
+     * @param rowExtractor 
+     * @param closeResultSet 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
     public static DataSet extractData(final ResultSet rs, int offset, int count, final RowFilter filter, final RowExtractor rowExtractor,
-            final boolean closeResultSet) throws SQLException {
+            final boolean closeResultSet) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(rs, "ResultSet");
         N.checkArgNotNegative(offset, "offset");
         N.checkArgNotNegative(count, "count");
@@ -4169,13 +4249,15 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.extractAllResultSets(stmt, resultExtractor).onClose(Fn.closeQuietly(stmt))...}
      *
-     * @param <T>
-     * @param stmt
-     * @param resultExtractor
-     * @return
+     * @param <T> 
+     * @param stmt 
+     * @param resultExtractor 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @SuppressWarnings("resource")
-    public static <T> CheckedStream<T, SQLException> extractAllResultSets(final Statement stmt, final ResultExtractor<T> resultExtractor) {
+    public static <T> CheckedStream<T, SQLException> extractAllResultSets(final Statement stmt, final ResultExtractor<T> resultExtractor)
+            throws IllegalArgumentException {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(resultExtractor, "resultExtractor");
 
@@ -4192,13 +4274,15 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.extractAllResultSets(stmt, resultExtractor).onClose(Fn.closeQuietly(stmt))...}
      *
-     * @param <T>
-     * @param stmt
-     * @param resultExtractor
-     * @return
+     * @param <T> 
+     * @param stmt 
+     * @param resultExtractor 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @SuppressWarnings("resource")
-    public static <T> CheckedStream<T, SQLException> extractAllResultSets(final Statement stmt, final BiResultExtractor<T> resultExtractor) {
+    public static <T> CheckedStream<T, SQLException> extractAllResultSets(final Statement stmt, final BiResultExtractor<T> resultExtractor)
+            throws IllegalArgumentException {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(resultExtractor, "resultExtractor");
 
@@ -4227,12 +4311,13 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
-     * @param <T>
-     * @param resultSet
+     * @param <T> 
+     * @param resultSet 
      * @param targetClass Array/List/Map or Entity with getter/setter methods.
-     * @return
+     * @return 
+     * @throws IllegalArgumentException 
      */
-    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final Class<? extends T> targetClass) {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final Class<? extends T> targetClass) throws IllegalArgumentException {
         N.checkArgNotNull(targetClass, "targetClass");
         N.checkArgNotNull(resultSet, "resultSet");
 
@@ -4244,12 +4329,13 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
-     * @param <T>
-     * @param resultSet
-     * @param rowMapper
-     * @return
+     * @param <T> 
+     * @param resultSet 
+     * @param rowMapper 
+     * @return 
+     * @throws IllegalArgumentException 
      */
-    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final RowMapper<? extends T> rowMapper) {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
@@ -4281,7 +4367,7 @@ public final class JdbcUtil {
             }
 
             @Override
-            public void advance(long n) throws SQLException {
+            public void advance(long n) throws IllegalArgumentException, SQLException {
                 N.checkArgNotNegative(n, "n");
 
                 final long m = hasNext ? n - 1 : n;
@@ -4317,13 +4403,15 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
-     * @param <T>
-     * @param resultSet
-     * @param rowFilter
-     * @param rowMapper
-     * @return
+     * @param <T> 
+     * @param resultSet 
+     * @param rowFilter 
+     * @param rowMapper 
+     * @return 
+     * @throws IllegalArgumentException 
      */
-    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper) {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper)
+            throws IllegalArgumentException {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -4379,12 +4467,14 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
-     * @param <T>
-     * @param resultSet
-     * @param rowMapper
-     * @return
+     * @param <T> 
+     * @param resultSet 
+     * @param rowMapper 
+     * @return 
+     * @throws IllegalArgumentException 
      */
-    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final BiRowMapper<? extends T> rowMapper) {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final BiRowMapper<? extends T> rowMapper)
+            throws IllegalArgumentException {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
@@ -4421,7 +4511,7 @@ public final class JdbcUtil {
             }
 
             @Override
-            public void advance(long n) throws SQLException {
+            public void advance(long n) throws IllegalArgumentException, SQLException {
                 N.checkArgNotNegative(n, "n");
 
                 final long m = hasNext ? n - 1 : n;
@@ -4457,13 +4547,15 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
-     * @param <T>
-     * @param resultSet
-     * @param rowFilter
-     * @param rowMapper
-     * @return
+     * @param <T> 
+     * @param resultSet 
+     * @param rowFilter 
+     * @param rowMapper 
+     * @return 
+     * @throws IllegalArgumentException 
      */
-    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper) {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper)
+            throws IllegalArgumentException {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -4512,12 +4604,13 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
-     * @param <T>
-     * @param resultSet
+     * @param <T> 
+     * @param resultSet 
      * @param columnIndex starts from 1, not 0.
-     * @return
+     * @return 
+     * @throws IllegalArgumentException 
      */
-    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final int columnIndex) {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final int columnIndex) throws IllegalArgumentException {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgPositive(columnIndex, "columnIndex");
 
@@ -4532,12 +4625,13 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
-     * @param <T>
-     * @param resultSet
-     * @param columnName
-     * @return
+     * @param <T> 
+     * @param resultSet 
+     * @param columnName 
+     * @return 
+     * @throws IllegalArgumentException 
      */
-    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final String columnName) {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final String columnName) throws IllegalArgumentException {
         N.checkArgNotNull(resultSet, "resultSet");
         N.checkArgNotEmpty(columnName, "columnName");
 
@@ -4564,14 +4658,15 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.streamAllResultSets(stmt, targetClass).onClose(Fn.closeQuietly(stmt))...}
      *
-     * @param <T>
-     * @param stmt
-     * @param targetClass
-     * @return
+     * @param <T> 
+     * @param stmt 
+     * @param targetClass 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @SuppressWarnings("resource")
     public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt,
-            final Class<? extends T> targetClass) {
+            final Class<? extends T> targetClass) throws IllegalArgumentException {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(targetClass, "targetClass");
 
@@ -4594,14 +4689,15 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.streamAllResultSets(stmt, rowMapper).onClose(Fn.closeQuietly(stmt))...}
      *
-     * @param <T>
-     * @param stmt
-     * @param rowMapper
-     * @return
+     * @param <T> 
+     * @param stmt 
+     * @param rowMapper 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @SuppressWarnings("resource")
     public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt,
-            final RowMapper<? extends T> rowMapper) {
+            final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
@@ -4620,15 +4716,16 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).onClose(Fn.closeQuietly(stmt))...}
      *
-     * @param <T>
-     * @param stmt
-     * @param rowFilter
-     * @param rowMapper
-     * @return
+     * @param <T> 
+     * @param stmt 
+     * @param rowFilter 
+     * @param rowMapper 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @SuppressWarnings("resource")
     public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt, final RowFilter rowFilter,
-            final RowMapper<? extends T> rowMapper) {
+            final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -4648,14 +4745,15 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.streamAllResultSets(stmt, rowMapper).onClose(Fn.closeQuietly(stmt))...}
      *
-     * @param <T>
-     * @param stmt
-     * @param rowMapper
-     * @return
+     * @param <T> 
+     * @param stmt 
+     * @param rowMapper 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @SuppressWarnings("resource")
     public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt,
-            final BiRowMapper<? extends T> rowMapper) {
+            final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowMapper, "rowMapper");
 
@@ -4674,15 +4772,16 @@ public final class JdbcUtil {
      * <br />
      * {@code JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).onClose(Fn.closeQuietly(stmt))...}
      *
-     * @param <T>
-     * @param stmt
-     * @param rowFilter
-     * @param rowMapper
-     * @return
+     * @param <T> 
+     * @param stmt 
+     * @param rowFilter 
+     * @param rowMapper 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @SuppressWarnings("resource")
     public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter,
-            final BiRowMapper<? extends T> rowMapper) {
+            final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException {
         N.checkArgNotNull(stmt, "stmt");
         N.checkArgNotNull(rowFilter, "rowFilter");
         N.checkArgNotNull(rowMapper, "rowMapper");
@@ -5254,13 +5353,15 @@ public final class JdbcUtil {
     };
 
     /**
+     * 
      *
-     * @param stmt
-     * @param outParams
-     * @return
-     * @throws SQLException
+     * @param stmt 
+     * @param outParams 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public static OutParamResult getOutParameters(final CallableStatement stmt, final List<OutParam> outParams) throws SQLException {
+    public static OutParamResult getOutParameters(final CallableStatement stmt, final List<OutParam> outParams) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(stmt, "stmt");
 
         if (N.isEmpty(outParams)) {
@@ -5855,12 +5956,13 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     *
-     * @param sqlAction
+     * @param sqlAction 
+     * @throws IllegalArgumentException 
      */
     @Beta
-    public static void run(final Throwables.Runnable<Exception> sqlAction) {
+    public static void run(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         try {
@@ -5871,14 +5973,15 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     *
-     * @param <T>
-     * @param t
-     * @param sqlAction
+     * @param <T> 
+     * @param t 
+     * @param sqlAction 
+     * @throws IllegalArgumentException 
      */
     @Beta
-    public static <T> void run(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) {
+    public static <T> void run(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         try {
@@ -5889,16 +5992,18 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     *
-     * @param <T>
-     * @param <U>
-     * @param t
-     * @param u
-     * @param sqlAction
+     * @param <T> 
+     * @param <U> 
+     * @param t 
+     * @param u 
+     * @param sqlAction 
+     * @throws IllegalArgumentException 
      */
     @Beta
-    public static <T, U> void run(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) {
+    public static <T, U> void run(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction)
+            throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         try {
@@ -5909,18 +6014,20 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     *
-     * @param <A>
-     * @param <B>
-     * @param <C>
-     * @param a
-     * @param b
-     * @param c
-     * @param sqlAction
+     * @param <A> 
+     * @param <B> 
+     * @param <C> 
+     * @param a 
+     * @param b 
+     * @param c 
+     * @param sqlAction 
+     * @throws IllegalArgumentException 
      */
     @Beta
-    public static <A, B, C> void run(final A a, final B b, final C c, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) {
+    public static <A, B, C> void run(final A a, final B b, final C c, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction)
+            throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         try {
@@ -5931,14 +6038,15 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     *
-     * @param <R>
-     * @param sqlAction
-     * @return
+     * @param <R> 
+     * @param sqlAction 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
-    public static <R> R call(final Callable<R> sqlAction) {
+    public static <R> R call(final Callable<R> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         try {
@@ -5949,16 +6057,17 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     *
-     * @param <T>
-     * @param <R>
-     * @param t
-     * @param sqlAction
-     * @return
+     * @param <T> 
+     * @param <R> 
+     * @param t 
+     * @param sqlAction 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
-    public static <T, R> R call(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) {
+    public static <T, R> R call(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         try {
@@ -5969,18 +6078,20 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     *
-     * @param <T>
-     * @param <U>
-     * @param <R>
-     * @param t
-     * @param u
-     * @param sqlAction
-     * @return
+     * @param <T> 
+     * @param <U> 
+     * @param <R> 
+     * @param t 
+     * @param u 
+     * @param sqlAction 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
-    public static <T, U, R> R call(final T t, final U u, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) {
+    public static <T, U, R> R call(final T t, final U u, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction)
+            throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         try {
@@ -5991,21 +6102,22 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     *
-     * @param <A>
-     * @param <B>
-     * @param <C>
-     * @param <R>
-     * @param a
-     * @param b
-     * @param c
-     * @param sqlAction
-     * @return
+     * @param <A> 
+     * @param <B> 
+     * @param <C> 
+     * @param <R> 
+     * @param a 
+     * @param b 
+     * @param c 
+     * @param sqlAction 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
     public static <A, B, C, R> R call(final A a, final B b, final C c,
-            final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) {
+            final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         try {
@@ -6018,11 +6130,12 @@ public final class JdbcUtil {
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param sqlAction
-     * @return
+     * @param sqlAction 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
-    public static ContinuableFuture<Void> asyncRun(final Throwables.Runnable<Exception> sqlAction) {
+    public static ContinuableFuture<Void> asyncRun(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         return asyncExecutor.execute(sqlAction);
@@ -6031,13 +6144,14 @@ public final class JdbcUtil {
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param sqlAction1
-     * @param sqlAction2
-     * @return
+     * @param sqlAction1 
+     * @param sqlAction2 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
     public static Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> asyncRun(final Throwables.Runnable<Exception> sqlAction1,
-            final Throwables.Runnable<Exception> sqlAction2) {
+            final Throwables.Runnable<Exception> sqlAction2) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction1, "sqlAction1");
         N.checkArgNotNull(sqlAction2, "sqlAction2");
 
@@ -6047,14 +6161,15 @@ public final class JdbcUtil {
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param sqlAction1
-     * @param sqlAction2
-     * @param sqlAction3
-     * @return
+     * @param sqlAction1 
+     * @param sqlAction2 
+     * @param sqlAction3 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
     public static Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> asyncRun(final Throwables.Runnable<Exception> sqlAction1,
-            final Throwables.Runnable<Exception> sqlAction2, final Throwables.Runnable<Exception> sqlAction3) {
+            final Throwables.Runnable<Exception> sqlAction2, final Throwables.Runnable<Exception> sqlAction3) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction1, "sqlAction1");
         N.checkArgNotNull(sqlAction2, "sqlAction2");
         N.checkArgNotNull(sqlAction3, "sqlAction3");
@@ -6065,13 +6180,14 @@ public final class JdbcUtil {
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <T>
-     * @param t
-     * @param sqlAction
-     * @return
+     * @param <T> 
+     * @param t 
+     * @param sqlAction 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
-    public static <T> ContinuableFuture<Void> asyncRun(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) {
+    public static <T> ContinuableFuture<Void> asyncRun(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         return asyncExecutor.execute(() -> sqlAction.accept(t));
@@ -6080,15 +6196,17 @@ public final class JdbcUtil {
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <T>
-     * @param <U>
-     * @param t
-     * @param u
-     * @param sqlAction
-     * @return
+     * @param <T> 
+     * @param <U> 
+     * @param t 
+     * @param u 
+     * @param sqlAction 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
-    public static <T, U> ContinuableFuture<Void> asyncRun(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) {
+    public static <T, U> ContinuableFuture<Void> asyncRun(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction)
+            throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         return asyncExecutor.execute(() -> sqlAction.accept(t, u));
@@ -6097,18 +6215,19 @@ public final class JdbcUtil {
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <A>
-     * @param <B>
-     * @param <C>
-     * @param a
-     * @param b
-     * @param c
-     * @param sqlAction
-     * @return
+     * @param <A> 
+     * @param <B> 
+     * @param <C> 
+     * @param a 
+     * @param b 
+     * @param c 
+     * @param sqlAction 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
     public static <A, B, C> ContinuableFuture<Void> asyncRun(final A a, final B b, final C c,
-            final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) {
+            final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         return asyncExecutor.execute(() -> sqlAction.accept(a, b, c));
@@ -6117,12 +6236,13 @@ public final class JdbcUtil {
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <R>
-     * @param sqlAction
-     * @return
+     * @param <R> 
+     * @param sqlAction 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
-    public static <R> ContinuableFuture<R> asyncCall(final Callable<R> sqlAction) {
+    public static <R> ContinuableFuture<R> asyncCall(final Callable<R> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         return asyncExecutor.execute(sqlAction);
@@ -6131,14 +6251,16 @@ public final class JdbcUtil {
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <R1>
-     * @param <R2>
-     * @param sqlAction1
-     * @param sqlAction2
-     * @return
+     * @param <R1> 
+     * @param <R2> 
+     * @param sqlAction1 
+     * @param sqlAction2 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
-    public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> asyncCall(final Callable<R1> sqlAction1, final Callable<R2> sqlAction2) {
+    public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> asyncCall(final Callable<R1> sqlAction1, final Callable<R2> sqlAction2)
+            throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction1, "sqlAction1");
         N.checkArgNotNull(sqlAction2, "sqlAction2");
 
@@ -6148,17 +6270,18 @@ public final class JdbcUtil {
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <R1>
-     * @param <R2>
-     * @param <R3>
-     * @param sqlAction1
-     * @param sqlAction2
-     * @param sqlAction3
-     * @return
+     * @param <R1> 
+     * @param <R2> 
+     * @param <R3> 
+     * @param sqlAction1 
+     * @param sqlAction2 
+     * @param sqlAction3 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
     public static <R1, R2, R3> Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>> asyncCall(final Callable<R1> sqlAction1,
-            final Callable<R2> sqlAction2, final Callable<R3> sqlAction3) {
+            final Callable<R2> sqlAction2, final Callable<R3> sqlAction3) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction1, "sqlAction1");
         N.checkArgNotNull(sqlAction2, "sqlAction2");
         N.checkArgNotNull(sqlAction3, "sqlAction3");
@@ -6169,14 +6292,16 @@ public final class JdbcUtil {
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <T>
-     * @param <R>
-     * @param t
-     * @param sqlAction
-     * @return
+     * @param <T> 
+     * @param <R> 
+     * @param t 
+     * @param sqlAction 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
-    public static <T, R> ContinuableFuture<R> asyncCall(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) {
+    public static <T, R> ContinuableFuture<R> asyncCall(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction)
+            throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         return asyncExecutor.execute(() -> sqlAction.apply(t));
@@ -6185,17 +6310,18 @@ public final class JdbcUtil {
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <T>
-     * @param <U>
-     * @param <R>
-     * @param t
-     * @param u
-     * @param sqlAction
-     * @return
+     * @param <T> 
+     * @param <U> 
+     * @param <R> 
+     * @param t 
+     * @param u 
+     * @param sqlAction 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
     public static <T, U, R> ContinuableFuture<R> asyncCall(final T t, final U u,
-            final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) {
+            final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         return asyncExecutor.execute(() -> sqlAction.apply(t, u));
@@ -6204,19 +6330,20 @@ public final class JdbcUtil {
     /**
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <A>
-     * @param <B>
-     * @param <C>
-     * @param <R>
-     * @param a
-     * @param b
-     * @param c
-     * @param sqlAction
-     * @return
+     * @param <A> 
+     * @param <B> 
+     * @param <C> 
+     * @param <R> 
+     * @param a 
+     * @param b 
+     * @param c 
+     * @param sqlAction 
+     * @return 
+     * @throws IllegalArgumentException 
      */
     @Beta
     public static <A, B, C, R> ContinuableFuture<R> asyncCall(final A a, final B b, final C c,
-            final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) {
+            final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, "sqlAction");
 
         return asyncExecutor.execute(() -> sqlAction.apply(a, b, c));
@@ -6469,17 +6596,18 @@ public final class JdbcUtil {
     private static final Map<Class<? extends Dao>, BiRowMapper<?>> idExtractorPool = new ConcurrentHashMap<>();
 
     /**
+     * 
      *
-     *
-     * @param <T>
-     * @param <ID>
-     * @param <SB>
-     * @param <TD>
-     * @param daoInterface
-     * @param idExtractor
+     * @param <T> 
+     * @param <ID> 
+     * @param <SB> 
+     * @param <TD> 
+     * @param daoInterface 
+     * @param idExtractor 
+     * @throws IllegalArgumentException 
      */
     public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
-            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final RowMapper<? extends ID> idExtractor) {
+            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final RowMapper<? extends ID> idExtractor) throws IllegalArgumentException {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(idExtractor, "idExtractor");
 
@@ -6487,17 +6615,18 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     *
-     * @param <T>
-     * @param <ID>
-     * @param <SB>
-     * @param <TD>
-     * @param daoInterface
-     * @param idExtractor
+     * @param <T> 
+     * @param <ID> 
+     * @param <SB> 
+     * @param <TD> 
+     * @param daoInterface 
+     * @param idExtractor 
+     * @throws IllegalArgumentException 
      */
     public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
-            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final BiRowMapper<? extends ID> idExtractor) {
+            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final BiRowMapper<? extends ID> idExtractor) throws IllegalArgumentException {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(idExtractor, "idExtractor");
 
@@ -6706,21 +6835,23 @@ public final class JdbcUtil {
     }
 
     /**
+     * 
      *
-     * @param <TD>
-     * @param daoInterface
-     * @param targetTableName
-     * @param ds
-     * @param sqlMapper
+     * @param <TD> 
+     * @param daoInterface 
+     * @param targetTableName 
+     * @param ds 
+     * @param sqlMapper 
      * @param cache It's better to not share cache between Dao instances.
-     * @param executor
-     * @return
-     * @deprecated
+     * @param executor 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @deprecated 
      */
     @Deprecated
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
-            final SQLMapper sqlMapper, final Cache<String, Object> cache, final Executor executor) {
+            final SQLMapper sqlMapper, final Cache<String, Object> cache, final Executor executor) throws IllegalArgumentException {
 
         //    synchronized (dsEntityDaoPool) {
         //        @SuppressWarnings("rawtypes")

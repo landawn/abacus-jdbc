@@ -1598,13 +1598,14 @@ public final class Jdbc {
             }
 
             /**
+             * 
              *
-             *
-             * @param columnIndex
-             * @param columnGetter
-             * @return
+             * @param columnIndex 
+             * @param columnGetter 
+             * @return 
+             * @throws IllegalArgumentException 
              */
-            public RowMapperBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) {
+            public RowMapperBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
                 N.checkArgPositive(columnIndex, "columnIndex");
                 N.checkArgNotNull(columnGetter, "columnGetter");
 
@@ -2055,7 +2056,7 @@ public final class Jdbc {
                 private List<String> cls = null;
 
                 @Override
-                public T apply(ResultSet rs) throws SQLException {
+                public T apply(ResultSet rs) throws IllegalArgumentException, SQLException {
                     if (cls == null) {
                         cls = JdbcUtil.getColumnLabelList(rs);
                     }
@@ -3217,13 +3218,14 @@ public final class Jdbc {
             }
 
             /**
+             * 
              *
-             *
-             * @param columnName
-             * @param columnGetter
-             * @return
+             * @param columnName 
+             * @param columnGetter 
+             * @return 
+             * @throws IllegalArgumentException 
              */
-            public BiRowMapperBuilder get(final String columnName, final ColumnGetter<?> columnGetter) {
+            public BiRowMapperBuilder get(final String columnName, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
                 N.checkArgNotNull(columnName, "columnName");
                 N.checkArgNotNull(columnGetter, "columnGetter");
 
@@ -4260,13 +4262,14 @@ public final class Jdbc {
             }
 
             /**
+             * 
              *
-             *
-             * @param columnIndex
-             * @param columnGetter
-             * @return
+             * @param columnIndex 
+             * @param columnGetter 
+             * @return 
+             * @throws IllegalArgumentException 
              */
-            public RowExtractorBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) {
+            public RowExtractorBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
                 N.checkArgPositive(columnIndex, "columnIndex");
                 N.checkArgNotNull(columnGetter, "columnGetter");
 
@@ -5097,37 +5100,40 @@ public final class Jdbc {
         }
 
         /**
+         * 
          *
-         *
-         * @param handlerClass
-         * @return
+         * @param handlerClass 
+         * @return 
+         * @throws IllegalArgumentException 
          */
-        public static boolean register(final Class<? extends Handler<?>> handlerClass) {
+        public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException {
             N.checkArgNotNull(handlerClass, "handlerClass");
 
             return register(N.newInstance(handlerClass));
         }
 
         /**
+         * 
          *
-         *
-         * @param handler
-         * @return
+         * @param handler 
+         * @return 
+         * @throws IllegalArgumentException 
          */
-        public static boolean register(final Handler<?> handler) {
+        public static boolean register(final Handler<?> handler) throws IllegalArgumentException {
             N.checkArgNotNull(handler, "handler");
 
             return register(ClassUtil.getCanonicalClassName(handler.getClass()), handler);
         }
 
         /**
+         * 
          *
-         *
-         * @param qualifier
-         * @param handler
-         * @return
+         * @param qualifier 
+         * @param handler 
+         * @return 
+         * @throws IllegalArgumentException 
          */
-        public static boolean register(final String qualifier, final Handler<?> handler) {
+        public static boolean register(final String qualifier, final Handler<?> handler) throws IllegalArgumentException {
             N.checkArgNotEmpty(qualifier, "qualifier");
             N.checkArgNotNull(handler, "handler");
 
@@ -5223,15 +5229,17 @@ public final class Jdbc {
         }
 
         /**
+         * 
          *
-         *
-         * @param <T>
-         * @param <E>
-         * @param beforeInvokeAction
-         * @return
+         * @param <T> 
+         * @param <E> 
+         * @param beforeInvokeAction 
+         * @return 
+         * @throws IllegalArgumentException 
          */
         public static <T, E extends RuntimeException> Handler<T> create(
-                final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction) {
+                final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction)
+                throws IllegalArgumentException {
             N.checkArgNotNull(beforeInvokeAction, "beforeInvokeAction");
 
             return new Handler<>() {
@@ -5243,15 +5251,17 @@ public final class Jdbc {
         }
 
         /**
+         * 
          *
-         *
-         * @param <T>
-         * @param <E>
-         * @param afterInvokeAction
-         * @return
+         * @param <T> 
+         * @param <E> 
+         * @param afterInvokeAction 
+         * @return 
+         * @throws IllegalArgumentException 
          */
         public static <T, E extends RuntimeException> Handler<T> create(
-                final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) {
+                final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction)
+                throws IllegalArgumentException {
             N.checkArgNotNull(afterInvokeAction, "afterInvokeAction");
 
             return new Handler<>() {
@@ -5265,17 +5275,19 @@ public final class Jdbc {
         }
 
         /**
+         * 
          *
-         *
-         * @param <T>
-         * @param <E>
-         * @param beforeInvokeAction
-         * @param afterInvokeAction
-         * @return
+         * @param <T> 
+         * @param <E> 
+         * @param beforeInvokeAction 
+         * @param afterInvokeAction 
+         * @return 
+         * @throws IllegalArgumentException 
          */
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction,
-                final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) {
+                final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction)
+                throws IllegalArgumentException {
             N.checkArgNotNull(beforeInvokeAction, "beforeInvokeAction");
             N.checkArgNotNull(afterInvokeAction, "afterInvokeAction");
 

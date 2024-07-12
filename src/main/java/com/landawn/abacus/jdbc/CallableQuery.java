@@ -931,11 +931,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the parameters.
      *
-     * @param parameters
-     * @return
+     * @param parameters 
+     * @return 
+     * @throws IllegalArgumentException 
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setParameters(final Map<String, ?> parameters) throws SQLException {
+    public CallableQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
 
         for (Map.Entry<String, ?> entry : parameters.entrySet()) {
@@ -947,17 +948,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the parameters.
-     * @param entity
-     * @param parameterNames
      *
-     * @return
+     * @param entity 
+     * @param parameterNames 
+     * @return 
+     * @throws IllegalArgumentException 
      * @throws SQLException the SQL exception
      * @see {@link ClassUtil#getPropNameList(Class)}
      * @see {@link ClassUtil#getPropNameListExclusively(Class, Set)}
      * @see {@link ClassUtil#getPropNameListExclusively(Class, Collection)}
      * @see {@link JdbcUtil#getNamedParameters(String)}
      */
-    public CallableQuery setParameters(final Object entity, final List<String> parameterNames) throws SQLException {
+    public CallableQuery setParameters(final Object entity, final List<String> parameterNames) throws IllegalArgumentException, SQLException {
         checkArgNotNull(entity, "entity");
         checkArgNotNull(parameterNames, "parameterNames");
 
@@ -1182,11 +1184,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Register out parameters.
      *
-     * @param register
-     * @return
+     * @param register 
+     * @return 
+     * @throws IllegalArgumentException 
      * @throws SQLException the SQL exception
      */
-    public CallableQuery registerOutParameters(final Jdbc.ParametersSetter<? super CallableQuery> register) throws SQLException {
+    public CallableQuery registerOutParameters(final Jdbc.ParametersSetter<? super CallableQuery> register) throws IllegalArgumentException, SQLException {
         checkArgNotNull(register, "register");
 
         boolean noException = false;
@@ -1372,11 +1375,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * 
      *
      * @return a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @throws IllegalStateException if this is closed 
+     * @throws SQLException 
      */
-    public Jdbc.OutParamResult executeAndGetOutParameters() throws SQLException {
+    public Jdbc.OutParamResult executeAndGetOutParameters() throws IllegalStateException, SQLException {
         assertNotClosed();
 
         try {
@@ -1398,13 +1403,17 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * 
      *
-     * @param <R>
+     * @param <R> 
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return the {@code R} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @throws IllegalArgumentException 
+     * @throws IllegalStateException if this is closed 
+     * @throws SQLException 
      */
-    public <R> Tuple2<R, Jdbc.OutParamResult> queryAndGetOutParameters(final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException {
+    public <R> Tuple2<R, Jdbc.OutParamResult> queryAndGetOutParameters(final Jdbc.ResultExtractor<? extends R> resultExtractor)
+            throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
@@ -1423,13 +1432,17 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * 
      *
-     * @param <R>
+     * @param <R> 
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return the {@code R} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @throws IllegalArgumentException 
+     * @throws IllegalStateException if this is closed 
+     * @throws SQLException 
      */
-    public <R> Tuple2<R, Jdbc.OutParamResult> queryAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException {
+    public <R> Tuple2<R, Jdbc.OutParamResult> queryAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R> resultExtractor)
+            throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(resultExtractor, "resultExtractor");
         assertNotClosed();
 
@@ -1531,17 +1544,20 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * 
      *
-     * @param <R1>
-     * @param <R2>
+     * @param <R1> 
+     * @param <R2> 
      * @param resultExtractor1 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param resultExtractor2 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return {@code R1/R2} extracted from the first two {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @throws IllegalArgumentException 
+     * @throws IllegalStateException if this is closed 
+     * @throws SQLException 
      */
     @Beta
     public <R1, R2> Tuple3<R1, R2, Jdbc.OutParamResult> query2ResultsetsAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
-            final Jdbc.BiResultExtractor<? extends R2> resultExtractor2) throws SQLException {
+            final Jdbc.BiResultExtractor<? extends R2> resultExtractor2) throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(resultExtractor1, "resultExtractor1");
         checkArgNotNull(resultExtractor2, "resultExtractor2");
         assertNotClosed();
@@ -1577,19 +1593,23 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * 
      *
-     * @param <R1>
-     * @param <R2>
-     * @param <R3>
+     * @param <R1> 
+     * @param <R2> 
+     * @param <R3> 
      * @param resultExtractor1 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param resultExtractor2 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param resultExtractor3 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return {@code R1/R2/R3} extracted from the first three {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @throws IllegalArgumentException 
+     * @throws IllegalStateException if this is closed 
+     * @throws SQLException 
      */
     @Beta
     public <R1, R2, R3> Tuple4<R1, R2, R3, Jdbc.OutParamResult> query3ResultsetsAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
-            final Jdbc.BiResultExtractor<? extends R2> resultExtractor2, final Jdbc.BiResultExtractor<? extends R3> resultExtractor3) throws SQLException {
+            final Jdbc.BiResultExtractor<? extends R2> resultExtractor2, final Jdbc.BiResultExtractor<? extends R3> resultExtractor3)
+            throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(resultExtractor1, "resultExtractor1");
         checkArgNotNull(resultExtractor2, "resultExtractor2");
         checkArgNotNull(resultExtractor3, "resultExtractor3");
@@ -1631,26 +1651,32 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param targetType
+     * @param <T> 
+     * @param targetType 
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
-    public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Class<? extends T> targetType) throws SQLException {
+    public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Class<? extends T> targetType) throws IllegalArgumentException, SQLException {
         checkArgNotNull(targetType, "targetType");
 
         return listAndGetOutParameters(Jdbc.BiRowMapper.to(targetType));
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param rowMapper
+     * @param <T> 
+     * @param rowMapper 
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @throws IllegalArgumentException 
+     * @throws IllegalStateException if this is closed 
+     * @throws SQLException 
      */
-    public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.RowMapper<? extends T> rowMapper) throws SQLException {
+    public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.RowMapper<? extends T> rowMapper)
+            throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -1703,13 +1729,17 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param rowMapper
+     * @param <T> 
+     * @param rowMapper 
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @throws IllegalArgumentException 
+     * @throws IllegalStateException if this is closed 
+     * @throws SQLException 
      */
-    public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException {
+    public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.BiRowMapper<? extends T> rowMapper)
+            throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
 
@@ -1766,13 +1796,17 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param targetType
+     * @param <T> 
+     * @param targetType 
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @throws IllegalArgumentException 
+     * @throws IllegalStateException if this is closed 
+     * @throws SQLException 
      */
-    public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listMultiResultsetsAndGetOutParameters(final Class<? extends T> targetType) throws SQLException {
+    public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listMultiResultsetsAndGetOutParameters(final Class<? extends T> targetType)
+            throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(targetType, "targetType");
         assertNotClosed();
 
@@ -1811,15 +1845,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param rowFilter
-     * @param rowMapper
+     * @param <T> 
+     * @param rowFilter 
+     * @param rowMapper 
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @throws IllegalArgumentException 
+     * @throws IllegalStateException if this is closed 
+     * @throws SQLException 
      */
     public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listMultiResultsetsAndGetOutParameters(final Jdbc.RowFilter rowFilter,
-            final Jdbc.RowMapper<? extends T> rowMapper) throws SQLException {
+            final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();
@@ -1859,15 +1896,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * 
      *
-     * @param <T>
-     * @param rowFilter
-     * @param rowMapper
+     * @param <T> 
+     * @param rowFilter 
+     * @param rowMapper 
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @throws IllegalArgumentException 
+     * @throws IllegalStateException if this is closed 
+     * @throws SQLException 
      */
     public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listMultiResultsetsAndGetOutParameters(final Jdbc.BiRowFilter rowFilter,
-            final Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException {
+            final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(rowFilter, "rowFilter");
         checkArgNotNull(rowMapper, "rowMapper");
         assertNotClosed();

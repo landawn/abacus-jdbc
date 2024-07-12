@@ -115,7 +115,7 @@ package com.landawn.abacus.jdbc;
  */
 // Archive for history. Replaced b PreparedQuery and Dao.
 public final class SQLExecutor {
-    private SQLExecutor() {
+    private SQLExecutor() throws IllegalArgumentException {
         // no use.
     }
     //

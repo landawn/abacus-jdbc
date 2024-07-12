@@ -570,23 +570,24 @@ public final class JdbcUtils {
     /**
      * Imports the data from <code>DataSet</code> to database.
      *
-     * @param <E>
-     * @param dataset
-     * @param offset
-     * @param count
-     * @param filter
+     * @param <E> 
+     * @param dataset 
+     * @param offset 
+     * @param count 
+     * @param filter 
      * @param stmt the column order in the sql must be consistent with the column order in the DataSet.
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param columnTypeMap
-     * @return
-     * @throws SQLException
-     * @throws E
+     * @param batchSize 
+     * @param batchIntervalInMillis 
+     * @param columnTypeMap 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
+     * @throws E 
      */
     @SuppressWarnings({ "rawtypes", "null" })
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
             final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Map<String, ? extends Type> columnTypeMap) throws SQLException, E {
+            final Map<String, ? extends Type> columnTypeMap) throws IllegalArgumentException, SQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count); //NOSONAR
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative", //NOSONAR
                 batchSize, batchIntervalInMillis);
@@ -684,22 +685,23 @@ public final class JdbcUtils {
     /**
      * Imports the data from <code>DataSet</code> to database.
      *
-     * @param <E>
-     * @param dataset
-     * @param offset
-     * @param count
-     * @param filter
+     * @param <E> 
+     * @param dataset 
+     * @param offset 
+     * @param count 
+     * @param filter 
      * @param stmt the column order in the sql must be consistent with the column order in the DataSet.
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param stmtSetter
-     * @return
-     * @throws SQLException
-     * @throws E
+     * @param batchSize 
+     * @param batchIntervalInMillis 
+     * @param stmtSetter 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
+     * @throws E 
      */
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
             final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException, E {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws IllegalArgumentException, SQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
@@ -1030,21 +1032,23 @@ public final class JdbcUtils {
     /**
      * Imports the data from file to database.
      *
-     * @param <E>
-     * @param reader
-     * @param offset
-     * @param count
-     * @param stmt
-     * @param batchSize
-     * @param batchIntervalInMillis
+     * @param <E> 
+     * @param reader 
+     * @param offset 
+     * @param count 
+     * @param stmt 
+     * @param batchSize 
+     * @param batchIntervalInMillis 
      * @param func convert line to the parameters for record insert. Returns a <code>null</code> array to skip the line.
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     * @throws E
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
+     * @throws IOException 
+     * @throws E 
      */
     public static <E extends Exception> long importData(final Reader reader, long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
+            final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func)
+            throws IllegalArgumentException, SQLException, IOException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
@@ -1208,23 +1212,24 @@ public final class JdbcUtils {
     /**
      * Imports the data from Iterator to database.
      *
-     * @param <T>
-     * @param <E>
-     * @param iter
-     * @param offset
-     * @param count
-     * @param filter
-     * @param stmt
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param stmtSetter
-     * @return
-     * @throws SQLException
-     * @throws E
+     * @param <T> 
+     * @param <E> 
+     * @param iter 
+     * @param offset 
+     * @param count 
+     * @param filter 
+     * @param stmt 
+     * @param batchSize 
+     * @param batchIntervalInMillis 
+     * @param stmtSetter 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
+     * @throws E 
      */
     public static <T, E extends Exception> long importData(final Iterator<? extends T> iter, long offset, final long count,
             final Throwables.Predicate<? super T, E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException, E {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws IllegalArgumentException, SQLException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
@@ -2178,24 +2183,26 @@ public final class JdbcUtils {
     /**
      * Imports the data from CSV to database.
      *
-     * @param <E>
-     * @param reader
-     * @param offset
-     * @param count
-     * @param filter
+     * @param <E> 
+     * @param reader 
+     * @param offset 
+     * @param count 
+     * @param filter 
      * @param stmt the column order in the sql should be consistent with the column order in the CSV file.
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param stmtSetter
-     * @return
-     * @throws SQLException
-     * @throws IOException
-     * @throws E
+     * @param batchSize 
+     * @param batchIntervalInMillis 
+     * @param stmtSetter 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
+     * @throws IOException 
+     * @throws E 
      */
     @SuppressWarnings({ "unchecked", "resource" })
     public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count, final Throwables.Predicate<String[], E> filter,
             final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter)
+            throws IllegalArgumentException, SQLException, IOException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
@@ -2660,20 +2667,21 @@ public final class JdbcUtils {
      * <br />
      * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
-     * @param out
-     * @param rs
-     * @param selectColumnNames
-     * @param offset
-     * @param count
-     * @param writeTitle
-     * @param quoted
-     * @return
-     * @throws SQLException
-     * @throws IOException
+     * @param out 
+     * @param rs 
+     * @param selectColumnNames 
+     * @param offset 
+     * @param count 
+     * @param writeTitle 
+     * @param quoted 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
+     * @throws IOException 
      */
     @SuppressWarnings("deprecation")
     public static long exportCSV(final Writer out, final ResultSet rs, final Collection<String> selectColumnNames, final long offset, final long count,
-            final boolean writeTitle, final boolean quoted) throws SQLException, IOException {
+            final boolean writeTitle, final boolean quoted) throws IllegalArgumentException, SQLException, IOException {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
 
         final JSONSerializationConfig config = JSC.create();

@@ -2872,11 +2872,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the parameters.
      *
-     * @param parameters
-     * @return
+     * @param parameters 
+     * @return 
+     * @throws IllegalArgumentException 
      * @throws SQLException the SQL exception
      */
-    public NamedQuery setParameters(final Map<String, ?> parameters) throws SQLException {
+    public NamedQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
 
         for (String paramName : parameterNames) {
@@ -2900,11 +2901,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets the parameters.
      *
      * @param parameters with getter/setter methods
-     * @return
+     * @return 
+     * @throws IllegalArgumentException 
      * @throws SQLException the SQL exception
      */
     @SuppressWarnings("rawtypes")
-    public NamedQuery setParameters(final Object parameters) throws SQLException {
+    public NamedQuery setParameters(final Object parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
 
         final Class<?> cls = parameters.getClass();
@@ -2940,17 +2942,18 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the parameters.
-     * @param entity
-     * @param parameterNames
      *
-     * @return
+     * @param entity 
+     * @param parameterNames 
+     * @return 
+     * @throws IllegalArgumentException 
      * @throws SQLException the SQL exception
      * @see {@link ClassUtil#getPropNameList(Class)}
      * @see {@link ClassUtil#getPropNameListExclusively(Class, Set)}
      * @see {@link ClassUtil#getPropNameListExclusively(Class, Collection)}
      * @see {@link JdbcUtil#getNamedParameters(String)}
      */
-    public NamedQuery setParameters(final Object entity, final Collection<String> parameterNames) throws SQLException {
+    public NamedQuery setParameters(final Object entity, final Collection<String> parameterNames) throws IllegalArgumentException, SQLException {
         checkArgNotNull(entity, "entity");
         checkArgNotNull(parameterNames, "parameterNames");
 
@@ -3011,13 +3014,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the parameters.
      *
-     * @param <T>
-     * @param paramaters
-     * @param paramsSetter
-     * @return
+     * @param <T> 
+     * @param paramaters 
+     * @param paramsSetter 
+     * @return 
+     * @throws IllegalArgumentException 
      * @throws SQLException the SQL exception
      */
-    public <T> NamedQuery setParameters(final T paramaters, Jdbc.TriParametersSetter<? super NamedQuery, ? super T> paramsSetter) throws SQLException {
+    public <T> NamedQuery setParameters(final T paramaters, Jdbc.TriParametersSetter<? super NamedQuery, ? super T> paramsSetter)
+            throws IllegalArgumentException, SQLException {
         checkArgNotNull(paramsSetter, "paramsSetter");
 
         boolean noException = false;
@@ -3036,14 +3041,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * 
      *
-     *
-     * @param batchParameters
-     * @return
-     * @throws SQLException
+     * @param batchParameters 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
     @Override
-    public NamedQuery addBatchParameters(final Collection<?> batchParameters) throws SQLException {
+    public NamedQuery addBatchParameters(final Collection<?> batchParameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
 
         if (N.isEmpty(batchParameters)) {
@@ -3054,16 +3060,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * 
      *
-     *
-     * @param batchParameters
-     * @return
-     * @throws SQLException
+     * @param batchParameters 
+     * @return 
+     * @throws IllegalArgumentException 
+     * @throws SQLException 
      */
     @Beta
     @Override
     @SuppressWarnings("rawtypes")
-    public NamedQuery addBatchParameters(final Iterator<?> batchParameters) throws SQLException {
+    public NamedQuery addBatchParameters(final Iterator<?> batchParameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(batchParameters, "batchParameters");
 
         final Iterator<?> iter = batchParameters;
