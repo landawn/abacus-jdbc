@@ -55,6 +55,8 @@ import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.Stream;
 
+import codes.entity.Account;
+
 /**
  * CRUD: insert -> read -> update -> delete a record in DB table.
  */
@@ -481,6 +483,7 @@ public class JdbcTest {
      */
     @Test
     public void test_generateEntityClass() {
+
         EntityCodeConfig ecc = EntityCodeConfig.builder()
                 .packageName("codes.entity")
                 .srcDir("./samples")
@@ -512,7 +515,7 @@ public class JdbcTest {
                 .jsonXmlConfig(EntityCodeConfig.JsonXmlConfig.builder()
                         .namingPolicy(NamingPolicy.UPPER_CASE_WITH_UNDERSCORE)
                         .ignoredFields("id,   create_time")
-                        .dateFormat("yyyy-mm-dd\\\"T\\\"")
+                        .dateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
                         .numberFormat("#.###")
                         .timeZone("PDT")
                         .enumerated(EnumBy.ORDINAL)
@@ -531,10 +534,13 @@ public class JdbcTest {
 
         ecc.setClassName("UserQueryAllResult");
         ecc.setAdditionalFieldsOrLines(additionalLines);
+        ecc.setGenerateFieldNameTable(true);
         str = JdbcUtil.generateEntityClass(dataSource, "UserQueryAllResult", "select * from user1", ecc);
         System.out.println(str);
 
         IOUtil.deleteIfExists(new File("./samples/codes/entity/User1.java"));
+
+        N.println(JdbcUtil.generatePropNameTableClass(Account.class, "NT", "./samples"));
     }
 
     /**

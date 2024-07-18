@@ -28,7 +28,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface Sqls {
+
     /**
+     * Sql script, or id which is defined in sql mapper or sql table class inside DAO class.
      *
      * @return
      */

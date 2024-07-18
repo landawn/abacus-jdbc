@@ -31,6 +31,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
 
 /**
  * A sample, just a sample, not a general configuration required.
@@ -58,7 +59,9 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Accessors(chain = true)
 public final class EntityCodeConfig {
+    static final String NT = "NT";
 
     private String srcDir;
     private String packageName;
@@ -105,46 +108,19 @@ public final class EntityCodeConfig {
     private boolean chainAccessor;
     private boolean generateBuilder;
     private boolean generateCopyMethod;
+    private boolean generateFieldNameTable;
+    private boolean extendFieldNameTableClassName;
+    // private String fieldNameTableClassName; // Always be "NT";
 
     // private List<Tuple2<String, String>> customizedJsonFields;
     @Beta
     private JsonXmlConfig jsonXmlConfig;
 
-    /**
-     *
-     * @see com.landawn.abacus.annotation.JsonXmlConfig
-     */
-
-    /**
-     * 
-     *
-     * @return 
-     */
     @Builder
-
-    /**
-     * 
-     *
-     * @return 
-     */
     @Data
-
-    /**
-     * 
-     */
     @NoArgsConstructor
-
-    /**
-     * 
-     *
-     * @param namingPolicy 
-     * @param ignoredFields 
-     * @param dateFormat 
-     * @param timeZone 
-     * @param numberFormat 
-     * @param enumerated 
-     */
     @AllArgsConstructor
+    @Accessors(chain = true)
     public static class JsonXmlConfig {
         private NamingPolicy namingPolicy;
 

@@ -22,7 +22,7 @@ import lombok.experimental.Accessors;
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true)
-@JsonXmlConfig(namingPolicy = NamingPolicy.UPPER_CASE_WITH_UNDERSCORE, ignoredFields = { "id", "create_time" }, dateFormat = "yyyy-mm-dd\"T\"", timeZone = "PDT", numberFormat = "#.###", enumerated = EnumBy.ORDINAL)
+@JsonXmlConfig(namingPolicy = NamingPolicy.UPPER_CASE_WITH_UNDERSCORE, ignoredFields = { "id", "create_time" }, dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'", timeZone = "PDT", numberFormat = "#.###", enumerated = EnumBy.ORDINAL)
 @Table(name = "user1")
 public class User {
 

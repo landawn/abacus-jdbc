@@ -33,9 +33,10 @@ import com.landawn.abacus.jdbc.OP;
 public @interface Select {
 
     /**
+     * Sql script, or id which is defined in sql mapper or sql table class inside DAO class.
      *
      * @return
-     * @deprecated using sql="SELECT ... FROM ..." for explicit call.
+     * @deprecated using {@code sql="SELECT ... FROM ..."} or {@code id="selectById"} for explicit call.
      */
     @Deprecated
     String value() default "";
@@ -44,13 +45,13 @@ public @interface Select {
      *
      * @return
      */
-    String id() default ""; // id defined SqlMapper
+    String sql() default "";
 
     /**
      *
      * @return
      */
-    String sql() default "";
+    String id() default ""; // id defined SqlMapper
 
     /**
      *
@@ -73,9 +74,9 @@ public @interface Select {
     boolean isSingleParameter() default false;
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     @Beta
     boolean hasDefineWithNamedParameter() default false;
@@ -83,15 +84,15 @@ public @interface Select {
     /**
      * Set named parameter {@code :now} to current system time if it's {@code true}.
      *
-     * @return 
+     * @return
      */
     @Beta
     boolean timestamped() default false;
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     OP op() default OP.DEFAULT;
 }

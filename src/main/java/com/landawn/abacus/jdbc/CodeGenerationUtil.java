@@ -433,6 +433,17 @@ final class CodeGenerationUtil {
                 sb.append("        return copy;").append("\n").append("    }").append("\n");
             }
 
+            if (configToUse.isGenerateFieldNameTable()) {
+
+                sb.append("\n").append("    public interface NT {").append("\n").append("\n"); //
+
+                for (String fieldName : fieldNameList) {
+                    sb.append("        String " + fieldName + " = \"" + fieldName + "\";").append("\n");
+                }
+
+                sb.append("\n").append("    }").append("\n");
+            }
+
             sb.append("\n").append("}").append("\n");
 
             String result = sb.toString();
@@ -507,4 +518,72 @@ final class CodeGenerationUtil {
 
         return className;
     }
+
+    /**
+     *
+     * @param entityClass
+     * @param propNameTableClassName
+     * @param srcDir
+     * @return
+     */
+    static String generatePropNameTableClass(final Class<?> entityClass, final String propNameTableClassName, final String srcDir) {
+        final StringBuilder sb = new StringBuilder();
+
+        final String interfaceName = "public interface " + propNameTableClassName;
+
+        sb.append("\n").append("    ").append(interfaceName).append(" {").append("\n").append("\n"); //
+
+        for (String propName : ClassUtil.getPropNameList(entityClass)) {
+            sb.append("        String " + propName + " = \"" + propName + "\";").append("\n");
+        }
+
+        sb.append("\n").append("    }").append("\n");
+
+        String ret = sb.toString();
+
+        if (Strings.isNotEmpty(srcDir)) {
+
+            String packageDir = srcDir;
+            String packageName = ClassUtil.getPackageName(entityClass);
+
+            if (Strings.isNotEmpty(packageName)) {
+                if (!(packageDir.endsWith("/") || packageDir.endsWith("\\"))) {
+                    packageDir += "/";
+                }
+
+                packageDir += Strings.replaceAll(packageName, ".", "/");
+            }
+
+            File file = new File(packageDir + IOUtil.FILE_SEPARATOR + ClassUtil.getSimpleClassName(entityClass) + ".java");
+            List<String> lines = IOUtil.readAllLines(file);
+
+            for (int i = 0, size = lines.size(); i < size; i++) {
+                if (lines.get(i).trim().startsWith(interfaceName)) {
+                    for (int j = i; j < size; j++) {
+                        if ("}".equals(Strings.strip(lines.get(j)))) {
+                            N.deleteRange(lines, Strings.isBlank(lines.get(i - 1)) ? i - 1 : i, Strings.isBlank(lines.get(j + 1)) ? j + 2 : j + 1);
+                            break;
+                        }
+                    }
+
+                    break;
+                }
+            }
+
+            for (int i = lines.size() - 1; i > 0; i--) {
+                if ("}".equals(Strings.strip(lines.get(i)))) {
+                    lines.add(i, ret);
+                }
+            }
+
+            try {
+                IOUtil.writeLines(lines, file);
+            } catch (IOException e) {
+                throw N.toRuntimeException(e);
+            }
+        }
+
+        return ret;
+    }
+
 }

@@ -25,7 +25,7 @@ import lombok.experimental.Accessors;
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true)
-@JsonXmlConfig(namingPolicy = NamingPolicy.UPPER_CASE_WITH_UNDERSCORE, ignoredFields = { "id", "create_time" }, dateFormat = "yyyy-mm-dd\"T\"", timeZone = "PDT", numberFormat = "#.###", enumerated = EnumBy.ORDINAL)
+@JsonXmlConfig(namingPolicy = NamingPolicy.UPPER_CASE_WITH_UNDERSCORE, ignoredFields = { "id", "create_time" }, dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'", timeZone = "PDT", numberFormat = "#.###", enumerated = EnumBy.ORDINAL)
 @Table(name = "UserQueryAllResult")
 public class UserQueryAllResult {
 
@@ -67,6 +67,17 @@ public class UserQueryAllResult {
         copy.users = this.users;
         copy.userSet = this.userSet;
         return copy;
+    }
+
+    public interface NT {
+
+        String id = "id";
+        String firstName = "firstName";
+        String lastName = "lastName";
+        String prop1 = "prop1";
+        String email = "email";
+        String create_time = "create_time";
+
     }
 
 }

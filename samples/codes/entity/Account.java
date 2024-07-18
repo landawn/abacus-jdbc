@@ -36,4 +36,14 @@ public class Account {
     @Column("CREATE_TIME")
     private java.sql.Timestamp createTime;
 
+    public interface NT {
+
+        String id = "id";
+        String firstName = "firstName";
+        String lastName = "lastName";
+        String emailAddress = "emailAddress";
+        String createTime = "createTime";
+
+    }
+
 }

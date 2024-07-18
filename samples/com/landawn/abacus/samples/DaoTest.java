@@ -992,6 +992,8 @@ public class DaoTest {
 
         userDao.listToSet(0).forEach(Fn.println());
 
+        userDao.listToSet2(0).forEach(Fn.println());
+
         assertEquals(1, userDao.listToSet(0).size());
 
         userDao.listToCollection(0).forEach(Fn.println());

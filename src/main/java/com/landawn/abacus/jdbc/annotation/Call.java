@@ -32,7 +32,7 @@ public @interface Call {
     /**
      *
      * @return
-     * @deprecated using sql="call update_account(?)" for explicit call.
+     * @deprecated using {@code sql="call update_account(?)"} or {@code id="updateAccount"} for explicit call.
      */
     @Deprecated
     String value() default "";
@@ -41,13 +41,13 @@ public @interface Call {
      *
      * @return
      */
-    String id() default ""; // id defined SqlMapper
+    String sql() default "";
 
     /**
      *
      * @return
      */
-    String sql() default "";
+    String id() default ""; // id defined SqlMapper
 
     /**
      *
@@ -73,7 +73,7 @@ public @interface Call {
      * Set it to true if want to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/listAll/streamAll}.
      * It is false by default. The reason is all the query methods extended from {@code AbstractQuery} only retrieve the first {@code ResultSet}.
      *
-     * @return 
+     * @return
      */
     OP op() default OP.DEFAULT;
 }
