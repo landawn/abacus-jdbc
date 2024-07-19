@@ -72,7 +72,7 @@ public class UserQueryAllResult {
     /*
      * Auto-generated class for property name table.
      */
-    public interface s {
+    public interface x {
 
         String id = "id";
         String firstName = "firstName";

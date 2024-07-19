@@ -40,7 +40,7 @@ public class Account {
      * Auto-generated class for property name table.
      */
     @SuppressWarnings("java:S1192")
-    public interface s {
+    public interface x {
 
         String id = "id";
         String firstName = "firstName";

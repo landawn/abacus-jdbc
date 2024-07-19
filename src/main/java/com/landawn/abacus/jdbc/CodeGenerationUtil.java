@@ -58,7 +58,9 @@ import com.landawn.abacus.util.stream.Stream;
 public final class CodeGenerationUtil {
     private static final String LINE_SEPERATOR = IOUtil.LINE_SEPARATOR;
 
-    private static final String DEFAULT_CLASS_NAME_PROP_NAME_TABLE = "s";
+    private static final String S = "s";
+
+    private static final String X = "x";
 
     private static final String eccImports = """
             import javax.persistence.Column;
@@ -466,12 +468,7 @@ public final class CodeGenerationUtil {
                         .append(LINE_SEPERATOR)
                         .append("     */");
 
-                sb.append(LINE_SEPERATOR)
-                        .append("    public interface ")
-                        .append(DEFAULT_CLASS_NAME_PROP_NAME_TABLE)
-                        .append(" {")
-                        .append(LINE_SEPERATOR)
-                        .append(LINE_SEPERATOR); //
+                sb.append(LINE_SEPERATOR).append("    public interface ").append(X).append(" {").append(LINE_SEPERATOR).append(LINE_SEPERATOR); //
 
                 for (String fieldName : fieldNameList) {
                     sb.append("        String " + fieldName + " = \"" + fieldName + "\";").append(LINE_SEPERATOR);
@@ -566,7 +563,7 @@ public final class CodeGenerationUtil {
      */
     @Beta
     public static String generatePropNameTableClass(final Class<?> entityClass) {
-        return generatePropNameTableClass(entityClass, DEFAULT_CLASS_NAME_PROP_NAME_TABLE);
+        return generatePropNameTableClass(entityClass, X);
     }
 
     /**
@@ -671,7 +668,7 @@ public final class CodeGenerationUtil {
      */
     @Beta
     public static String generatePropNameTableClasses(final Collection<? extends Class<?>> entityClasses) {
-        return generatePropNameTableClasses(entityClasses, DEFAULT_CLASS_NAME_PROP_NAME_TABLE);
+        return generatePropNameTableClasses(entityClasses, S);
     }
 
     /**

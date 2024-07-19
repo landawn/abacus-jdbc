@@ -59,7 +59,8 @@ import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.LongStream;
 import com.landawn.abacus.util.stream.Stream;
 
-import codes.entity.Account.s;
+import codes.entity.Account;
+import codes.entity.Account.x;
 
 public class DaoTest {
 
@@ -77,19 +78,19 @@ public class DaoTest {
 
         userDao.batchInsertWithId(users);
 
-        userDao.paginate(CB.where(CF.gt(s.id, 0)).orderBy(s.id), 9, (q, r) -> {
+        userDao.paginate(CB.where(CF.gt(x.id, 0)).orderBy(x.id), 9, (q, r) -> {
             if (r == null) {
                 q.setLong(1, -1);
             } else {
-                q.setLong(1, (Long) N.lastOrNullIfEmpty(r.getColumn(s.id)));
+                q.setLong(1, (Long) N.lastOrNullIfEmpty(r.getColumn(x.id)));
             }
         }).forEach(N::println);
 
-        userDao.paginate(CB.where(CF.gt("id", 0).and(CF.ne(s.firstName, "aaaa"))).orderBy("id"), 9, (q, r) -> {
+        userDao.paginate(CB.where(CF.gt(x.id, 0).and(CF.ne(x.firstName, "aaaa"))).orderBy("id"), 9, (q, r) -> {
             if (r == null) {
                 q.setLong(1, -1);
             } else {
-                q.setLong(1, (Long) N.lastOrNullIfEmpty(r.getColumn(s.id)));
+                q.setLong(1, (Long) N.lastOrNullIfEmpty(r.getColumn(x.id)));
             }
         }).forEach(N::println);
 
@@ -97,7 +98,7 @@ public class DaoTest {
             if (r == null) {
                 q.setLong(1, -1);
             } else {
-                q.setLong(1, (Long) N.lastOrNullIfEmpty(r.getColumn(s.id)));
+                q.setLong(1, (Long) N.lastOrNullIfEmpty(r.getColumn(x.id)));
             }
         }).forEach(N::println);
 
@@ -494,7 +495,7 @@ public class DaoTest {
     @Test
     public void test_handler() throws SQLException {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-        userDao.insert(user, N.asList(s.id, s.firstName, "lastName", "email"));
+        userDao.insert(user, N.asList(x.id, Account.x.firstName, "lastName", "email"));
 
         User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);

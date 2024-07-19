@@ -16,14 +16,13 @@ import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.samples.entity.User;
+import com.landawn.abacus.samples.entity.s;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.stream.IntStream;
-
-import codes.entity.Account.s;
 
 public class PreparedQueryTest {
 

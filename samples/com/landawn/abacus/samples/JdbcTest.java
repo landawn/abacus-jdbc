@@ -543,7 +543,7 @@ public class JdbcTest {
 
         IOUtil.deleteIfExists(new File("./samples/codes/entity/User1.java"));
 
-        N.println(CodeGenerationUtil.generatePropNameTableClass(Account.class, "s", "./samples"));
+        N.println(CodeGenerationUtil.generatePropNameTableClass(Account.class, "x", "./samples"));
 
         final Collection<Class<?>> classes = N.concat(ClassUtil.getClassesByPackage(User.class.getPackageName(), false, false),
                 ClassUtil.getClassesByPackage(Account.class.getPackageName(), false, false));
