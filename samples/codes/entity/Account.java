@@ -36,7 +36,11 @@ public class Account {
     @Column("CREATE_TIME")
     private java.sql.Timestamp createTime;
 
-    public interface NT {
+    /*
+     * Auto-generated class for property name table.
+     */
+    @SuppressWarnings("java:S1192")
+    public interface s {
 
         String id = "id";
         String firstName = "firstName";

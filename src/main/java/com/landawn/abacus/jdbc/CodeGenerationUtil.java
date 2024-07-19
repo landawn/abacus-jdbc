@@ -35,6 +35,7 @@ import java.util.function.BiFunction;
 
 import javax.sql.DataSource;
 
+import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Table;
@@ -44,6 +45,7 @@ import com.landawn.abacus.util.BiMap;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IOUtil;
+import com.landawn.abacus.util.ListMultimap;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Splitter;
 import com.landawn.abacus.util.Strings;
@@ -53,7 +55,11 @@ import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.function.QuadFunction;
 import com.landawn.abacus.util.stream.Stream;
 
-final class CodeGenerationUtil {
+public final class CodeGenerationUtil {
+    private static final String LINE_SEPERATOR = IOUtil.LINE_SEPARATOR;
+
+    private static final String DEFAULT_CLASS_NAME_PROP_NAME_TABLE = "s";
+
     private static final String eccImports = """
             import javax.persistence.Column;
             import javax.persistence.Id;
@@ -96,31 +102,34 @@ final class CodeGenerationUtil {
         // singleton.
     }
 
-    static String generateEntityClass(final DataSource ds, final String tableName) {
-        return generateEntityClass(ds, tableName, createQueryByTableName(tableName));
+    /**
+     *
+     *
+     * @param ds
+     * @param tableName
+     * @return
+     */
+    public static String generateEntityClass(final DataSource ds, final String tableName) {
+        return generateEntityClass(ds, tableName, (EntityCodeConfig) null);
     }
 
-    static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
+    /**
+     *
+     *
+     * @param ds
+     * @param tableName
+     * @param config
+     * @return
+     */
+    public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
         return generateEntityClass(ds, tableName, createQueryByTableName(tableName), config);
     }
 
-    static String generateEntityClass(final Connection conn, final String tableName) {
-        return generateEntityClass(conn, tableName, createQueryByTableName(tableName));
-    }
-
-    static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
-        return generateEntityClass(conn, tableName, createQueryByTableName(tableName), config);
-    }
-
-    private static String createQueryByTableName(String tableName) {
-        return "select * from " + tableName + " where 1 > 2";
-    }
-
-    static String generateEntityClass(final DataSource ds, final String entityName, String query) {
+    public static String generateEntityClass(final DataSource ds, final String entityName, String query) {
         return generateEntityClass(ds, entityName, query, null);
     }
 
-    static String generateEntityClass(final DataSource ds, final String entityName, String query, final EntityCodeConfig config) {
+    public static String generateEntityClass(final DataSource ds, final String entityName, String query, final EntityCodeConfig config) {
         try (Connection conn = ds.getConnection()) {
             return generateEntityClass(conn, entityName, query, config);
 
@@ -129,11 +138,26 @@ final class CodeGenerationUtil {
         }
     }
 
-    static String generateEntityClass(final Connection conn, final String entityName, String query) {
+    /**
+     *
+     *
+     * @param conn
+     * @param tableName
+     * @return
+     */
+    public static String generateEntityClass(final Connection conn, final String tableName) {
+        return generateEntityClass(conn, tableName, (EntityCodeConfig) null);
+    }
+
+    public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
+        return generateEntityClass(conn, tableName, createQueryByTableName(tableName), config);
+    }
+
+    public static String generateEntityClass(final Connection conn, final String entityName, String query) {
         return generateEntityClass(conn, entityName, query, null);
     }
 
-    static String generateEntityClass(final Connection conn, final String entityName, String query, final EntityCodeConfig config) {
+    public static String generateEntityClass(final Connection conn, final String entityName, String query, final EntityCodeConfig config) {
         try (PreparedStatement stmt = conn.prepareStatement(query); //
                 ResultSet rs = stmt.executeQuery()) {
 
@@ -228,7 +252,7 @@ final class CodeGenerationUtil {
 
                     try { //NOSONAR
                         if (ClassUtil.forClass("java.util." + clsName) != null) {
-                            headPart += "\n" + "import java.util." + clsName + ";"; //NOSONAR
+                            headPart += LINE_SEPERATOR + "import java.util." + clsName + ";"; //NOSONAR
                         }
                     } catch (Exception e) {
                         // ignore.
@@ -237,10 +261,10 @@ final class CodeGenerationUtil {
             }
 
             if (Strings.isNotEmpty(headPart)) {
-                headPart += "\n";
+                headPart += LINE_SEPERATOR;
             }
 
-            headPart += "\n" + eccImports + "\n" + eccClassAnnos;
+            headPart += LINE_SEPERATOR + eccImports + LINE_SEPERATOR + eccClassAnnos;
 
             if (isJavaPersistenceColumn) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Column;\n", "");
@@ -296,7 +320,7 @@ final class CodeGenerationUtil {
             }
 
             if (headPart.contains("javax.persistence.")) {
-                sb.append("\n");
+                sb.append(LINE_SEPERATOR);
             }
 
             sb.append(headPart);
@@ -334,14 +358,14 @@ final class CodeGenerationUtil {
                     tmp.add("enumerated = EnumBy." + eccJsonXmlConfig.getEnumerated().name() + "");
                 }
 
-                sb.append("@JsonXmlConfig" + Strings.join(tmp, ", ", "(", ")")).append("\n");
+                sb.append("@JsonXmlConfig" + Strings.join(tmp, ", ", "(", ")")).append(LINE_SEPERATOR);
             }
 
             sb.append(isJavaPersistenceTable ? "@Table(name = \"" + entityName + "\")" : "@Table(\"" + entityName + "\")")
-                    .append("\n")
+                    .append(LINE_SEPERATOR)
                     .append("public class " + finalClassName)
                     .append(" {")
-                    .append("\n");
+                    .append(LINE_SEPERATOR);
 
             final Collection<String> excludedFields = configToUse.getExcludedFields();
             final List<String> columnNameList = new ArrayList<>();
@@ -371,27 +395,28 @@ final class CodeGenerationUtil {
                 columnNameList.add(columnName);
                 fieldNameList.add(fieldName);
 
-                sb.append("\n");
+                sb.append(LINE_SEPERATOR);
 
                 if (idFields.remove(fieldName) || idFields.remove(columnName)) {
-                    sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append("\n"); //NOSONAR
+                    sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append(LINE_SEPERATOR); //NOSONAR
                 }
 
                 if (readOnlyFields.remove(fieldName) || readOnlyFields.remove(columnName)) {
-                    sb.append("    @ReadOnly").append("\n");
+                    sb.append("    @ReadOnly").append(LINE_SEPERATOR);
                 } else if (nonUpdatableFields.remove(fieldName) || nonUpdatableFields.remove(columnName)) {
-                    sb.append("    @NonUpdatable").append("\n");
+                    sb.append("    @NonUpdatable").append(LINE_SEPERATOR);
                 }
 
-                sb.append(isJavaPersistenceColumn ? "    @Column(name = \"" + columnName + "\")" : "    @Column(\"" + columnName + "\")").append("\n");
+                sb.append(isJavaPersistenceColumn ? "    @Column(name = \"" + columnName + "\")" : "    @Column(\"" + columnName + "\")")
+                        .append(LINE_SEPERATOR);
 
                 final Tuple2<String, String> dbType = customizedFieldDbTypeMap.getOrDefault(fieldName, customizedFieldDbTypeMap.get(columnName));
 
                 if (dbType != null) {
-                    sb.append("    @Type(name = \"" + dbType._2 + "\")").append("\n");
+                    sb.append("    @Type(name = \"" + dbType._2 + "\")").append(LINE_SEPERATOR);
                 }
 
-                sb.append("    private " + columnClassName + " " + fieldName + ";").append("\n");
+                sb.append("    private " + columnClassName + " " + fieldName + ";").append(LINE_SEPERATOR);
             }
 
             //    if (idFields.size() > 0) {
@@ -410,41 +435,52 @@ final class CodeGenerationUtil {
             //    }
 
             if (Strings.isNotEmpty(configToUse.getAdditionalFieldsOrLines())) {
-                sb.append("\n").append(configToUse.getAdditionalFieldsOrLines());
+                sb.append(LINE_SEPERATOR).append(configToUse.getAdditionalFieldsOrLines());
             }
 
             if (configToUse.isGenerateCopyMethod()) {
                 // TODO extract fields from additionalFieldsOrLines?
 
-                sb.append("\n")
+                sb.append(LINE_SEPERATOR)
                         .append("    public " + className + " copy() {")
-                        .append("\n") //
+                        .append(LINE_SEPERATOR) //
                         .append("        final " + className + " copy = new " + className + "();")
-                        .append("\n"); //
+                        .append(LINE_SEPERATOR); //
 
                 for (String fieldName : fieldNameList) {
-                    sb.append("        copy." + fieldName + " = this." + fieldName + ";").append("\n");
+                    sb.append("        copy." + fieldName + " = this." + fieldName + ";").append(LINE_SEPERATOR);
                 }
 
                 for (Tuple2<String, String> tp : additionalFields) {
-                    sb.append("        copy." + tp._2 + " = this." + tp._2 + ";").append("\n");
+                    sb.append("        copy." + tp._2 + " = this." + tp._2 + ";").append(LINE_SEPERATOR);
                 }
 
-                sb.append("        return copy;").append("\n").append("    }").append("\n");
+                sb.append("        return copy;").append(LINE_SEPERATOR).append("    }").append(LINE_SEPERATOR);
             }
 
             if (configToUse.isGenerateFieldNameTable()) {
+                sb.append(LINE_SEPERATOR)
+                        .append("    /*")
+                        .append(LINE_SEPERATOR)
+                        .append("     * Auto-generated class for property name table.")
+                        .append(LINE_SEPERATOR)
+                        .append("     */");
 
-                sb.append("\n").append("    public interface NT {").append("\n").append("\n"); //
+                sb.append(LINE_SEPERATOR)
+                        .append("    public interface ")
+                        .append(DEFAULT_CLASS_NAME_PROP_NAME_TABLE)
+                        .append(" {")
+                        .append(LINE_SEPERATOR)
+                        .append(LINE_SEPERATOR); //
 
                 for (String fieldName : fieldNameList) {
-                    sb.append("        String " + fieldName + " = \"" + fieldName + "\";").append("\n");
+                    sb.append("        String " + fieldName + " = \"" + fieldName + "\";").append(LINE_SEPERATOR);
                 }
 
-                sb.append("\n").append("    }").append("\n");
+                sb.append(LINE_SEPERATOR).append("    }").append(LINE_SEPERATOR);
             }
 
-            sb.append("\n").append("}").append("\n");
+            sb.append(LINE_SEPERATOR).append("}").append(LINE_SEPERATOR);
 
             String result = sb.toString();
 
@@ -474,6 +510,10 @@ final class CodeGenerationUtil {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    private static String createQueryByTableName(String tableName) {
+        return "select * from " + tableName + " where 1 > 2";
     }
 
     private static String getColumnClassName(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
@@ -522,22 +562,55 @@ final class CodeGenerationUtil {
     /**
      *
      * @param entityClass
+     * @return
+     */
+    @Beta
+    public static String generatePropNameTableClass(final Class<?> entityClass) {
+        return generatePropNameTableClass(entityClass, DEFAULT_CLASS_NAME_PROP_NAME_TABLE);
+    }
+
+    /**
+     *
+     * @param entityClass
+     * @param propNameTableClassName
+     * @return
+     */
+    @Beta
+    public static String generatePropNameTableClass(final Class<?> entityClass, final String propNameTableClassName) {
+        return generatePropNameTableClass(entityClass, propNameTableClassName, null);
+    }
+
+    /**
+     *
+     * @param entityClass
      * @param propNameTableClassName
      * @param srcDir
      * @return
      */
-    static String generatePropNameTableClass(final Class<?> entityClass, final String propNameTableClassName, final String srcDir) {
+    @Beta
+    public static String generatePropNameTableClass(final Class<?> entityClass, final String propNameTableClassName, final String srcDir) {
         final StringBuilder sb = new StringBuilder();
 
         final String interfaceName = "public interface " + propNameTableClassName;
 
-        sb.append("\n").append("    ").append(interfaceName).append(" {").append("\n").append("\n"); //
+        sb.append(LINE_SEPERATOR)
+                .append("    /*")
+                .append(LINE_SEPERATOR)
+                .append("     * Auto-generated class for property name table.")
+                .append(LINE_SEPERATOR)
+                .append("     */");
 
-        for (String propName : ClassUtil.getPropNameList(entityClass)) {
-            sb.append("        String " + propName + " = \"" + propName + "\";").append("\n");
+        if (Character.isLowerCase(propNameTableClassName.charAt(0))) {
+            sb.append(LINE_SEPERATOR).append("    @SuppressWarnings(\"java:S1192\")");
         }
 
-        sb.append("\n").append("    }").append("\n");
+        sb.append(LINE_SEPERATOR).append("    ").append(interfaceName).append(" {").append(LINE_SEPERATOR).append(LINE_SEPERATOR); //
+
+        for (String propName : ClassUtil.getPropNameList(entityClass)) {
+            sb.append("        String " + propName + " = \"" + propName + "\";").append(LINE_SEPERATOR);
+        }
+
+        sb.append(LINE_SEPERATOR).append("    }").append(LINE_SEPERATOR);
 
         String ret = sb.toString();
 
@@ -558,7 +631,11 @@ final class CodeGenerationUtil {
             List<String> lines = IOUtil.readAllLines(file);
 
             for (int i = 0, size = lines.size(); i < size; i++) {
-                if (lines.get(i).trim().startsWith(interfaceName)) {
+                if (Strings.startsWithAny(lines.get(i).trim(), interfaceName, "* Auto-generated class for property name table.")) {
+                    if (Strings.startsWith(lines.get(i).trim(), "* Auto-generated class for property name table.")) {
+                        i--;
+                    }
+
                     for (int j = i; j < size; j++) {
                         if ("}".equals(Strings.strip(lines.get(j)))) {
                             N.deleteRange(lines, Strings.isBlank(lines.get(i - 1)) ? i - 1 : i, Strings.isBlank(lines.get(j + 1)) ? j + 2 : j + 1);
@@ -573,6 +650,7 @@ final class CodeGenerationUtil {
             for (int i = lines.size() - 1; i > 0; i--) {
                 if ("}".equals(Strings.strip(lines.get(i)))) {
                     lines.add(i, ret);
+                    break;
                 }
             }
 
@@ -584,6 +662,305 @@ final class CodeGenerationUtil {
         }
 
         return ret;
+    }
+
+    /**
+     *
+     * @param entityClasses
+     * @return
+     */
+    @Beta
+    public static String generatePropNameTableClasses(final Collection<? extends Class<?>> entityClasses) {
+        return generatePropNameTableClasses(entityClasses, DEFAULT_CLASS_NAME_PROP_NAME_TABLE);
+    }
+
+    /**
+     *
+     * @param entityClasses
+     * @param propNameTableClassName
+     * @return
+     */
+    @Beta
+    public static String generatePropNameTableClasses(final Collection<? extends Class<?>> entityClasses, final String propNameTableClassName) {
+        return generatePropNameTableClasses(entityClasses, propNameTableClassName, null);
+    }
+
+    /**
+     *
+     * @param entityClasses
+     * @param propNameTableClassName
+     * @param srcDir
+     * @return
+     */
+    @Beta
+    public static String generatePropNameTableClasses(final Collection<? extends Class<?>> entityClasses, final String propNameTableClassName,
+            final String srcDir) {
+        N.checkArgNotEmpty(entityClasses, "entityClasses");
+
+        final StringBuilder sb = new StringBuilder();
+
+        final String interfaceName = "public interface " + propNameTableClassName;
+        final ListMultimap<String, Class<?>> propNameMap = N.newListMultimap();
+
+        for (Class<?> cls : entityClasses) {
+            for (String propName : ClassUtil.getPropNameList(cls)) {
+                propNameMap.put(propName, cls);
+            }
+        }
+
+        List<String> propNames = new ArrayList<>(propNameMap.keySet());
+        N.sort(propNames);
+
+        sb.append(LINE_SEPERATOR)
+                .append("/*")
+                .append(LINE_SEPERATOR)
+                .append(" * Auto-generated class for property name table.")
+                .append(LINE_SEPERATOR)
+                .append(" */");
+
+        if (Character.isLowerCase(propNameTableClassName.charAt(0))) {
+            sb.append(LINE_SEPERATOR).append("@SuppressWarnings(\"java:S1192\")");
+        }
+
+        sb.append(LINE_SEPERATOR).append(interfaceName).append(" {").append(LINE_SEPERATOR); //
+
+        for (String propName : propNames) {
+            final String clsNameList = Stream.of(propNameMap.get(propName)).map(ClassUtil::getSimpleClassName).sorted().join(", ", "[", "]");
+
+            sb.append(LINE_SEPERATOR)
+                    .append("    /* Property name for classes: ")
+                    .append(clsNameList)
+                    .append(" */")
+                    .append(LINE_SEPERATOR)
+                    .append("    String " + propName + " = \"" + propName + "\";")
+                    .append(LINE_SEPERATOR);
+        }
+
+        sb.append(LINE_SEPERATOR).append("}").append(LINE_SEPERATOR);
+
+        String ret = sb.toString();
+
+        final Class<?> entityClass = N.firstElement(entityClasses).orElseThrow();
+
+        if (Strings.isNotEmpty(srcDir)) {
+
+            String packageDir = srcDir;
+            String packageName = ClassUtil.getPackageName(entityClass);
+
+            if (Strings.isNotEmpty(packageName)) {
+                if (!(packageDir.endsWith("/") || packageDir.endsWith("\\"))) {
+                    packageDir += "/";
+                }
+
+                packageDir += Strings.replaceAll(packageName, ".", "/");
+            }
+
+            final List<String> lines = new ArrayList<>();
+
+            if (Strings.isNotEmpty(packageName)) {
+                lines.add("package " + packageName + ";");
+            }
+
+            lines.add(ret);
+
+            File file = new File(packageDir + IOUtil.FILE_SEPARATOR + propNameTableClassName + ".java");
+            IOUtil.createIfNotExists(file);
+            try {
+                IOUtil.writeLines(lines, file);
+            } catch (IOException e) {
+                throw N.toRuntimeException(e);
+            }
+        }
+
+        return ret;
+    }
+
+    /**
+     *
+     *
+     * @param dataSource
+     * @param tableName
+     * @return
+     * @throws UncheckedSQLException
+     */
+    public static String generateSelectSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateSelectSql(conn, tableName);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     *
+     *
+     * @param conn
+     * @param tableName
+     * @return
+     */
+    public static String generateSelectSql(final Connection conn, final String tableName) {
+        String query = "select * from " + tableName + " where 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+
+            return Strings.join(columnLabelList, ", ", "select ", " from " + tableName);
+
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     *
+     *
+     * @param dataSource
+     * @param tableName
+     * @return
+     * @throws UncheckedSQLException
+     */
+    public static String generateInsertSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateInsertSql(conn, tableName);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     *
+     *
+     * @param conn
+     * @param tableName
+     * @return
+     */
+    public static String generateInsertSql(final Connection conn, final String tableName) {
+        String query = "select * from " + tableName + " where 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+
+            return Strings.join(columnLabelList, ", ", "insert into " + tableName + "(",
+                    ") values (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     *
+     *
+     * @param dataSource
+     * @param tableName
+     * @return
+     * @throws UncheckedSQLException
+     */
+    public static String generateNamedInsertSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateNamedInsertSql(conn, tableName);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     *
+     *
+     * @param conn
+     * @param tableName
+     * @return
+     */
+    public static String generateNamedInsertSql(final Connection conn, final String tableName) {
+        String query = "select * from " + tableName + " where 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+
+            return Strings.join(columnLabelList, ", ", "insert into " + tableName + "(",
+                    Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") values (", ")"));
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     *
+     *
+     * @param dataSource
+     * @param tableName
+     * @return
+     * @throws UncheckedSQLException
+     */
+    public static String generateUpdateSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateUpdateSql(conn, tableName);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     *
+     *
+     * @param conn
+     * @param tableName
+     * @return
+     */
+    public static String generateUpdateSql(final Connection conn, final String tableName) {
+        String query = "select * from " + tableName + " where 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+
+            return "update " + tableName + " set " + Stream.of(columnLabelList).map(it -> it + " = ?").join(", ");
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     *
+     *
+     * @param dataSource
+     * @param tableName
+     * @return
+     * @throws UncheckedSQLException
+     */
+    public static String generateNamedUpdateSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateNamedUpdateSql(conn, tableName);
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     *
+     *
+     * @param conn
+     * @param tableName
+     * @return
+     */
+    public static String generateNamedUpdateSql(final Connection conn, final String tableName) {
+        String query = "select * from " + tableName + " where 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+
+            return "update " + tableName + " set " + Stream.of(columnLabelList).map(it -> it + " = :" + Strings.toCamelCase(it)).join(", ");
+        } catch (SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
     }
 
 }

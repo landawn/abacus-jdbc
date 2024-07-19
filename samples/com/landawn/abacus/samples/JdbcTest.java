@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import com.landawn.abacus.annotation.Type.EnumBy;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.CodeGenerationUtil;
 import com.landawn.abacus.jdbc.EntityCodeConfig;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
@@ -41,6 +42,7 @@ import com.landawn.abacus.samples.dao.UserDao;
 import com.landawn.abacus.samples.dao.UserDaoL;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.CheckedStream;
+import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Holder;
@@ -493,7 +495,7 @@ public class JdbcTest {
                 .generateBuilder(true)
                 .build();
 
-        String str = JdbcUtil.generateEntityClass(dataSource, "user1", ecc);
+        String str = CodeGenerationUtil.generateEntityClass(dataSource, "user1", ecc);
         System.out.println(str);
 
         ecc = EntityCodeConfig.builder()
@@ -522,7 +524,7 @@ public class JdbcTest {
                         .build())
                 .build();
 
-        str = JdbcUtil.generateEntityClass(dataSource, "user1", ecc);
+        str = CodeGenerationUtil.generateEntityClass(dataSource, "user1", ecc);
         System.out.println(str);
 
         String additionalLines = """
@@ -535,12 +537,15 @@ public class JdbcTest {
         ecc.setClassName("UserQueryAllResult");
         ecc.setAdditionalFieldsOrLines(additionalLines);
         ecc.setGenerateFieldNameTable(true);
-        str = JdbcUtil.generateEntityClass(dataSource, "UserQueryAllResult", "select * from user1", ecc);
+        str = CodeGenerationUtil.generateEntityClass(dataSource, "UserQueryAllResult", "select * from user1", ecc);
         System.out.println(str);
 
         IOUtil.deleteIfExists(new File("./samples/codes/entity/User1.java"));
 
-        N.println(JdbcUtil.generatePropNameTableClass(Account.class, "NT", "./samples"));
+        N.println(CodeGenerationUtil.generatePropNameTableClass(Account.class, "s", "./samples"));
+
+        N.println(
+                CodeGenerationUtil.generatePropNameTableClasses(ClassUtil.getClassesByPackage(Account.class.getPackageName(), false, false), "s", "./samples"));
     }
 
     /**
@@ -548,19 +553,19 @@ public class JdbcTest {
      */
     @Test
     public void test_generateSql() {
-        String sql = JdbcUtil.generateSelectSql(dataSource, "user1");
+        String sql = CodeGenerationUtil.generateSelectSql(dataSource, "user1");
         N.println(sql);
 
-        sql = JdbcUtil.generateInsertSql(dataSource, "user1");
+        sql = CodeGenerationUtil.generateInsertSql(dataSource, "user1");
         N.println(sql);
 
-        sql = JdbcUtil.generateNamedInsertSql(dataSource, "user1");
+        sql = CodeGenerationUtil.generateNamedInsertSql(dataSource, "user1");
         N.println(sql);
 
-        sql = JdbcUtil.generateUpdateSql(dataSource, "user1");
+        sql = CodeGenerationUtil.generateUpdateSql(dataSource, "user1");
         N.println(sql);
 
-        sql = JdbcUtil.generateNamedUpdateSql(dataSource, "user1");
+        sql = CodeGenerationUtil.generateNamedUpdateSql(dataSource, "user1");
         N.println(sql);
     }
 

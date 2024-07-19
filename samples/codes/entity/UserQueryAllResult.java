@@ -69,7 +69,10 @@ public class UserQueryAllResult {
         return copy;
     }
 
-    public interface NT {
+    /*
+     * Auto-generated class for property name table.
+     */
+    public interface s {
 
         String id = "id";
         String firstName = "firstName";

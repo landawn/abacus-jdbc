@@ -23,12 +23,14 @@ import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.stream.IntStream;
 
+import codes.entity.s;
+
 public class PreparedQueryTest {
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_queryForSingleResult() throws SQLException {
@@ -54,9 +56,9 @@ public class PreparedQueryTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_alias() throws SQLException {
@@ -87,9 +89,9 @@ public class PreparedQueryTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_listToMap() throws SQLException {
@@ -113,7 +115,7 @@ public class PreparedQueryTest {
         try {
             JdbcUtil.prepareQuery(dataSource, sql) //
                     .setLong(1, minId)
-                    .query(Jdbc.ResultExtractor.toMap(rs -> rs.getString("lastName"), rs -> rs.getLong(1)))
+                    .query(Jdbc.ResultExtractor.toMap(rs -> rs.getString(s.lastName), rs -> rs.getLong(1)))
                     .forEach(Fn.println("="));
             fail("Should throw IllegalStateException");
         } catch (IllegalStateException e) {
@@ -121,7 +123,7 @@ public class PreparedQueryTest {
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, minId)
-                .query(Jdbc.ResultExtractor.toMap(rs -> rs.getString("lastName"), rs -> rs.getLong(1), Fn.replacingMerger()))
+                .query(Jdbc.ResultExtractor.toMap(rs -> rs.getString(s.lastName), rs -> rs.getLong(1), Fn.replacingMerger()))
                 .forEach(Fn.println("="));
 
         sql = PSC.deleteFrom(User.class).where("id >= ?").sql();
@@ -131,9 +133,9 @@ public class PreparedQueryTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_ColumnGetter() throws SQLException {
@@ -147,12 +149,12 @@ public class PreparedQueryTest {
                 .setString(5, "123@email.com")
                 .insert();
 
-        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(CF.eq("firstName")).sql()) //
-                .setParameters(User.builder().firstName("Forrest").build(), N.asList("firstName"))
+        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(CF.eq(s.firstName)).sql()) //
+                .setParameters(User.builder().firstName("Forrest").build(), N.asList(s.firstName))
                 .findOnlyOne(User.class)
                 .ifPresent(System.out::println);
 
-        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(CF.eq("firstName")).sql()) //
+        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(CF.eq(s.firstName)).sql()) //
                 .settParameters(1, N.asList("Forrest"))
                 .findOnlyOne(User.class)
                 .ifPresent(System.out::println);
@@ -172,15 +174,15 @@ public class PreparedQueryTest {
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
                 .findOnlyOne(Jdbc.BiRowMapper.builder()
-                        .get("id", ResultSet::getLong)
-                        .get("firstName", ResultSet::getString)
-                        .getTimestamp("createTime")
+                        .get(s.id, ResultSet::getLong)
+                        .get(s.firstName, ResultSet::getString)
+                        .getTimestamp(s.createTime)
                         .to(User.class))
                 .ifPresent(System.out::println);
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
-                .findOnlyOne(Jdbc.BiRowMapper.builder().getLong("id").get("firstName", ResultSet::getString).getTime("createTime").to(List.class))
+                .findOnlyOne(Jdbc.BiRowMapper.builder().getLong(s.id).get(s.firstName, ResultSet::getString).getTime(s.createTime).to(List.class))
                 .ifPresent(System.out::println);
 
         JdbcUtil.prepareQuery(dataSource, sql) //

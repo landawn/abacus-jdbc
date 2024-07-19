@@ -61,8 +61,6 @@ import lombok.experimental.Accessors;
 @AllArgsConstructor
 @Accessors(chain = true)
 public final class EntityCodeConfig {
-    static final String NT = "NT";
-
     private String srcDir;
     private String packageName;
     private String className;
