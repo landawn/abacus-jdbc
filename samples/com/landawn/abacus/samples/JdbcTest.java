@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.List;
 
 import javax.sql.DataSource;
@@ -544,8 +545,10 @@ public class JdbcTest {
 
         N.println(CodeGenerationUtil.generatePropNameTableClass(Account.class, "s", "./samples"));
 
-        N.println(
-                CodeGenerationUtil.generatePropNameTableClasses(ClassUtil.getClassesByPackage(Account.class.getPackageName(), false, false), "s", "./samples"));
+        final Collection<Class<?>> classes = N.concat(ClassUtil.getClassesByPackage(User.class.getPackageName(), false, false),
+                ClassUtil.getClassesByPackage(Account.class.getPackageName(), false, false));
+
+        N.println(CodeGenerationUtil.generatePropNameTableClasses(classes, "s", "./samples"));
     }
 
     /**

@@ -703,6 +703,10 @@ public final class CodeGenerationUtil {
         final ListMultimap<String, Class<?>> propNameMap = N.newListMultimap();
 
         for (Class<?> cls : entityClasses) {
+            if (cls.isInterface() || (cls.isMemberClass() && ClassUtil.getSimpleClassName(cls).endsWith("Builder"))) {
+                continue;
+            }
+
             for (String propName : ClassUtil.getPropNameList(cls)) {
                 propNameMap.put(propName, cls);
             }
@@ -711,10 +715,17 @@ public final class CodeGenerationUtil {
         List<String> propNames = new ArrayList<>(propNameMap.keySet());
         N.sort(propNames);
 
+        final String allClsNameList = Stream.of(entityClasses)
+                .filter(cls -> !(cls.isInterface() || (cls.isMemberClass() && ClassUtil.getSimpleClassName(cls).endsWith("Builder"))))
+                .map(ClassUtil::getSimpleClassName)
+                .sorted()
+                .join(", ", "[", "]");
+
         sb.append(LINE_SEPERATOR)
                 .append("/*")
                 .append(LINE_SEPERATOR)
-                .append(" * Auto-generated class for property name table.")
+                .append(" * Auto-generated class for property name table for classes: ")
+                .append(allClsNameList)
                 .append(LINE_SEPERATOR)
                 .append(" */");
 

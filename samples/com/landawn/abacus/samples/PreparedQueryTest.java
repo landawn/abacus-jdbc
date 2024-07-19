@@ -23,7 +23,7 @@ import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.stream.IntStream;
 
-import codes.entity.s;
+import codes.entity.Account.s;
 
 public class PreparedQueryTest {
 
