@@ -56,11 +56,10 @@ import com.landawn.abacus.util.function.QuadFunction;
 import com.landawn.abacus.util.stream.Stream;
 
 public final class CodeGenerationUtil {
+    public static final String S = "s";
+    public static final String X = "x";
+
     private static final String LINE_SEPERATOR = IOUtil.LINE_SEPARATOR;
-
-    private static final String S = "s";
-
-    private static final String X = "x";
 
     private static final String eccImports = """
             import javax.persistence.Column;
@@ -464,7 +463,7 @@ public final class CodeGenerationUtil {
                 sb.append(LINE_SEPERATOR)
                         .append("    /*")
                         .append(LINE_SEPERATOR)
-                        .append("     * Auto-generated class for property name table.")
+                        .append("     * Auto-generated class for property name table by abacus-jdbc.")
                         .append(LINE_SEPERATOR)
                         .append("     */");
 
@@ -593,7 +592,7 @@ public final class CodeGenerationUtil {
         sb.append(LINE_SEPERATOR)
                 .append("    /*")
                 .append(LINE_SEPERATOR)
-                .append("     * Auto-generated class for property name table.")
+                .append("     * Auto-generated class for property name table by abacus-jdbc.")
                 .append(LINE_SEPERATOR)
                 .append("     */");
 
@@ -628,8 +627,8 @@ public final class CodeGenerationUtil {
             List<String> lines = IOUtil.readAllLines(file);
 
             for (int i = 0, size = lines.size(); i < size; i++) {
-                if (Strings.startsWithAny(lines.get(i).trim(), interfaceName, "* Auto-generated class for property name table.")) {
-                    if (Strings.startsWith(lines.get(i).trim(), "* Auto-generated class for property name table.")) {
+                if (Strings.startsWithAny(lines.get(i).trim(), interfaceName, "* Auto-generated class for property name table by abacus-jdbc")) {
+                    if (Strings.startsWith(lines.get(i).trim(), "* Auto-generated class for property name table by abacus-jdbc")) {
                         i--;
                     }
 
@@ -679,33 +678,81 @@ public final class CodeGenerationUtil {
      */
     @Beta
     public static String generatePropNameTableClasses(final Collection<? extends Class<?>> entityClasses, final String propNameTableClassName) {
-        return generatePropNameTableClasses(entityClasses, propNameTableClassName, null);
+        return generatePropNameTableClasses(entityClasses, propNameTableClassName, null, null);
+    }
+
+    private static final BiFunction<Class<?>, String, String> identityPropNameConverter = (cls, propName) -> propName;
+
+    /**
+     *
+     * @param entityClasses
+     * @param propNameTableClassName
+     * @param propNameTableClassPackageName
+     * @param srcDir
+     * @return
+     */
+    @Beta
+    public static String generatePropNameTableClasses(final Collection<? extends Class<?>> entityClasses, final String propNameTableClassName,
+            final String propNameTableClassPackageName, final String srcDir) {
+        return generatePropNameTableClasses(entityClasses, propNameTableClassName, propNameTableClassPackageName, srcDir, identityPropNameConverter);
     }
 
     /**
      *
      * @param entityClasses
      * @param propNameTableClassName
+     * @param propNameTableClassPackageName
      * @param srcDir
+     * @param propNameConverter to filter out a property by returning {@code null}.
      * @return
      */
     @Beta
     public static String generatePropNameTableClasses(final Collection<? extends Class<?>> entityClasses, final String propNameTableClassName,
-            final String srcDir) {
+            final String propNameTableClassPackageName, final String srcDir, final BiFunction<Class<?>, String, String> propNameConverter) {
         N.checkArgNotEmpty(entityClasses, "entityClasses");
 
         final StringBuilder sb = new StringBuilder();
 
         final String interfaceName = "public interface " + propNameTableClassName;
-        final ListMultimap<String, Class<?>> propNameMap = N.newListMultimap();
+        final ListMultimap<String, String> propNameMap = N.newListMultimap();
 
         for (Class<?> cls : entityClasses) {
-            if (cls.isInterface() || (cls.isMemberClass() && ClassUtil.getSimpleClassName(cls).endsWith("Builder"))) {
+            if (cls.isInterface()) {
                 continue;
             }
 
+            if (cls.isMemberClass() && ClassUtil.getSimpleClassName(cls).endsWith("Builder") && cls.getDeclaringClass() != null) {
+                try {
+                    if (cls.getDeclaringClass().isAnnotationPresent(lombok.Builder.class)) {
+                        continue;
+                    }
+                } catch (Throwable e) {
+                    // ignore
+
+                    try {
+                        if (Stream.of(cls.getDeclaringClass().getAnnotations()).anyMatch(it -> "Builder".equals(it.annotationType().getSimpleName()))) {
+                            continue;
+                        }
+                    } catch (Throwable e2) {
+                        // ignore
+                    }
+                }
+            }
+
+            final String simpleClassName = ClassUtil.getSimpleClassName(cls);
+
             for (String propName : ClassUtil.getPropNameList(cls)) {
-                propNameMap.put(propName, cls);
+                String newPropName = propNameConverter.apply(cls, propName);
+
+                if (Strings.isEmpty(newPropName)) {
+                    continue;
+                }
+
+                if (newPropName.equals(propName)) {
+                    propNameMap.put(newPropName, simpleClassName);
+                } else {
+                    propNameMap.put(newPropName, simpleClassName + "." + propName);
+                }
             }
         }
 
@@ -721,7 +768,7 @@ public final class CodeGenerationUtil {
         sb.append(LINE_SEPERATOR)
                 .append("/*")
                 .append(LINE_SEPERATOR)
-                .append(" * Auto-generated class for property name table for classes: ")
+                .append(" * Auto-generated class for property name table by abacus-jdbc for classes: ")
                 .append(allClsNameList)
                 .append(LINE_SEPERATOR)
                 .append(" */");
@@ -733,7 +780,7 @@ public final class CodeGenerationUtil {
         sb.append(LINE_SEPERATOR).append(interfaceName).append(" {").append(LINE_SEPERATOR); //
 
         for (String propName : propNames) {
-            final String clsNameList = Stream.of(propNameMap.get(propName)).map(ClassUtil::getSimpleClassName).sorted().join(", ", "[", "]");
+            final String clsNameList = Stream.of(propNameMap.get(propName)).sorted().join(", ", "[", "]");
 
             sb.append(LINE_SEPERATOR)
                     .append("    /* Property name for classes: ")
@@ -751,9 +798,8 @@ public final class CodeGenerationUtil {
         final Class<?> entityClass = N.firstElement(entityClasses).orElseThrow();
 
         if (Strings.isNotEmpty(srcDir)) {
-
             String packageDir = srcDir;
-            String packageName = ClassUtil.getPackageName(entityClass);
+            String packageName = Strings.isEmpty(propNameTableClassPackageName) ? ClassUtil.getPackageName(entityClass) : propNameTableClassPackageName;
 
             if (Strings.isNotEmpty(packageName)) {
                 if (!(packageDir.endsWith("/") || packageDir.endsWith("\\"))) {
@@ -771,6 +817,7 @@ public final class CodeGenerationUtil {
 
             lines.add(ret);
 
+            IOUtil.mkdirsIfNotExists(new File(packageDir));
             File file = new File(packageDir + IOUtil.FILE_SEPARATOR + propNameTableClassName + ".java");
             IOUtil.createIfNotExists(file);
             try {

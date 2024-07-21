@@ -48,6 +48,7 @@ import java.util.stream.Collector;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
+import com.landawn.abacus.jdbc.Jdbc.Columns;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -1598,12 +1599,12 @@ public final class Jdbc {
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @param columnGetter 
-             * @return 
-             * @throws IllegalArgumentException 
+             *
+             * @param columnIndex
+             * @param columnGetter
+             * @return
+             * @throws IllegalArgumentException
              */
             public RowMapperBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
                 N.checkArgPositive(columnIndex, "columnIndex");
@@ -3218,12 +3219,12 @@ public final class Jdbc {
             }
 
             /**
-             * 
              *
-             * @param columnName 
-             * @param columnGetter 
-             * @return 
-             * @throws IllegalArgumentException 
+             *
+             * @param columnName
+             * @param columnGetter
+             * @return
+             * @throws IllegalArgumentException
              */
             public BiRowMapperBuilder get(final String columnName, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
                 N.checkArgNotNull(columnName, "columnName");
@@ -3536,7 +3537,7 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static RowConsumer create(Throwables.ObjIntConsumer<ResultSet, SQLException> consumerForAll) {
+        static RowConsumer create(Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
             N.checkArgNotNull(consumerForAll, "consumerForAll");
 
             return new RowConsumer() {
@@ -3712,7 +3713,7 @@ public final class Jdbc {
          * @return
          */
         @Beta
-        static BiRowConsumer create(Throwables.ObjIntConsumer<ResultSet, SQLException> consumerForAll) {
+        static BiRowConsumer create(Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
             N.checkArgNotNull(consumerForAll, "consumerForAll");
 
             return new BiRowConsumer() {
@@ -4262,12 +4263,12 @@ public final class Jdbc {
             }
 
             /**
-             * 
              *
-             * @param columnIndex 
-             * @param columnGetter 
-             * @return 
-             * @throws IllegalArgumentException 
+             *
+             * @param columnIndex
+             * @param columnGetter
+             * @return
+             * @throws IllegalArgumentException
              */
             public RowExtractorBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
                 N.checkArgPositive(columnIndex, "columnIndex");
@@ -5100,11 +5101,11 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param handlerClass 
-         * @return 
-         * @throws IllegalArgumentException 
+         *
+         * @param handlerClass
+         * @return
+         * @throws IllegalArgumentException
          */
         public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException {
             N.checkArgNotNull(handlerClass, "handlerClass");
@@ -5113,11 +5114,11 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param handler 
-         * @return 
-         * @throws IllegalArgumentException 
+         *
+         * @param handler
+         * @return
+         * @throws IllegalArgumentException
          */
         public static boolean register(final Handler<?> handler) throws IllegalArgumentException {
             N.checkArgNotNull(handler, "handler");
@@ -5126,12 +5127,12 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param qualifier 
-         * @param handler 
-         * @return 
-         * @throws IllegalArgumentException 
+         *
+         * @param qualifier
+         * @param handler
+         * @return
+         * @throws IllegalArgumentException
          */
         public static boolean register(final String qualifier, final Handler<?> handler) throws IllegalArgumentException {
             N.checkArgNotEmpty(qualifier, "qualifier");
@@ -5229,13 +5230,13 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param <E> 
-         * @param beforeInvokeAction 
-         * @return 
-         * @throws IllegalArgumentException 
+         *
+         * @param <T>
+         * @param <E>
+         * @param beforeInvokeAction
+         * @return
+         * @throws IllegalArgumentException
          */
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction)
@@ -5251,13 +5252,13 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param <E> 
-         * @param afterInvokeAction 
-         * @return 
-         * @throws IllegalArgumentException 
+         *
+         * @param <T>
+         * @param <E>
+         * @param afterInvokeAction
+         * @return
+         * @throws IllegalArgumentException
          */
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction)
@@ -5275,14 +5276,14 @@ public final class Jdbc {
         }
 
         /**
-         * 
          *
-         * @param <T> 
-         * @param <E> 
-         * @param beforeInvokeAction 
-         * @param afterInvokeAction 
-         * @return 
-         * @throws IllegalArgumentException 
+         *
+         * @param <T>
+         * @param <E>
+         * @param beforeInvokeAction
+         * @param afterInvokeAction
+         * @return
+         * @throws IllegalArgumentException
          */
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction,

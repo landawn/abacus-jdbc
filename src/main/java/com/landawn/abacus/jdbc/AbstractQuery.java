@@ -6085,7 +6085,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this is closed
      */
     @Beta
-    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<This, R, SQLException> sqlAction)
+    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction)
             throws IllegalArgumentException, IllegalStateException {
         checkArgNotNull(sqlAction, "sqlAction");
         assertNotClosed();
@@ -6106,7 +6106,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this is closed
      */
     @Beta
-    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<This, R, SQLException> sqlAction, final Executor executor)
+    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction, final Executor executor)
             throws IllegalArgumentException, IllegalStateException {
         checkArgNotNull(sqlAction, "sqlAction");
         checkArgNotNull(executor, "executor");
@@ -6126,7 +6126,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this is closed
      */
     @Beta
-    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<This, SQLException> sqlAction) throws IllegalArgumentException, IllegalStateException {
+    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super This, SQLException> sqlAction)
+            throws IllegalArgumentException, IllegalStateException {
         checkArgNotNull(sqlAction, "sqlAction");
         assertNotClosed();
 
@@ -6145,7 +6146,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this is closed
      */
     @Beta
-    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<This, SQLException> sqlAction, final Executor executor)
+    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super This, SQLException> sqlAction, final Executor executor)
             throws IllegalArgumentException, IllegalStateException {
         checkArgNotNull(sqlAction, "sqlAction");
         checkArgNotNull(executor, "executor");

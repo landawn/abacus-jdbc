@@ -36,8 +36,9 @@ public class Account {
     @Column("CREATE_TIME")
     private java.sql.Timestamp createTime;
 
+
     /*
-     * Auto-generated class for property name table.
+     * Auto-generated class for property name table by abacus-jdbc.
      */
     @SuppressWarnings("java:S1192")
     public interface x {

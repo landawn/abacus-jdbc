@@ -1314,12 +1314,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Returns a {@code Nullable<V>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
-     * @param <V> 
-     * @param targetValueClass 
-     * @param singleSelectPropName 
-     * @param cond 
-     * @return 
-     * @throws SQLException 
+     * @param <V>
+     * @param targetValueClass
+     * @param singleSelectPropName
+     * @param cond
+     * @return
+     * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      * @see AbstractQuery#queryForSingleResult(Class)
@@ -2186,7 +2186,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @Beta
     @NonDBOperation
-    default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<TD, R, SQLException> sqlAction) {
+    default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction) {
         return asyncCall(sqlAction, executor());
     }
 
@@ -2201,7 +2201,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @Beta
     @NonDBOperation
-    default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<TD, R, SQLException> sqlAction, final Executor executor) {
+    default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction, final Executor executor) {
         N.checkArgNotNull(sqlAction, "func");
         N.checkArgNotNull(executor, "executor");
 
@@ -2219,7 +2219,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @Beta
     @NonDBOperation
-    default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<TD, SQLException> sqlAction) {
+    default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super TD, SQLException> sqlAction) {
         return asyncRun(sqlAction, executor());
     }
 
@@ -2233,7 +2233,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @Beta
     @NonDBOperation
-    default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<TD, SQLException> sqlAction, final Executor executor) {
+    default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super TD, SQLException> sqlAction, final Executor executor) {
         N.checkArgNotNull(sqlAction, "action");
         N.checkArgNotNull(executor, "executor");
 

@@ -570,19 +570,19 @@ public final class JdbcUtils {
     /**
      * Imports the data from <code>DataSet</code> to database.
      *
-     * @param <E> 
-     * @param dataset 
-     * @param offset 
-     * @param count 
-     * @param filter 
+     * @param <E>
+     * @param dataset
+     * @param offset
+     * @param count
+     * @param filter
      * @param stmt the column order in the sql must be consistent with the column order in the DataSet.
-     * @param batchSize 
-     * @param batchIntervalInMillis 
-     * @param columnTypeMap 
-     * @return 
-     * @throws IllegalArgumentException 
-     * @throws SQLException 
-     * @throws E 
+     * @param batchSize
+     * @param batchIntervalInMillis
+     * @param columnTypeMap
+     * @return
+     * @throws IllegalArgumentException
+     * @throws SQLException
+     * @throws E
      */
     @SuppressWarnings({ "rawtypes", "null" })
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
@@ -685,19 +685,19 @@ public final class JdbcUtils {
     /**
      * Imports the data from <code>DataSet</code> to database.
      *
-     * @param <E> 
-     * @param dataset 
-     * @param offset 
-     * @param count 
-     * @param filter 
+     * @param <E>
+     * @param dataset
+     * @param offset
+     * @param count
+     * @param filter
      * @param stmt the column order in the sql must be consistent with the column order in the DataSet.
-     * @param batchSize 
-     * @param batchIntervalInMillis 
-     * @param stmtSetter 
-     * @return 
-     * @throws IllegalArgumentException 
-     * @throws SQLException 
-     * @throws E 
+     * @param batchSize
+     * @param batchIntervalInMillis
+     * @param stmtSetter
+     * @return
+     * @throws IllegalArgumentException
+     * @throws SQLException
+     * @throws E
      */
     public static <E extends Exception> int importData(final DataSet dataset, final int offset, final int count,
             final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
@@ -756,7 +756,7 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importData(final File file, final javax.sql.DataSource sourceDataSource, final String insertSQL,
-            final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
+            final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
         final Connection conn = sourceDataSource.getConnection();
 
         try {
@@ -779,7 +779,7 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importData(final File file, final Connection conn, final String insertSQL,
-            final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
+            final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
         return importData(file, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
 
@@ -800,7 +800,8 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importData(final File file, final long offset, final long count, final Connection conn, final String insertSQL,
-            final int batchSize, final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
+            final int batchSize, final long batchIntervalInMillis, final Throwables.Function<? super String, Object[], E> func)
+            throws SQLException, IOException, E {
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importData(file, offset, count, stmt, batchSize, batchIntervalInMillis, func);
@@ -818,7 +819,8 @@ public final class JdbcUtils {
      * @throws IOException
      * @throws E
      */
-    public static <E extends Exception> long importData(final File file, final PreparedStatement stmt, final Throwables.Function<String, Object[], E> func)
+    public static <E extends Exception> long importData(final File file, final PreparedStatement stmt,
+            final Throwables.Function<? super String, Object[], E> func)
             throws SQLException, IOException, E {
         return importData(file, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
@@ -840,7 +842,7 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importData(final File file, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
+            final long batchIntervalInMillis, final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
 
         try (Reader reader = IOUtil.newFileReader(file)) {
             return importData(reader, offset, count, stmt, batchSize, batchIntervalInMillis, func);
@@ -860,7 +862,7 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importData(final InputStream is, final javax.sql.DataSource sourceDataSource, final String insertSQL,
-            final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
+            final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
         final Connection conn = sourceDataSource.getConnection();
 
         try {
@@ -883,7 +885,7 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importData(final InputStream is, final Connection conn, final String insertSQL,
-            final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
+            final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
         return importData(is, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
 
@@ -904,7 +906,7 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importData(final InputStream is, final long offset, final long count, final Connection conn,
-            final String insertSQL, final int batchSize, final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func)
+            final String insertSQL, final int batchSize, final long batchIntervalInMillis, final Throwables.Function<? super String, Object[], E> func)
             throws SQLException, IOException, E {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importData(is, offset, count, stmt, batchSize, batchIntervalInMillis, func);
@@ -922,7 +924,8 @@ public final class JdbcUtils {
      * @throws IOException
      * @throws E
      */
-    public static <E extends Exception> long importData(final InputStream is, final PreparedStatement stmt, final Throwables.Function<String, Object[], E> func)
+    public static <E extends Exception> long importData(final InputStream is, final PreparedStatement stmt,
+            final Throwables.Function<? super String, Object[], E> func)
             throws SQLException, IOException, E {
         return importData(is, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
@@ -944,7 +947,8 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importData(final InputStream is, final long offset, final long count, final PreparedStatement stmt,
-            final int batchSize, final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
+            final int batchSize, final long batchIntervalInMillis, final Throwables.Function<? super String, Object[], E> func)
+            throws SQLException, IOException, E {
         final Reader reader = IOUtil.newInputStreamReader(is);
 
         return importData(reader, offset, count, stmt, batchSize, batchIntervalInMillis, func);
@@ -963,7 +967,7 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importData(final Reader reader, final javax.sql.DataSource sourceDataSource, final String insertSQL,
-            final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
+            final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
         final Connection conn = sourceDataSource.getConnection();
 
         try {
@@ -986,7 +990,7 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importData(final Reader reader, final Connection conn, final String insertSQL,
-            final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
+            final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
         return importData(reader, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
 
@@ -1007,7 +1011,8 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importData(final Reader reader, final long offset, final long count, final Connection conn, final String insertSQL,
-            final int batchSize, final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func) throws SQLException, IOException, E {
+            final int batchSize, final long batchIntervalInMillis, final Throwables.Function<? super String, Object[], E> func)
+            throws SQLException, IOException, E {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importData(reader, offset, count, stmt, batchSize, batchIntervalInMillis, func);
         }
@@ -1024,7 +1029,8 @@ public final class JdbcUtils {
      * @throws IOException
      * @throws E
      */
-    public static <E extends Exception> long importData(final Reader reader, final PreparedStatement stmt, final Throwables.Function<String, Object[], E> func)
+    public static <E extends Exception> long importData(final Reader reader, final PreparedStatement stmt,
+            final Throwables.Function<? super String, Object[], E> func)
             throws SQLException, IOException, E {
         return importData(reader, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
@@ -1032,22 +1038,22 @@ public final class JdbcUtils {
     /**
      * Imports the data from file to database.
      *
-     * @param <E> 
-     * @param reader 
-     * @param offset 
-     * @param count 
-     * @param stmt 
-     * @param batchSize 
-     * @param batchIntervalInMillis 
+     * @param <E>
+     * @param reader
+     * @param offset
+     * @param count
+     * @param stmt
+     * @param batchSize
+     * @param batchIntervalInMillis
      * @param func convert line to the parameters for record insert. Returns a <code>null</code> array to skip the line.
-     * @return 
-     * @throws IllegalArgumentException 
-     * @throws SQLException 
-     * @throws IOException 
-     * @throws E 
+     * @return
+     * @throws IllegalArgumentException
+     * @throws SQLException
+     * @throws IOException
+     * @throws E
      */
     public static <E extends Exception> long importData(final Reader reader, long offset, final long count, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final Throwables.Function<String, Object[], E> func)
+            final long batchIntervalInMillis, final Throwables.Function<? super String, Object[], E> func)
             throws IllegalArgumentException, SQLException, IOException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
@@ -1212,20 +1218,20 @@ public final class JdbcUtils {
     /**
      * Imports the data from Iterator to database.
      *
-     * @param <T> 
-     * @param <E> 
-     * @param iter 
-     * @param offset 
-     * @param count 
-     * @param filter 
-     * @param stmt 
-     * @param batchSize 
-     * @param batchIntervalInMillis 
-     * @param stmtSetter 
-     * @return 
-     * @throws IllegalArgumentException 
-     * @throws SQLException 
-     * @throws E 
+     * @param <T>
+     * @param <E>
+     * @param iter
+     * @param offset
+     * @param count
+     * @param filter
+     * @param stmt
+     * @param batchSize
+     * @param batchIntervalInMillis
+     * @param stmtSetter
+     * @return
+     * @throws IllegalArgumentException
+     * @throws SQLException
+     * @throws E
      */
     public static <T, E extends Exception> long importData(final Iterator<? extends T> iter, long offset, final long count,
             final Throwables.Predicate<? super T, E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
@@ -1326,7 +1332,7 @@ public final class JdbcUtils {
     //     */
     //    @SuppressWarnings("rawtypes")
     //    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final boolean skipTitle,
-    //            final Throwables.Predicate<String[], E> filter, final Connection conn, final String insertSQL, final int batchSize,
+    //            final Throwables.Predicate<? super String[], E> filter, final Connection conn, final String insertSQL, final int batchSize,
     //            final long batchIntervalInMillis, final List<? extends Type> columnTypeList) throws SQLException, IOException, E {
     //
     //        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
@@ -1388,7 +1394,7 @@ public final class JdbcUtils {
     //     */
     //    @SuppressWarnings("rawtypes")
     //    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final boolean skipTitle,
-    //            final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
+    //            final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
     //            final List<? extends Type> columnTypeList) throws SQLException, IOException, E {
     //
     //        try (Reader reader = new FileReader(file)) {
@@ -1451,7 +1457,7 @@ public final class JdbcUtils {
     //     */
     //    @SuppressWarnings("rawtypes")
     //    public static <E extends Exception> long importCSV(final InputStream is, final long offset, final long count, final boolean skipTitle,
-    //            final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
+    //            final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
     //            final List<? extends Type> columnTypeList) throws SQLException, IOException, E {
     //        final Reader reader = new InputStreamReader(is);
     //
@@ -1513,7 +1519,7 @@ public final class JdbcUtils {
     //     */
     //    @SuppressWarnings({ "unchecked", "rawtypes" })
     //    public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count, final boolean skipTitle,
-    //            final Throwables.Predicate<String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
+    //            final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
     //            final List<? extends Type> columnTypeList) throws SQLException, IOException, E {
     //        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
     //        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
@@ -1634,7 +1640,7 @@ public final class JdbcUtils {
     //     * @throws E
     //     */
     //    @SuppressWarnings("rawtypes")
-    //    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
+    //    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<? super String[], E> filter,
     //            final Connection conn, final String insertSQL, final int batchSize, final long batchIntervalInMillis,
     //            final Map<String, ? extends Type> columnTypeMap) throws SQLException, IOException, E {
     //
@@ -1695,7 +1701,7 @@ public final class JdbcUtils {
     //     * @throws E
     //     */
     //    @SuppressWarnings("rawtypes")
-    //    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
+    //    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<? super String[], E> filter,
     //            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
     //            throws SQLException, IOException, E {
     //
@@ -1756,7 +1762,7 @@ public final class JdbcUtils {
     //     * @throws E
     //     */
     //    @SuppressWarnings("rawtypes")
-    //    public static <E extends Exception> long importCSV(final InputStream is, long offset, final long count, final Throwables.Predicate<String[], E> filter,
+    //    public static <E extends Exception> long importCSV(final InputStream is, long offset, final long count, final Throwables.Predicate<? super String[], E> filter,
     //            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
     //            throws SQLException, IOException, E {
     //        final Reader reader = new InputStreamReader(is);
@@ -1815,7 +1821,7 @@ public final class JdbcUtils {
     //     * @throws E
     //     */
     //    @SuppressWarnings({ "unchecked", "rawtypes" })
-    //    public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count, final Throwables.Predicate<String[], E> filter,
+    //    public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count, final Throwables.Predicate<? super String[], E> filter,
     //            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
     //            throws SQLException, IOException, E {
     //        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);
@@ -1978,7 +1984,8 @@ public final class JdbcUtils {
      * @throws IOException
      * @throws E
      */
-    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
+    public static <E extends Exception> long importCSV(final File file, final long offset, final long count,
+            final Throwables.Predicate<? super String[], E> filter,
             final Connection conn, final String insertSQL, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E {
 
@@ -2037,7 +2044,8 @@ public final class JdbcUtils {
      * @throws IOException
      * @throws E
      */
-    public static <E extends Exception> long importCSV(final File file, final long offset, final long count, final Throwables.Predicate<String[], E> filter,
+    public static <E extends Exception> long importCSV(final File file, final long offset, final long count,
+            final Throwables.Predicate<? super String[], E> filter,
             final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E {
         try (Reader reader = IOUtil.newFileReader(file)) {
@@ -2117,7 +2125,8 @@ public final class JdbcUtils {
      * @throws IOException
      * @throws E
      */
-    public static <E extends Exception> long importCSV(final InputStream is, long offset, final long count, final Throwables.Predicate<String[], E> filter,
+    public static <E extends Exception> long importCSV(final InputStream is, long offset, final long count,
+            final Throwables.Predicate<? super String[], E> filter,
             final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E {
         final Reader reader = IOUtil.newInputStreamReader(is);
@@ -2183,23 +2192,24 @@ public final class JdbcUtils {
     /**
      * Imports the data from CSV to database.
      *
-     * @param <E> 
-     * @param reader 
-     * @param offset 
-     * @param count 
-     * @param filter 
+     * @param <E>
+     * @param reader
+     * @param offset
+     * @param count
+     * @param filter
      * @param stmt the column order in the sql should be consistent with the column order in the CSV file.
-     * @param batchSize 
-     * @param batchIntervalInMillis 
-     * @param stmtSetter 
-     * @return 
-     * @throws IllegalArgumentException 
-     * @throws SQLException 
-     * @throws IOException 
-     * @throws E 
+     * @param batchSize
+     * @param batchIntervalInMillis
+     * @param stmtSetter
+     * @return
+     * @throws IllegalArgumentException
+     * @throws SQLException
+     * @throws IOException
+     * @throws E
      */
     @SuppressWarnings({ "unchecked", "resource" })
-    public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count, final Throwables.Predicate<String[], E> filter,
+    public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count,
+            final Throwables.Predicate<? super String[], E> filter,
             final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter)
             throws IllegalArgumentException, SQLException, IOException, E {
@@ -2667,17 +2677,17 @@ public final class JdbcUtils {
      * <br />
      * Each line in the output file/Writer is an array of JSON String without root bracket.
      *
-     * @param out 
-     * @param rs 
-     * @param selectColumnNames 
-     * @param offset 
-     * @param count 
-     * @param writeTitle 
-     * @param quoted 
-     * @return 
-     * @throws IllegalArgumentException 
-     * @throws SQLException 
-     * @throws IOException 
+     * @param out
+     * @param rs
+     * @param selectColumnNames
+     * @param offset
+     * @param count
+     * @param writeTitle
+     * @param quoted
+     * @return
+     * @throws IllegalArgumentException
+     * @throws SQLException
+     * @throws IOException
      */
     @SuppressWarnings("deprecation")
     public static long exportCSV(final Writer out, final ResultSet rs, final Collection<String> selectColumnNames, final long offset, final long count,
@@ -3587,7 +3597,7 @@ public final class JdbcUtils {
     //     * @throws SQLException
     //     * @throws E
     //     */
-    //    public static <E extends Exception> void parse(final Connection conn, final String sql, final Throwables.Consumer<ResultSet, E> rowParser)
+    //    public static <E extends Exception> void parse(final Connection conn, final String sql, final Throwables.Consumer<? super ResultSet, E> rowParser)
     //            throws SQLException, E {
     //        parse(conn, sql, rowParser, Fn.emptyAction());
     //    }
@@ -3605,7 +3615,7 @@ public final class JdbcUtils {
     //     * @throws E2
     //     */
     //    public static <E extends Exception, E2 extends Exception> void parse(final Connection conn, final String sql,
-    //            final Throwables.Consumer<ResultSet, E> rowParser, final Throwables.Runnable<E2> onComplete) throws SQLException, E, E2 {
+    //            final Throwables.Consumer<? super ResultSet, E> rowParser, final Throwables.Runnable<E2> onComplete) throws SQLException, E, E2 {
     //        parse(conn, sql, 0, Long.MAX_VALUE, rowParser, onComplete);
     //    }
     //
@@ -3621,7 +3631,7 @@ public final class JdbcUtils {
     //     * @throws E
     //     */
     //    public static <E extends Exception> void parse(final Connection conn, final String sql, final long offset, final long count,
-    //            final Throwables.Consumer<ResultSet, E> rowParser) throws SQLException, E {
+    //            final Throwables.Consumer<? super ResultSet, E> rowParser) throws SQLException, E {
     //        parse(conn, sql, offset, count, rowParser, Fn.emptyAction());
     //    }
     //
@@ -3640,7 +3650,7 @@ public final class JdbcUtils {
     //     * @throws E2
     //     */
     //    public static <E extends Exception, E2 extends Exception> void parse(final Connection conn, final String sql, final long offset, final long count,
-    //            final Throwables.Consumer<ResultSet, E> rowParser, final Throwables.Runnable<E2> onComplete) throws SQLException, E, E2 {
+    //            final Throwables.Consumer<? super ResultSet, E> rowParser, final Throwables.Runnable<E2> onComplete) throws SQLException, E, E2 {
     //        parse(conn, sql, offset, count, 0, 0, rowParser, onComplete);
     //    }
     //
@@ -3658,7 +3668,7 @@ public final class JdbcUtils {
     //     * @throws E
     //     */
     //    public static <E extends Exception> void parse(final Connection conn, final String sql, final long offset, final long count, final int processThreadNum,
-    //            final int queueSize, final Throwables.Consumer<ResultSet, E> rowParser) throws SQLException, E {
+    //            final int queueSize, final Throwables.Consumer<? super ResultSet, E> rowParser) throws SQLException, E {
     //        parse(conn, sql, offset, count, processThreadNum, queueSize, rowParser, Fn.emptyAction());
     //    }
     //
@@ -3680,7 +3690,7 @@ public final class JdbcUtils {
     //     * @throws E2
     //     */
     //    public static <E extends Exception, E2 extends Exception> void parse(final Connection conn, final String sql, final long offset, final long count,
-    //            final int processThreadNum, final int queueSize, final Throwables.Consumer<ResultSet, E> rowParser, final Throwables.Runnable<E2> onComplete)
+    //            final int processThreadNum, final int queueSize, final Throwables.Consumer<? super ResultSet, E> rowParser, final Throwables.Runnable<E2> onComplete)
     //            throws SQLException, E, E2 {
     //        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql)) {
     //
@@ -3698,7 +3708,7 @@ public final class JdbcUtils {
     //     * @throws SQLException
     //     * @throws E
     //     */
-    //    public static <E extends Exception> void parse(final PreparedStatement stmt, final Throwables.Consumer<ResultSet, E> rowParser) throws SQLException, E {
+    //    public static <E extends Exception> void parse(final PreparedStatement stmt, final Throwables.Consumer<? super ResultSet, E> rowParser) throws SQLException, E {
     //        parse(stmt, rowParser, Fn.emptyAction());
     //    }
     //
@@ -3713,7 +3723,7 @@ public final class JdbcUtils {
     //     * @throws E
     //     * @throws E2
     //     */
-    //    public static <E extends Exception, E2 extends Exception> void parse(final PreparedStatement stmt, final Throwables.Consumer<ResultSet, E> rowParser,
+    //    public static <E extends Exception, E2 extends Exception> void parse(final PreparedStatement stmt, final Throwables.Consumer<? super ResultSet, E> rowParser,
     //            final Throwables.Runnable<E2> onComplete) throws SQLException, E, E2 {
     //        parse(stmt, 0, Long.MAX_VALUE, rowParser, onComplete);
     //    }
@@ -3729,7 +3739,7 @@ public final class JdbcUtils {
     //     * @throws E
     //     */
     //    public static <E extends Exception> void parse(final PreparedStatement stmt, final long offset, final long count,
-    //            final Throwables.Consumer<ResultSet, E> rowParser) throws SQLException, E {
+    //            final Throwables.Consumer<? super ResultSet, E> rowParser) throws SQLException, E {
     //        parse(stmt, offset, count, rowParser, Fn.emptyAction());
     //    }
     //
@@ -3747,7 +3757,7 @@ public final class JdbcUtils {
     //     * @throws E2
     //     */
     //    public static <E extends Exception, E2 extends Exception> void parse(final PreparedStatement stmt, final long offset, final long count,
-    //            final Throwables.Consumer<ResultSet, E> rowParser, final Throwables.Runnable<E2> onComplete) throws SQLException, E, E2 {
+    //            final Throwables.Consumer<? super ResultSet, E> rowParser, final Throwables.Runnable<E2> onComplete) throws SQLException, E, E2 {
     //        parse(stmt, offset, count, 0, 0, rowParser, onComplete);
     //    }
     //
@@ -3764,7 +3774,7 @@ public final class JdbcUtils {
     //     * @throws E
     //     */
     //    public static <E extends Exception> void parse(final PreparedStatement stmt, final long offset, final long count, final int processThreadNum,
-    //            final int queueSize, final Throwables.Consumer<ResultSet, E> rowParser) throws SQLException, E {
+    //            final int queueSize, final Throwables.Consumer<? super ResultSet, E> rowParser) throws SQLException, E {
     //        parse(stmt, offset, count, processThreadNum, queueSize, rowParser, Fn.emptyAction());
     //    }
     //
@@ -3785,7 +3795,7 @@ public final class JdbcUtils {
     //     * @throws E2
     //     */
     //    public static <E extends Exception, E2 extends Exception> void parse(final PreparedStatement stmt, final long offset, final long count,
-    //            final int processThreadNum, final int queueSize, final Throwables.Consumer<ResultSet, E> rowParser, final Throwables.Runnable<E2> onComplete)
+    //            final int processThreadNum, final int queueSize, final Throwables.Consumer<? super ResultSet, E> rowParser, final Throwables.Runnable<E2> onComplete)
     //            throws SQLException, E, E2 {
     //        ResultSet rs = null;
     //
@@ -3806,7 +3816,7 @@ public final class JdbcUtils {
     //     * @throws SQLException
     //     * @throws E
     //     */
-    //    public static <E extends Exception> void parse(final ResultSet rs, final Throwables.Consumer<ResultSet, E> rowParser) throws SQLException, E {
+    //    public static <E extends Exception> void parse(final ResultSet rs, final Throwables.Consumer<? super ResultSet, E> rowParser) throws SQLException, E {
     //        parse(rs, rowParser, Fn.emptyAction());
     //    }
     //
@@ -3821,7 +3831,7 @@ public final class JdbcUtils {
     //     * @throws E
     //     * @throws E2
     //     */
-    //    public static <E extends Exception, E2 extends Exception> void parse(final ResultSet rs, final Throwables.Consumer<ResultSet, E> rowParser,
+    //    public static <E extends Exception, E2 extends Exception> void parse(final ResultSet rs, final Throwables.Consumer<? super ResultSet, E> rowParser,
     //            final Throwables.Runnable<E2> onComplete) throws SQLException, E, E2 {
     //        parse(rs, 0, Long.MAX_VALUE, rowParser, onComplete);
     //    }
@@ -3836,7 +3846,7 @@ public final class JdbcUtils {
     //     * @throws SQLException
     //     * @throws E
     //     */
-    //    public static <E extends Exception> void parse(final ResultSet rs, long offset, long count, final Throwables.Consumer<ResultSet, E> rowParser)
+    //    public static <E extends Exception> void parse(final ResultSet rs, long offset, long count, final Throwables.Consumer<? super ResultSet, E> rowParser)
     //            throws SQLException, E {
     //        parse(rs, offset, count, rowParser, Fn.emptyAction());
     //    }
@@ -3855,7 +3865,7 @@ public final class JdbcUtils {
     //     * @throws E2
     //     */
     //    public static <E extends Exception, E2 extends Exception> void parse(final ResultSet rs, long offset, long count,
-    //            final Throwables.Consumer<ResultSet, E> rowParser, final Throwables.Runnable<E2> onComplete) throws SQLException, E, E2 {
+    //            final Throwables.Consumer<? super ResultSet, E> rowParser, final Throwables.Runnable<E2> onComplete) throws SQLException, E, E2 {
     //        parse(rs, offset, count, 0, 0, rowParser, onComplete);
     //    }
     //
@@ -3872,7 +3882,7 @@ public final class JdbcUtils {
     //     * @throws E
     //     */
     //    public static <E extends Exception> void parse(final ResultSet rs, long offset, long count, final int processThreadNum, final int queueSize,
-    //            final Throwables.Consumer<ResultSet, E> rowParser) throws SQLException, E {
+    //            final Throwables.Consumer<? super ResultSet, E> rowParser) throws SQLException, E {
     //        parse(rs, offset, count, processThreadNum, queueSize, rowParser, Fn.emptyAction());
     //    }
     //
@@ -3892,7 +3902,7 @@ public final class JdbcUtils {
     //     * @throws E2
     //     */
     //    public static <E extends Exception, E2 extends Exception> void parse(final ResultSet rs, long offset, long count, final int processThreadNum,
-    //            final int queueSize, final Throwables.Consumer<ResultSet, E> rowParser, final Throwables.Runnable<E2> onComplete) throws E, E2 {
+    //            final int queueSize, final Throwables.Consumer<? super ResultSet, E> rowParser, final Throwables.Runnable<E2> onComplete) throws E, E2 {
     //        N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can not be negative", offset, count);
     //
     //        Iterators.forEach(iter, offset, count, processThreadNum, queueSize, elementParser);

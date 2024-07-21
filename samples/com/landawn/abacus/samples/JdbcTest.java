@@ -4,23 +4,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collection;
 import java.util.List;
 
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.annotation.Type.EnumBy;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.jdbc.CodeGenerationUtil;
-import com.landawn.abacus.jdbc.EntityCodeConfig;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
@@ -43,22 +38,16 @@ import com.landawn.abacus.samples.dao.UserDao;
 import com.landawn.abacus.samples.dao.UserDaoL;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.CheckedStream;
-import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Holder;
-import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.Strings;
-import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.Stream;
-
-import codes.entity.Account;
 
 /**
  * CRUD: insert -> read -> update -> delete a record in DB table.
@@ -479,97 +468,6 @@ public class JdbcTest {
 
         // In you're in Spring and want to use Spring transaction management,
         // then don't need to call beginTransaction because Spring transaction is integrated and supported.
-    }
-
-    /**
-     *
-     */
-    @Test
-    public void test_generateEntityClass() {
-
-        EntityCodeConfig ecc = EntityCodeConfig.builder()
-                .packageName("codes.entity")
-                .srcDir("./samples")
-                .idField("id")
-                .readOnlyFields(N.asSet("createTime"))
-                .nonUpdatableFields(N.asSet("id"))
-                .generateBuilder(true)
-                .build();
-
-        String str = CodeGenerationUtil.generateEntityClass(dataSource, "user1", ecc);
-        System.out.println(str);
-
-        ecc = EntityCodeConfig.builder()
-                .className("User")
-                .packageName("codes.entity")
-                .srcDir("./samples")
-                .useBoxedType(true)
-                .readOnlyFields(N.asSet("id"))
-                .idField("id")
-                .nonUpdatableFields(N.asSet("create_time"))
-                .idAnnotationClass(javax.persistence.Id.class)
-                // .columnAnnotationClass(javax.persistence.Column.class)
-                .tableAnnotationClass(javax.persistence.Table.class)
-                .customizedFields(N.asList(Tuple.of("createTime", "create_time", java.util.Date.class)))
-                .customizedFieldDbTypes(N.asList(Tuple.of("create_time", "List<String>")))
-                .chainAccessor(true)
-                .generateBuilder(true)
-                .generateCopyMethod(true)
-                .jsonXmlConfig(EntityCodeConfig.JsonXmlConfig.builder()
-                        .namingPolicy(NamingPolicy.UPPER_CASE_WITH_UNDERSCORE)
-                        .ignoredFields("id,   create_time")
-                        .dateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
-                        .numberFormat("#.###")
-                        .timeZone("PDT")
-                        .enumerated(EnumBy.ORDINAL)
-                        .build())
-                .build();
-
-        str = CodeGenerationUtil.generateEntityClass(dataSource, "user1", ecc);
-        System.out.println(str);
-
-        String additionalLines = """
-                    // test
-                    private List<User> users;
-
-                    private Set<User> userSet; // test
-                """;
-
-        ecc.setClassName("UserQueryAllResult");
-        ecc.setAdditionalFieldsOrLines(additionalLines);
-        ecc.setGenerateFieldNameTable(true);
-        str = CodeGenerationUtil.generateEntityClass(dataSource, "UserQueryAllResult", "select * from user1", ecc);
-        System.out.println(str);
-
-        IOUtil.deleteIfExists(new File("./samples/codes/entity/User1.java"));
-
-        N.println(CodeGenerationUtil.generatePropNameTableClass(Account.class, "x", "./samples"));
-
-        final Collection<Class<?>> classes = N.concat(ClassUtil.getClassesByPackage(User.class.getPackageName(), false, false),
-                ClassUtil.getClassesByPackage(Account.class.getPackageName(), false, false));
-
-        N.println(CodeGenerationUtil.generatePropNameTableClasses(classes, "s", "./samples"));
-    }
-
-    /**
-     *
-     */
-    @Test
-    public void test_generateSql() {
-        String sql = CodeGenerationUtil.generateSelectSql(dataSource, "user1");
-        N.println(sql);
-
-        sql = CodeGenerationUtil.generateInsertSql(dataSource, "user1");
-        N.println(sql);
-
-        sql = CodeGenerationUtil.generateNamedInsertSql(dataSource, "user1");
-        N.println(sql);
-
-        sql = CodeGenerationUtil.generateUpdateSql(dataSource, "user1");
-        N.println(sql);
-
-        sql = CodeGenerationUtil.generateNamedUpdateSql(dataSource, "user1");
-        N.println(sql);
     }
 
     /**
