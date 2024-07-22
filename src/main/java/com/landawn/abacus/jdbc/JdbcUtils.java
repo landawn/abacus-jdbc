@@ -820,8 +820,7 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importData(final File file, final PreparedStatement stmt,
-            final Throwables.Function<? super String, Object[], E> func)
-            throws SQLException, IOException, E {
+            final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
         return importData(file, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
 
@@ -925,8 +924,7 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importData(final InputStream is, final PreparedStatement stmt,
-            final Throwables.Function<? super String, Object[], E> func)
-            throws SQLException, IOException, E {
+            final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
         return importData(is, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
 
@@ -1030,8 +1028,7 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importData(final Reader reader, final PreparedStatement stmt,
-            final Throwables.Function<? super String, Object[], E> func)
-            throws SQLException, IOException, E {
+            final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
         return importData(reader, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
     }
 
@@ -1985,9 +1982,9 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importCSV(final File file, final long offset, final long count,
-            final Throwables.Predicate<? super String[], E> filter,
-            final Connection conn, final String insertSQL, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E {
+            final Throwables.Predicate<? super String[], E> filter, final Connection conn, final String insertSQL, final int batchSize,
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter)
+            throws SQLException, IOException, E {
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importCSV(file, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
@@ -2045,8 +2042,7 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importCSV(final File file, final long offset, final long count,
-            final Throwables.Predicate<? super String[], E> filter,
-            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
+            final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E {
         try (Reader reader = IOUtil.newFileReader(file)) {
             return importCSV(reader, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
@@ -2126,8 +2122,7 @@ public final class JdbcUtils {
      * @throws E
      */
     public static <E extends Exception> long importCSV(final InputStream is, long offset, final long count,
-            final Throwables.Predicate<? super String[], E> filter,
-            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
+            final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E {
         final Reader reader = IOUtil.newInputStreamReader(is);
         return importCSV(reader, offset, count, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
@@ -2209,8 +2204,7 @@ public final class JdbcUtils {
      */
     @SuppressWarnings({ "unchecked", "resource" })
     public static <E extends Exception> long importCSV(final Reader reader, long offset, final long count,
-            final Throwables.Predicate<? super String[], E> filter,
-            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
+            final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter)
             throws IllegalArgumentException, SQLException, IOException, E {
         N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative", offset, count);

@@ -7027,7 +7027,11 @@ public final class JdbcUtil {
      * @throws SQLException
      */
     public static String blob2String(final Blob blob) throws SQLException {
-        return new String(blob.getBytes(1, (int) blob.length()), Charsets.UTF_8);
+        try {
+            return new String(blob.getBytes(1, (int) blob.length()), Charsets.UTF_8);
+        } finally {
+            blob.free();
+        }
     }
 
     /**
@@ -7039,7 +7043,11 @@ public final class JdbcUtil {
      * @throws SQLException
      */
     public static String blob2String(final Blob blob, final Charset charset) throws SQLException {
-        return new String(blob.getBytes(1, (int) blob.length()), charset);
+        try {
+            return new String(blob.getBytes(1, (int) blob.length()), charset);
+        } finally {
+            blob.free();
+        }
     }
 
     /**
@@ -7052,7 +7060,43 @@ public final class JdbcUtil {
      * @throws IOException
      */
     public static long writeBlobToFile(final Blob blob, final File output) throws SQLException, IOException {
-        return IOUtil.write(blob.getBinaryStream(), output);
+        try {
+            return IOUtil.write(blob.getBinaryStream(), output);
+        } finally {
+            blob.free();
+        }
+    }
+
+    /**
+     *
+     *
+     * @param clob
+     * @return
+     * @throws SQLException
+     */
+    public static String clob2String(final Clob clob) throws SQLException {
+        try {
+            return clob.getSubString(1, (int) clob.length());
+        } finally {
+            clob.free();
+        }
+    }
+
+    /**
+     *
+     *
+     * @param clob
+     * @param output
+     * @return
+     * @throws SQLException
+     * @throws IOException
+     */
+    public static long writeClobToFile(final Clob clob, final File output) throws SQLException, IOException {
+        try {
+            return IOUtil.write(clob.getCharacterStream(), output);
+        } finally {
+            clob.free();
+        }
     }
 
     /**
