@@ -53,6 +53,7 @@ import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.function.QuadFunction;
+import com.landawn.abacus.util.stream.CharStream;
 import com.landawn.abacus.util.stream.Stream;
 
 public final class CodeGenerationUtil {
@@ -861,8 +862,7 @@ public final class CodeGenerationUtil {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
 
-            return Strings.join(columnLabelList, ", ", "select ", " from " + tableName);
-
+            return Strings.join(checkColumnName(columnLabelList), ", ", "select ", " from " + checkTableName(tableName));
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -899,7 +899,7 @@ public final class CodeGenerationUtil {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
 
-            return Strings.join(columnLabelList, ", ", "insert into " + tableName + "(",
+            return Strings.join(checkColumnName(columnLabelList), ", ", "insert into " + checkTableName(tableName) + "(",
                     ") values (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
@@ -937,7 +937,7 @@ public final class CodeGenerationUtil {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
 
-            return Strings.join(columnLabelList, ", ", "insert into " + tableName + "(",
+            return Strings.join(checkColumnName(columnLabelList), ", ", "insert into " + checkTableName(tableName) + "(",
                     Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") values (", ")"));
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
@@ -975,7 +975,8 @@ public final class CodeGenerationUtil {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
 
-            return "update " + tableName + " set " + Stream.of(columnLabelList).map(it -> it + " = ?").join(", ");
+            return "update " + checkTableName(tableName) + " set "
+                    + Stream.of(columnLabelList).map(columnLabel -> checkColumnName(columnLabel) + " = ?").join(", ");
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1012,10 +1013,24 @@ public final class CodeGenerationUtil {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
 
-            return "update " + tableName + " set " + Stream.of(columnLabelList).map(it -> it + " = :" + Strings.toCamelCase(it)).join(", ");
+            return "update " + checkTableName(tableName) + " set "
+                    + Stream.of(columnLabelList).map(columnLabel -> checkColumnName(columnLabel) + " = :" + Strings.toCamelCase(columnLabel)).join(", ");
         } catch (SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
 
+    private static String checkTableName(final String tableName) {
+        return CharStream.of(tableName).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? tableName
+                : Strings.wrap(tableName, "`");
+    }
+
+    private static String checkColumnName(final String columnLabel) {
+        return CharStream.of(columnLabel).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? columnLabel
+                : Strings.wrap(columnLabel, "'");
+    }
+
+    private static List<String> checkColumnName(final List<String> columnLabelList) {
+        return N.map(columnLabelList, CodeGenerationUtil::checkColumnName);
+    }
 }

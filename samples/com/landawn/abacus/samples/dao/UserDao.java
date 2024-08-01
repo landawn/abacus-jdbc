@@ -71,7 +71,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
      * @param user
      * @throws SQLException
      */
-    @Insert(sql = "INSERT INTO user1 (id, first_name, last_name, email, create_time) VALUES (:id, :firstName, :lastName, :email, :now)", timestamped = true)
+    @Insert(sql = "INSERT INTO `user1` (id, first_name, last_name, email, create_time) VALUES (:id, :firstName, :lastName, :email, :now)", timestamped = true)
     void insertWithId(User user) throws SQLException;
 
     /**
@@ -83,7 +83,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
      * @return
      * @throws SQLException
      */
-    @Update("UPDATE user1 SET first_name = :firstName, last_name = :lastName WHERE id = :id")
+    @Update("UPDATE `user1` SET first_name = :firstName, last_name = :lastName WHERE id = :id")
     int updateFirstAndLastName(@Bind("firstName") String newFirstName, @Bind("lastName") String newLastName, @Bind("id") long id) throws SQLException;
 
     /**
@@ -94,7 +94,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
      * @throws SQLException
      */
     @SqlLogEnabled
-    @Select("SELECT first_name, last_name FROM user1 WHERE id = :id")
+    @Select("SELECT first_name, last_name FROM `user1` WHERE id = :id")
     User getFirstAndLastNameBy(@Bind("id") long id) throws SQLException;
 
     /**
