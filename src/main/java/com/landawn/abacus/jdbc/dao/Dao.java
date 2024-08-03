@@ -452,6 +452,39 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Prepare a {@code select} query by specified {@code cond}.
+     * <br />
+     * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
+     *
+     * @param cond
+     * @return
+     * @throws SQLException
+     * @see {@link #prepareQuery(Collection, Condition)}
+     */
+    @Beta
+    @NonDBOperation
+    default PreparedQuery prepareQuery(final Condition cond) throws SQLException {
+        return prepareQuery(null, cond);
+    }
+
+    /**
+     * Prepare a {@code select} query by specified {@code selectPropNames} and {@code cond}.
+     * <br />
+     *
+     * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
+     *
+     * @param selectPropNames
+     * @param cond
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    @NonDBOperation
+    default PreparedQuery prepareQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
+        return DaoUtil.getDaoPreparedQueryFunc(this)._1.apply(selectPropNames, cond);
+    }
+
+    /**
      *
      * @param query
      * @return
@@ -461,6 +494,40 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     @NonDBOperation
     default PreparedQuery prepareQueryForBigResult(final String query) throws SQLException {
         return JdbcUtil.prepareQueryForBigResult(dataSource(), query);
+    }
+
+    /**
+     * Prepare a big result {@code select} query by specified {@code cond}.
+     * <br />
+     *
+     * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
+     *
+     * @param cond
+     * @return
+     * @throws SQLException
+     * @see {@link #prepareQueryForBigResult(Collection, Condition)}
+     */
+    @Beta
+    @NonDBOperation
+    default PreparedQuery prepareQueryForBigResult(final Condition cond) throws SQLException {
+        return prepareQueryForBigResult(null, cond);
+    }
+
+    /**
+     * Prepare a big result {@code select} query by specified {@code selectPropNames} and {@code cond}.
+     * <br />
+     *
+     * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
+     *
+     * @param selectPropNames
+     * @param cond
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    @NonDBOperation
+    default PreparedQuery prepareQueryForBigResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
+        return prepareQuery(selectPropNames, cond).configStmt(DaoUtil.stmtSetterForBigQueryResult);
     }
 
     /**
@@ -594,111 +661,6 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     *
-     * @param namedQuery
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    @NonDBOperation
-    default NamedQuery prepareNamedQueryForBigResult(final String namedQuery) throws SQLException {
-        return JdbcUtil.prepareNamedQueryForBigResult(dataSource(), namedQuery);
-    }
-
-    /**
-     *
-     * @param query
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    @NonDBOperation
-    default CallableQuery prepareCallableQuery(final String query) throws SQLException {
-        return JdbcUtil.prepareCallableQuery(dataSource(), query);
-    }
-
-    /**
-     *
-     * @param sql
-     * @param stmtCreator
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    @NonDBOperation
-    default CallableQuery prepareCallableQuery(final String sql, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
-            throws SQLException {
-        return JdbcUtil.prepareCallableQuery(dataSource(), sql, stmtCreator);
-    }
-
-    /**
-     * Prepare a {@code select} query by specified {@code cond}.
-     * <br />
-     * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
-     *
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see {@link #prepareQuery(Collection, Condition)}
-     */
-    @Beta
-    @NonDBOperation
-    default PreparedQuery prepareQuery(final Condition cond) throws SQLException {
-        return prepareQuery(null, cond);
-    }
-
-    /**
-     * Prepare a {@code select} query by specified {@code selectPropNames} and {@code cond}.
-     * <br />
-     *
-     * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
-     *
-     * @param selectPropNames
-     * @param cond
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    @NonDBOperation
-    default PreparedQuery prepareQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
-        return DaoUtil.getDaoPreparedQueryFunc(this)._1.apply(selectPropNames, cond);
-    }
-
-    /**
-     * Prepare a big result {@code select} query by specified {@code cond}.
-     * <br />
-     *
-     * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
-     *
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see {@link #prepareQueryForBigResult(Collection, Condition)}
-     */
-    @Beta
-    @NonDBOperation
-    default PreparedQuery prepareQueryForBigResult(final Condition cond) throws SQLException {
-        return prepareQueryForBigResult(null, cond);
-    }
-
-    /**
-     * Prepare a big result {@code select} query by specified {@code selectPropNames} and {@code cond}.
-     * <br />
-     *
-     * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
-     *
-     * @param selectPropNames
-     * @param cond
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    @NonDBOperation
-    default PreparedQuery prepareQueryForBigResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
-        return prepareQuery(selectPropNames, cond).configStmt(DaoUtil.stmtSetterForBigQueryResult);
-    }
-
-    /**
      * Prepare a {@code select} query by specified {@code cond}.
      * <br />
      * {@code query} could be a {@code select/insert/update/delete} or other sql statement. If it's {@code select} by default if not specified.
@@ -729,6 +691,30 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
         return DaoUtil.getDaoPreparedQueryFunc(this)._2.apply(selectPropNames, cond);
+    }
+
+    /**
+     *
+     * @param namedQuery
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQueryForBigResult(final String namedQuery) throws SQLException {
+        return JdbcUtil.prepareNamedQueryForBigResult(dataSource(), namedQuery);
+    }
+
+    /**
+     *
+     * @param namedSql the named query
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQueryForBigResult(final ParsedSql namedSql) throws SQLException {
+        return JdbcUtil.prepareNamedQueryForBigResult(dataSource(), namedSql);
     }
 
     /**
@@ -763,6 +749,32 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     @NonDBOperation
     default NamedQuery prepareNamedQueryForBigResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
         return prepareNamedQuery(selectPropNames, cond).configStmt(DaoUtil.stmtSetterForBigQueryResult);
+    }
+
+    /**
+     *
+     * @param query
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    @NonDBOperation
+    default CallableQuery prepareCallableQuery(final String query) throws SQLException {
+        return JdbcUtil.prepareCallableQuery(dataSource(), query);
+    }
+
+    /**
+     *
+     * @param sql
+     * @param stmtCreator
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    @NonDBOperation
+    default CallableQuery prepareCallableQuery(final String sql, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
+            throws SQLException {
+        return JdbcUtil.prepareCallableQuery(dataSource(), sql, stmtCreator);
     }
 
     /**

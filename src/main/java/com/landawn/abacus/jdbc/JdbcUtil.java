@@ -2841,13 +2841,27 @@ public final class JdbcUtil {
      * and fetch size will be set to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
      *
      * @param ds
-     * @param sql
+     * @param namedSql
      * @return
      * @throws SQLException
      */
     @Beta
-    public static NamedQuery prepareNamedQueryForBigResult(final javax.sql.DataSource ds, final String sql) throws SQLException {
-        return prepareNamedQuery(ds, sql).configStmt(stmtSetterForBigQueryResult);
+    public static NamedQuery prepareNamedQueryForBigResult(final javax.sql.DataSource ds, final String namedSql) throws SQLException {
+        return prepareNamedQuery(ds, namedSql).configStmt(stmtSetterForBigQueryResult);
+    }
+
+    /**
+     * Prepare {@code select} query for big result set. Fetch direction will be set to {@code FetchDirection.FORWARD}
+     * and fetch size will be set to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
+     *
+     * @param ds
+     * @param namedSql
+     * @return
+     * @throws SQLException
+     */
+    @Beta
+    public static NamedQuery prepareNamedQueryForBigResult(final javax.sql.DataSource ds, final ParsedSql namedSql) throws SQLException {
+        return prepareNamedQuery(ds, namedSql).configStmt(stmtSetterForBigQueryResult);
     }
 
     /**
@@ -2855,13 +2869,13 @@ public final class JdbcUtil {
      * and fetch size will be set to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
      *
      * @param conn
-     * @param sql
+     * @param namedSql
      * @return
      * @throws SQLException
      */
     @Beta
-    public static NamedQuery prepareNamedQueryForBigResult(final Connection conn, final String sql) throws SQLException {
-        return prepareNamedQuery(conn, sql).configStmt(stmtSetterForBigQueryResult);
+    public static NamedQuery prepareNamedQueryForBigResult(final Connection conn, final String namedSql) throws SQLException {
+        return prepareNamedQuery(conn, namedSql).configStmt(stmtSetterForBigQueryResult);
     }
 
     /**
