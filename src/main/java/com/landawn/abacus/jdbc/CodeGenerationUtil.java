@@ -1027,7 +1027,7 @@ public final class CodeGenerationUtil {
 
     private static String checkColumnName(final String columnLabel) {
         return CharStream.of(columnLabel).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? columnLabel
-                : Strings.wrap(columnLabel, "'");
+                : Strings.wrap(columnLabel, "`");
     }
 
     private static List<String> checkColumnName(final List<String> columnLabelList) {
