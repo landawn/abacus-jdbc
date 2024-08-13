@@ -494,7 +494,7 @@ public final class CodeGenerationUtil {
 
                 IOUtil.mkdirsIfNotExists(new File(packageDir));
 
-                File file = new File(packageDir + IOUtil.FILE_SEPARATOR + finalClassName + ".java");
+                File file = new File(packageDir + IOUtil.DIR_SEPARATOR + finalClassName + ".java");
 
                 IOUtil.createIfNotExists(file);
 
@@ -624,7 +624,7 @@ public final class CodeGenerationUtil {
                 packageDir += Strings.replaceAll(packageName, ".", "/");
             }
 
-            File file = new File(packageDir + IOUtil.FILE_SEPARATOR + ClassUtil.getSimpleClassName(entityClass) + ".java");
+            File file = new File(packageDir + IOUtil.DIR_SEPARATOR + ClassUtil.getSimpleClassName(entityClass) + ".java");
             List<String> lines = IOUtil.readAllLines(file);
 
             for (int i = 0, size = lines.size(); i < size; i++) {
@@ -819,7 +819,7 @@ public final class CodeGenerationUtil {
             lines.add(ret);
 
             IOUtil.mkdirsIfNotExists(new File(packageDir));
-            File file = new File(packageDir + IOUtil.FILE_SEPARATOR + propNameTableClassName + ".java");
+            File file = new File(packageDir + IOUtil.DIR_SEPARATOR + propNameTableClassName + ".java");
             IOUtil.createIfNotExists(file);
             try {
                 IOUtil.writeLines(lines, file);
