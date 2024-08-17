@@ -14,7 +14,6 @@
 
 package com.landawn.abacus.jdbc;
 
-import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Map;
@@ -37,7 +36,7 @@ import com.landawn.abacus.util.Throwables;
  * @author Haiyang Li
  * @since 0.8
  */
-public final class SQLTransaction implements Transaction, Closeable {
+public final class SQLTransaction implements Transaction, AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(SQLTransaction.class);
 
@@ -188,10 +187,10 @@ public final class SQLTransaction implements Transaction, Closeable {
     }
 
     /**
-     * 
      *
-     * @param actoinAfterCommit 
-     * @throws UncheckedSQLException 
+     *
+     * @param actoinAfterCommit
+     * @throws UncheckedSQLException
      */
     @Override
     public void commit(Runnable actoinAfterCommit) throws UncheckedSQLException {
@@ -271,10 +270,10 @@ public final class SQLTransaction implements Transaction, Closeable {
     }
 
     /**
-     * 
      *
-     * @param actionAfterRollback 
-     * @throws UncheckedSQLException 
+     *
+     * @param actionAfterRollback
+     * @throws UncheckedSQLException
      */
     @Override
     public void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {

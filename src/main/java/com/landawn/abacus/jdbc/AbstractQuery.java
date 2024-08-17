@@ -16,7 +16,6 @@
 
 package com.landawn.abacus.jdbc;
 
-import java.io.Closeable;
 import java.io.InputStream;
 import java.io.Reader;
 import java.lang.reflect.Method;
@@ -99,7 +98,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  * @param <This>
  */
 @SuppressWarnings("java:S1192")
-public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends AbstractQuery<Stmt, This>> implements Closeable {
+public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends AbstractQuery<Stmt, This>> implements AutoCloseable {
 
     static final Logger logger = LoggerFactory.getLogger(AbstractQuery.class);
 
