@@ -2064,7 +2064,7 @@ public final class JdbcUtils {
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
         final Connection conn = sourceDataSource.getConnection();
 
-        try (PreparedStatement stmt = conn.prepareStatement(insertSQL)) {
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importCSV(is, stmt, stmtSetter);
         } finally {
             JdbcUtil.releaseConnection(conn, sourceDataSource);
@@ -2143,7 +2143,7 @@ public final class JdbcUtils {
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
         final Connection conn = sourceDataSource.getConnection();
 
-        try (PreparedStatement stmt = conn.prepareStatement(insertSQL)) {
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importCSV(reader, stmt, stmtSetter);
         } finally {
             JdbcUtil.releaseConnection(conn, sourceDataSource);

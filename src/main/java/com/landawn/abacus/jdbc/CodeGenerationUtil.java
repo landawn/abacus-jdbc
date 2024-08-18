@@ -160,7 +160,7 @@ public final class CodeGenerationUtil {
     }
 
     public static String generateEntityClass(final Connection conn, final String entityName, String query, final EntityCodeConfig config) {
-        try (PreparedStatement stmt = conn.prepareStatement(query); //
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 ResultSet rs = stmt.executeQuery()) {
 
             return generateEntityClass(entityName, rs, config);
