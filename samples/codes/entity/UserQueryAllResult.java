@@ -3,13 +3,13 @@ package codes.entity;
 import java.util.List;
 import java.util.Set;
 
+import jakarta.persistence.Column;
 import javax.persistence.Id;
-import javax.persistence.Table;
 
-import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.JsonXmlConfig;
 import com.landawn.abacus.annotation.NonUpdatable;
 import com.landawn.abacus.annotation.ReadOnly;
+import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.annotation.Type;
 import com.landawn.abacus.annotation.Type.EnumBy;
 import com.landawn.abacus.util.NamingPolicy;
@@ -26,28 +26,28 @@ import lombok.experimental.Accessors;
 @AllArgsConstructor
 @Accessors(chain = true)
 @JsonXmlConfig(namingPolicy = NamingPolicy.UPPER_CASE_WITH_UNDERSCORE, ignoredFields = { "id", "create_time" }, dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'", timeZone = "PDT", numberFormat = "#.###", enumerated = EnumBy.ORDINAL)
-@Table(name = "UserQueryAllResult")
+@Table("UserQueryAllResult")
 public class UserQueryAllResult {
 
     @Id
     @ReadOnly
-    @Column("ID")
+    @Column(name = "ID")
     private Long id;
 
-    @Column("FIRST_NAME")
+    @Column(name = "FIRST_NAME")
     private String firstName;
 
-    @Column("LAST_NAME")
+    @Column(name = "LAST_NAME")
     private String lastName;
 
-    @Column("PROP1")
+    @Column(name = "PROP1")
     private String prop1;
 
-    @Column("EMAIL")
+    @Column(name = "EMAIL")
     private String email;
 
     @NonUpdatable
-    @Column("CREATE_TIME")
+    @Column(name = "CREATE_TIME")
     @Type(name = "List<String>")
     private java.util.Date create_time;
 

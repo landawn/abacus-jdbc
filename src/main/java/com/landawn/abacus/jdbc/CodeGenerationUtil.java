@@ -200,11 +200,15 @@ public final class CodeGenerationUtil {
 
         final Class<? extends Annotation> idAnnotationClass = configToUse.getIdAnnotationClass() == null ? Id.class : configToUse.getIdAnnotationClass();
 
-        final boolean isJavaPersistenceTable = "javax.persistence.Table".equals(ClassUtil.getCanonicalClassName(tableAnnotationClass))
+        final String tableAnnotationClassName = ClassUtil.getCanonicalClassName(tableAnnotationClass);
+        final String columnAnnotationClassName = ClassUtil.getCanonicalClassName(columnAnnotationClass);
+        final String idAnnotationClassName = ClassUtil.getCanonicalClassName(idAnnotationClass);
+
+        final boolean isJavaPersistenceTable = "javax.persistence.Table".equals(tableAnnotationClassName)
                 || "jakarta.persistence.Table".equals(ClassUtil.getCanonicalClassName(tableAnnotationClass));
-        final boolean isJavaPersistenceColumn = "javax.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass))
+        final boolean isJavaPersistenceColumn = "javax.persistence.Column".equals(columnAnnotationClassName)
                 || "jakarta.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass));
-        final boolean isJavaPersistenceId = "javax.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass))
+        final boolean isJavaPersistenceId = "javax.persistence.Id".equals(idAnnotationClassName)
                 || "jakarta.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass));
 
         final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = N.toMap(N.nullToEmpty(configToUse.getCustomizedFields()), tp -> tp._1);
@@ -268,16 +272,18 @@ public final class CodeGenerationUtil {
 
             headPart += LINE_SEPERATOR + eccImports + LINE_SEPERATOR + eccClassAnnos;
 
-            if (isJavaPersistenceColumn) {
-                headPart = headPart.replace("import com.landawn.abacus.annotation.Column;\n", "");
-            } else {
-                headPart = headPart.replace("import javax.persistence.Column;\n", "");
-            }
-
             if (isJavaPersistenceTable) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Table;\n", "");
+                headPart = headPart.replace("javax.persistence.Table", tableAnnotationClassName);
             } else {
                 headPart = headPart.replace("import javax.persistence.Table;\n", "");
+            }
+
+            if (isJavaPersistenceColumn) {
+                headPart = headPart.replace("import com.landawn.abacus.annotation.Column;\n", "");
+                headPart = headPart.replace("javax.persistence.Column", columnAnnotationClassName);
+            } else {
+                headPart = headPart.replace("import javax.persistence.Column;\n", "");
             }
 
             if (N.isEmpty(idFields)) {
@@ -285,6 +291,7 @@ public final class CodeGenerationUtil {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
             } else if (isJavaPersistenceId) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
+                headPart = headPart.replace("javax.persistence.Column", idAnnotationClassName);
             } else {
                 headPart = headPart.replace("import javax.persistence.Id;\n", "");
             }
