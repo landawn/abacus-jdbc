@@ -5479,16 +5479,6 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the named parameters.
-     *
-     * @param sql
-     * @return
-     */
-    public static List<String> getNamedParameters(String sql) {
-        return ParsedSql.parse(sql).getNamedParameters();
-    }
-
-    /**
      * Gets the DB sequence.
      *
      * @param ds
@@ -6935,6 +6925,26 @@ public final class JdbcUtil {
     //            }
     //        }
     //    }
+
+    /**
+     * Gets the named parameters.
+     *
+     * @param sql
+     * @return
+     */
+    public static List<String> getNamedParameters(String sql) {
+        return ParsedSql.parse(sql).getNamedParameters();
+    }
+
+    /**
+     *
+     * @param sql
+     * @return
+     * @see ParsedSql#parse(String)
+     */
+    public static ParsedSql parseSql(String sql) {
+        return ParsedSql.parse(sql);
+    }
 
     /**
      *
