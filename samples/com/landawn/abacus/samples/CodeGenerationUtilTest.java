@@ -47,7 +47,7 @@ class CodeGenerationUtilTest {
                 .idAnnotationClass(javax.persistence.Id.class)
                 .columnAnnotationClass(jakarta.persistence.Column.class)
                 .tableAnnotationClass(com.landawn.abacus.annotation.Table.class)
-                .customizedFields(N.asList(Tuple.of("createTime", "create_time", java.util.Date.class)))
+                .customizedFields(N.asList(Tuple.of("create_time", "create_time", java.util.Date.class)))
                 .customizedFieldDbTypes(N.asList(Tuple.of("create_time", "List<String>")))
                 .chainAccessor(true)
                 .generateBuilder(true)

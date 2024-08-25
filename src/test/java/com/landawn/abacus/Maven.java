@@ -12,10 +12,10 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 public class Maven {
 
     /**
-     * 
      *
-     * @param args 
-     * @throws Exception 
+     *
+     * @param args
+     * @throws Exception
      */
     public static void main(String[] args) throws Exception {
         N.println(new File(".").getAbsolutePath());
@@ -37,12 +37,12 @@ public class Maven {
 
         targetDir.mkdir();
 
-        IOUtil.copyFileToDirectory(sourceDir, targetDir);
+        IOUtil.copyToDirectory(sourceDir, targetDir);
 
         StreamEx.listFiles(new File("./target/"))
                 .filter(f -> f.getName().startsWith("abacus-jdbc") && f.getName().endsWith(".jar"))
                 .peek(f -> N.println(f.getName()))
-                .forEach(f -> IOUtil.copyFileToDirectory(f, targetDir));
+                .forEach(f -> IOUtil.copyToDirectory(f, targetDir));
 
         StreamEx.listFiles(targetDir) //
                 .forEach(file -> IOUtil.renameTo(file, file.getName().replace(sourceVersion, targetVersion)));

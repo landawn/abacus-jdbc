@@ -31,6 +31,7 @@ import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.LazyEvaluation;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory;
+import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.CallableQuery;
@@ -2152,6 +2153,22 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws SQLException;
+
+    /**
+     *
+     * @param entity
+     * @param uniquePropNamesForQuery
+     * @return
+     * @throws SQLException
+     */
+    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws SQLException {
+        N.checkArgNotNull(entity, "entity");
+        N.checkArgNotEmpty(uniquePropNamesForQuery, "uniquePropNamesForQuery");
+
+        final Condition cond = CF.eqAnd(entity, uniquePropNamesForQuery);
+
+        return upsert(entity, cond);
+    }
 
     /**
      * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.

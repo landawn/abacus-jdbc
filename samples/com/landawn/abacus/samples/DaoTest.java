@@ -44,6 +44,7 @@ import com.landawn.abacus.samples.entity.EmployeeProject;
 import com.landawn.abacus.samples.entity.ImmutableUser;
 import com.landawn.abacus.samples.entity.Project;
 import com.landawn.abacus.samples.entity.User;
+import com.landawn.abacus.samples.entity.s;
 import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.DateUtil;
 import com.landawn.abacus.util.EntityId;
@@ -269,22 +270,72 @@ public class DaoTest {
     public void test_batchUpsert() throws Exception {
 
         List<User> users = IntStream.range(1, 1000)
-                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                .mapToObj(i -> User.builder()
+                        .id(i)
+                        .firstName("Forrest" + i)
+                        .lastName(Strings.guid().substring(0, 32))
+                        .nickName("Forrest")
+                        .email(Strings.guid().substring(0, 32))
+                        .build())
                 .toList();
 
-        userDao.batchInsertWithId(users.subList(0, 499));
+        {
+            final List<User> usersToInsert = users.subList(0, 499);
+            userDao.batchInsertWithId(usersToInsert);
+            users.forEach(it -> it.setFirstName(Strings.uuid().substring(0, 32)));
 
-        users.forEach(it -> it.setFirstName(Strings.uuid().substring(0, 32)));
+            userDao.batchUpsert(users);
 
-        userDao.batchUpsert(users);
+            final List<User> dbUsers = userDao.list(CF.gt("id", 0));
 
-        final List<User> dbUsers = userDao.list(CF.gt("id", 0));
+            // assertEquals(users.size(), StreamEx.of(users).innerJoin(dbUsers, it -> it.getFirstName(), Pair::of).count());
 
-        // assertEquals(users.size(), StreamEx.of(users).innerJoin(dbUsers, it -> it.getFirstName(), Pair::of).count());
+            dbUsers.forEach(Fn.println());
 
-        dbUsers.forEach(Fn.println());
+            assertTrue(usersToInsert.stream()
+                    .allMatch(it -> dbUsers.stream().anyMatch(e -> e.getId() == it.getId() && e.getFirstName().equals(it.getFirstName()))));
 
-        userDao.batchDelete(dbUsers);
+            userDao.batchDelete(dbUsers);
+
+        }
+
+        {
+            final List<User> usersToInsert = users.subList(0, 499);
+            userDao.batchInsertWithId(usersToInsert);
+            users.forEach(it -> it.setFirstName(Strings.uuid().substring(0, 32)));
+
+            userDao.batchUpsert(users, N.asList(s.email));
+
+            final List<User> dbUsers = userDao.list(CF.gt("id", 0));
+
+            // assertEquals(users.size(), StreamEx.of(users).innerJoin(dbUsers, it -> it.getFirstName(), Pair::of).count());
+
+            dbUsers.forEach(Fn.println());
+
+            assertTrue(usersToInsert.stream()
+                    .allMatch(it -> dbUsers.stream().anyMatch(e -> e.getId() == it.getId() && e.getFirstName().equals(it.getFirstName()))));
+
+            userDao.batchDelete(dbUsers);
+        }
+
+        {
+            final List<User> usersToInsert = users.subList(0, 499);
+            userDao.batchInsertWithId(usersToInsert);
+            users.forEach(it -> it.setFirstName(Strings.uuid().substring(0, 32)));
+
+            userDao.batchUpsert(users, N.asList(s.email, s.lastName));
+
+            final List<User> dbUsers = userDao.list(CF.gt("id", 0));
+
+            // assertEquals(users.size(), StreamEx.of(users).innerJoin(dbUsers, it -> it.getFirstName(), Pair::of).count());
+
+            dbUsers.forEach(Fn.println());
+
+            assertTrue(usersToInsert.stream()
+                    .allMatch(it -> dbUsers.stream().anyMatch(e -> e.getId() == it.getId() && e.getFirstName().equals(it.getFirstName()))));
+
+            userDao.batchDelete(dbUsers);
+        }
     }
 
     /**

@@ -37,10 +37,14 @@ import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
+import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.util.CheckedStream;
+import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.QueryUtil;
 import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -368,12 +372,12 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns a {@code Nullable<V>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
-     * @param <V> 
-     * @param targetValueClass 
-     * @param singleSelectPropName 
-     * @param id 
-     * @return 
-     * @throws UncheckedSQLException 
+     * @param <V>
+     * @param targetValueClass
+     * @param singleSelectPropName
+     * @param id
+     * @return
+     * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      * @see AbstractQuery#queryForSingleResult(Class)
@@ -821,18 +825,42 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
             return new ArrayList<>();
         }
 
+        final List<String> propNameListForQuery = uniquePropNamesForQuery;
         final T first = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = first.getClass();
-        final List<String> propNameListForQuery = uniquePropNamesForQuery;
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
-        final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(propNameListForQuery, entityInfo);
-        final List<ID> ids = N.map(entities, idExtractorFunc);
+        final PropInfo uniquePropInfo = entityInfo.getPropInfo(propNameListForQuery.get(0));
+        final List<PropInfo> uniquePropInfos = N.map(propNameListForQuery, entityInfo::getPropInfo);
 
-        final List<T> dbEntities = batchGet(ids, batchSize);
+        final com.landawn.abacus.util.function.Function<T, Object> singleKeyExtractor = uniquePropInfo::getPropValue;
 
-        final Map<ID, T> dbIdEntityMap = StreamEx.of(dbEntities).toMap(idExtractorFunc, Fn.identity(), Fn.ignoringMerger());
-        final Map<Boolean, List<T>> map = StreamEx.of(entities).groupTo(it -> dbIdEntityMap.containsKey(idExtractorFunc.apply(it)), Fn.identity());
+        @SuppressWarnings("deprecation")
+        final com.landawn.abacus.util.function.Function<T, EntityId> entityIdExtractor = it -> {
+            final Seid entityId = Seid.of(entityInfo.simpleClassName);
+
+            for (PropInfo propInfo : uniquePropInfos) {
+                entityId.set(propInfo.name, propInfo.getPropValue(it));
+            }
+
+            return entityId;
+        };
+
+        final com.landawn.abacus.util.function.Function<T, ? extends Object> keysExtractor = propNameListForQuery.size() == 1 ? singleKeyExtractor
+                : entityIdExtractor;
+
+        final List<T> dbEntities = propNameListForQuery.size() == 1
+                ? CheckedStream.of(entities, UncheckedSQLException.class)
+                        .splitToList(batchSize)
+                        .flatmap(it -> list(CF.in(propNameListForQuery.get(0), N.map(it, singleKeyExtractor))))
+                        .toList()
+                : CheckedStream.of(entities, UncheckedSQLException.class)
+                        .splitToList(batchSize)
+                        .flatmap(it -> list(CF.id2Cond(N.map(it, entityIdExtractor))))
+                        .toList();
+
+        final Map<Object, T> dbIdEntityMap = StreamEx.of(dbEntities).toMap(keysExtractor, Fn.identity(), Fn.ignoringMerger());
+        final Map<Boolean, List<T>> map = StreamEx.of(entities).groupTo(it -> dbIdEntityMap.containsKey(keysExtractor.apply(it)), Fn.identity());
         final List<T> entitiesToUpdate = map.get(true);
         final List<T> entitiesToInsert = map.get(false);
 
@@ -856,7 +884,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
                 }
 
                 final List<T> dbEntitiesToUpdate = StreamEx.of(entitiesToUpdate)
-                        .map(it -> N.merge(it, dbIdEntityMap.get(idExtractorFunc.apply(it)), false, ignoredPropNames))
+                        .map(it -> N.merge(it, dbIdEntityMap.get(keysExtractor.apply(it)), false, ignoredPropNames))
                         .toList();
 
                 batchUpdate(dbEntitiesToUpdate, batchSize);

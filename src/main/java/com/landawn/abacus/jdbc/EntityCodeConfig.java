@@ -40,8 +40,8 @@ import lombok.experimental.Accessors;
  *        .className("User")
  *        .packageName("codes.entity")
  *        .srcDir("./samples")
- *        .fieldNameConverter((tableName, columnName) -> StringUtil.toCamelCase(columnName))
- *        .fieldTypeConverter((tableName, columnName, fieldName, columnClassName) -> ClassUtil.getCanonicalClassName(ClassUtil.forClass(columnClassName)) // columnClassName <- resultSetMetaData.getColumnClassName(columnIndex);
+ *        .fieldNameConverter((enityOrTableName, columnName) -> StringUtil.toCamelCase(columnName))
+ *        .fieldTypeConverter((enityOrTableName, fieldName, columnName, columnClassName) -> columnClassName // columnClassName <- resultSetMetaData.getColumnClassName(columnIndex);
  *                .replace("java.lang.", ""))
  *        .useBoxedType(false)
  *        .readOnlyFields(N.asSet("id"))
@@ -66,11 +66,11 @@ public final class EntityCodeConfig {
     private String className;
 
     /**
-     * First parameter in the function is table name, 2nd is column name.
+     * First parameter in the function is entity/table name, 2nd is column name.
      */
     private BiFunction<String, String, String> fieldNameConverter;
     /**
-     * First parameter in the function is table name, 2nd is column name, 3rd is field name, 4th is column class name.
+     * First parameter in the function is entity/table name, 2nd is field name, 3rd is column name, 4th is column class name
      */
     private QuadFunction<String, String, String, String, String> fieldTypeConverter;
 
@@ -82,7 +82,7 @@ public final class EntityCodeConfig {
     private List<Tuple3<String, String, Class<?>>> customizedFields;
 
     /**
-     * First parameter in the Tuple is column name, 2nd is db type.
+     * First parameter in the Tuple is field name, 2nd is db type.
      *
      */
     private List<Tuple2<String, String>> customizedFieldDbTypes;

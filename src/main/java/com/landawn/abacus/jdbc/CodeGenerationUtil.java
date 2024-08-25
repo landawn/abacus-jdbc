@@ -181,6 +181,11 @@ public final class CodeGenerationUtil {
 
         final QuadFunction<String, String, String, String, String> fieldTypeConverter = configToUse.getFieldTypeConverter();
 
+        final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = N.toMap(N.nullToEmpty(configToUse.getCustomizedFields()),
+                tp -> tp._1.toLowerCase());
+
+        final Map<String, Tuple2<String, String>> customizedFieldDbTypeMap = N.toMap(N.nullToEmpty(configToUse.getCustomizedFieldDbTypes()), tp -> tp._1);
+
         final Set<String> readOnlyFields = configToUse.getReadOnlyFields() == null ? new HashSet<>() : new HashSet<>(configToUse.getReadOnlyFields());
 
         final Set<String> nonUpdatableFields = configToUse.getNonUpdatableFields() == null ? new HashSet<>()
@@ -210,9 +215,6 @@ public final class CodeGenerationUtil {
                 || "jakarta.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass));
         final boolean isJavaPersistenceId = "javax.persistence.Id".equals(idAnnotationClassName)
                 || "jakarta.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass));
-
-        final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = N.toMap(N.nullToEmpty(configToUse.getCustomizedFields()), tp -> tp._1);
-        final Map<String, Tuple2<String, String>> customizedFieldDbTypeMap = N.toMap(N.nullToEmpty(configToUse.getCustomizedFieldDbTypes()), tp -> tp._1);
 
         try {
             String finalClassName = Strings.isEmpty(className) ? Strings.capitalize(Strings.toCamelCase(entityName)) : className;
@@ -386,8 +388,8 @@ public final class CodeGenerationUtil {
             for (int i = 1; i <= columnCount; i++) {
                 final String columnName = rsmd.getColumnName(i);
 
-                final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(Strings.toCamelCase(columnName),
-                        customizedFieldMap.get(columnName));
+                final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(columnName.toLowerCase(),
+                        customizedFieldMap.get(Strings.toCamelCase(columnName)));
 
                 final String fieldName = customizedField == null || Strings.isEmpty(customizedField._2) ? fieldNameConverter.apply(entityName, columnName)
                         : customizedField._2;
@@ -398,7 +400,7 @@ public final class CodeGenerationUtil {
 
                 final String columnClassName = customizedField == null || customizedField._3 == null
                         ? mapColumClassnName((fieldTypeConverter == null ? getColumnClassName(rsmd, i)
-                                : fieldTypeConverter.apply(entityName, columnName, fieldName, getColumnClassName(rsmd, i))), false, configToUse)
+                                : fieldTypeConverter.apply(entityName, fieldName, columnName, getColumnClassName(rsmd, i))), false, configToUse)
                         : mapColumClassnName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
 
                 columnNameList.add(columnName);
@@ -521,26 +523,26 @@ public final class CodeGenerationUtil {
     }
 
     private static String getColumnClassName(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
-        String className = rsmd.getColumnClassName(columnIndex);
+        String columnClassName = rsmd.getColumnClassName(columnIndex);
 
         try {
-            className = ClassUtil.getCanonicalClassName(ClassUtil.forClass(className));
+            columnClassName = ClassUtil.getCanonicalClassName(ClassUtil.forClass(columnClassName));
         } catch (Throwable e) {
             // ignore.
         }
 
-        if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className) || Strings.endsWithIgnoreCase(className, ".Timestamp")
-                || Strings.endsWithIgnoreCase(className, ".DateTime")) {
-            className = ClassUtil.getCanonicalClassName(java.sql.Timestamp.class);
-        } else if ("oracle.sql.DATE".equals(className) || Strings.endsWithIgnoreCase(className, ".Date")) {
-            className = ClassUtil.getCanonicalClassName(java.sql.Date.class);
-        } else if ("oracle.sql.TIME".equals(className) || Strings.endsWithIgnoreCase(className, ".Time")) {
-            className = ClassUtil.getCanonicalClassName(java.sql.Time.class);
+        if ("oracle.sql.TIMESTAMP".equals(columnClassName) || "oracle.sql.TIMESTAMPTZ".equals(columnClassName)
+                || Strings.endsWithIgnoreCase(columnClassName, ".Timestamp") || Strings.endsWithIgnoreCase(columnClassName, ".DateTime")) {
+            columnClassName = ClassUtil.getCanonicalClassName(java.sql.Timestamp.class);
+        } else if ("oracle.sql.DATE".equals(columnClassName) || Strings.endsWithIgnoreCase(columnClassName, ".Date")) {
+            columnClassName = ClassUtil.getCanonicalClassName(java.sql.Date.class);
+        } else if ("oracle.sql.TIME".equals(columnClassName) || Strings.endsWithIgnoreCase(columnClassName, ".Time")) {
+            columnClassName = ClassUtil.getCanonicalClassName(java.sql.Time.class);
         }
 
-        className = className.replace("java.lang.", "");
+        columnClassName = columnClassName.replace("java.lang.", "");
 
-        return eccClassNameMap.getOrDefault(className, className);
+        return eccClassNameMap.getOrDefault(columnClassName, columnClassName);
     }
 
     private static String mapColumClassnName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
