@@ -246,6 +246,37 @@ public final class CodeGenerationUtil {
                             })
                             .toList();
 
+            final Collection<String> excludedFields = configToUse.getExcludedFields();
+            final List<String> columnNameList = new ArrayList<>();
+            final List<String> columnClassNameList = new ArrayList<>();
+            final List<String> fieldNameList = new ArrayList<>();
+
+            final ResultSetMetaData rsmd = rs.getMetaData();
+            final int columnCount = rsmd.getColumnCount();
+
+            for (int i = 1; i <= columnCount; i++) {
+                final String columnName = rsmd.getColumnName(i);
+
+                final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(columnName.toLowerCase(),
+                        customizedFieldMap.get(Strings.toCamelCase(columnName)));
+
+                final String fieldName = customizedField == null || Strings.isEmpty(customizedField._2) ? fieldNameConverter.apply(entityName, columnName)
+                        : customizedField._2;
+
+                if (N.notEmpty(excludedFields) && (excludedFields.contains(fieldName) || excludedFields.contains(columnName))) {
+                    continue;
+                }
+
+                final String columnClassName = customizedField == null || customizedField._3 == null
+                        ? mapColumClassnName((fieldTypeConverter == null ? getColumnClassName(rsmd, i)
+                                : fieldTypeConverter.apply(entityName, fieldName, columnName, getColumnClassName(rsmd, i))), false, configToUse)
+                        : mapColumClassnName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
+
+                columnNameList.add(columnName);
+                fieldNameList.add(fieldName);
+                columnClassNameList.add(columnClassName);
+            }
+
             final StringBuilder sb = new StringBuilder();
 
             if (Strings.isNotEmpty(packageName)) {
@@ -288,7 +319,7 @@ public final class CodeGenerationUtil {
                 headPart = headPart.replace("import javax.persistence.Column;\n", "");
             }
 
-            if (N.isEmpty(idFields)) {
+            if (N.isEmpty(idFields) || N.intersection(idFields, fieldNameList).isEmpty()) {
                 headPart = headPart.replace("import javax.persistence.Id;\n", "");
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
             } else if (isJavaPersistenceId) {
@@ -298,15 +329,15 @@ public final class CodeGenerationUtil {
                 headPart = headPart.replace("import javax.persistence.Id;\n", "");
             }
 
-            if (N.isEmpty(nonUpdatableFields)) {
+            if (N.isEmpty(nonUpdatableFields) || N.intersection(nonUpdatableFields, fieldNameList).isEmpty()) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.NonUpdatable;\n", "");
             }
 
-            if (N.isEmpty(readOnlyFields)) {
+            if (N.isEmpty(readOnlyFields) || N.intersection(readOnlyFields, fieldNameList).isEmpty()) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.ReadOnly;\n", "");
             }
 
-            if (N.isEmpty(customizedFieldDbTypeMap)) {
+            if (N.isEmpty(customizedFieldDbTypeMap) || N.intersection(customizedFieldDbTypeMap.keySet(), fieldNameList).isEmpty()) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Type;\n", "");
             }
 
@@ -378,33 +409,10 @@ public final class CodeGenerationUtil {
                     .append(" {")
                     .append(LINE_SEPERATOR);
 
-            final Collection<String> excludedFields = configToUse.getExcludedFields();
-            final List<String> columnNameList = new ArrayList<>();
-            final List<String> fieldNameList = new ArrayList<>();
-
-            final ResultSetMetaData rsmd = rs.getMetaData();
-            final int columnCount = rsmd.getColumnCount();
-
-            for (int i = 1; i <= columnCount; i++) {
-                final String columnName = rsmd.getColumnName(i);
-
-                final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(columnName.toLowerCase(),
-                        customizedFieldMap.get(Strings.toCamelCase(columnName)));
-
-                final String fieldName = customizedField == null || Strings.isEmpty(customizedField._2) ? fieldNameConverter.apply(entityName, columnName)
-                        : customizedField._2;
-
-                if (N.notEmpty(excludedFields) && (excludedFields.contains(fieldName) || excludedFields.contains(columnName))) {
-                    continue;
-                }
-
-                final String columnClassName = customizedField == null || customizedField._3 == null
-                        ? mapColumClassnName((fieldTypeConverter == null ? getColumnClassName(rsmd, i)
-                                : fieldTypeConverter.apply(entityName, fieldName, columnName, getColumnClassName(rsmd, i))), false, configToUse)
-                        : mapColumClassnName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
-
-                columnNameList.add(columnName);
-                fieldNameList.add(fieldName);
+            for (int i = 0, size = columnNameList.size(); i < size; i++) {
+                final String columnName = columnNameList.get(i);
+                final String fieldName = fieldNameList.get(i);
+                final String columnClassName = columnClassNameList.get(i);
 
                 sb.append(LINE_SEPERATOR);
 
