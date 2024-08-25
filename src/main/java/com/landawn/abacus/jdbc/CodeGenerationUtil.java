@@ -210,14 +210,13 @@ public final class CodeGenerationUtil {
     }
 
     static String generateEntityClass(final String entityName, final ResultSet rs, final EntityCodeConfig config) {
-        final EntityCodeConfig configToUse = config == null ? defaultEntityCodeConfig : config;
+        final EntityCodeConfig configToUse = N.defaultIfNull(config, defaultEntityCodeConfig);
 
         final String className = configToUse.getClassName();
         final String packageName = configToUse.getPackageName();
         final String srcDir = configToUse.getSrcDir();
 
-        final BiFunction<String, String, String> fieldNameConverter = configToUse.getFieldNameConverter() == null ? (tn, cn) -> Strings.toCamelCase(cn)
-                : configToUse.getFieldNameConverter();
+        final BiFunction<String, String, String> fieldNameConverter = N.defaultIfNull(configToUse.getFieldNameConverter(), (tn, cn) -> Strings.toCamelCase(cn));
 
         final QuadFunction<String, String, String, String, String> fieldTypeConverter = configToUse.getFieldTypeConverter();
 
@@ -264,14 +263,6 @@ public final class CodeGenerationUtil {
                         + " can't be read-only and non-updatable at the same time in entity class: " + finalClassName);
             }
 
-            if (idFields.size() == 0) {
-                try (ResultSet pkColumns = rs.getStatement().getConnection().getMetaData().getPrimaryKeys(null, null, entityName)) {
-                    while (pkColumns.next()) {
-                        idFields.add(pkColumns.getString("COLUMN_NAME"));
-                    }
-                }
-            }
-
             final List<Tuple2<String, String>> additionalFields = Strings.isEmpty(configToUse.getAdditionalFieldsOrLines()) ? new ArrayList<>()
                     : Stream.split(configToUse.getAdditionalFieldsOrLines(), "\n")
                             .map(it -> it.contains("//") ? Strings.substringBefore(it, "//") : it)
@@ -315,6 +306,14 @@ public final class CodeGenerationUtil {
                 columnNameList.add(columnName);
                 fieldNameList.add(fieldName);
                 columnClassNameList.add(columnClassName);
+            }
+
+            if (N.isEmpty(idFields) || N.intersection(idFields, fieldNameList).isEmpty()) {
+                try (ResultSet pkColumns = rs.getStatement().getConnection().getMetaData().getPrimaryKeys(null, null, entityName)) {
+                    while (pkColumns.next()) {
+                        idFields.add(pkColumns.getString("COLUMN_NAME"));
+                    }
+                }
             }
 
             final StringBuilder sb = new StringBuilder();
@@ -793,9 +792,7 @@ public final class CodeGenerationUtil {
 
         final Collection<Class<?>> entityClasses = N.checkArgNotEmpty(codeConfig.getEntityClasses(), "entityClasses");
         final String propNameTableClassName = N.checkArgNotEmpty(codeConfig.getClassName(), "className");
-
-        final BiFunction<Class<?>, String, String> propNameConverter = codeConfig.getPropNameConverter() == null ? identityPropNameConverter
-                : codeConfig.getPropNameConverter();
+        final BiFunction<Class<?>, String, String> propNameConverter = N.defaultIfNull(codeConfig.getPropNameConverter(), identityPropNameConverter);
 
         final StringBuilder sb = new StringBuilder();
 
@@ -962,7 +959,7 @@ public final class CodeGenerationUtil {
 
         if (Strings.isNotEmpty(srcDir)) {
             String packageDir = srcDir;
-            String packageName = Strings.isEmpty(propNameTableClassPackageName) ? ClassUtil.getPackageName(entityClass) : propNameTableClassPackageName;
+            String packageName = N.defaultIfEmpty(propNameTableClassPackageName, ClassUtil.getPackageName(entityClass));
 
             if (Strings.isNotEmpty(packageName)) {
                 if (!(packageDir.endsWith("/") || packageDir.endsWith("\\"))) {
@@ -1305,9 +1302,10 @@ public final class CodeGenerationUtil {
      *          .className(CodeGenerationUtil.S)
      *          .packageName("com.landawn.abacus.samples.util")
      *          .srcDir("./samples")
-     *          .propNameConverter((cls, propName) -> propName.equals("create_time") ? "createTime" : propName)
-     *          .generateFunctionPropName(true)
-     *          .propFunctions(N.asLinkedHashMap("min", CodeGenerationUtil.MIN_FUNC, "max", CodeGenerationUtil.MAX_FUNC))
+     *          .propNameConverter((cls, propName) -> propName.equals("create_time") ? "createTime" : propName) // default is: (cls, propName) -> propName
+     *          .generateFunctionPropName(true) // default is false
+     *          .functionClassName("f") // default is "sf" if not set.
+     *          .propFunctions(N.asLinkedHashMap("min", CodeGenerationUtil.MIN_FUNC, "max", CodeGenerationUtil.MAX_FUNC)) // Returns null to skip the field.
      *          .build();
      * </pre>
      *

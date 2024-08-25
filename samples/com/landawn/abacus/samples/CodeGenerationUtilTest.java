@@ -96,6 +96,7 @@ class CodeGenerationUtilTest {
                 .srcDir("./samples")
                 .propNameConverter((cls, propName) -> propName.equals("create_time") ? "createTime" : propName)
                 .generateFunctionPropName(true)
+                .functionClassName("f")
                 .propFunctions(N.asLinkedHashMap("min", CodeGenerationUtil.MIN_FUNC, "max", CodeGenerationUtil.MAX_FUNC))
                 .build();
 

@@ -80,7 +80,7 @@ public interface s { // NOSONAR
     /*
      * Auto-generated class for function property(field) name table by abacus-jdbc for classes: [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User, Account, User, UserQueryAllResult]
      */
-    public interface sf { // NOSONAR
+    public interface f { // NOSONAR
 
         /** Function property(field) name {@code "min(city)"} for classes: {@code [Address]} */
         String min_city = "min(city)";
