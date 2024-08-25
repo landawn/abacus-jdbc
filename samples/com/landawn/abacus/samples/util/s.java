@@ -3,8 +3,7 @@ package com.landawn.abacus.samples.util;
 /*
  * Auto-generated class for property name table by abacus-jdbc for classes: [Account, Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User, User, UserQueryAllResult]
  */
-@SuppressWarnings("java:S1192")
-public interface s {
+public interface s { // NOSONAR
 
     /* Property name for classes: [ImmutableUser, User] */
     String address = "address";

@@ -40,8 +40,7 @@ public class Account {
     /*
      * Auto-generated class for property name table by abacus-jdbc.
      */
-    @SuppressWarnings("java:S1192")
-    public interface x {
+    public interface x { // NOSONAR
 
         String id = "id";
         String firstName = "firstName";

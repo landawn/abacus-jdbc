@@ -39,6 +39,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Table;
+import com.landawn.abacus.annotation.Type.EnumBy;
 import com.landawn.abacus.exception.UncheckedIOException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.util.BiMap;
@@ -47,6 +48,7 @@ import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.ListMultimap;
 import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.Splitter;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Tuple;
@@ -56,9 +58,23 @@ import com.landawn.abacus.util.function.QuadFunction;
 import com.landawn.abacus.util.stream.CharStream;
 import com.landawn.abacus.util.stream.Stream;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
+
 public final class CodeGenerationUtil {
+    /**
+     * Default name of class for field/prop names.
+     */
     public static final String S = "s";
+    /**
+     * Default name of inner class for field names inside an entity class.
+     */
     public static final String X = "x";
+
+    private static final String BUILDER = "Builder";
 
     private static final String LINE_SEPERATOR = IOUtil.LINE_SEPARATOR;
 
@@ -485,7 +501,13 @@ public final class CodeGenerationUtil {
                         .append(LINE_SEPERATOR)
                         .append("     */");
 
-                sb.append(LINE_SEPERATOR).append("    public interface ").append(X).append(" {").append(LINE_SEPERATOR).append(LINE_SEPERATOR); //
+                sb.append(LINE_SEPERATOR)
+                        .append("    public interface ")
+                        .append(X)
+                        .append(" {")
+                        .append(Character.isLowerCase(X.charAt(0)) ? " // NOSONAR" : "")
+                        .append(LINE_SEPERATOR)
+                        .append(LINE_SEPERATOR); //
 
                 for (String fieldName : fieldNameList) {
                     sb.append("        String " + fieldName + " = \"" + fieldName + "\";").append(LINE_SEPERATOR);
@@ -614,11 +636,17 @@ public final class CodeGenerationUtil {
                 .append(LINE_SEPERATOR)
                 .append("     */");
 
-        if (Character.isLowerCase(propNameTableClassName.charAt(0))) {
-            sb.append(LINE_SEPERATOR).append("    @SuppressWarnings(\"java:S1192\")");
-        }
+        //    if (Character.isLowerCase(propNameTableClassName.charAt(0))) {
+        //        sb.append(LINE_SEPERATOR).append("    @SuppressWarnings(\"java:S1192\")");
+        //    }
 
-        sb.append(LINE_SEPERATOR).append("    ").append(interfaceName).append(" {").append(LINE_SEPERATOR).append(LINE_SEPERATOR); //
+        sb.append(LINE_SEPERATOR)
+                .append("    ")
+                .append(interfaceName)
+                .append(" {")
+                .append(Character.isLowerCase(interfaceName.charAt(0)) ? " // NOSONAR" : "")
+                .append(LINE_SEPERATOR)
+                .append(LINE_SEPERATOR); //
 
         for (String propName : ClassUtil.getPropNameList(entityClass)) {
             sb.append("        String " + propName + " = \"" + propName + "\";").append(LINE_SEPERATOR);
@@ -676,6 +704,7 @@ public final class CodeGenerationUtil {
         }
 
         return ret;
+
     }
 
     /**
@@ -683,8 +712,7 @@ public final class CodeGenerationUtil {
      * @param entityClasses
      * @return
      */
-    @Beta
-    public static String generatePropNameTableClasses(final Collection<? extends Class<?>> entityClasses) {
+    public static String generatePropNameTableClasses(final Collection<Class<?>> entityClasses) {
         return generatePropNameTableClasses(entityClasses, S);
     }
 
@@ -694,8 +722,7 @@ public final class CodeGenerationUtil {
      * @param propNameTableClassName
      * @return
      */
-    @Beta
-    public static String generatePropNameTableClasses(final Collection<? extends Class<?>> entityClasses, final String propNameTableClassName) {
+    public static String generatePropNameTableClasses(final Collection<Class<?>> entityClasses, final String propNameTableClassName) {
         return generatePropNameTableClasses(entityClasses, propNameTableClassName, null, null);
     }
 
@@ -709,25 +736,33 @@ public final class CodeGenerationUtil {
      * @param srcDir
      * @return
      */
-    @Beta
-    public static String generatePropNameTableClasses(final Collection<? extends Class<?>> entityClasses, final String propNameTableClassName,
+    public static String generatePropNameTableClasses(final Collection<Class<?>> entityClasses, final String propNameTableClassName,
             final String propNameTableClassPackageName, final String srcDir) {
-        return generatePropNameTableClasses(entityClasses, propNameTableClassName, propNameTableClassPackageName, srcDir, identityPropNameConverter);
+
+        final PropNameTableCodeConfig codeConfig = PropNameTableCodeConfig.builder()
+                .entityClasses(entityClasses)
+                .className(propNameTableClassName)
+                .packageName(propNameTableClassPackageName)
+                .srcDir(srcDir)
+                .propNameConverter(identityPropNameConverter)
+                .build();
+
+        return generatePropNameTableClasses(codeConfig);
     }
 
     /**
      *
-     * @param entityClasses
-     * @param propNameTableClassName
-     * @param propNameTableClassPackageName
-     * @param srcDir
-     * @param propNameConverter to filter out a property by returning {@code null}.
+     * @param codeConfig
      * @return
      */
-    @Beta
-    public static String generatePropNameTableClasses(final Collection<? extends Class<?>> entityClasses, final String propNameTableClassName,
-            final String propNameTableClassPackageName, final String srcDir, final BiFunction<Class<?>, String, String> propNameConverter) {
-        N.checkArgNotEmpty(entityClasses, "entityClasses");
+    public static String generatePropNameTableClasses(PropNameTableCodeConfig codeConfig) {
+        N.checkArgNotNull(codeConfig, "codeConfig");
+
+        final Collection<Class<?>> entityClasses = N.checkArgNotEmpty(codeConfig.getEntityClasses(), "entityClasses");
+        final String propNameTableClassName = N.checkArgNotEmpty(codeConfig.getClassName(), "className");
+
+        final BiFunction<Class<?>, String, String> propNameConverter = codeConfig.getPropNameConverter() == null ? identityPropNameConverter
+                : codeConfig.getPropNameConverter();
 
         final StringBuilder sb = new StringBuilder();
 
@@ -739,7 +774,7 @@ public final class CodeGenerationUtil {
                 continue;
             }
 
-            if (cls.isMemberClass() && ClassUtil.getSimpleClassName(cls).endsWith("Builder") && cls.getDeclaringClass() != null) {
+            if (cls.isMemberClass() && ClassUtil.getSimpleClassName(cls).endsWith(BUILDER) && cls.getDeclaringClass() != null) {
                 try {
                     if (cls.getDeclaringClass().isAnnotationPresent(lombok.Builder.class)) {
                         continue;
@@ -748,7 +783,7 @@ public final class CodeGenerationUtil {
                     // ignore
 
                     try {
-                        if (Stream.of(cls.getDeclaringClass().getAnnotations()).anyMatch(it -> "Builder".equals(it.annotationType().getSimpleName()))) {
+                        if (Stream.of(cls.getDeclaringClass().getAnnotations()).anyMatch(it -> BUILDER.equals(it.annotationType().getSimpleName()))) {
                             continue;
                         }
                     } catch (Throwable e2) {
@@ -778,7 +813,7 @@ public final class CodeGenerationUtil {
         N.sort(propNames);
 
         final String allClsNameList = Stream.of(entityClasses)
-                .filter(cls -> !(cls.isInterface() || (cls.isMemberClass() && ClassUtil.getSimpleClassName(cls).endsWith("Builder"))))
+                .filter(cls -> !(cls.isInterface() || (cls.isMemberClass() && ClassUtil.getSimpleClassName(cls).endsWith(BUILDER))))
                 .map(ClassUtil::getSimpleClassName)
                 .sorted()
                 .join(", ", "[", "]");
@@ -791,11 +826,15 @@ public final class CodeGenerationUtil {
                 .append(LINE_SEPERATOR)
                 .append(" */");
 
-        if (Character.isLowerCase(propNameTableClassName.charAt(0))) {
-            sb.append(LINE_SEPERATOR).append("@SuppressWarnings(\"java:S1192\")");
-        }
+        //    if (Character.isLowerCase(propNameTableClassName.charAt(0))) {
+        //        sb.append(LINE_SEPERATOR).append("@SuppressWarnings(\"java:S1192\")");
+        //    }
 
-        sb.append(LINE_SEPERATOR).append(interfaceName).append(" {").append(LINE_SEPERATOR); //
+        sb.append(LINE_SEPERATOR)
+                .append(interfaceName)
+                .append(" {")
+                .append(Character.isLowerCase(propNameTableClassName.charAt(0)) ? " // NOSONAR" : "")
+                .append(LINE_SEPERATOR); //
 
         for (String propName : propNames) {
             final String clsNameList = Stream.of(propNameMap.get(propName)).sorted().join(", ", "[", "]");
@@ -814,6 +853,8 @@ public final class CodeGenerationUtil {
         String ret = sb.toString();
 
         final Class<?> entityClass = N.firstElement(entityClasses).orElseThrow();
+        final String srcDir = codeConfig.getSrcDir();
+        final String propNameTableClassPackageName = codeConfig.getPackageName();
 
         if (Strings.isNotEmpty(srcDir)) {
             String packageDir = srcDir;
@@ -1049,5 +1090,141 @@ public final class CodeGenerationUtil {
 
     private static List<String> checkColumnName(final List<String> columnLabelList) {
         return N.map(columnLabelList, CodeGenerationUtil::checkColumnName);
+    }
+
+    /**
+     * A sample, just a sample, not a general configuration required.
+     * <pre>
+     * EntityCodeConfig ecc = EntityCodeConfig.builder()
+     *        .className("User")
+     *        .packageName("codes.entity")
+     *        .srcDir("./samples")
+     *        .fieldNameConverter((enityOrTableName, columnName) -> StringUtil.toCamelCase(columnName))
+     *        .fieldTypeConverter((enityOrTableName, fieldName, columnName, columnClassName) -> columnClassName // columnClassName <- resultSetMetaData.getColumnClassName(columnIndex);
+     *                .replace("java.lang.", ""))
+     *        .useBoxedType(false)
+     *        .readOnlyFields(N.asSet("id"))
+     *        .nonUpdatableFields(N.asSet("create_time"))
+     *        // .idAnnotationClass(javax.persistence.Id.class)
+     *        // .columnAnnotationClass(javax.persistence.Column.class)
+     *        // .tableAnnotationClass(javax.persistence.Table.class)
+     *        .customizedFields(N.asList(Tuple.of("columnName", "fieldName", java.util.Date.class)))
+     *        .customizedFieldDbTypes(N.asList(Tuple.of("fieldName", "List<String>")))
+     *        .build();
+     * </pre>
+     *
+     */
+    @Builder
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Accessors(chain = true)
+    public static final class EntityCodeConfig {
+        private String srcDir;
+        private String packageName;
+        private String className;
+
+        /**
+         * First parameter in the function is entity/table name, 2nd is column name.
+         */
+        private BiFunction<String, String, String> fieldNameConverter;
+        /**
+         * First parameter in the function is entity/table name, 2nd is field name, 3rd is column name, 4th is column class name
+         */
+        private QuadFunction<String, String, String, String, String> fieldTypeConverter;
+
+        /**
+         *
+         * First parameter in the Tuple is column name, 2nd is field name, 3rd is column class.
+         *
+         */
+        private List<Tuple3<String, String, Class<?>>> customizedFields;
+
+        /**
+         * First parameter in the Tuple is field name, 2nd is db type.
+         *
+         */
+        private List<Tuple2<String, String>> customizedFieldDbTypes;
+
+        private boolean useBoxedType;
+        private boolean mapBigIntegerToLong;
+        private boolean mapBigDecimalToDouble;
+
+        private Collection<String> readOnlyFields;
+        private Collection<String> nonUpdatableFields;
+        private Collection<String> idFields;
+        private String idField;
+
+        private Collection<String> excludedFields;
+        private String additionalFieldsOrLines;
+
+        private Class<? extends Annotation> tableAnnotationClass;
+        private Class<? extends Annotation> columnAnnotationClass;
+        private Class<? extends Annotation> idAnnotationClass;
+
+        private boolean chainAccessor;
+        private boolean generateBuilder;
+        private boolean generateCopyMethod;
+        private boolean generateFieldNameTable;
+        private boolean extendFieldNameTableClassName;
+        // private String fieldNameTableClassName; // Always be "NT";
+
+        // private List<Tuple2<String, String>> customizedJsonFields;
+        @Beta
+        private JsonXmlConfig jsonXmlConfig;
+
+        @Builder
+        @Data
+        @NoArgsConstructor
+        @AllArgsConstructor
+        @Accessors(chain = true)
+        public static class JsonXmlConfig {
+            private NamingPolicy namingPolicy;
+
+            private String ignoredFields;
+
+            private String dateFormat;
+
+            private String timeZone;
+
+            private String numberFormat;
+
+            private EnumBy enumerated;
+        }
+    }
+
+    /**
+     * A sample, just a sample, not a general configuration required.
+     * <pre>
+     * EntityCodeConfig ecc = EntityCodeConfig.builder()
+     *        .className("User")
+     *        .packageName("codes.entity")
+     *        .srcDir("./samples")
+     *        .fieldNameConverter((enityOrTableName, columnName) -> StringUtil.toCamelCase(columnName))
+     *        .fieldTypeConverter((enityOrTableName, fieldName, columnName, columnClassName) -> columnClassName // columnClassName <- resultSetMetaData.getColumnClassName(columnIndex);
+     *                .replace("java.lang.", ""))
+     *        .useBoxedType(false)
+     *        .readOnlyFields(N.asSet("id"))
+     *        .nonUpdatableFields(N.asSet("create_time"))
+     *        // .idAnnotationClass(javax.persistence.Id.class)
+     *        // .columnAnnotationClass(javax.persistence.Column.class)
+     *        // .tableAnnotationClass(javax.persistence.Table.class)
+     *        .customizedFields(N.asList(Tuple.of("columnName", "fieldName", java.util.Date.class)))
+     *        .customizedFieldDbTypes(N.asList(Tuple.of("fieldName", "List<String>")))
+     *        .build();
+     * </pre>
+     *
+     */
+    @Builder
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Accessors(chain = true)
+    public static final class PropNameTableCodeConfig {
+        private String srcDir;
+        private String packageName;
+        private String className;
+        private Collection<Class<?>> entityClasses;
+        private BiFunction<Class<?>, String, String> propNameConverter;
     }
 }

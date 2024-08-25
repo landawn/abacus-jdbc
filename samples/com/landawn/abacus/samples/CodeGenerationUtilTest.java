@@ -9,7 +9,8 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.annotation.Type.EnumBy;
 import com.landawn.abacus.jdbc.CodeGenerationUtil;
-import com.landawn.abacus.jdbc.EntityCodeConfig;
+import com.landawn.abacus.jdbc.CodeGenerationUtil.EntityCodeConfig;
+import com.landawn.abacus.jdbc.CodeGenerationUtil.PropNameTableCodeConfig;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.IOUtil;
@@ -88,8 +89,15 @@ class CodeGenerationUtilTest {
         final Collection<Class<?>> classes = N.concat(ClassUtil.getClassesByPackage(User.class.getPackageName(), false, false),
                 ClassUtil.getClassesByPackage(Account.class.getPackageName(), false, false));
 
-        N.println(CodeGenerationUtil.generatePropNameTableClasses(classes, CodeGenerationUtil.S, "com.landawn.abacus.samples.util", "./samples",
-                (cls, propName) -> propName.equals("create_time") ? "createTime" : propName));
+        final PropNameTableCodeConfig codeConfig = PropNameTableCodeConfig.builder()
+                .entityClasses(classes)
+                .className(CodeGenerationUtil.S)
+                .packageName("com.landawn.abacus.samples.util")
+                .srcDir("./samples")
+                .propNameConverter((cls, propName) -> propName.equals("create_time") ? "createTime" : propName)
+                .build();
+
+        N.println(CodeGenerationUtil.generatePropNameTableClasses(codeConfig));
     }
 
     @Test
