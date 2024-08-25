@@ -534,7 +534,7 @@ public final class CodeGenerationUtil {
                         .append(LINE_SEPERATOR); //
 
                 for (String fieldName : fieldNameList) {
-                    sb.append("        /** Property name {@code \"" + fieldName + "\"} */")
+                    sb.append("        /** Property(field) name {@code \"" + fieldName + "\"} */")
                             .append(LINE_SEPERATOR)
                             .append("        String " + fieldName + " = \"" + fieldName + "\";")
                             .append(LINE_SEPERATOR)
@@ -678,7 +678,7 @@ public final class CodeGenerationUtil {
 
         for (String propName : ClassUtil.getPropNameList(entityClass)) {
 
-            sb.append("        /** Property name {@code \"" + propName + "\"} */")
+            sb.append("        /** Property(field) name {@code \"" + propName + "\"} */")
                     .append(LINE_SEPERATOR)
                     .append("        String " + propName + " = \"" + propName + "\";")
                     .append(LINE_SEPERATOR)
@@ -874,7 +874,7 @@ public final class CodeGenerationUtil {
                 final String clsNameList = Stream.of(propNameMap.get(propName)).sorted().join(", ", "{@code [", "]}");
 
                 sb.append(LINE_SEPERATOR)
-                        .append("    /** Property name {@code \"" + propName + "\"} for classes: ")
+                        .append("    /** Property(field) name {@code \"" + propName + "\"} for classes: ")
                         .append(clsNameList)
                         .append(" */")
                         .append(LINE_SEPERATOR)
@@ -950,7 +950,7 @@ public final class CodeGenerationUtil {
 
                         sb.append(LINE_SEPERATOR)
                                 .append(indentation)
-                                .append("    /** Function property name {@code \"" + propNameTP._2 + "\"} for classes: ")
+                                .append("    /** Function property(field) name {@code \"" + propNameTP._2 + "\"} for classes: ")
                                 .append(clsNameList)
                                 .append(" */")
                                 .append(LINE_SEPERATOR)
@@ -1318,6 +1318,8 @@ public final class CodeGenerationUtil {
      *          .packageName("com.landawn.abacus.samples.util")
      *          .srcDir("./samples")
      *          .propNameConverter((cls, propName) -> propName.equals("create_time") ? "createTime" : propName)
+     *          .generateFunctionPropName(true)
+     *          .propFunctions(N.asLinkedHashMap("min", CodeGenerationUtil.MIN_FUNC, "max", CodeGenerationUtil.MAX_FUNC))
      *          .build();
      * </pre>
      *

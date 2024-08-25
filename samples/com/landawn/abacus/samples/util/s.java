@@ -5,76 +5,76 @@ package com.landawn.abacus.samples.util;
  */
 public interface s { // NOSONAR
 
-    /** Property name {@code "address"} for classes: {@code [ImmutableUser, User]} */
+    /** Property(field) name {@code "address"} for classes: {@code [ImmutableUser, User]} */
     String address = "address";
 
-    /** Property name {@code "address2"} for classes: {@code [ImmutableUser, User]} */
+    /** Property(field) name {@code "address2"} for classes: {@code [ImmutableUser, User]} */
     String address2 = "address2";
 
-    /** Property name {@code "city"} for classes: {@code [Address]} */
+    /** Property(field) name {@code "city"} for classes: {@code [Address]} */
     String city = "city";
 
-    /** Property name {@code "createTime"} for classes: {@code [Account, ImmutableUser, User, User.create_time, UserQueryAllResult.create_time]} */
+    /** Property(field) name {@code "createTime"} for classes: {@code [Account, ImmutableUser, User, User.create_time, UserQueryAllResult.create_time]} */
     String createTime = "createTime";
 
-    /** Property name {@code "devices"} for classes: {@code [ImmutableUser, User]} */
+    /** Property(field) name {@code "devices"} for classes: {@code [ImmutableUser, User]} */
     String devices = "devices";
 
-    /** Property name {@code "devices2"} for classes: {@code [ImmutableUser, User]} */
+    /** Property(field) name {@code "devices2"} for classes: {@code [ImmutableUser, User]} */
     String devices2 = "devices2";
 
-    /** Property name {@code "email"} for classes: {@code [ImmutableUser, User, User, UserQueryAllResult]} */
+    /** Property(field) name {@code "email"} for classes: {@code [ImmutableUser, User, User, UserQueryAllResult]} */
     String email = "email";
 
-    /** Property name {@code "emailAddress"} for classes: {@code [Account]} */
+    /** Property(field) name {@code "emailAddress"} for classes: {@code [Account]} */
     String emailAddress = "emailAddress";
 
-    /** Property name {@code "employeeId"} for classes: {@code [Employee, EmployeeProject]} */
+    /** Property(field) name {@code "employeeId"} for classes: {@code [Employee, EmployeeProject]} */
     String employeeId = "employeeId";
 
-    /** Property name {@code "employees"} for classes: {@code [Project]} */
+    /** Property(field) name {@code "employees"} for classes: {@code [Project]} */
     String employees = "employees";
 
-    /** Property name {@code "firstName"} for classes: {@code [Account, Employee, ImmutableUser, User, User, UserQueryAllResult]} */
+    /** Property(field) name {@code "firstName"} for classes: {@code [Account, Employee, ImmutableUser, User, User, UserQueryAllResult]} */
     String firstName = "firstName";
 
-    /** Property name {@code "id"} for classes: {@code [Account, Address, Device, ImmutableUser, User, User, UserQueryAllResult]} */
+    /** Property(field) name {@code "id"} for classes: {@code [Account, Address, Device, ImmutableUser, User, User, UserQueryAllResult]} */
     String id = "id";
 
-    /** Property name {@code "lastName"} for classes: {@code [Account, Employee, ImmutableUser, User, User, UserQueryAllResult]} */
+    /** Property(field) name {@code "lastName"} for classes: {@code [Account, Employee, ImmutableUser, User, User, UserQueryAllResult]} */
     String lastName = "lastName";
 
-    /** Property name {@code "manufacture"} for classes: {@code [Device]} */
+    /** Property(field) name {@code "manufacture"} for classes: {@code [Device]} */
     String manufacture = "manufacture";
 
-    /** Property name {@code "model"} for classes: {@code [Device]} */
+    /** Property(field) name {@code "model"} for classes: {@code [Device]} */
     String model = "model";
 
-    /** Property name {@code "nickName"} for classes: {@code [ImmutableUser, User]} */
+    /** Property(field) name {@code "nickName"} for classes: {@code [ImmutableUser, User]} */
     String nickName = "nickName";
 
-    /** Property name {@code "projectId"} for classes: {@code [EmployeeProject, Project]} */
+    /** Property(field) name {@code "projectId"} for classes: {@code [EmployeeProject, Project]} */
     String projectId = "projectId";
 
-    /** Property name {@code "projects"} for classes: {@code [Employee]} */
+    /** Property(field) name {@code "projects"} for classes: {@code [Employee]} */
     String projects = "projects";
 
-    /** Property name {@code "prop1"} for classes: {@code [User, UserQueryAllResult]} */
+    /** Property(field) name {@code "prop1"} for classes: {@code [User, UserQueryAllResult]} */
     String prop1 = "prop1";
 
-    /** Property name {@code "street"} for classes: {@code [Address]} */
+    /** Property(field) name {@code "street"} for classes: {@code [Address]} */
     String street = "street";
 
-    /** Property name {@code "title"} for classes: {@code [Project]} */
+    /** Property(field) name {@code "title"} for classes: {@code [Project]} */
     String title = "title";
 
-    /** Property name {@code "userId"} for classes: {@code [Address, Device]} */
+    /** Property(field) name {@code "userId"} for classes: {@code [Address, Device]} */
     String userId = "userId";
 
-    /** Property name {@code "userSet"} for classes: {@code [UserQueryAllResult]} */
+    /** Property(field) name {@code "userSet"} for classes: {@code [UserQueryAllResult]} */
     String userSet = "userSet";
 
-    /** Property name {@code "users"} for classes: {@code [UserQueryAllResult]} */
+    /** Property(field) name {@code "users"} for classes: {@code [UserQueryAllResult]} */
     String users = "users";
 
     /*
@@ -82,82 +82,82 @@ public interface s { // NOSONAR
      */
     public interface sf     {     // NOSONAR
 
-        /** Function property name {@code "min(city)"} for classes: {@code [Address]} */
+        /** Function property(field) name {@code "min(city)"} for classes: {@code [Address]} */
         String min_city = "min(city)";
 
-        /** Function property name {@code "min(createTime)"} for classes: {@code [Account, ImmutableUser, User, User, UserQueryAllResult]} */
+        /** Function property(field) name {@code "min(createTime)"} for classes: {@code [Account, ImmutableUser, User, User, UserQueryAllResult]} */
         String min_createTime = "min(createTime)";
 
-        /** Function property name {@code "min(email)"} for classes: {@code [ImmutableUser, User, User, UserQueryAllResult]} */
+        /** Function property(field) name {@code "min(email)"} for classes: {@code [ImmutableUser, User, User, UserQueryAllResult]} */
         String min_email = "min(email)";
 
-        /** Function property name {@code "min(emailAddress)"} for classes: {@code [Account]} */
+        /** Function property(field) name {@code "min(emailAddress)"} for classes: {@code [Account]} */
         String min_emailAddress = "min(emailAddress)";
 
-        /** Function property name {@code "min(firstName)"} for classes: {@code [Account, Employee, ImmutableUser, User, User, UserQueryAllResult]} */
+        /** Function property(field) name {@code "min(firstName)"} for classes: {@code [Account, Employee, ImmutableUser, User, User, UserQueryAllResult]} */
         String min_firstName = "min(firstName)";
 
-        /** Function property name {@code "min(id)"} for classes: {@code [User, UserQueryAllResult]} */
+        /** Function property(field) name {@code "min(id)"} for classes: {@code [User, UserQueryAllResult]} */
         String min_id = "min(id)";
 
-        /** Function property name {@code "min(lastName)"} for classes: {@code [Account, Employee, ImmutableUser, User, User, UserQueryAllResult]} */
+        /** Function property(field) name {@code "min(lastName)"} for classes: {@code [Account, Employee, ImmutableUser, User, User, UserQueryAllResult]} */
         String min_lastName = "min(lastName)";
 
-        /** Function property name {@code "min(manufacture)"} for classes: {@code [Device]} */
+        /** Function property(field) name {@code "min(manufacture)"} for classes: {@code [Device]} */
         String min_manufacture = "min(manufacture)";
 
-        /** Function property name {@code "min(model)"} for classes: {@code [Device]} */
+        /** Function property(field) name {@code "min(model)"} for classes: {@code [Device]} */
         String min_model = "min(model)";
 
-        /** Function property name {@code "min(nickName)"} for classes: {@code [ImmutableUser, User]} */
+        /** Function property(field) name {@code "min(nickName)"} for classes: {@code [ImmutableUser, User]} */
         String min_nickName = "min(nickName)";
 
-        /** Function property name {@code "min(prop1)"} for classes: {@code [User, UserQueryAllResult]} */
+        /** Function property(field) name {@code "min(prop1)"} for classes: {@code [User, UserQueryAllResult]} */
         String min_prop1 = "min(prop1)";
 
-        /** Function property name {@code "min(street)"} for classes: {@code [Address]} */
+        /** Function property(field) name {@code "min(street)"} for classes: {@code [Address]} */
         String min_street = "min(street)";
 
-        /** Function property name {@code "min(title)"} for classes: {@code [Project]} */
+        /** Function property(field) name {@code "min(title)"} for classes: {@code [Project]} */
         String min_title = "min(title)";
 
-        /** Function property name {@code "max(city)"} for classes: {@code [Address]} */
+        /** Function property(field) name {@code "max(city)"} for classes: {@code [Address]} */
         String max_city = "max(city)";
 
-        /** Function property name {@code "max(createTime)"} for classes: {@code [Account, ImmutableUser, User, User, UserQueryAllResult]} */
+        /** Function property(field) name {@code "max(createTime)"} for classes: {@code [Account, ImmutableUser, User, User, UserQueryAllResult]} */
         String max_createTime = "max(createTime)";
 
-        /** Function property name {@code "max(email)"} for classes: {@code [ImmutableUser, User, User, UserQueryAllResult]} */
+        /** Function property(field) name {@code "max(email)"} for classes: {@code [ImmutableUser, User, User, UserQueryAllResult]} */
         String max_email = "max(email)";
 
-        /** Function property name {@code "max(emailAddress)"} for classes: {@code [Account]} */
+        /** Function property(field) name {@code "max(emailAddress)"} for classes: {@code [Account]} */
         String max_emailAddress = "max(emailAddress)";
 
-        /** Function property name {@code "max(firstName)"} for classes: {@code [Account, Employee, ImmutableUser, User, User, UserQueryAllResult]} */
+        /** Function property(field) name {@code "max(firstName)"} for classes: {@code [Account, Employee, ImmutableUser, User, User, UserQueryAllResult]} */
         String max_firstName = "max(firstName)";
 
-        /** Function property name {@code "max(id)"} for classes: {@code [User, UserQueryAllResult]} */
+        /** Function property(field) name {@code "max(id)"} for classes: {@code [User, UserQueryAllResult]} */
         String max_id = "max(id)";
 
-        /** Function property name {@code "max(lastName)"} for classes: {@code [Account, Employee, ImmutableUser, User, User, UserQueryAllResult]} */
+        /** Function property(field) name {@code "max(lastName)"} for classes: {@code [Account, Employee, ImmutableUser, User, User, UserQueryAllResult]} */
         String max_lastName = "max(lastName)";
 
-        /** Function property name {@code "max(manufacture)"} for classes: {@code [Device]} */
+        /** Function property(field) name {@code "max(manufacture)"} for classes: {@code [Device]} */
         String max_manufacture = "max(manufacture)";
 
-        /** Function property name {@code "max(model)"} for classes: {@code [Device]} */
+        /** Function property(field) name {@code "max(model)"} for classes: {@code [Device]} */
         String max_model = "max(model)";
 
-        /** Function property name {@code "max(nickName)"} for classes: {@code [ImmutableUser, User]} */
+        /** Function property(field) name {@code "max(nickName)"} for classes: {@code [ImmutableUser, User]} */
         String max_nickName = "max(nickName)";
 
-        /** Function property name {@code "max(prop1)"} for classes: {@code [User, UserQueryAllResult]} */
+        /** Function property(field) name {@code "max(prop1)"} for classes: {@code [User, UserQueryAllResult]} */
         String max_prop1 = "max(prop1)";
 
-        /** Function property name {@code "max(street)"} for classes: {@code [Address]} */
+        /** Function property(field) name {@code "max(street)"} for classes: {@code [Address]} */
         String max_street = "max(street)";
 
-        /** Function property name {@code "max(title)"} for classes: {@code [Project]} */
+        /** Function property(field) name {@code "max(title)"} for classes: {@code [Project]} */
         String max_title = "max(title)";
 
     }

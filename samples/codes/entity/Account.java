@@ -42,19 +42,19 @@ public class Account {
      */
     public interface x { // NOSONAR
 
-        /** Property name {@code "id"} */
+        /** Property(field) name {@code "id"} */
         String id = "id";
 
-        /** Property name {@code "firstName"} */
+        /** Property(field) name {@code "firstName"} */
         String firstName = "firstName";
 
-        /** Property name {@code "lastName"} */
+        /** Property(field) name {@code "lastName"} */
         String lastName = "lastName";
 
-        /** Property name {@code "emailAddress"} */
+        /** Property(field) name {@code "emailAddress"} */
         String emailAddress = "emailAddress";
 
-        /** Property name {@code "createTime"} */
+        /** Property(field) name {@code "createTime"} */
         String createTime = "createTime";
 
     }
