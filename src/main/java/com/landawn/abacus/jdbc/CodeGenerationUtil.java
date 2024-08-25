@@ -55,8 +55,10 @@ import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.function.QuadFunction;
+import com.landawn.abacus.util.function.TriFunction;
 import com.landawn.abacus.util.stream.CharStream;
 import com.landawn.abacus.util.stream.Stream;
+import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -69,10 +71,32 @@ public final class CodeGenerationUtil {
      * Default name of class for field/prop names.
      */
     public static final String S = "s";
+
+    /**
+     * Default name of class for function field/prop names.
+     */
+    public static final String SF = "sf";
+
     /**
      * Default name of inner class for field names inside an entity class.
      */
     public static final String X = "x";
+
+    public static final TriFunction<Class<?>, Class<?>, String, String> MIN_FUNC = (entityClass, propClass, propName) -> {
+        if (Comparable.class.isAssignableFrom(propClass)) {
+            return "min(" + propName + ")";
+        }
+
+        return null;
+    };
+
+    public static final TriFunction<Class<?>, Class<?>, String, String> MAX_FUNC = (entityClass, propClass, propName) -> {
+        if (Comparable.class.isAssignableFrom(propClass)) {
+            return "max(" + propName + ")";
+        }
+
+        return null;
+    };
 
     private static final String BUILDER = "Builder";
 
@@ -510,10 +534,14 @@ public final class CodeGenerationUtil {
                         .append(LINE_SEPERATOR); //
 
                 for (String fieldName : fieldNameList) {
-                    sb.append("        String " + fieldName + " = \"" + fieldName + "\";").append(LINE_SEPERATOR);
+                    sb.append("        /** Property name {@code \"" + fieldName + "\"} */")
+                            .append(LINE_SEPERATOR)
+                            .append("        String " + fieldName + " = \"" + fieldName + "\";")
+                            .append(LINE_SEPERATOR)
+                            .append(LINE_SEPERATOR);
                 }
 
-                sb.append(LINE_SEPERATOR).append("    }").append(LINE_SEPERATOR);
+                sb.append("    }").append(LINE_SEPERATOR);
             }
 
             sb.append(LINE_SEPERATOR).append("}").append(LINE_SEPERATOR);
@@ -649,10 +677,15 @@ public final class CodeGenerationUtil {
                 .append(LINE_SEPERATOR); //
 
         for (String propName : ClassUtil.getPropNameList(entityClass)) {
-            sb.append("        String " + propName + " = \"" + propName + "\";").append(LINE_SEPERATOR);
+
+            sb.append("        /** Property name {@code \"" + propName + "\"} */")
+                    .append(LINE_SEPERATOR)
+                    .append("        String " + propName + " = \"" + propName + "\";")
+                    .append(LINE_SEPERATOR)
+                    .append(LINE_SEPERATOR);
         }
 
-        sb.append(LINE_SEPERATOR).append("    }").append(LINE_SEPERATOR);
+        sb.append("    }").append(LINE_SEPERATOR);
 
         String ret = sb.toString();
 
@@ -767,24 +800,23 @@ public final class CodeGenerationUtil {
         final StringBuilder sb = new StringBuilder();
 
         final String interfaceName = "public interface " + propNameTableClassName;
-        final ListMultimap<String, String> propNameMap = N.newListMultimap();
 
-        for (Class<?> cls : entityClasses) {
+        final List<Class<?>> entityClassesToUse = StreamEx.of(entityClasses).filter(cls -> {
             if (cls.isInterface()) {
-                continue;
+                return false;
             }
 
             if (cls.isMemberClass() && ClassUtil.getSimpleClassName(cls).endsWith(BUILDER) && cls.getDeclaringClass() != null) {
                 try {
                     if (cls.getDeclaringClass().isAnnotationPresent(lombok.Builder.class)) {
-                        continue;
+                        return false;
                     }
                 } catch (Throwable e) {
                     // ignore
 
                     try {
                         if (Stream.of(cls.getDeclaringClass().getAnnotations()).anyMatch(it -> BUILDER.equals(it.annotationType().getSimpleName()))) {
-                            continue;
+                            return false;
                         }
                     } catch (Throwable e2) {
                         // ignore
@@ -792,60 +824,144 @@ public final class CodeGenerationUtil {
                 }
             }
 
-            final String simpleClassName = ClassUtil.getSimpleClassName(cls);
+            return true;
+        }).toList();
 
-            for (String propName : ClassUtil.getPropNameList(cls)) {
-                String newPropName = propNameConverter.apply(cls, propName);
+        {
+            final ListMultimap<String, String> propNameMap = N.newListMultimap();
 
-                if (Strings.isEmpty(newPropName)) {
-                    continue;
+            for (Class<?> cls : entityClassesToUse) {
+                final String simpleClassName = ClassUtil.getSimpleClassName(cls);
+                String newPropName = null;
+
+                for (String propName : ClassUtil.getPropNameList(cls)) {
+                    newPropName = propNameConverter.apply(cls, propName);
+
+                    if (Strings.isEmpty(newPropName)) {
+                        continue;
+                    }
+
+                    if (newPropName.equals(propName)) {
+                        propNameMap.put(newPropName, simpleClassName);
+                    } else {
+                        propNameMap.put(newPropName, simpleClassName + "." + propName);
+                    }
                 }
+            }
 
-                if (newPropName.equals(propName)) {
-                    propNameMap.put(newPropName, simpleClassName);
-                } else {
-                    propNameMap.put(newPropName, simpleClassName + "." + propName);
-                }
+            sb.append(LINE_SEPERATOR)
+                    .append("/*")
+                    .append(LINE_SEPERATOR)
+                    .append(" * Auto-generated class for property name table by abacus-jdbc for classes: ")
+                    .append(Strings.join(entityClassesToUse, ", ", "[", "]"))
+                    .append(LINE_SEPERATOR)
+                    .append(" */");
+
+            //    if (Character.isLowerCase(propNameTableClassName.charAt(0))) {
+            //        sb.append(LINE_SEPERATOR).append("@SuppressWarnings(\"java:S1192\")");
+            //    }
+
+            sb.append(LINE_SEPERATOR)
+                    .append(interfaceName)
+                    .append(" {")
+                    .append(Character.isLowerCase(propNameTableClassName.charAt(0)) ? " // NOSONAR" : "")
+                    .append(LINE_SEPERATOR); //
+
+            final List<String> propNames = new ArrayList<>(propNameMap.keySet());
+            N.sort(propNames);
+
+            for (String propName : propNames) {
+                final String clsNameList = Stream.of(propNameMap.get(propName)).sorted().join(", ", "{@code [", "]}");
+
+                sb.append(LINE_SEPERATOR)
+                        .append("    /** Property name {@code \"" + propName + "\"} for classes: ")
+                        .append(clsNameList)
+                        .append(" */")
+                        .append(LINE_SEPERATOR)
+                        .append("    String " + propName + " = \"" + propName + "\";")
+                        .append(LINE_SEPERATOR);
             }
         }
 
-        List<String> propNames = new ArrayList<>(propNameMap.keySet());
-        N.sort(propNames);
+        {
+            if (codeConfig.isGenerateFunctionPropName()) {
+                final String indentation = "    ";
+                final String functionClassName = N.defaultIfEmpty(codeConfig.getFunctionClassName(), SF);
+                final Map<String, TriFunction<Class<?>, Class<?>, String, String>> propFuncMap = N.nullToEmpty(codeConfig.getPropFunctions());
 
-        final String allClsNameList = Stream.of(entityClasses)
-                .filter(cls -> !(cls.isInterface() || (cls.isMemberClass() && ClassUtil.getSimpleClassName(cls).endsWith(BUILDER))))
-                .map(ClassUtil::getSimpleClassName)
-                .sorted()
-                .join(", ", "[", "]");
+                final List<ListMultimap<Tuple2<String, String>, String>> funcPropNameMapList = new ArrayList<>();
 
-        sb.append(LINE_SEPERATOR)
-                .append("/*")
-                .append(LINE_SEPERATOR)
-                .append(" * Auto-generated class for property name table by abacus-jdbc for classes: ")
-                .append(allClsNameList)
-                .append(LINE_SEPERATOR)
-                .append(" */");
+                for (Map.Entry<String, TriFunction<Class<?>, Class<?>, String, String>> propFuncEntry : propFuncMap.entrySet()) {
+                    final String funcName = propFuncEntry.getKey();
+                    final TriFunction<Class<?>, Class<?>, String, String> propFunc = propFuncEntry.getValue();
+                    final ListMultimap<Tuple2<String, String>, String> funcPropNameMap = N.newListMultimap();
 
-        //    if (Character.isLowerCase(propNameTableClassName.charAt(0))) {
-        //        sb.append(LINE_SEPERATOR).append("@SuppressWarnings(\"java:S1192\")");
-        //    }
+                    for (Class<?> cls : entityClassesToUse) {
+                        final String simpleClassName = ClassUtil.getSimpleClassName(cls);
+                        String newPropName = null;
+                        String funcPropName = null;
 
-        sb.append(LINE_SEPERATOR)
-                .append(interfaceName)
-                .append(" {")
-                .append(Character.isLowerCase(propNameTableClassName.charAt(0)) ? " // NOSONAR" : "")
-                .append(LINE_SEPERATOR); //
+                        for (String propName : ClassUtil.getPropNameList(cls)) {
+                            newPropName = propNameConverter.apply(cls, propName);
+                            funcPropName = propFunc.apply(cls, ClassUtil.getPropGetMethod(cls, propName).getReturnType(), newPropName);
 
-        for (String propName : propNames) {
-            final String clsNameList = Stream.of(propNameMap.get(propName)).sorted().join(", ", "[", "]");
+                            if (Strings.isEmpty(funcPropName)) {
+                                continue;
+                            }
 
-            sb.append(LINE_SEPERATOR)
-                    .append("    /* Property name for classes: ")
-                    .append(clsNameList)
-                    .append(" */")
-                    .append(LINE_SEPERATOR)
-                    .append("    String " + propName + " = \"" + propName + "\";")
-                    .append(LINE_SEPERATOR);
+                            funcPropNameMap.put(Tuple.of(funcName + "_" + newPropName, funcPropName), simpleClassName);
+                        }
+                    }
+
+                    funcPropNameMapList.add(funcPropNameMap);
+                }
+
+                sb.append(LINE_SEPERATOR)
+                        .append(indentation)
+                        .append("/*")
+                        .append(LINE_SEPERATOR)
+                        .append(indentation)
+                        .append(" * Auto-generated class for property name table by abacus-jdbc for classes: ")
+                        .append(indentation)
+                        .append(Strings.join(entityClassesToUse, ", ", "[", "]"))
+                        .append(LINE_SEPERATOR)
+                        .append(indentation)
+                        .append(" */");
+
+                //    if (Character.isLowerCase(propNameTableClassName.charAt(0))) {
+                //        sb.append(LINE_SEPERATOR).append("@SuppressWarnings(\"java:S1192\")");
+                //    }
+
+                sb.append(LINE_SEPERATOR)
+                        .append(indentation)
+                        .append("public interface " + functionClassName)
+                        .append(indentation)
+                        .append(" {")
+                        .append(indentation)
+                        .append(Character.isLowerCase(functionClassName.charAt(0)) ? " // NOSONAR" : "")
+                        .append(LINE_SEPERATOR); //
+
+                for (ListMultimap<Tuple2<String, String>, String> funcPropNameMap : funcPropNameMapList) {
+                    final List<Tuple2<String, String>> propNameTPs = new ArrayList<>(funcPropNameMap.keySet());
+                    N.sortBy(propNameTPs, it -> it._1);
+
+                    for (Tuple2<String, String> propNameTP : propNameTPs) {
+                        final String clsNameList = Stream.of(funcPropNameMap.get(propNameTP)).sorted().join(", ", "{@code [", "]}");
+
+                        sb.append(LINE_SEPERATOR)
+                                .append(indentation)
+                                .append("    /** Function property name {@code \"" + propNameTP._2 + "\"} for classes: ")
+                                .append(clsNameList)
+                                .append(" */")
+                                .append(LINE_SEPERATOR)
+                                .append(indentation)
+                                .append("    String " + propNameTP._1 + " = \"" + propNameTP._2 + "\";")
+                                .append(LINE_SEPERATOR);
+                    }
+                }
+
+                sb.append(LINE_SEPERATOR).append(indentation).append("}").append(LINE_SEPERATOR);
+            }
         }
 
         sb.append(LINE_SEPERATOR).append("}").append(LINE_SEPERATOR);
@@ -1196,22 +1312,13 @@ public final class CodeGenerationUtil {
     /**
      * A sample, just a sample, not a general configuration required.
      * <pre>
-     * EntityCodeConfig ecc = EntityCodeConfig.builder()
-     *        .className("User")
-     *        .packageName("codes.entity")
-     *        .srcDir("./samples")
-     *        .fieldNameConverter((enityOrTableName, columnName) -> StringUtil.toCamelCase(columnName))
-     *        .fieldTypeConverter((enityOrTableName, fieldName, columnName, columnClassName) -> columnClassName // columnClassName <- resultSetMetaData.getColumnClassName(columnIndex);
-     *                .replace("java.lang.", ""))
-     *        .useBoxedType(false)
-     *        .readOnlyFields(N.asSet("id"))
-     *        .nonUpdatableFields(N.asSet("create_time"))
-     *        // .idAnnotationClass(javax.persistence.Id.class)
-     *        // .columnAnnotationClass(javax.persistence.Column.class)
-     *        // .tableAnnotationClass(javax.persistence.Table.class)
-     *        .customizedFields(N.asList(Tuple.of("columnName", "fieldName", java.util.Date.class)))
-     *        .customizedFieldDbTypes(N.asList(Tuple.of("fieldName", "List<String>")))
-     *        .build();
+     * final PropNameTableCodeConfig codeConfig = PropNameTableCodeConfig.builder()
+     *          .entityClasses(classes)
+     *          .className(CodeGenerationUtil.S)
+     *          .packageName("com.landawn.abacus.samples.util")
+     *          .srcDir("./samples")
+     *          .propNameConverter((cls, propName) -> propName.equals("create_time") ? "createTime" : propName)
+     *          .build();
      * </pre>
      *
      */
@@ -1221,10 +1328,13 @@ public final class CodeGenerationUtil {
     @AllArgsConstructor
     @Accessors(chain = true)
     public static final class PropNameTableCodeConfig {
-        private String srcDir;
-        private String packageName;
-        private String className;
         private Collection<Class<?>> entityClasses;
+        private String className;
+        private String packageName;
+        private String srcDir;
         private BiFunction<Class<?>, String, String> propNameConverter;
+        private boolean generateFunctionPropName;
+        private String functionClassName;
+        private Map<String, TriFunction<Class<?>, Class<?>, String, String>> propFunctions;
     }
 }

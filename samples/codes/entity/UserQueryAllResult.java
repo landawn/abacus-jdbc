@@ -74,11 +74,22 @@ public class UserQueryAllResult {
      */
     public interface x { // NOSONAR
 
+        /** Property name {@code "id"} */
         String id = "id";
+
+        /** Property name {@code "firstName"} */
         String firstName = "firstName";
+
+        /** Property name {@code "lastName"} */
         String lastName = "lastName";
+
+        /** Property name {@code "prop1"} */
         String prop1 = "prop1";
+
+        /** Property name {@code "email"} */
         String email = "email";
+
+        /** Property name {@code "create_time"} */
         String create_time = "create_time";
 
     }

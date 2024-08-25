@@ -95,6 +95,8 @@ class CodeGenerationUtilTest {
                 .packageName("com.landawn.abacus.samples.util")
                 .srcDir("./samples")
                 .propNameConverter((cls, propName) -> propName.equals("create_time") ? "createTime" : propName)
+                .generateFunctionPropName(true)
+                .propFunctions(N.asLinkedHashMap("min", CodeGenerationUtil.MIN_FUNC, "max", CodeGenerationUtil.MAX_FUNC))
                 .build();
 
         N.println(CodeGenerationUtil.generatePropNameTableClasses(codeConfig));
