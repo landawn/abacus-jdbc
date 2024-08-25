@@ -1,7 +1,7 @@
 package com.landawn.abacus.samples.util;
 
 /*
- * Auto-generated class for property name table by abacus-jdbc for classes: [class com.landawn.abacus.samples.entity.Address$AddressBuilder, class com.landawn.abacus.samples.entity.Address, class com.landawn.abacus.samples.entity.Device$DeviceBuilder, class com.landawn.abacus.samples.entity.Device, class com.landawn.abacus.samples.entity.Employee$EmployeeBuilder, class com.landawn.abacus.samples.entity.Employee, class com.landawn.abacus.samples.entity.EmployeeProject$EmployeeProjectBuilder, class com.landawn.abacus.samples.entity.EmployeeProject, class com.landawn.abacus.samples.entity.ImmutableUser$ImmutableUserBuilder, class com.landawn.abacus.samples.entity.ImmutableUser, class com.landawn.abacus.samples.entity.Project$ProjectBuilder, class com.landawn.abacus.samples.entity.Project, class com.landawn.abacus.samples.entity.User$UserBuilder, class com.landawn.abacus.samples.entity.User, class codes.entity.Account$AccountBuilder, class codes.entity.Account, class codes.entity.User$UserBuilder, class codes.entity.User, class codes.entity.UserQueryAllResult$UserQueryAllResultBuilder, class codes.entity.UserQueryAllResult]
+ * Auto-generated class for property(field) name table by abacus-jdbc for classes: [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User, Account, User, UserQueryAllResult]
  */
 public interface s { // NOSONAR
 
@@ -78,9 +78,9 @@ public interface s { // NOSONAR
     String users = "users";
 
     /*
-     * Auto-generated class for property name table by abacus-jdbc for classes:     [class com.landawn.abacus.samples.entity.Address$AddressBuilder, class com.landawn.abacus.samples.entity.Address, class com.landawn.abacus.samples.entity.Device$DeviceBuilder, class com.landawn.abacus.samples.entity.Device, class com.landawn.abacus.samples.entity.Employee$EmployeeBuilder, class com.landawn.abacus.samples.entity.Employee, class com.landawn.abacus.samples.entity.EmployeeProject$EmployeeProjectBuilder, class com.landawn.abacus.samples.entity.EmployeeProject, class com.landawn.abacus.samples.entity.ImmutableUser$ImmutableUserBuilder, class com.landawn.abacus.samples.entity.ImmutableUser, class com.landawn.abacus.samples.entity.Project$ProjectBuilder, class com.landawn.abacus.samples.entity.Project, class com.landawn.abacus.samples.entity.User$UserBuilder, class com.landawn.abacus.samples.entity.User, class codes.entity.Account$AccountBuilder, class codes.entity.Account, class codes.entity.User$UserBuilder, class codes.entity.User, class codes.entity.UserQueryAllResult$UserQueryAllResultBuilder, class codes.entity.UserQueryAllResult]
+     * Auto-generated class for function property(field) name table by abacus-jdbc for classes: [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User, Account, User, UserQueryAllResult]
      */
-    public interface sf     {     // NOSONAR
+    public interface sf { // NOSONAR
 
         /** Function property(field) name {@code "min(city)"} for classes: {@code [Address]} */
         String min_city = "min(city)";

@@ -521,7 +521,7 @@ public final class CodeGenerationUtil {
                 sb.append(LINE_SEPERATOR)
                         .append("    /*")
                         .append(LINE_SEPERATOR)
-                        .append("     * Auto-generated class for property name table by abacus-jdbc.")
+                        .append("     * Auto-generated class for property(field) name table by abacus-jdbc.")
                         .append(LINE_SEPERATOR)
                         .append("     */");
 
@@ -660,7 +660,7 @@ public final class CodeGenerationUtil {
         sb.append(LINE_SEPERATOR)
                 .append("    /*")
                 .append(LINE_SEPERATOR)
-                .append("     * Auto-generated class for property name table by abacus-jdbc.")
+                .append("     * Auto-generated class for property(field) name table by abacus-jdbc.")
                 .append(LINE_SEPERATOR)
                 .append("     */");
 
@@ -706,8 +706,8 @@ public final class CodeGenerationUtil {
             List<String> lines = IOUtil.readAllLines(file);
 
             for (int i = 0, size = lines.size(); i < size; i++) {
-                if (Strings.startsWithAny(lines.get(i).trim(), interfaceName, "* Auto-generated class for property name table by abacus-jdbc")) {
-                    if (Strings.startsWith(lines.get(i).trim(), "* Auto-generated class for property name table by abacus-jdbc")) {
+                if (Strings.startsWithAny(lines.get(i).trim(), interfaceName, "* Auto-generated class for property(field) name table by abacus-jdbc")) {
+                    if (Strings.startsWith(lines.get(i).trim(), "* Auto-generated class for property(field) name table by abacus-jdbc")) {
                         i--;
                     }
 
@@ -806,26 +806,17 @@ public final class CodeGenerationUtil {
                 return false;
             }
 
-            if (cls.isMemberClass() && ClassUtil.getSimpleClassName(cls).endsWith(BUILDER) && cls.getDeclaringClass() != null) {
-                try {
-                    if (cls.getDeclaringClass().isAnnotationPresent(lombok.Builder.class)) {
-                        return false;
-                    }
-                } catch (Throwable e) {
-                    // ignore
+            final String simpleClassName = ClassUtil.getSimpleClassName(cls);
 
-                    try {
-                        if (Stream.of(cls.getDeclaringClass().getAnnotations()).anyMatch(it -> BUILDER.equals(it.annotationType().getSimpleName()))) {
-                            return false;
-                        }
-                    } catch (Throwable e2) {
-                        // ignore
-                    }
-                }
+            if (cls.isMemberClass() && simpleClassName.endsWith(BUILDER) && cls.getDeclaringClass() != null
+                    && simpleClassName.equals(ClassUtil.getSimpleClassName(cls.getDeclaringClass()) + BUILDER)) {
+                return false;
             }
 
             return true;
         }).toList();
+
+        final String allClassName = StreamEx.of(entityClassesToUse).map(ClassUtil::getSimpleClassName).join(", ", "[", "]");
 
         {
             final ListMultimap<String, String> propNameMap = N.newListMultimap();
@@ -852,8 +843,8 @@ public final class CodeGenerationUtil {
             sb.append(LINE_SEPERATOR)
                     .append("/*")
                     .append(LINE_SEPERATOR)
-                    .append(" * Auto-generated class for property name table by abacus-jdbc for classes: ")
-                    .append(Strings.join(entityClassesToUse, ", ", "[", "]"))
+                    .append(" * Auto-generated class for property(field) name table by abacus-jdbc for classes: ")
+                    .append(allClassName)
                     .append(LINE_SEPERATOR)
                     .append(" */");
 
@@ -921,9 +912,8 @@ public final class CodeGenerationUtil {
                         .append("/*")
                         .append(LINE_SEPERATOR)
                         .append(indentation)
-                        .append(" * Auto-generated class for property name table by abacus-jdbc for classes: ")
-                        .append(indentation)
-                        .append(Strings.join(entityClassesToUse, ", ", "[", "]"))
+                        .append(" * Auto-generated class for function property(field) name table by abacus-jdbc for classes: ")
+                        .append(allClassName)
                         .append(LINE_SEPERATOR)
                         .append(indentation)
                         .append(" */");
@@ -935,9 +925,7 @@ public final class CodeGenerationUtil {
                 sb.append(LINE_SEPERATOR)
                         .append(indentation)
                         .append("public interface " + functionClassName)
-                        .append(indentation)
                         .append(" {")
-                        .append(indentation)
                         .append(Character.isLowerCase(functionClassName.charAt(0)) ? " // NOSONAR" : "")
                         .append(LINE_SEPERATOR); //
 

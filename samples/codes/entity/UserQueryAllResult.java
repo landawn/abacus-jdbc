@@ -70,7 +70,7 @@ public class UserQueryAllResult {
     }
 
     /*
-     * Auto-generated class for property name table by abacus-jdbc.
+     * Auto-generated class for property(field) name table by abacus-jdbc.
      */
     public interface x { // NOSONAR
 
