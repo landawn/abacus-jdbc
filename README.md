@@ -1,7 +1,7 @@
 # abacus-jdbc
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc.svg)](https://maven-badges.herokuapp.com/maven-central/com.landawn/abacus-jdbc/)
-[![Javadocs](https://img.shields.io/badge/javadoc-3.7.5-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/3.7.5/index.html)
+[![Javadocs](https://img.shields.io/badge/javadoc-3.7.6-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/3.7.6/index.html)
 
 Hope it will bring you the programming experiences: coding with SQL/DB is just like coding with Collections.
 
@@ -127,6 +127,8 @@ userDao.selectUserByFirstName(firstName)
 <br />
 
 
+* Code Generation: [CodeGenerationUtil](https://www.javadoc.io/doc/com.landawn/abacus-common/latest/com/landawn/abacus/util/CodeGenerationUtil.html), [JdbcCodeGenerationUtil](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/latest/com/landawn/abacus/jdbc/JdbcCodeGenerationUtil.html).
+
 ## Why abacus-jdbc?
 
 The biggest difference between this library and other data(database) access frameworks is the simplicity/consistency/integrity in the APIs design.
@@ -141,7 +143,7 @@ The biggest difference between this library and other data(database) access fram
 <dependency>
 	<groupId>com.landawn</groupId>
 	<artifactId>abacus-jdbc</artifactId>
-	<version>3.7.5</version> 
+	<version>3.7.6</version> 
 <dependency>
 ```
 
@@ -149,7 +151,7 @@ The biggest difference between this library and other data(database) access fram
 
 ```gradle
 // JDK 17 or above:
-compile 'com.landawn:abacus-jdbc:3.7.5'
+compile 'com.landawn:abacus-jdbc:3.7.6'
 ```
 
 ## User Guide:

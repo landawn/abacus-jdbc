@@ -2897,8 +2897,8 @@ public final class JdbcUtils {
         try {
             conn = sourceDataSource.getConnection();
 
-            selectSql = CodeGenerationUtil.generateSelectSql(conn, sourceTableName);
-            insertSql = CodeGenerationUtil.generateInsertSql(conn, sourceTableName);
+            selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, sourceTableName);
+            insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, sourceTableName);
 
             if (!sourceTableName.equals(targetTableName)) {
                 insertSql = Strings.replaceFirstIgnoreCase(insertSql, sourceTableName, targetTableName);
@@ -3076,8 +3076,8 @@ public final class JdbcUtils {
     */
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
             final int batchSize) throws SQLException {
-        final String selectSql = CodeGenerationUtil.generateSelectSql(sourceConn, sourceTableName);
-        String insertSql = CodeGenerationUtil.generateInsertSql(sourceConn, sourceTableName);
+        final String selectSql = JdbcCodeGenerationUtil.generateSelectSql(sourceConn, sourceTableName);
+        String insertSql = JdbcCodeGenerationUtil.generateInsertSql(sourceConn, sourceTableName);
 
         if (!sourceTableName.equals(targetTableName)) {
             insertSql = Strings.replaceFirstIgnoreCase(insertSql, sourceTableName, targetTableName);
@@ -3126,7 +3126,7 @@ public final class JdbcUtils {
 
     private static String generateSelectSql(final Connection conn, final String tableName, final Collection<String> selectColumnNames) {
         if (N.isEmpty(selectColumnNames)) {
-            return CodeGenerationUtil.generateSelectSql(conn, tableName);
+            return JdbcCodeGenerationUtil.generateSelectSql(conn, tableName);
         }
 
         final StringBuilder sb = new StringBuilder();
@@ -3148,7 +3148,7 @@ public final class JdbcUtils {
 
     private static String generateInsertSql(final Connection conn, final String tableName, final Collection<String> selectColumnNames) {
         if (N.isEmpty(selectColumnNames)) {
-            return CodeGenerationUtil.generateInsertSql(conn, tableName);
+            return JdbcCodeGenerationUtil.generateInsertSql(conn, tableName);
         }
 
         final StringBuilder sb = new StringBuilder();
