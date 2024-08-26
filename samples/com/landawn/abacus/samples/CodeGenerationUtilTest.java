@@ -3,18 +3,47 @@ package com.landawn.abacus.samples;
 import static com.landawn.abacus.samples.JdbcTest.dataSource;
 
 import java.io.File;
+import java.util.Collection;
 
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.annotation.Type.EnumBy;
 import com.landawn.abacus.jdbc.JdbcCodeGenerationUtil;
 import com.landawn.abacus.jdbc.JdbcCodeGenerationUtil.EntityCodeConfig;
+import com.landawn.abacus.samples.entity.User;
+import com.landawn.abacus.util.ClassUtil;
+import com.landawn.abacus.util.CodeGenerationUtil;
+import com.landawn.abacus.util.CodeGenerationUtil.PropNameTableCodeConfig;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.Tuple;
 
+import codes.entity.Account;
+
 class CodeGenerationUtilTest {
+
+    @Test
+    public void test_generatePropNameTableClasses() {
+        N.println(CodeGenerationUtil.generatePropNameTableClass(Account.class, CodeGenerationUtil.X, "./samples"));
+
+        final Collection<Class<?>> classes = N.concat(ClassUtil.getClassesByPackage(User.class.getPackageName(), false, false));
+
+        final PropNameTableCodeConfig codeConfig = PropNameTableCodeConfig.builder()
+                .entityClasses(classes)
+                .className(CodeGenerationUtil.S)
+                .packageName("com.landawn.abacus.samples.entity")
+                .srcDir("./samples")
+                .propNameConverter((cls, propName) -> propName.equals("create_time") ? "createTime" : propName)
+                .generateClassPropNameList(true)
+                .generateUpperCaseWithUnderscore(true)
+                .generateFunctionPropName(true)
+                .functionClassName("f")
+                .propFunctions(N.asLinkedHashMap("min", CodeGenerationUtil.MIN_FUNC, "max", CodeGenerationUtil.MAX_FUNC))
+                .build();
+
+        N.println(CodeGenerationUtil.generatePropNameTableClasses(codeConfig));
+    }
 
     @Test
     public void test_generateEntityClass() {

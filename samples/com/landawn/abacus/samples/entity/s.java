@@ -1,85 +1,246 @@
 package com.landawn.abacus.samples.entity;
 
-/*
- * Auto-generated class for property name table for classes: [Account, Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User, User, UserQueryAllResult]
- */
-@SuppressWarnings("java:S1192")
-public interface s {
+import com.landawn.abacus.util.ImmutableList;
 
-    /* Property name for classes: [ImmutableUser, User] */
+/*
+ * Auto-generated class for property(field) name table by abacus-jdbc for classes: [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User]
+ */
+public interface s { // NOSONAR
+
+    /** Property(field) name {@code "address"} for classes: {@code [ImmutableUser, User]} */
     String address = "address";
 
-    /* Property name for classes: [ImmutableUser, User] */
+    /** Property(field) name {@code "address2"} for classes: {@code [ImmutableUser, User]} */
     String address2 = "address2";
 
-    /* Property name for classes: [Address] */
+    /** Property(field) name {@code "city"} for classes: {@code [Address]} */
     String city = "city";
 
-    /* Property name for classes: [Account, ImmutableUser, User] */
+    /** Property(field) name {@code "createTime"} for classes: {@code [ImmutableUser, User]} */
     String createTime = "createTime";
 
-    /* Property name for classes: [User, UserQueryAllResult] */
-    String create_time = "create_time";
-
-    /* Property name for classes: [ImmutableUser, User] */
+    /** Property(field) name {@code "devices"} for classes: {@code [ImmutableUser, User]} */
     String devices = "devices";
 
-    /* Property name for classes: [ImmutableUser, User] */
+    /** Property(field) name {@code "devices2"} for classes: {@code [ImmutableUser, User]} */
     String devices2 = "devices2";
 
-    /* Property name for classes: [ImmutableUser, User, User, UserQueryAllResult] */
+    /** Property(field) name {@code "email"} for classes: {@code [ImmutableUser, User]} */
     String email = "email";
 
-    /* Property name for classes: [Account] */
-    String emailAddress = "emailAddress";
-
-    /* Property name for classes: [Employee, EmployeeProject] */
+    /** Property(field) name {@code "employeeId"} for classes: {@code [Employee, EmployeeProject]} */
     String employeeId = "employeeId";
 
-    /* Property name for classes: [Project] */
+    /** Property(field) name {@code "employees"} for classes: {@code [Project]} */
     String employees = "employees";
 
-    /* Property name for classes: [Account, Employee, ImmutableUser, User, User, UserQueryAllResult] */
+    /** Property(field) name {@code "firstName"} for classes: {@code [Employee, ImmutableUser, User]} */
     String firstName = "firstName";
 
-    /* Property name for classes: [Account, Address, Device, ImmutableUser, User, User, UserQueryAllResult] */
+    /** Property(field) name {@code "id"} for classes: {@code [Address, Device, ImmutableUser, User]} */
     String id = "id";
 
-    /* Property name for classes: [Account, Employee, ImmutableUser, User, User, UserQueryAllResult] */
+    /** Property(field) name {@code "lastName"} for classes: {@code [Employee, ImmutableUser, User]} */
     String lastName = "lastName";
 
-    /* Property name for classes: [Device] */
+    /** Property(field) name {@code "manufacture"} for classes: {@code [Device]} */
     String manufacture = "manufacture";
 
-    /* Property name for classes: [Device] */
+    /** Property(field) name {@code "model"} for classes: {@code [Device]} */
     String model = "model";
 
-    /* Property name for classes: [ImmutableUser, User] */
+    /** Property(field) name {@code "nickName"} for classes: {@code [ImmutableUser, User]} */
     String nickName = "nickName";
 
-    /* Property name for classes: [EmployeeProject, Project] */
+    /** Property(field) name {@code "projectId"} for classes: {@code [EmployeeProject, Project]} */
     String projectId = "projectId";
 
-    /* Property name for classes: [Employee] */
+    /** Property(field) name {@code "projects"} for classes: {@code [Employee]} */
     String projects = "projects";
 
-    /* Property name for classes: [User, UserQueryAllResult] */
-    String prop1 = "prop1";
-
-    /* Property name for classes: [Address] */
+    /** Property(field) name {@code "street"} for classes: {@code [Address]} */
     String street = "street";
 
-    /* Property name for classes: [Project] */
+    /** Property(field) name {@code "title"} for classes: {@code [Project]} */
     String title = "title";
 
-    /* Property name for classes: [Address, Device] */
+    /** Property(field) name {@code "userId"} for classes: {@code [Address, Device]} */
     String userId = "userId";
 
-    /* Property name for classes: [UserQueryAllResult] */
-    String userSet = "userSet";
+    /** Immutable property(field) name list for class: {@code "Project"}. */
+    ImmutableList<String> projectPropNameList = ImmutableList.of(employees, projectId, title);
 
-    /* Property name for classes: [UserQueryAllResult] */
-    String users = "users";
+    /** Immutable property(field) name list for class: {@code "Employee"}. */
+    ImmutableList<String> employeePropNameList = ImmutableList.of(employeeId, firstName, lastName, projects);
+
+    /** Immutable property(field) name list for class: {@code "User"}. */
+    ImmutableList<String> userPropNameList = ImmutableList.of(address, address2, createTime, devices, devices2, email, firstName, id, lastName, nickName);
+
+    /** Immutable property(field) name list for class: {@code "Address"}. */
+    ImmutableList<String> addressPropNameList = ImmutableList.of(city, id, street, userId);
+
+    /** Immutable property(field) name list for class: {@code "Device"}. */
+    ImmutableList<String> devicePropNameList = ImmutableList.of(id, manufacture, model, userId);
+
+    /** Immutable property(field) name list for class: {@code "ImmutableUser"}. */
+    ImmutableList<String> immutableUserPropNameList = ImmutableList.of(address, address2, createTime, devices, devices2, email, firstName, id, lastName, nickName);
+
+    /** Immutable property(field) name list for class: {@code "EmployeeProject"}. */
+    ImmutableList<String> employeeProjectPropNameList = ImmutableList.of(employeeId, projectId);
+
+    /*
+     * Auto-generated class for upper case property(field) name table by abacus-jdbc for classes: [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User]
+     */
+    public interface su { // NOSONAR
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "ADDRESS"} for classes: {@code [ImmutableUser, User]} */
+        String address = "ADDRESS";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "ADDRESS2"} for classes: {@code [ImmutableUser, User]} */
+        String address2 = "ADDRESS2";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "CITY"} for classes: {@code [Address]} */
+        String city = "CITY";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "CREATE_TIME"} for classes: {@code [ImmutableUser, User]} */
+        String createTime = "CREATE_TIME";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "DEVICES"} for classes: {@code [ImmutableUser, User]} */
+        String devices = "DEVICES";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "DEVICES2"} for classes: {@code [ImmutableUser, User]} */
+        String devices2 = "DEVICES2";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "EMAIL"} for classes: {@code [ImmutableUser, User]} */
+        String email = "EMAIL";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "EMPLOYEE_ID"} for classes: {@code [Employee, EmployeeProject]} */
+        String employeeId = "EMPLOYEE_ID";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "EMPLOYEES"} for classes: {@code [Project]} */
+        String employees = "EMPLOYEES";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "FIRST_NAME"} for classes: {@code [Employee, ImmutableUser, User]} */
+        String firstName = "FIRST_NAME";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "ID"} for classes: {@code [Address, Device, ImmutableUser, User]} */
+        String id = "ID";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "LAST_NAME"} for classes: {@code [Employee, ImmutableUser, User]} */
+        String lastName = "LAST_NAME";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "MANUFACTURE"} for classes: {@code [Device]} */
+        String manufacture = "MANUFACTURE";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "MODEL"} for classes: {@code [Device]} */
+        String model = "MODEL";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "NICK_NAME"} for classes: {@code [ImmutableUser, User]} */
+        String nickName = "NICK_NAME";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "PROJECT_ID"} for classes: {@code [EmployeeProject, Project]} */
+        String projectId = "PROJECT_ID";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "PROJECTS"} for classes: {@code [Employee]} */
+        String projects = "PROJECTS";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "STREET"} for classes: {@code [Address]} */
+        String street = "STREET";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "TITLE"} for classes: {@code [Project]} */
+        String title = "TITLE";
+
+        /** Property(field) name in upper case concatenated with underscore: {@code "USER_ID"} for classes: {@code [Address, Device]} */
+        String userId = "USER_ID";
+
+    /** Immutable property(field) name list for class: {@code "Project"}. */
+    ImmutableList<String> projectPropNameList = ImmutableList.of(employees, projectId, title);
+
+    /** Immutable property(field) name list for class: {@code "Employee"}. */
+    ImmutableList<String> employeePropNameList = ImmutableList.of(employeeId, firstName, lastName, projects);
+
+    /** Immutable property(field) name list for class: {@code "User"}. */
+    ImmutableList<String> userPropNameList = ImmutableList.of(address, address2, createTime, devices, devices2, email, firstName, id, lastName, nickName);
+
+    /** Immutable property(field) name list for class: {@code "Address"}. */
+    ImmutableList<String> addressPropNameList = ImmutableList.of(city, id, street, userId);
+
+    /** Immutable property(field) name list for class: {@code "Device"}. */
+    ImmutableList<String> devicePropNameList = ImmutableList.of(id, manufacture, model, userId);
+
+    /** Immutable property(field) name list for class: {@code "ImmutableUser"}. */
+    ImmutableList<String> immutableUserPropNameList = ImmutableList.of(address, address2, createTime, devices, devices2, email, firstName, id, lastName, nickName);
+
+    /** Immutable property(field) name list for class: {@code "EmployeeProject"}. */
+    ImmutableList<String> employeeProjectPropNameList = ImmutableList.of(employeeId, projectId);
+
+    }
+
+    /*
+     * Auto-generated class for function property(field) name table by abacus-jdbc for classes: [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User]
+     */
+    public interface f { // NOSONAR
+
+        /** Function property(field) name {@code "min(city)"} for classes: {@code [Address]} */
+        String min_city = "min(city)";
+
+        /** Function property(field) name {@code "min(createTime)"} for classes: {@code [ImmutableUser, User]} */
+        String min_createTime = "min(createTime)";
+
+        /** Function property(field) name {@code "min(email)"} for classes: {@code [ImmutableUser, User]} */
+        String min_email = "min(email)";
+
+        /** Function property(field) name {@code "min(firstName)"} for classes: {@code [Employee, ImmutableUser, User]} */
+        String min_firstName = "min(firstName)";
+
+        /** Function property(field) name {@code "min(lastName)"} for classes: {@code [Employee, ImmutableUser, User]} */
+        String min_lastName = "min(lastName)";
+
+        /** Function property(field) name {@code "min(manufacture)"} for classes: {@code [Device]} */
+        String min_manufacture = "min(manufacture)";
+
+        /** Function property(field) name {@code "min(model)"} for classes: {@code [Device]} */
+        String min_model = "min(model)";
+
+        /** Function property(field) name {@code "min(nickName)"} for classes: {@code [ImmutableUser, User]} */
+        String min_nickName = "min(nickName)";
+
+        /** Function property(field) name {@code "min(street)"} for classes: {@code [Address]} */
+        String min_street = "min(street)";
+
+        /** Function property(field) name {@code "min(title)"} for classes: {@code [Project]} */
+        String min_title = "min(title)";
+
+        /** Function property(field) name {@code "max(city)"} for classes: {@code [Address]} */
+        String max_city = "max(city)";
+
+        /** Function property(field) name {@code "max(createTime)"} for classes: {@code [ImmutableUser, User]} */
+        String max_createTime = "max(createTime)";
+
+        /** Function property(field) name {@code "max(email)"} for classes: {@code [ImmutableUser, User]} */
+        String max_email = "max(email)";
+
+        /** Function property(field) name {@code "max(firstName)"} for classes: {@code [Employee, ImmutableUser, User]} */
+        String max_firstName = "max(firstName)";
+
+        /** Function property(field) name {@code "max(lastName)"} for classes: {@code [Employee, ImmutableUser, User]} */
+        String max_lastName = "max(lastName)";
+
+        /** Function property(field) name {@code "max(manufacture)"} for classes: {@code [Device]} */
+        String max_manufacture = "max(manufacture)";
+
+        /** Function property(field) name {@code "max(model)"} for classes: {@code [Device]} */
+        String max_model = "max(model)";
+
+        /** Function property(field) name {@code "max(nickName)"} for classes: {@code [ImmutableUser, User]} */
+        String max_nickName = "max(nickName)";
+
+        /** Function property(field) name {@code "max(street)"} for classes: {@code [Address]} */
+        String max_street = "max(street)";
+
+        /** Function property(field) name {@code "max(title)"} for classes: {@code [Project]} */
+        String max_title = "max(title)";
+
+    }
 
 }
-
