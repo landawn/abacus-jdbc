@@ -1,9 +1,9 @@
 package com.landawn.abacus.samples.entity;
 
-import com.landawn.abacus.util.ImmutableList;
+import java.util.List;
 
-/*
- * Auto-generated class for property(field) name table by abacus-jdbc for classes: [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User]
+/**
+ * Auto-generated class for property(field) name table for classes: {@code [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User]}
  */
 public interface s { // NOSONAR
 
@@ -67,29 +67,29 @@ public interface s { // NOSONAR
     /** Property(field) name {@code "userId"} for classes: {@code [Address, Device]} */
     String userId = "userId";
 
-    /** Immutable property(field) name list for class: {@code "Project"}. */
-    ImmutableList<String> projectPropNameList = ImmutableList.of(employees, projectId, title);
+    /** Unmodifiable property(field) name list for class: {@code "Project"}. */
+    List<String> projectPropNameList = List.of(employees, projectId, title);
 
-    /** Immutable property(field) name list for class: {@code "Employee"}. */
-    ImmutableList<String> employeePropNameList = ImmutableList.of(employeeId, firstName, lastName, projects);
+    /** Unmodifiable property(field) name list for class: {@code "Employee"}. */
+    List<String> employeePropNameList = List.of(employeeId, firstName, lastName, projects);
 
-    /** Immutable property(field) name list for class: {@code "User"}. */
-    ImmutableList<String> userPropNameList = ImmutableList.of(address, address2, createTime, devices, devices2, email, firstName, id, lastName, nickName);
+    /** Unmodifiable property(field) name list for class: {@code "User"}. */
+    List<String> userPropNameList = List.of(address, address2, createTime, devices, devices2, email, firstName, id, lastName, nickName);
 
-    /** Immutable property(field) name list for class: {@code "Address"}. */
-    ImmutableList<String> addressPropNameList = ImmutableList.of(city, id, street, userId);
+    /** Unmodifiable property(field) name list for class: {@code "Address"}. */
+    List<String> addressPropNameList = List.of(city, id, street, userId);
 
-    /** Immutable property(field) name list for class: {@code "Device"}. */
-    ImmutableList<String> devicePropNameList = ImmutableList.of(id, manufacture, model, userId);
+    /** Unmodifiable property(field) name list for class: {@code "Device"}. */
+    List<String> devicePropNameList = List.of(id, manufacture, model, userId);
 
-    /** Immutable property(field) name list for class: {@code "ImmutableUser"}. */
-    ImmutableList<String> immutableUserPropNameList = ImmutableList.of(address, address2, createTime, devices, devices2, email, firstName, id, lastName, nickName);
+    /** Unmodifiable property(field) name list for class: {@code "ImmutableUser"}. */
+    List<String> immutableUserPropNameList = List.of(address, address2, createTime, devices, devices2, email, firstName, id, lastName, nickName);
 
-    /** Immutable property(field) name list for class: {@code "EmployeeProject"}. */
-    ImmutableList<String> employeeProjectPropNameList = ImmutableList.of(employeeId, projectId);
+    /** Unmodifiable property(field) name list for class: {@code "EmployeeProject"}. */
+    List<String> employeeProjectPropNameList = List.of(employeeId, projectId);
 
-    /*
-     * Auto-generated class for upper case property(field) name table by abacus-jdbc for classes: [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User]
+    /**
+     * Auto-generated class for upper case property(field) name table for classes: {@code [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User]}
      */
     public interface su { // NOSONAR
 
@@ -153,31 +153,31 @@ public interface s { // NOSONAR
         /** Property(field) name in upper case concatenated with underscore: {@code "USER_ID"} for classes: {@code [Address, Device]} */
         String userId = "USER_ID";
 
-    /** Immutable property(field) name list for class: {@code "Project"}. */
-    ImmutableList<String> projectPropNameList = ImmutableList.of(employees, projectId, title);
+        /** Unmodifiable property(field) name list for class: {@code "Project"}. */
+        List<String> projectPropNameList = List.of(employees, projectId, title);
 
-    /** Immutable property(field) name list for class: {@code "Employee"}. */
-    ImmutableList<String> employeePropNameList = ImmutableList.of(employeeId, firstName, lastName, projects);
+        /** Unmodifiable property(field) name list for class: {@code "Employee"}. */
+        List<String> employeePropNameList = List.of(employeeId, firstName, lastName, projects);
 
-    /** Immutable property(field) name list for class: {@code "User"}. */
-    ImmutableList<String> userPropNameList = ImmutableList.of(address, address2, createTime, devices, devices2, email, firstName, id, lastName, nickName);
+        /** Unmodifiable property(field) name list for class: {@code "User"}. */
+        List<String> userPropNameList = List.of(address, address2, createTime, devices, devices2, email, firstName, id, lastName, nickName);
 
-    /** Immutable property(field) name list for class: {@code "Address"}. */
-    ImmutableList<String> addressPropNameList = ImmutableList.of(city, id, street, userId);
+        /** Unmodifiable property(field) name list for class: {@code "Address"}. */
+        List<String> addressPropNameList = List.of(city, id, street, userId);
 
-    /** Immutable property(field) name list for class: {@code "Device"}. */
-    ImmutableList<String> devicePropNameList = ImmutableList.of(id, manufacture, model, userId);
+        /** Unmodifiable property(field) name list for class: {@code "Device"}. */
+        List<String> devicePropNameList = List.of(id, manufacture, model, userId);
 
-    /** Immutable property(field) name list for class: {@code "ImmutableUser"}. */
-    ImmutableList<String> immutableUserPropNameList = ImmutableList.of(address, address2, createTime, devices, devices2, email, firstName, id, lastName, nickName);
+        /** Unmodifiable property(field) name list for class: {@code "ImmutableUser"}. */
+        List<String> immutableUserPropNameList = List.of(address, address2, createTime, devices, devices2, email, firstName, id, lastName, nickName);
 
-    /** Immutable property(field) name list for class: {@code "EmployeeProject"}. */
-    ImmutableList<String> employeeProjectPropNameList = ImmutableList.of(employeeId, projectId);
+        /** Unmodifiable property(field) name list for class: {@code "EmployeeProject"}. */
+        List<String> employeeProjectPropNameList = List.of(employeeId, projectId);
 
     }
 
-    /*
-     * Auto-generated class for function property(field) name table by abacus-jdbc for classes: [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User]
+    /**
+     * Auto-generated class for function property(field) name table for classes: {@code [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User]}
      */
     public interface f { // NOSONAR
 
