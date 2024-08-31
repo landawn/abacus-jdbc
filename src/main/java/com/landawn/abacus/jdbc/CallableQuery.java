@@ -98,7 +98,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public CallableQuery setNull(String parameterName, int sqlType) throws SQLException {
+    public CallableQuery setNull(final String parameterName, final int sqlType) throws SQLException {
         cstmt.setNull(parameterName, sqlType);
 
         return this;
@@ -114,7 +114,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public CallableQuery setNull(String parameterName, int sqlType, String typeName) throws SQLException {
+    public CallableQuery setNull(final String parameterName, final int sqlType, String typeName) throws SQLException {
         cstmt.setNull(parameterName, sqlType, typeName);
 
         return this;
@@ -128,7 +128,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setBoolean(String parameterName, boolean x) throws SQLException {
+    public CallableQuery setBoolean(final String parameterName, final boolean x) throws SQLException {
         cstmt.setBoolean(parameterName, x);
 
         return this;
@@ -142,7 +142,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setBoolean(String parameterName, Boolean x) throws SQLException {
+    public CallableQuery setBoolean(final String parameterName, final Boolean x) throws SQLException {
         if (x == null) {
             cstmt.setNull(parameterName, java.sql.Types.BOOLEAN);
         } else {
@@ -160,7 +160,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setByte(String parameterName, byte x) throws SQLException {
+    public CallableQuery setByte(final String parameterName, final byte x) throws SQLException {
         cstmt.setByte(parameterName, x);
 
         return this;
@@ -174,7 +174,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setByte(String parameterName, Byte x) throws SQLException {
+    public CallableQuery setByte(final String parameterName, final Byte x) throws SQLException {
         if (x == null) {
             cstmt.setNull(parameterName, java.sql.Types.TINYINT);
         } else {
@@ -192,7 +192,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setShort(String parameterName, short x) throws SQLException {
+    public CallableQuery setShort(final String parameterName, final short x) throws SQLException {
         cstmt.setShort(parameterName, x);
 
         return this;
@@ -206,7 +206,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setShort(String parameterName, Short x) throws SQLException {
+    public CallableQuery setShort(final String parameterName, final Short x) throws SQLException {
         if (x == null) {
             cstmt.setNull(parameterName, java.sql.Types.SMALLINT);
         } else {
@@ -224,7 +224,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setInt(String parameterName, int x) throws SQLException {
+    public CallableQuery setInt(final String parameterName, final int x) throws SQLException {
         cstmt.setInt(parameterName, x);
 
         return this;
@@ -238,7 +238,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setInt(String parameterName, Integer x) throws SQLException {
+    public CallableQuery setInt(final String parameterName, final Integer x) throws SQLException {
         if (x == null) {
             cstmt.setNull(parameterName, java.sql.Types.INTEGER);
         } else {
@@ -256,7 +256,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setLong(String parameterName, long x) throws SQLException {
+    public CallableQuery setLong(final String parameterName, final long x) throws SQLException {
         cstmt.setLong(parameterName, x);
 
         return this;
@@ -270,7 +270,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setLong(String parameterName, Long x) throws SQLException {
+    public CallableQuery setLong(final String parameterName, final Long x) throws SQLException {
         if (x == null) {
             cstmt.setNull(parameterName, java.sql.Types.BIGINT);
         } else {
@@ -288,7 +288,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setLong(String parameterName, BigInteger x) throws SQLException {
+    public CallableQuery setLong(final String parameterName, final BigInteger x) throws SQLException {
         if (x == null) {
             cstmt.setNull(parameterName, Types.BIGINT);
         } else {
@@ -306,7 +306,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setFloat(String parameterName, float x) throws SQLException {
+    public CallableQuery setFloat(final String parameterName, final float x) throws SQLException {
         cstmt.setFloat(parameterName, x);
 
         return this;
@@ -320,7 +320,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setFloat(String parameterName, Float x) throws SQLException {
+    public CallableQuery setFloat(final String parameterName, final Float x) throws SQLException {
         if (x == null) {
             cstmt.setNull(parameterName, java.sql.Types.FLOAT);
         } else {
@@ -338,7 +338,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setDouble(String parameterName, double x) throws SQLException {
+    public CallableQuery setDouble(final String parameterName, final double x) throws SQLException {
         cstmt.setDouble(parameterName, x);
 
         return this;
@@ -352,7 +352,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setDouble(String parameterName, Double x) throws SQLException {
+    public CallableQuery setDouble(final String parameterName, final Double x) throws SQLException {
         if (x == null) {
             cstmt.setNull(parameterName, java.sql.Types.DOUBLE);
         } else {
@@ -370,7 +370,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setBigDecimal(String parameterName, BigDecimal x) throws SQLException {
+    public CallableQuery setBigDecimal(final String parameterName, final BigDecimal x) throws SQLException {
         cstmt.setBigDecimal(parameterName, x);
 
         return this;
@@ -384,7 +384,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setBigDecimal(String parameterName, BigInteger x) throws SQLException {
+    public CallableQuery setBigDecimal(final String parameterName, final BigInteger x) throws SQLException {
         if (x == null) {
             cstmt.setNull(parameterName, Types.DECIMAL);
         } else {
@@ -406,7 +406,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see {@link #setLong(String, BigInteger)}
      */
     @Beta
-    public CallableQuery setBigIntegerAsString(String parameterName, BigInteger x) throws SQLException {
+    public CallableQuery setBigIntegerAsString(final String parameterName, final BigInteger x) throws SQLException {
         return setString(parameterName, x);
     }
 
@@ -418,7 +418,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setString(String parameterName, String x) throws SQLException {
+    public CallableQuery setString(final String parameterName, final String x) throws SQLException {
         cstmt.setString(parameterName, x);
 
         return this;
@@ -432,7 +432,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setString(String parameterName, CharSequence x) throws SQLException {
+    public CallableQuery setString(final String parameterName, final CharSequence x) throws SQLException {
         return setString(parameterName, x == null ? null : x.toString());
     }
 
@@ -444,7 +444,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException
      */
-    public CallableQuery setString(String parameterName, char x) throws SQLException {
+    public CallableQuery setString(final String parameterName, final char x) throws SQLException {
         return setString(parameterName, String.valueOf(x));
     }
 
@@ -456,7 +456,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException
      */
-    public CallableQuery setString(String parameterName, Character x) throws SQLException {
+    public CallableQuery setString(final String parameterName, final Character x) throws SQLException {
         return setString(parameterName, x == null ? (String) null : x.toString()); //NOSONAR
     }
 
@@ -468,7 +468,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setString(String parameterName, BigInteger x) throws SQLException {
+    public CallableQuery setString(final String parameterName, final BigInteger x) throws SQLException {
         if (x == null) {
             cstmt.setNull(parameterName, Types.VARCHAR);
         } else {
@@ -486,7 +486,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setNString(String parameterName, String x) throws SQLException {
+    public CallableQuery setNString(final String parameterName, final String x) throws SQLException {
         cstmt.setNString(parameterName, x);
 
         return this;
@@ -500,7 +500,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setDate(String parameterName, java.sql.Date x) throws SQLException {
+    public CallableQuery setDate(final String parameterName, final java.sql.Date x) throws SQLException {
         cstmt.setDate(parameterName, x);
 
         return this;
@@ -514,7 +514,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setDate(String parameterName, java.util.Date x) throws SQLException {
+    public CallableQuery setDate(final String parameterName, final java.util.Date x) throws SQLException {
         cstmt.setDate(parameterName, x == null ? null : x instanceof java.sql.Date ? (java.sql.Date) x : new java.sql.Date(x.getTime()));
 
         return this;
@@ -528,7 +528,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setTime(String parameterName, java.sql.Time x) throws SQLException {
+    public CallableQuery setTime(final String parameterName, final java.sql.Time x) throws SQLException {
         cstmt.setTime(parameterName, x);
 
         return this;
@@ -542,7 +542,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setTime(String parameterName, java.util.Date x) throws SQLException {
+    public CallableQuery setTime(final String parameterName, final java.util.Date x) throws SQLException {
         cstmt.setTime(parameterName, x == null ? null : x instanceof java.sql.Time ? (java.sql.Time) x : new java.sql.Time(x.getTime()));
 
         return this;
@@ -556,7 +556,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setTimestamp(String parameterName, java.sql.Timestamp x) throws SQLException {
+    public CallableQuery setTimestamp(final String parameterName, final java.sql.Timestamp x) throws SQLException {
         cstmt.setTimestamp(parameterName, x);
 
         return this;
@@ -570,7 +570,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setTimestamp(String parameterName, java.util.Date x) throws SQLException {
+    public CallableQuery setTimestamp(final String parameterName, final java.util.Date x) throws SQLException {
         cstmt.setTimestamp(parameterName, x == null ? null : x instanceof java.sql.Timestamp ? (java.sql.Timestamp) x : new java.sql.Timestamp(x.getTime()));
 
         return this;
@@ -584,7 +584,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setBytes(String parameterName, byte[] x) throws SQLException {
+    public CallableQuery setBytes(final String parameterName, final byte[] x) throws SQLException {
         cstmt.setBytes(parameterName, x);
 
         return this;
@@ -598,7 +598,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setAsciiStream(String parameterName, InputStream inputStream) throws SQLException {
+    public CallableQuery setAsciiStream(final String parameterName, final InputStream inputStream) throws SQLException {
         cstmt.setAsciiStream(parameterName, inputStream);
 
         return this;
@@ -613,7 +613,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setAsciiStream(String parameterName, InputStream inputStream, long length) throws SQLException {
+    public CallableQuery setAsciiStream(final String parameterName, final InputStream inputStream, final long length) throws SQLException {
         cstmt.setAsciiStream(parameterName, inputStream, length);
 
         return this;
@@ -627,7 +627,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setBinaryStream(String parameterName, InputStream inputStream) throws SQLException {
+    public CallableQuery setBinaryStream(final String parameterName, final InputStream inputStream) throws SQLException {
         cstmt.setBinaryStream(parameterName, inputStream);
 
         return this;
@@ -642,7 +642,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setBinaryStream(String parameterName, InputStream inputStream, long length) throws SQLException {
+    public CallableQuery setBinaryStream(final String parameterName, final InputStream inputStream, final long length) throws SQLException {
         cstmt.setBinaryStream(parameterName, inputStream, length);
 
         return this;
@@ -656,7 +656,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setCharacterStream(String parameterName, Reader reader) throws SQLException {
+    public CallableQuery setCharacterStream(final String parameterName, final Reader reader) throws SQLException {
         cstmt.setCharacterStream(parameterName, reader);
 
         return this;
@@ -671,7 +671,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setCharacterStream(String parameterName, Reader reader, long length) throws SQLException {
+    public CallableQuery setCharacterStream(final String parameterName, final Reader reader, final long length) throws SQLException {
         cstmt.setCharacterStream(parameterName, reader, length);
 
         return this;
@@ -685,7 +685,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setNCharacterStream(String parameterName, Reader reader) throws SQLException {
+    public CallableQuery setNCharacterStream(final String parameterName, final Reader reader) throws SQLException {
         cstmt.setNCharacterStream(parameterName, reader);
 
         return this;
@@ -700,7 +700,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setNCharacterStream(String parameterName, Reader reader, long length) throws SQLException {
+    public CallableQuery setNCharacterStream(final String parameterName, final Reader reader, final long length) throws SQLException {
         cstmt.setNCharacterStream(parameterName, reader, length);
 
         return this;
@@ -714,7 +714,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setBlob(String parameterName, java.sql.Blob x) throws SQLException {
+    public CallableQuery setBlob(final String parameterName, final java.sql.Blob x) throws SQLException {
         cstmt.setBlob(parameterName, x);
 
         return this;
@@ -728,7 +728,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setBlob(String parameterName, InputStream inputStream) throws SQLException {
+    public CallableQuery setBlob(final String parameterName, final InputStream inputStream) throws SQLException {
         cstmt.setBlob(parameterName, inputStream);
 
         return this;
@@ -743,7 +743,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setBlob(String parameterName, InputStream inputStream, long length) throws SQLException {
+    public CallableQuery setBlob(final String parameterName, final InputStream inputStream, final long length) throws SQLException {
         cstmt.setBlob(parameterName, inputStream, length);
 
         return this;
@@ -757,7 +757,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setClob(String parameterName, java.sql.Clob x) throws SQLException {
+    public CallableQuery setClob(final String parameterName, final java.sql.Clob x) throws SQLException {
         cstmt.setClob(parameterName, x);
 
         return this;
@@ -771,7 +771,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setClob(String parameterName, Reader reader) throws SQLException {
+    public CallableQuery setClob(final String parameterName, final Reader reader) throws SQLException {
         cstmt.setClob(parameterName, reader);
 
         return this;
@@ -786,7 +786,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setClob(String parameterName, Reader reader, long length) throws SQLException {
+    public CallableQuery setClob(final String parameterName, final Reader reader, final long length) throws SQLException {
         cstmt.setClob(parameterName, reader, length);
 
         return this;
@@ -800,7 +800,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setNClob(String parameterName, java.sql.NClob x) throws SQLException {
+    public CallableQuery setNClob(final String parameterName, final java.sql.NClob x) throws SQLException {
         cstmt.setNClob(parameterName, x);
 
         return this;
@@ -814,7 +814,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setNClob(String parameterName, Reader reader) throws SQLException {
+    public CallableQuery setNClob(final String parameterName, final Reader reader) throws SQLException {
         cstmt.setNClob(parameterName, reader);
 
         return this;
@@ -829,7 +829,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setNClob(String parameterName, Reader reader, long length) throws SQLException {
+    public CallableQuery setNClob(final String parameterName, final Reader reader, final long length) throws SQLException {
         cstmt.setNClob(parameterName, reader, length);
 
         return this;
@@ -843,7 +843,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setURL(String parameterName, URL x) throws SQLException {
+    public CallableQuery setURL(final String parameterName, final URL x) throws SQLException {
         cstmt.setURL(parameterName, x);
 
         return this;
@@ -857,7 +857,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setSQLXML(String parameterName, java.sql.SQLXML x) throws SQLException {
+    public CallableQuery setSQLXML(final String parameterName, final java.sql.SQLXML x) throws SQLException {
         cstmt.setSQLXML(parameterName, x);
 
         return this;
@@ -871,7 +871,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setRowId(String parameterName, java.sql.RowId x) throws SQLException {
+    public CallableQuery setRowId(final String parameterName, final java.sql.RowId x) throws SQLException {
         cstmt.setRowId(parameterName, x);
 
         return this;
@@ -885,7 +885,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery setObject(String parameterName, Object x) throws SQLException {
+    public CallableQuery setObject(final String parameterName, final Object x) throws SQLException {
         if (x == null) {
             cstmt.setObject(parameterName, x);
         } else {
@@ -905,7 +905,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public CallableQuery setObject(String parameterName, Object x, int sqlType) throws SQLException {
+    public CallableQuery setObject(final String parameterName, final Object x, final int sqlType) throws SQLException {
         cstmt.setObject(parameterName, x, sqlType);
 
         return this;
@@ -931,9 +931,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the parameters.
      *
-     * @param parameters 
-     * @return 
-     * @throws IllegalArgumentException 
+     * @param parameters
+     * @return
+     * @throws IllegalArgumentException
      * @throws SQLException the SQL exception
      */
     public CallableQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException {
@@ -949,10 +949,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the parameters.
      *
-     * @param entity 
-     * @param parameterNames 
-     * @return 
-     * @throws IllegalArgumentException 
+     * @param entity
+     * @param parameterNames
+     * @return
+     * @throws IllegalArgumentException
      * @throws SQLException the SQL exception
      * @see {@link ClassUtil#getPropNameList(Class)}
      * @see {@link ClassUtil#getPropNameListExclusively(Class, Set)}
@@ -984,7 +984,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public CallableQuery registerOutParameter(int parameterIndex, int sqlType) throws SQLException {
+    public CallableQuery registerOutParameter(int parameterIndex, final int sqlType) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType);
 
         addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType, null, -1));
@@ -1002,7 +1002,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public CallableQuery registerOutParameter(int parameterIndex, int sqlType, int scale) throws SQLException {
+    public CallableQuery registerOutParameter(int parameterIndex, final int sqlType, int scale) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType, scale);
 
         addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType, null, scale));
@@ -1020,7 +1020,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public CallableQuery registerOutParameter(int parameterIndex, int sqlType, String typeName) throws SQLException {
+    public CallableQuery registerOutParameter(int parameterIndex, final int sqlType, String typeName) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType, typeName);
 
         addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType, typeName, -1));
@@ -1037,7 +1037,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public CallableQuery registerOutParameter(String parameterName, int sqlType) throws SQLException {
+    public CallableQuery registerOutParameter(final String parameterName, final int sqlType) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType);
 
         addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType, null, -1));
@@ -1055,7 +1055,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public CallableQuery registerOutParameter(String parameterName, int sqlType, int scale) throws SQLException {
+    public CallableQuery registerOutParameter(final String parameterName, final int sqlType, int scale) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType, scale);
 
         addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType, null, scale));
@@ -1073,7 +1073,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public CallableQuery registerOutParameter(String parameterName, int sqlType, String typeName) throws SQLException {
+    public CallableQuery registerOutParameter(final String parameterName, final int sqlType, String typeName) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType, typeName);
 
         addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType, typeName, -1));
@@ -1089,7 +1089,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery registerOutParameter(int parameterIndex, SQLType sqlType) throws SQLException {
+    public CallableQuery registerOutParameter(int parameterIndex, final SQLType sqlType) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType);
 
         addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), null, -1));
@@ -1106,7 +1106,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery registerOutParameter(int parameterIndex, SQLType sqlType, int scale) throws SQLException {
+    public CallableQuery registerOutParameter(int parameterIndex, final SQLType sqlType, int scale) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType, scale);
 
         addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), null, scale));
@@ -1123,7 +1123,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery registerOutParameter(int parameterIndex, SQLType sqlType, String typeName) throws SQLException {
+    public CallableQuery registerOutParameter(int parameterIndex, final SQLType sqlType, String typeName) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType, typeName);
 
         addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), typeName, -1));
@@ -1139,7 +1139,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery registerOutParameter(String parameterName, SQLType sqlType) throws SQLException {
+    public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType);
 
         addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), null, -1));
@@ -1156,7 +1156,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery registerOutParameter(String parameterName, SQLType sqlType, int scale) throws SQLException {
+    public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType, int scale) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType, scale);
 
         addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), null, scale));
@@ -1173,7 +1173,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery registerOutParameter(String parameterName, SQLType sqlType, String typeName) throws SQLException {
+    public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType, String typeName) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType, typeName);
 
         addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), typeName, -1));
@@ -1184,9 +1184,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Register out parameters.
      *
-     * @param register 
-     * @return 
-     * @throws IllegalArgumentException 
+     * @param register
+     * @return
+     * @throws IllegalArgumentException
      * @throws SQLException the SQL exception
      */
     public CallableQuery registerOutParameters(final Jdbc.ParametersSetter<? super CallableQuery> register) throws IllegalArgumentException, SQLException {
@@ -1375,11 +1375,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * 
+     *
      *
      * @return a list of {@code Out Parameters}.
-     * @throws IllegalStateException if this is closed 
-     * @throws SQLException 
+     * @throws IllegalStateException if this is closed
+     * @throws SQLException
      */
     public Jdbc.OutParamResult executeAndGetOutParameters() throws IllegalStateException, SQLException {
         assertNotClosed();
@@ -1403,14 +1403,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return the {@code R} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException 
-     * @throws IllegalStateException if this is closed 
-     * @throws SQLException 
+     * @throws IllegalArgumentException
+     * @throws IllegalStateException if this is closed
+     * @throws SQLException
      */
     public <R> Tuple2<R, Jdbc.OutParamResult> queryAndGetOutParameters(final Jdbc.ResultExtractor<? extends R> resultExtractor)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -1432,14 +1432,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * 
      *
-     * @param <R> 
+     *
+     * @param <R>
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return the {@code R} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException 
-     * @throws IllegalStateException if this is closed 
-     * @throws SQLException 
+     * @throws IllegalArgumentException
+     * @throws IllegalStateException if this is closed
+     * @throws SQLException
      */
     public <R> Tuple2<R, Jdbc.OutParamResult> queryAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R> resultExtractor)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -1544,16 +1544,16 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * 
      *
-     * @param <R1> 
-     * @param <R2> 
+     *
+     * @param <R1>
+     * @param <R2>
      * @param resultExtractor1 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param resultExtractor2 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return {@code R1/R2} extracted from the first two {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException 
-     * @throws IllegalStateException if this is closed 
-     * @throws SQLException 
+     * @throws IllegalArgumentException
+     * @throws IllegalStateException if this is closed
+     * @throws SQLException
      */
     @Beta
     public <R1, R2> Tuple3<R1, R2, Jdbc.OutParamResult> query2ResultsetsAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
@@ -1593,18 +1593,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * 
      *
-     * @param <R1> 
-     * @param <R2> 
-     * @param <R3> 
+     *
+     * @param <R1>
+     * @param <R2>
+     * @param <R3>
      * @param resultExtractor1 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param resultExtractor2 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param resultExtractor3 Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return {@code R1/R2/R3} extracted from the first three {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException 
-     * @throws IllegalStateException if this is closed 
-     * @throws SQLException 
+     * @throws IllegalArgumentException
+     * @throws IllegalStateException if this is closed
+     * @throws SQLException
      */
     @Beta
     public <R1, R2, R3> Tuple4<R1, R2, R3, Jdbc.OutParamResult> query3ResultsetsAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
@@ -1651,13 +1651,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param targetType 
+     *
+     * @param <T>
+     * @param targetType
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException 
-     * @throws SQLException 
+     * @throws IllegalArgumentException
+     * @throws SQLException
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Class<? extends T> targetType) throws IllegalArgumentException, SQLException {
         checkArgNotNull(targetType, "targetType");
@@ -1666,14 +1666,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param rowMapper 
+     *
+     * @param <T>
+     * @param rowMapper
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException 
-     * @throws IllegalStateException if this is closed 
-     * @throws SQLException 
+     * @throws IllegalArgumentException
+     * @throws IllegalStateException if this is closed
+     * @throws SQLException
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -1729,14 +1729,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param rowMapper 
+     *
+     * @param <T>
+     * @param rowMapper
      * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException 
-     * @throws IllegalStateException if this is closed 
-     * @throws SQLException 
+     * @throws IllegalArgumentException
+     * @throws IllegalStateException if this is closed
+     * @throws SQLException
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -1796,14 +1796,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param targetType 
+     *
+     * @param <T>
+     * @param targetType
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException 
-     * @throws IllegalStateException if this is closed 
-     * @throws SQLException 
+     * @throws IllegalArgumentException
+     * @throws IllegalStateException if this is closed
+     * @throws SQLException
      */
     public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listMultiResultsetsAndGetOutParameters(final Class<? extends T> targetType)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -1845,15 +1845,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param rowFilter 
-     * @param rowMapper 
+     *
+     * @param <T>
+     * @param rowFilter
+     * @param rowMapper
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException 
-     * @throws IllegalStateException if this is closed 
-     * @throws SQLException 
+     * @throws IllegalArgumentException
+     * @throws IllegalStateException if this is closed
+     * @throws SQLException
      */
     public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listMultiResultsetsAndGetOutParameters(final Jdbc.RowFilter rowFilter,
             final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -1896,15 +1896,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * 
      *
-     * @param <T> 
-     * @param rowFilter 
-     * @param rowMapper 
+     *
+     * @param <T>
+     * @param rowFilter
+     * @param rowMapper
      * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException 
-     * @throws IllegalStateException if this is closed 
-     * @throws SQLException 
+     * @throws IllegalArgumentException
+     * @throws IllegalStateException if this is closed
+     * @throws SQLException
      */
     public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listMultiResultsetsAndGetOutParameters(final Jdbc.BiRowFilter rowFilter,
             final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException, SQLException {

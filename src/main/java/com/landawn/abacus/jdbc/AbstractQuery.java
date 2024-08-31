@@ -217,7 +217,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      * @see java.sql.Types
      */
-    public This setNull(int parameterIndex, int sqlType) throws SQLException {
+    public This setNull(final int parameterIndex, final int sqlType) throws SQLException {
         stmt.setNull(parameterIndex, sqlType);
 
         return (This) this;
@@ -233,7 +233,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      * @see java.sql.Types
      */
-    public This setNull(int parameterIndex, int sqlType, String typeName) throws SQLException {
+    public This setNull(final int parameterIndex, final int sqlType, String typeName) throws SQLException {
         stmt.setNull(parameterIndex, sqlType, typeName);
 
         return (This) this;
@@ -247,7 +247,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setBoolean(int parameterIndex, boolean x) throws SQLException {
+    public This setBoolean(final int parameterIndex, final boolean x) throws SQLException {
         stmt.setBoolean(parameterIndex, x);
 
         return (This) this;
@@ -261,7 +261,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setBoolean(int parameterIndex, Boolean x) throws SQLException {
+    public This setBoolean(final int parameterIndex, final Boolean x) throws SQLException {
         if (x == null) {
             stmt.setNull(parameterIndex, java.sql.Types.BOOLEAN);
         } else {
@@ -279,7 +279,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setByte(int parameterIndex, byte x) throws SQLException {
+    public This setByte(final int parameterIndex, final byte x) throws SQLException {
         stmt.setByte(parameterIndex, x);
 
         return (This) this;
@@ -293,7 +293,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setByte(int parameterIndex, Byte x) throws SQLException {
+    public This setByte(final int parameterIndex, final Byte x) throws SQLException {
         if (x == null) {
             stmt.setNull(parameterIndex, java.sql.Types.TINYINT);
         } else {
@@ -312,7 +312,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setByte(int parameterIndex, Byte x, byte defaultValueForNull) throws SQLException {
+    public This setByte(final int parameterIndex, final Byte x, byte defaultValueForNull) throws SQLException {
         if (x == null) {
             stmt.setByte(parameterIndex, defaultValueForNull);
         } else {
@@ -330,7 +330,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setShort(int parameterIndex, short x) throws SQLException {
+    public This setShort(final int parameterIndex, final short x) throws SQLException {
         stmt.setShort(parameterIndex, x);
 
         return (This) this;
@@ -344,7 +344,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setShort(int parameterIndex, Short x) throws SQLException {
+    public This setShort(final int parameterIndex, final Short x) throws SQLException {
         if (x == null) {
             stmt.setNull(parameterIndex, java.sql.Types.SMALLINT);
         } else {
@@ -363,7 +363,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setShort(int parameterIndex, Short x, short defaultValueForNull) throws SQLException {
+    public This setShort(final int parameterIndex, final Short x, short defaultValueForNull) throws SQLException {
         if (x == null) {
             stmt.setShort(parameterIndex, defaultValueForNull);
         } else {
@@ -381,7 +381,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setInt(int parameterIndex, int x) throws SQLException {
+    public This setInt(final int parameterIndex, final int x) throws SQLException {
         stmt.setInt(parameterIndex, x);
 
         return (This) this;
@@ -395,7 +395,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setInt(int parameterIndex, Integer x) throws SQLException {
+    public This setInt(final int parameterIndex, final Integer x) throws SQLException {
         if (x == null) {
             stmt.setNull(parameterIndex, java.sql.Types.INTEGER);
         } else {
@@ -415,7 +415,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     @Beta
-    public This setInt(int parameterIndex, Integer x, int defaultValueForNull) throws SQLException {
+    public This setInt(final int parameterIndex, final Integer x, int defaultValueForNull) throws SQLException {
         if (x == null) {
             stmt.setInt(parameterIndex, defaultValueForNull);
         } else {
@@ -434,11 +434,20 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     @Beta
-    public This setInt(int parameterIndex, String x) throws SQLException {
+    public This setInt(final int parameterIndex, final String x) throws SQLException {
         if (Strings.isEmpty(x)) {
             stmt.setNull(parameterIndex, java.sql.Types.INTEGER);
         } else {
-            stmt.setInt(parameterIndex, Numbers.toInt(x));
+            boolean noException = false;
+
+            try {
+                stmt.setInt(parameterIndex, Numbers.toInt(x));
+                noException = true;
+            } finally {
+                if (!noException) {
+                    close();
+                }
+            }
         }
 
         return (This) this;
@@ -456,7 +465,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Deprecated
     @Beta
-    public This setInt(int parameterIndex, char x) throws SQLException {
+    public This setInt(final int parameterIndex, final char x) throws SQLException {
         stmt.setInt(parameterIndex, x);
 
         return (This) this;
@@ -474,7 +483,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Deprecated
     @Beta
-    public This setInt(int parameterIndex, Character x) throws SQLException {
+    public This setInt(final int parameterIndex, final Character x) throws SQLException {
         if (x == null) {
             stmt.setNull(parameterIndex, java.sql.Types.INTEGER);
         } else {
@@ -492,7 +501,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setLong(int parameterIndex, long x) throws SQLException {
+    public This setLong(final int parameterIndex, final long x) throws SQLException {
         stmt.setLong(parameterIndex, x);
 
         return (This) this;
@@ -506,7 +515,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setLong(int parameterIndex, Long x) throws SQLException {
+    public This setLong(final int parameterIndex, final Long x) throws SQLException {
         if (x == null) {
             stmt.setNull(parameterIndex, java.sql.Types.BIGINT);
         } else {
@@ -526,7 +535,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     @Beta
-    public This setLong(int parameterIndex, Long x, long defaultValueForNull) throws SQLException {
+    public This setLong(final int parameterIndex, final Long x, long defaultValueForNull) throws SQLException {
         if (x == null) {
             stmt.setLong(parameterIndex, defaultValueForNull);
         } else {
@@ -545,11 +554,20 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     @Beta
-    public This setLong(int parameterIndex, String x) throws SQLException {
+    public This setLong(final int parameterIndex, final String x) throws SQLException {
         if (Strings.isEmpty(x)) {
             stmt.setNull(parameterIndex, java.sql.Types.BIGINT);
         } else {
-            stmt.setLong(parameterIndex, Numbers.toLong(x));
+            boolean noException = false;
+
+            try {
+                stmt.setLong(parameterIndex, Numbers.toLong(x));
+                noException = true;
+            } finally {
+                if (!noException) {
+                    close();
+                }
+            }
         }
 
         return (This) this;
@@ -563,11 +581,20 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setLong(int parameterIndex, BigInteger x) throws SQLException {
+    public This setLong(final int parameterIndex, final BigInteger x) throws SQLException {
         if (x == null) {
             stmt.setNull(parameterIndex, java.sql.Types.BIGINT);
         } else {
-            stmt.setLong(parameterIndex, x.longValueExact());
+            boolean noException = false;
+
+            try {
+                stmt.setLong(parameterIndex, x.longValueExact());
+                noException = true;
+            } finally {
+                if (!noException) {
+                    close();
+                }
+            }
         }
 
         return (This) this;
@@ -581,7 +608,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setFloat(int parameterIndex, float x) throws SQLException {
+    public This setFloat(final int parameterIndex, final float x) throws SQLException {
         stmt.setFloat(parameterIndex, x);
 
         return (This) this;
@@ -595,7 +622,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setFloat(int parameterIndex, Float x) throws SQLException {
+    public This setFloat(final int parameterIndex, final Float x) throws SQLException {
         if (x == null) {
             stmt.setNull(parameterIndex, java.sql.Types.FLOAT);
         } else {
@@ -614,11 +641,39 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setFloat(int parameterIndex, Float x, float defaultValueForNull) throws SQLException {
+    public This setFloat(final int parameterIndex, final Float x, float defaultValueForNull) throws SQLException {
         if (x == null) {
             stmt.setFloat(parameterIndex, defaultValueForNull);
         } else {
             stmt.setFloat(parameterIndex, x);
+        }
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the float.
+     *
+     * @param parameterIndex
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public This setFloat(final int parameterIndex, final String x) throws SQLException {
+        if (Strings.isEmpty(x)) {
+            stmt.setNull(parameterIndex, java.sql.Types.FLOAT);
+        } else {
+            boolean noException = false;
+
+            try {
+                stmt.setFloat(parameterIndex, Numbers.toFloat(x));
+                noException = true;
+            } finally {
+                if (!noException) {
+                    close();
+                }
+            }
+
         }
 
         return (This) this;
@@ -632,7 +687,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setDouble(int parameterIndex, double x) throws SQLException {
+    public This setDouble(final int parameterIndex, final double x) throws SQLException {
         stmt.setDouble(parameterIndex, x);
 
         return (This) this;
@@ -646,7 +701,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setDouble(int parameterIndex, Double x) throws SQLException {
+    public This setDouble(final int parameterIndex, final Double x) throws SQLException {
         if (x == null) {
             stmt.setNull(parameterIndex, java.sql.Types.DOUBLE);
         } else {
@@ -665,11 +720,39 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setDouble(int parameterIndex, Double x, double defaultValueForNull) throws SQLException {
+    public This setDouble(final int parameterIndex, final Double x, double defaultValueForNull) throws SQLException {
         if (x == null) {
             stmt.setDouble(parameterIndex, defaultValueForNull);
         } else {
             stmt.setDouble(parameterIndex, x);
+        }
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the double.
+     *
+     * @param parameterIndex
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public This setDouble(final int parameterIndex, final String x) throws SQLException {
+        if (Strings.isEmpty(x)) {
+            stmt.setNull(parameterIndex, java.sql.Types.DOUBLE);
+        } else {
+            boolean noException = false;
+
+            try {
+                stmt.setDouble(parameterIndex, Numbers.toDouble(x));
+                noException = true;
+            } finally {
+                if (!noException) {
+                    close();
+                }
+            }
+
         }
 
         return (This) this;
@@ -683,7 +766,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setBigDecimal(int parameterIndex, BigDecimal x) throws SQLException {
+    public This setBigDecimal(final int parameterIndex, final BigDecimal x) throws SQLException {
         stmt.setBigDecimal(parameterIndex, x);
 
         return (This) this;
@@ -697,7 +780,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setBigDecimal(int parameterIndex, BigInteger x) throws SQLException {
+    public This setBigDecimal(final int parameterIndex, final BigInteger x) throws SQLException {
         if (x == null) {
             stmt.setNull(parameterIndex, Types.DECIMAL);
         } else {
@@ -719,7 +802,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see {@link #setLong(int, BigInteger)}
      */
     @Beta
-    public This setBigIntegerAsString(int parameterIndex, BigInteger x) throws SQLException {
+    public This setBigIntegerAsString(final int parameterIndex, final BigInteger x) throws SQLException {
         return setString(parameterIndex, x);
     }
 
@@ -731,7 +814,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setString(int parameterIndex, String x) throws SQLException {
+    public This setString(final int parameterIndex, final String x) throws SQLException {
         stmt.setString(parameterIndex, x);
 
         return (This) this;
@@ -745,7 +828,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setString(int parameterIndex, CharSequence x) throws SQLException {
+    public This setString(final int parameterIndex, final CharSequence x) throws SQLException {
         stmt.setString(parameterIndex, x == null ? null : x.toString());
 
         return (This) this;
@@ -759,7 +842,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setString(int parameterIndex, char x) throws SQLException {
+    public This setString(final int parameterIndex, final char x) throws SQLException {
         stmt.setString(parameterIndex, String.valueOf(x));
 
         return (This) this;
@@ -773,7 +856,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setString(int parameterIndex, Character x) throws SQLException {
+    public This setString(final int parameterIndex, final Character x) throws SQLException {
         stmt.setString(parameterIndex, x == null ? null : String.valueOf(x));
 
         return (This) this;
@@ -787,7 +870,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setString(int parameterIndex, BigInteger x) throws SQLException {
+    public This setString(final int parameterIndex, final BigInteger x) throws SQLException {
         if (x == null) {
             stmt.setNull(parameterIndex, Types.VARCHAR);
         } else {
@@ -805,7 +888,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setNString(int parameterIndex, String x) throws SQLException {
+    public This setNString(final int parameterIndex, final String x) throws SQLException {
         stmt.setNString(parameterIndex, x);
 
         return (This) this;
@@ -819,7 +902,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setNString(int parameterIndex, CharSequence x) throws SQLException {
+    public This setNString(final int parameterIndex, final CharSequence x) throws SQLException {
         stmt.setNString(parameterIndex, x == null ? null : x.toString());
 
         return (This) this;
@@ -833,7 +916,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setDate(int parameterIndex, java.sql.Date x) throws SQLException {
+    public This setDate(final int parameterIndex, final java.sql.Date x) throws SQLException {
         stmt.setDate(parameterIndex, x);
 
         return (This) this;
@@ -847,7 +930,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setDate(int parameterIndex, java.util.Date x) throws SQLException {
+    public This setDate(final int parameterIndex, final java.util.Date x) throws SQLException {
         stmt.setDate(parameterIndex, x == null ? null : x instanceof java.sql.Date ? (java.sql.Date) x : new java.sql.Date(x.getTime()));
 
         return (This) this;
@@ -862,7 +945,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setDate(int parameterIndex, java.sql.Date x, Calendar cal) throws SQLException {
+    public This setDate(final int parameterIndex, final java.sql.Date x, Calendar cal) throws SQLException {
         stmt.setDate(parameterIndex, x, cal);
 
         return (This) this;
@@ -876,7 +959,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setTime(int parameterIndex, java.sql.Time x) throws SQLException {
+    public This setTime(final int parameterIndex, final java.sql.Time x) throws SQLException {
         stmt.setTime(parameterIndex, x);
 
         return (This) this;
@@ -890,7 +973,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setTime(int parameterIndex, java.util.Date x) throws SQLException {
+    public This setTime(final int parameterIndex, final java.util.Date x) throws SQLException {
         stmt.setTime(parameterIndex, x == null ? null : x instanceof java.sql.Time ? (java.sql.Time) x : new java.sql.Time(x.getTime()));
 
         return (This) this;
@@ -905,7 +988,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setTime(int parameterIndex, java.sql.Time x, Calendar cal) throws SQLException {
+    public This setTime(final int parameterIndex, final java.sql.Time x, Calendar cal) throws SQLException {
         stmt.setTime(parameterIndex, x, cal);
 
         return (This) this;
@@ -919,7 +1002,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setTimestamp(int parameterIndex, java.sql.Timestamp x) throws SQLException {
+    public This setTimestamp(final int parameterIndex, final java.sql.Timestamp x) throws SQLException {
         stmt.setTimestamp(parameterIndex, x);
 
         return (This) this;
@@ -933,7 +1016,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setTimestamp(int parameterIndex, java.util.Date x) throws SQLException {
+    public This setTimestamp(final int parameterIndex, final java.util.Date x) throws SQLException {
         stmt.setTimestamp(parameterIndex, x == null ? null : x instanceof java.sql.Timestamp ? (java.sql.Timestamp) x : new java.sql.Timestamp(x.getTime()));
 
         return (This) this;
@@ -948,7 +1031,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setTimestamp(int parameterIndex, java.sql.Timestamp x, Calendar cal) throws SQLException {
+    public This setTimestamp(final int parameterIndex, final java.sql.Timestamp x, Calendar cal) throws SQLException {
         stmt.setTimestamp(parameterIndex, x, cal);
 
         return (This) this;
@@ -962,7 +1045,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setBytes(int parameterIndex, byte[] x) throws SQLException {
+    public This setBytes(final int parameterIndex, final byte[] x) throws SQLException {
         stmt.setBytes(parameterIndex, x);
 
         return (This) this;
@@ -976,7 +1059,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setAsciiStream(int parameterIndex, InputStream inputStream) throws SQLException {
+    public This setAsciiStream(final int parameterIndex, final InputStream inputStream) throws SQLException {
         stmt.setAsciiStream(parameterIndex, inputStream);
 
         return (This) this;
@@ -991,7 +1074,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setAsciiStream(int parameterIndex, InputStream inputStream, int length) throws SQLException {
+    public This setAsciiStream(final int parameterIndex, final InputStream inputStream, int length) throws SQLException {
         stmt.setAsciiStream(parameterIndex, inputStream, length);
 
         return (This) this;
@@ -1006,7 +1089,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setAsciiStream(int parameterIndex, InputStream inputStream, long length) throws SQLException {
+    public This setAsciiStream(final int parameterIndex, final InputStream inputStream, final long length) throws SQLException {
         stmt.setAsciiStream(parameterIndex, inputStream, length);
 
         return (This) this;
@@ -1020,7 +1103,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setBinaryStream(int parameterIndex, InputStream inputStream) throws SQLException {
+    public This setBinaryStream(final int parameterIndex, final InputStream inputStream) throws SQLException {
         stmt.setBinaryStream(parameterIndex, inputStream);
 
         return (This) this;
@@ -1035,7 +1118,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setBinaryStream(int parameterIndex, InputStream inputStream, int length) throws SQLException {
+    public This setBinaryStream(final int parameterIndex, final InputStream inputStream, int length) throws SQLException {
         stmt.setBinaryStream(parameterIndex, inputStream, length);
 
         return (This) this;
@@ -1050,7 +1133,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setBinaryStream(int parameterIndex, InputStream inputStream, long length) throws SQLException {
+    public This setBinaryStream(final int parameterIndex, final InputStream inputStream, final long length) throws SQLException {
         stmt.setBinaryStream(parameterIndex, inputStream, length);
 
         return (This) this;
@@ -1064,7 +1147,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setCharacterStream(int parameterIndex, Reader reader) throws SQLException {
+    public This setCharacterStream(final int parameterIndex, final Reader reader) throws SQLException {
         stmt.setCharacterStream(parameterIndex, reader);
 
         return (This) this;
@@ -1079,7 +1162,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setCharacterStream(int parameterIndex, Reader reader, int length) throws SQLException {
+    public This setCharacterStream(final int parameterIndex, final Reader reader, int length) throws SQLException {
         stmt.setCharacterStream(parameterIndex, reader, length);
 
         return (This) this;
@@ -1094,7 +1177,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setCharacterStream(int parameterIndex, Reader reader, long length) throws SQLException {
+    public This setCharacterStream(final int parameterIndex, final Reader reader, final long length) throws SQLException {
         stmt.setCharacterStream(parameterIndex, reader, length);
 
         return (This) this;
@@ -1108,7 +1191,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setNCharacterStream(int parameterIndex, Reader reader) throws SQLException {
+    public This setNCharacterStream(final int parameterIndex, final Reader reader) throws SQLException {
         stmt.setNCharacterStream(parameterIndex, reader);
 
         return (This) this;
@@ -1123,7 +1206,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setNCharacterStream(int parameterIndex, Reader reader, long length) throws SQLException {
+    public This setNCharacterStream(final int parameterIndex, final Reader reader, final long length) throws SQLException {
         stmt.setNCharacterStream(parameterIndex, reader, length);
 
         return (This) this;
@@ -1137,7 +1220,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setBlob(int parameterIndex, java.sql.Blob x) throws SQLException {
+    public This setBlob(final int parameterIndex, final java.sql.Blob x) throws SQLException {
         stmt.setBlob(parameterIndex, x);
 
         return (This) this;
@@ -1151,7 +1234,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setBlob(int parameterIndex, InputStream inputStream) throws SQLException {
+    public This setBlob(final int parameterIndex, final InputStream inputStream) throws SQLException {
         stmt.setBlob(parameterIndex, inputStream);
 
         return (This) this;
@@ -1166,7 +1249,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setBlob(int parameterIndex, InputStream inputStream, long length) throws SQLException {
+    public This setBlob(final int parameterIndex, final InputStream inputStream, final long length) throws SQLException {
         stmt.setBlob(parameterIndex, inputStream, length);
 
         return (This) this;
@@ -1180,7 +1263,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setClob(int parameterIndex, java.sql.Clob x) throws SQLException {
+    public This setClob(final int parameterIndex, final java.sql.Clob x) throws SQLException {
         stmt.setClob(parameterIndex, x);
 
         return (This) this;
@@ -1194,7 +1277,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setClob(int parameterIndex, Reader reader) throws SQLException {
+    public This setClob(final int parameterIndex, final Reader reader) throws SQLException {
         stmt.setClob(parameterIndex, reader);
 
         return (This) this;
@@ -1209,7 +1292,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setClob(int parameterIndex, Reader reader, long length) throws SQLException {
+    public This setClob(final int parameterIndex, final Reader reader, final long length) throws SQLException {
         stmt.setClob(parameterIndex, reader, length);
 
         return (This) this;
@@ -1223,7 +1306,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setNClob(int parameterIndex, java.sql.NClob x) throws SQLException {
+    public This setNClob(final int parameterIndex, final java.sql.NClob x) throws SQLException {
         stmt.setNClob(parameterIndex, x);
 
         return (This) this;
@@ -1237,7 +1320,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setNClob(int parameterIndex, Reader reader) throws SQLException {
+    public This setNClob(final int parameterIndex, final Reader reader) throws SQLException {
         stmt.setNClob(parameterIndex, reader);
 
         return (This) this;
@@ -1252,7 +1335,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setNClob(int parameterIndex, Reader reader, long length) throws SQLException {
+    public This setNClob(final int parameterIndex, final Reader reader, final long length) throws SQLException {
         stmt.setNClob(parameterIndex, reader, length);
 
         return (This) this;
@@ -1266,7 +1349,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setURL(int parameterIndex, URL x) throws SQLException {
+    public This setURL(final int parameterIndex, final URL x) throws SQLException {
         stmt.setURL(parameterIndex, x);
 
         return (This) this;
@@ -1280,7 +1363,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setArray(int parameterIndex, java.sql.Array x) throws SQLException {
+    public This setArray(final int parameterIndex, final java.sql.Array x) throws SQLException {
         stmt.setArray(parameterIndex, x);
 
         return (This) this;
@@ -1294,7 +1377,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setSQLXML(int parameterIndex, java.sql.SQLXML x) throws SQLException {
+    public This setSQLXML(final int parameterIndex, final java.sql.SQLXML x) throws SQLException {
         stmt.setSQLXML(parameterIndex, x);
 
         return (This) this;
@@ -1308,7 +1391,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setRef(int parameterIndex, java.sql.Ref x) throws SQLException {
+    public This setRef(final int parameterIndex, final java.sql.Ref x) throws SQLException {
         stmt.setRef(parameterIndex, x);
 
         return (This) this;
@@ -1322,7 +1405,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setRowId(int parameterIndex, java.sql.RowId x) throws SQLException {
+    public This setRowId(final int parameterIndex, final java.sql.RowId x) throws SQLException {
         stmt.setRowId(parameterIndex, x);
 
         return (This) this;
@@ -1336,7 +1419,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setObject(int parameterIndex, Object x) throws SQLException {
+    public This setObject(final int parameterIndex, final Object x) throws SQLException {
         if (x == null) {
             stmt.setObject(parameterIndex, x);
         } else {
@@ -1356,7 +1439,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      * @see java.sql.Types
      */
-    public This setObject(int parameterIndex, Object x, int sqlType) throws SQLException {
+    public This setObject(final int parameterIndex, final Object x, final int sqlType) throws SQLException {
         stmt.setObject(parameterIndex, x, sqlType);
 
         return (This) this;
@@ -1373,7 +1456,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      * @see java.sql.Types
      */
-    public This setObject(int parameterIndex, Object x, int sqlType, int scaleOrLength) throws SQLException {
+    public This setObject(final int parameterIndex, final Object x, final int sqlType, final int scaleOrLength) throws SQLException {
         stmt.setObject(parameterIndex, x, sqlType, scaleOrLength);
 
         return (This) this;
@@ -1388,7 +1471,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setObject(int parameterIndex, Object x, SQLType sqlType) throws SQLException {
+    public This setObject(final int parameterIndex, final Object x, final SQLType sqlType) throws SQLException {
         stmt.setObject(parameterIndex, x, sqlType);
 
         return (This) this;
@@ -1404,7 +1487,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
-    public This setObject(int parameterIndex, Object x, SQLType sqlType, int scaleOrLength) throws SQLException {
+    public This setObject(final int parameterIndex, final Object x, final SQLType sqlType, final int scaleOrLength) throws SQLException {
         stmt.setObject(parameterIndex, x, sqlType, scaleOrLength);
 
         return (This) this;
@@ -1420,7 +1503,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException
      * @throws SQLException
      */
-    public This setObject(int parameterIndex, Object x, Type<Object> type) throws IllegalArgumentException, SQLException {
+    public This setObject(final int parameterIndex, final Object x, final Type<Object> type) throws IllegalArgumentException, SQLException {
         type.set(stmt, parameterIndex, x);
 
         return (This) this;
