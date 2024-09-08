@@ -32,16 +32,16 @@ import com.landawn.abacus.annotation.Beta;
 public @interface Cache {
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     int capacity() default 1000;
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     long evictDelay() default 3000; // unit milliseconds.
 }

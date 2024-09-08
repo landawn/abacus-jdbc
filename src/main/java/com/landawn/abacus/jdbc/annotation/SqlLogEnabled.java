@@ -30,16 +30,16 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 public @interface SqlLogEnabled {
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     boolean value() default true;
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     int maxSqlLogLength() default JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH; // 1024
 

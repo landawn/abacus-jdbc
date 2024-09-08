@@ -2852,42 +2852,42 @@ public final class JdbcUtils {
     }
 
     /**
-    *
-    * @param sourceDataSource
-    * @param targetDataSource
-    * @param tableName
-    * @return
-    * @throws SQLException
-    */
+     *
+     * @param sourceDataSource
+     * @param targetDataSource
+     * @param tableName
+     * @return
+     * @throws SQLException
+     */
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String tableName)
             throws SQLException {
         return copy(sourceDataSource, targetDataSource, tableName, tableName);
     }
 
     /**
-    *
-    * @param sourceDataSource
-    * @param targetDataSource
-    * @param sourceTableName
-    * @param targetTableName
-    * @return
-    * @throws SQLException
-    */
+     *
+     * @param sourceDataSource
+     * @param targetDataSource
+     * @param sourceTableName
+     * @param targetTableName
+     * @return
+     * @throws SQLException
+     */
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
             final String targetTableName) throws SQLException {
         return copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
-    *
-    * @param sourceDataSource
-    * @param targetDataSource
-    * @param sourceTableName
-    * @param targetTableName
-    * @param batchSize
-    * @return
-    * @throws SQLException
-    */
+     *
+     * @param sourceDataSource
+     * @param targetDataSource
+     * @param sourceTableName
+     * @param targetTableName
+     * @param batchSize
+     * @return
+     * @throws SQLException
+     */
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
             final String targetTableName, final int batchSize) throws SQLException {
         String selectSql = null;
@@ -2926,16 +2926,16 @@ public final class JdbcUtils {
     }
 
     /**
-    *
-    * @param sourceDataSource
-    * @param targetDataSource
-    * @param sourceTableName
-    * @param targetTableName
-    * @param selectColumnNames
-    * @param batchSize
-    * @return
-    * @throws SQLException
-    */
+     *
+     * @param sourceDataSource
+     * @param targetDataSource
+     * @param sourceTableName
+     * @param targetTableName
+     * @param selectColumnNames
+     * @param batchSize
+     * @return
+     * @throws SQLException
+     */
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
             final String targetTableName, final Collection<String> selectColumnNames, final int batchSize) throws SQLException {
         String selectSql = null;
@@ -2959,45 +2959,45 @@ public final class JdbcUtils {
     }
 
     /**
-    *
-    * @param sourceDataSource
-    * @param selectSql
-    * @param targetDataSource
-    * @param insertSql
-    * @return
-    * @throws SQLException
-    */
+     *
+     * @param sourceDataSource
+     * @param selectSql
+     * @param targetDataSource
+     * @param insertSql
+     * @return
+     * @throws SQLException
+     */
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource,
             final String insertSql) throws SQLException {
         return copy(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
-    *
-    * @param sourceDataSource
-    * @param selectSql
-    * @param fetchSize it should be bigger than {@code batchSize}. It can be x times {@code batchSize}, depends on how big one record is and how much memory is available.
-    * @param targetDataSource
-    * @param insertSql
-    * @param batchSize
-    * @return
-    * @throws SQLException
-    */
+     *
+     * @param sourceDataSource
+     * @param selectSql
+     * @param fetchSize it should be bigger than {@code batchSize}. It can be x times {@code batchSize}, depends on how big one record is and how much memory is available.
+     * @param targetDataSource
+     * @param insertSql
+     * @param batchSize
+     * @return
+     * @throws SQLException
+     */
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
             final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize) throws SQLException {
         return copy(sourceDataSource, selectSql, fetchSize, targetDataSource, insertSql, batchSize, supplierOfStmtSetterByRS.get());
     }
 
     /**
-    *
-    * @param sourceDataSource
-    * @param selectSql
-    * @param targetDataSource
-    * @param insertSql
-    * @param stmtSetter
-    * @return
-    * @throws SQLException
-    */
+     *
+     * @param sourceDataSource
+     * @param selectSql
+     * @param targetDataSource
+     * @param insertSql
+     * @param stmtSetter
+     * @return
+     * @throws SQLException
+     */
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource,
             final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) throws SQLException {
         return copy(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE,
@@ -3005,17 +3005,17 @@ public final class JdbcUtils {
     }
 
     /**
-    *
-    * @param sourceDataSource
-    * @param selectSql
-    * @param fetchSize it should be bigger than {@code batchSize}. It can be x times {@code batchSize}, depends on how big one record is and how much memory is available.
-    * @param targetDataSource
-    * @param insertSql
-    * @param batchSize
-    * @param stmtSetter
-    * @return
-    * @throws SQLException
-    */
+     *
+     * @param sourceDataSource
+     * @param selectSql
+     * @param fetchSize it should be bigger than {@code batchSize}. It can be x times {@code batchSize}, depends on how big one record is and how much memory is available.
+     * @param targetDataSource
+     * @param insertSql
+     * @param batchSize
+     * @param stmtSetter
+     * @return
+     * @throws SQLException
+     */
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
             final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize,
             final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) throws SQLException {
@@ -3039,41 +3039,41 @@ public final class JdbcUtils {
     }
 
     /**
-    *
-    * @param sourceConn
-    * @param targetConn
-    * @param tableName
-    * @return
-    * @throws SQLException
-    */
+     *
+     * @param sourceConn
+     * @param targetConn
+     * @param tableName
+     * @return
+     * @throws SQLException
+     */
     public static long copy(final Connection sourceConn, final Connection targetConn, final String tableName) throws SQLException {
         return copy(sourceConn, targetConn, tableName, tableName);
     }
 
     /**
-    *
-    * @param sourceConn
-    * @param targetConn
-    * @param sourceTableName
-    * @param targetTableName
-    * @return
-    * @throws SQLException
-    */
+     *
+     * @param sourceConn
+     * @param targetConn
+     * @param sourceTableName
+     * @param targetTableName
+     * @return
+     * @throws SQLException
+     */
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName)
             throws SQLException {
         return copy(sourceConn, targetConn, sourceTableName, targetTableName, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
-    *
-    * @param sourceConn
-    * @param targetConn
-    * @param sourceTableName
-    * @param targetTableName
-    * @param batchSize
-    * @return
-    * @throws SQLException
-    */
+     *
+     * @param sourceConn
+     * @param targetConn
+     * @param sourceTableName
+     * @param targetTableName
+     * @param batchSize
+     * @return
+     * @throws SQLException
+     */
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
             final int batchSize) throws SQLException {
         final String selectSql = JdbcCodeGenerationUtil.generateSelectSql(sourceConn, sourceTableName);
@@ -3087,31 +3087,31 @@ public final class JdbcUtils {
     }
 
     /**
-    *
-    * @param sourceConn
-    * @param targetConn
-    * @param sourceTableName
-    * @param targetTableName
-    * @param selectColumnNames
-    * @return
-    * @throws SQLException
-    */
+     *
+     * @param sourceConn
+     * @param targetConn
+     * @param sourceTableName
+     * @param targetTableName
+     * @param selectColumnNames
+     * @return
+     * @throws SQLException
+     */
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
             final Collection<String> selectColumnNames) throws SQLException {
         return copy(sourceConn, targetConn, sourceTableName, targetTableName, selectColumnNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
-    *
-    * @param sourceConn
-    * @param targetConn
-    * @param sourceTableName
-    * @param targetTableName
-    * @param selectColumnNames
-    * @param batchSize
-    * @return
-    * @throws SQLException
-    */
+     *
+     * @param sourceConn
+     * @param targetConn
+     * @param sourceTableName
+     * @param targetTableName
+     * @param selectColumnNames
+     * @param batchSize
+     * @return
+     * @throws SQLException
+     */
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
             final Collection<String> selectColumnNames, final int batchSize) throws SQLException {
         final String selectSql = generateSelectSql(sourceConn, sourceTableName, selectColumnNames);

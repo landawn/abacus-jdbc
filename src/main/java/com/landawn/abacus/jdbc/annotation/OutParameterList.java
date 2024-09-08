@@ -25,9 +25,9 @@ import java.lang.annotation.Target;
 public @interface OutParameterList {
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     OutParameter[] value();
 }

@@ -25,9 +25,9 @@ import java.lang.annotation.Target;
 public @interface FetchColumnByEntityClass {
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     boolean value() default true;
 }

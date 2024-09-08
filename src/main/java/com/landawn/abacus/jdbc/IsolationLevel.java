@@ -66,7 +66,7 @@ public enum IsolationLevel {
      *
      * @param intValue
      */
-    IsolationLevel(int intValue) {
+    IsolationLevel(final int intValue) {
         this.intValue = intValue;
     }
 
@@ -83,7 +83,7 @@ public enum IsolationLevel {
      * @param intValue
      * @return IsolationLevel
      */
-    public static IsolationLevel valueOf(int intValue) {
+    public static IsolationLevel valueOf(final int intValue) {
         switch (intValue) {
             case -1:
                 return DEFAULT;

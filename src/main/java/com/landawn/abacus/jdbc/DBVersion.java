@@ -68,18 +68,18 @@ public enum DBVersion {
     OTHERS;
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     public boolean isMySQL() {
         return Strings.startsWithIgnoreCase(name(), "mysql");
     }
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     public boolean isPostgreSQL() {
         return Strings.startsWithIgnoreCase(name(), "postgresql");

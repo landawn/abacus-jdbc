@@ -25,7 +25,7 @@ public enum FetchDirection {
 
     final int intValue;
 
-    FetchDirection(int intValue) {
+    FetchDirection(final int intValue) {
         this.intValue = intValue;
     }
 
@@ -34,7 +34,7 @@ public enum FetchDirection {
      * @param intValue
      * @return
      */
-    public static FetchDirection valueOf(int intValue) {
+    public static FetchDirection valueOf(final int intValue) {
         switch (intValue) {
             case ResultSet.FETCH_FORWARD:
                 return FORWARD;
@@ -52,9 +52,9 @@ public enum FetchDirection {
     }
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     public int intValue() {
         return intValue;

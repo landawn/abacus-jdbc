@@ -778,7 +778,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
         final com.landawn.abacus.util.function.Function<T, EntityId> entityIdExtractor = it -> {
             final Seid entityId = Seid.of(entityInfo.simpleClassName);
 
-            for (PropInfo propInfo : uniquePropInfos) {
+            for (final PropInfo propInfo : uniquePropInfos) {
                 entityId.set(propInfo.name, propInfo.getPropValue(it));
             }
 
@@ -866,7 +866,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     @SuppressWarnings("deprecation")
-    default boolean refresh(final T entity, Collection<String> propNamesToRefresh) throws SQLException {
+    default boolean refresh(final T entity, final Collection<String> propNamesToRefresh) throws SQLException {
         N.checkArgNotNull(entity, "entity");
         N.checkArgNotEmpty(propNamesToRefresh, "propNamesToRefresh");
 
@@ -937,7 +937,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     @SuppressWarnings("deprecation")
-    default int batchRefresh(final Collection<? extends T> entities, Collection<String> propNamesToRefresh, final int batchSize) throws SQLException {
+    default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize) throws SQLException {
         N.checkArgNotEmpty(propNamesToRefresh, "propNamesToRefresh");
         N.checkArgPositive(batchSize, "batchSize");
 
@@ -964,7 +964,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
                 final List<T> tmp = idEntityMap.get(id);
 
                 if (N.notEmpty(tmp)) {
-                    for (T entity : tmp) {
+                    for (final T entity : tmp) {
                         N.merge(dbEntity, entity, propNamesToRefresh);
                     }
                 }

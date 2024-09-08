@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2024 HaiYang Li
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package com.landawn.abacus.samples.dao;
 
 import java.lang.reflect.Method;
@@ -173,7 +186,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
      * @return
      * @throws SQLException
      */
-    default int[] batchDeleteByIds_2(List<Long> userIds) throws SQLException {
+    default int[] batchDeleteByIds_2(final List<Long> userIds) throws SQLException {
         return prepareNamedQuery("DELETE FROM user1 where id = :id").addBatchParameters(userIds, long.class).batchUpdate();
     }
 
@@ -185,10 +198,10 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
      * @return
      */
     @Sqls({ "SELECT * FROM user1 where id >= :id", "SELECT * FROM user1 where id >= :id" })
-    default List<User> listUserByAnnoSql(long id, String... sqls) {
+    default List<User> listUserByAnnoSql(final long id, final String... sqls) {
         try {
             return prepareNamedQuery(sqls[0]).setLong(1, id).list(User.class);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -203,11 +216,11 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
      */
     @Transactional
     @Sqls({ "update user1 set first_name = ? where id = -1", "SELECT * FROM user1 where id >= :id" })
-    default List<User> listUserByAnnoSql2(String firstName, long id, String... sqls) {
+    default List<User> listUserByAnnoSql2(final String firstName, final long id, final String... sqls) {
         try {
             prepareQuery(sqls[0]).setString(1, firstName).update();
             return prepareNamedQuery(sqls[1]).setLong(1, id).list(User.class);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -221,12 +234,12 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
      */
     @Transactional(propagation = Propagation.SUPPORTS)
     @Sqls("DELETE FROM user1 where id = ?")
-    default boolean delete_propagation_SUPPORTS(long id, String... sqls) {
+    default boolean delete_propagation_SUPPORTS(final long id, final String... sqls) {
         N.sleep(1001);
 
         try {
             return prepareQuery(sqls[0]).setLong(1, id).update() > 0;
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -241,10 +254,10 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Handler(qualifier = "handler2")
     @Sqls("DELETE FROM user1 where id = ?")
-    default boolean delete_propagation_REQUIRES_NEW(long id, String... sqls) {
+    default boolean delete_propagation_REQUIRES_NEW(final long id, final String... sqls) {
         try {
             return prepareQuery(sqls[0]).setLong(1, id).update() > 0;
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -547,7 +560,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
 
             @Override
             public void afterInvoke(final Object result, final UserDao targetDao, final Object[] args,
-                    Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                    final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
                 N.println("innerHandler_1.afterInvoke: method: result" + result);
             }
         };

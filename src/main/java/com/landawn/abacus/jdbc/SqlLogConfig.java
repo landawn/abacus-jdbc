@@ -23,13 +23,13 @@ final class SqlLogConfig {
     SqlLogConfig(final boolean isEnabled, final int maxSqlLogLength) {
         this.isEnabled = isEnabled;
         this.maxSqlLogLength = maxSqlLogLength <= 0 ? JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
-        this.minExecutionTimeForSqlPerfLog = Long.MAX_VALUE;
+        minExecutionTimeForSqlPerfLog = Long.MAX_VALUE;
     }
 
     SqlLogConfig(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength) {
         this.minExecutionTimeForSqlPerfLog = minExecutionTimeForSqlPerfLog;
         this.maxSqlLogLength = maxSqlLogLength <= 0 ? JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
-        this.isEnabled = false;
+        isEnabled = false;
     }
 
     void set(final boolean isEnabled, final int maxSqlLogLength) {

@@ -168,7 +168,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
         if (result != null) {
-            for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+            for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                 loadJoinEntities(result, joinEntityClass);
             }
         }

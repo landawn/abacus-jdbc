@@ -73,7 +73,7 @@ final class DaoUtil {
         } else {
             final Seid entityId = Seid.of(entityInfo.simpleClassName);
 
-            for (String idPropName : idPropNameList) {
+            for (final String idPropName : idPropNameList) {
                 entityId.set(idPropName, entityInfo.getPropInfo(idPropName).getPropValue(entity));
             }
 
@@ -93,7 +93,7 @@ final class DaoUtil {
             return it -> {
                 final Seid entityId = Seid.of(entityInfo.simpleClassName);
 
-                for (PropInfo propInfo : idPropInfos) {
+                for (final PropInfo propInfo : idPropInfos) {
                     entityId.set(propInfo.name, propInfo.getPropValue(it));
                 }
 
@@ -102,7 +102,7 @@ final class DaoUtil {
         }
     }
 
-    static Collection<String> getRefreshSelectPropNames(Collection<String> propNamesToRefresh, final List<String> idPropNameList) {
+    static Collection<String> getRefreshSelectPropNames(final Collection<String> propNamesToRefresh, final List<String> idPropNameList) {
         if (propNamesToRefresh.containsAll(idPropNameList)) {
             return propNamesToRefresh;
         } else {
@@ -165,7 +165,7 @@ final class DaoUtil {
     };
 
     static void uncheckedComplete(final List<ContinuableFuture<Void>> futures) throws UncheckedSQLException {
-        for (ContinuableFuture<Void> f : futures) {
+        for (final ContinuableFuture<Void> f : futures) {
             f.gett().ifFailure(throwUncheckedSQLException);
         }
     }
@@ -174,7 +174,7 @@ final class DaoUtil {
         int result = 0;
         Result<Integer, Exception> ret = null;
 
-        for (ContinuableFuture<Integer> f : futures) {
+        for (final ContinuableFuture<Integer> f : futures) {
             ret = f.gett();
 
             if (ret.isFailure()) {
@@ -188,7 +188,7 @@ final class DaoUtil {
     }
 
     static void complete(final List<ContinuableFuture<Void>> futures) throws SQLException {
-        for (ContinuableFuture<Void> f : futures) {
+        for (final ContinuableFuture<Void> f : futures) {
             f.gett().ifFailure(throwSQLExceptionAction);
         }
     }
@@ -197,7 +197,7 @@ final class DaoUtil {
         int result = 0;
         Result<Integer, Exception> ret = null;
 
-        for (ContinuableFuture<Integer> f : futures) {
+        for (final ContinuableFuture<Integer> f : futures) {
             ret = f.gett();
 
             if (ret.isFailure()) {
@@ -343,11 +343,11 @@ final class DaoUtil {
         return tp;
     }
 
-    static boolean isSelectQuery(String sql) throws UnsupportedOperationException {
+    static boolean isSelectQuery(final String sql) throws UnsupportedOperationException {
         return sql.startsWith("select ") || sql.startsWith("SELECT ") || Strings.startsWithIgnoreCase(Strings.trim(sql), "select ");
     }
 
-    static boolean isInsertQuery(String sql) throws UnsupportedOperationException {
+    static boolean isInsertQuery(final String sql) throws UnsupportedOperationException {
         return sql.startsWith("insert ") || sql.startsWith("INSERT ") || Strings.startsWithIgnoreCase(Strings.trim(sql), "insert ");
     }
 

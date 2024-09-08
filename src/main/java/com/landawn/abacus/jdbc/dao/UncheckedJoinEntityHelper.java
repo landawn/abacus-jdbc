@@ -82,7 +82,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         final Optional<T> result = DaoUtil.getDao(this).findFirst(selectPropNames, cond);
 
         if (result.isPresent()) {
-            for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+            for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                 loadJoinEntities(result.get(), joinEntityClass);
             }
         }
@@ -146,7 +146,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
 
         if (result.isPresent()) {
-            for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+            for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                 loadJoinEntities(result.get(), joinEntityClass);
             }
         }
@@ -216,12 +216,12 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         if (N.notEmpty(result) && N.notEmpty(joinEntitiesToLoad)) {
             if (result.size() > JdbcUtil.DEFAULT_BATCH_SIZE) {
                 StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(it -> {
-                    for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                         loadJoinEntities(it, joinEntityClass);
                     }
                 });
             } else {
-                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                     loadJoinEntities(result, joinEntityClass);
                 }
             }
@@ -280,7 +280,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
 
-        for (String joinEntityPropName : joinEntityPropNames) {
+        for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntities(entity, joinEntityPropName, selectPropNames);
         }
     }
@@ -316,7 +316,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
 
-        for (String joinEntityPropName : joinEntityPropNames) {
+        for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntities(entities, joinEntityPropName, selectPropNames);
         }
     }
@@ -375,7 +375,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
             return;
         }
 
-        for (String joinEntityPropName : joinEntityPropNames) {
+        for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntities(entity, joinEntityPropName);
         }
     }
@@ -432,7 +432,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
             return;
         }
 
-        for (String joinEntityPropName : joinEntityPropNames) {
+        for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntities(entities, joinEntityPropName);
         }
     }
@@ -487,7 +487,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      */
     @SuppressWarnings("deprecation")
     @Override
-    default void loadAllJoinEntities(T entity) throws UncheckedSQLException {
+    default void loadAllJoinEntities(final T entity) throws UncheckedSQLException {
         loadJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
     }
 
@@ -596,7 +596,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
 
-        for (String joinEntityPropName : joinEntityPropNames) {
+        for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntitiesIfNull(entity, joinEntityPropName, selectPropNames);
         }
     }
@@ -635,7 +635,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         if (joinEntityPropNames.size() == 1) {
             loadJoinEntitiesIfNull(entities, joinEntityPropNames.get(0), selectPropNames);
         } else {
-            for (String joinEntityPropName : joinEntityPropNames) {
+            for (final String joinEntityPropName : joinEntityPropNames) {
                 loadJoinEntitiesIfNull(entities, joinEntityPropName, selectPropNames);
             }
         }
@@ -717,7 +717,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
             return;
         }
 
-        for (String joinEntityPropName : joinEntityPropNames) {
+        for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntitiesIfNull(entity, joinEntityPropName);
         }
     }
@@ -774,7 +774,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
             return;
         }
 
-        for (String joinEntityPropName : joinEntityPropNames) {
+        for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntitiesIfNull(entities, joinEntityPropName);
         }
     }
@@ -829,7 +829,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      */
     @SuppressWarnings("deprecation")
     @Override
-    default void loadJoinEntitiesIfNull(T entity) throws UncheckedSQLException {
+    default void loadJoinEntitiesIfNull(final T entity) throws UncheckedSQLException {
         loadJoinEntitiesIfNull(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
     }
 
@@ -935,7 +935,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
             final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
             try {
-                for (String joinEntityPropName : joinEntityPropNames) {
+                for (final String joinEntityPropName : joinEntityPropNames) {
                     result += deleteJoinEntities(entity, joinEntityPropName);
                 }
                 tran.commit();
@@ -974,7 +974,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
             final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
             try {
-                for (String joinEntityPropName : joinEntityPropNames) {
+                for (final String joinEntityPropName : joinEntityPropNames) {
                     result += deleteJoinEntities(entities, joinEntityPropName);
                 }
                 tran.commit();
@@ -1029,7 +1029,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
             final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
             try {
-                for (String joinEntityPropName : joinEntityPropNames) {
+                for (final String joinEntityPropName : joinEntityPropNames) {
                     result += deleteJoinEntities(entity, joinEntityPropName);
                 }
                 tran.commit();
@@ -1107,7 +1107,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
             final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
             try {
-                for (String joinEntityPropName : joinEntityPropNames) {
+                for (final String joinEntityPropName : joinEntityPropNames) {
                     result += deleteJoinEntities(entities, joinEntityPropName);
                 }
                 tran.commit();
@@ -1175,7 +1175,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      */
     @SuppressWarnings("deprecation")
     @Override
-    default int deleteAllJoinEntities(T entity) throws UncheckedSQLException {
+    default int deleteAllJoinEntities(final T entity) throws UncheckedSQLException {
         return deleteJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
     }
 

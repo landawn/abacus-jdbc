@@ -33,16 +33,16 @@ import com.landawn.abacus.jdbc.dao.Dao;
 public @interface Handler {
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     String qualifier() default "";
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     @SuppressWarnings("rawtypes")
     Class<? extends Jdbc.Handler<? extends Dao>> type() default EmptyHandler.class; //NOSONAR

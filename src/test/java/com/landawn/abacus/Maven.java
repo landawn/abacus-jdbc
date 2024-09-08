@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2024 HaiYang Li
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package com.landawn.abacus;
 
 import java.io.File;
@@ -17,7 +30,7 @@ public class Maven {
      * @param args
      * @throws Exception
      */
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         N.println(new File(".").getAbsolutePath());
 
         final String sourceVersion = "0.0.1-SNAPSHOT";
@@ -52,7 +65,7 @@ public class Maven {
                 .forEach(file -> {
                     final List<String> lines = IOUtil.readAllLines(file);
                     final List<String> newLines = new ArrayList<>(lines.size());
-                    for (String line : lines) {
+                    for (final String line : lines) {
                         newLines.add(line.replaceAll(sourceVersion, targetVersion));
                     }
                     IOUtil.writeLines(newLines, file);

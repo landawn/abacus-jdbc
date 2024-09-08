@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2024 HaiYang Li
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package com.landawn.abacus.samples;
 
 import static org.junit.Assert.assertEquals;
@@ -100,73 +113,80 @@ public class JdbcTest {
             JdbcUtil.executeUpdate(dataSource, sql_device_drop_table);
             JdbcUtil.executeUpdate(dataSource, sql_user_drop_table);
 
-            final String sql_user_creat_table = "CREATE TABLE IF NOT EXISTS user1 (" //
-                    + "id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
-                    + "first_name varchar(32) NOT NULL, " //
-                    + "last_name varchar(32) NOT NULL, " //
-                    + "prop1 varchar(32), " //
-                    + "email varchar(32), " //
-                    + "create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)";
+            final String sql_user_creat_table = """
+                CREATE TABLE IF NOT EXISTS user1 (\
+                id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
+                first_name varchar(32) NOT NULL, \
+                last_name varchar(32) NOT NULL, \
+                prop1 varchar(32), \
+                email varchar(32), \
+                create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)""";
 
             JdbcUtil.executeUpdate(dataSource, sql_user_creat_table);
 
-            final String sql_user2_creat_table = "CREATE TABLE IF NOT EXISTS user2 (" //
-                    + "id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
-                    + "first_name varchar(32) NOT NULL, " //
-                    + "last_name varchar(32) NOT NULL, " //
-                    + "prop1 varchar(32), " //
-                    + "email varchar(32), " //
-                    + "create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)";
+            final String sql_user2_creat_table = """
+                CREATE TABLE IF NOT EXISTS user2 (\
+                id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
+                first_name varchar(32) NOT NULL, \
+                last_name varchar(32) NOT NULL, \
+                prop1 varchar(32), \
+                email varchar(32), \
+                create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)""";
 
             JdbcUtil.executeUpdate(dataSource, sql_user2_creat_table);
 
-            final String sql_device_creat_table = "CREATE TABLE IF NOT EXISTS device (" //
-                    + "id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
-                    + "manufacture varchar(64) NOT NULL, " //
-                    + "model varchar(32) NOT NULL, " //
-                    + "user_id bigint, " //
-                    + "FOREIGN KEY (user_id) REFERENCES user1(id) ON DELETE CASCADE)";
+            final String sql_device_creat_table = """
+                CREATE TABLE IF NOT EXISTS device (\
+                id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
+                manufacture varchar(64) NOT NULL, \
+                model varchar(32) NOT NULL, \
+                user_id bigint, \
+                FOREIGN KEY (user_id) REFERENCES user1(id) ON DELETE CASCADE)""";
 
             JdbcUtil.executeUpdate(dataSource, sql_device_creat_table);
 
-            final String sql_address_creat_table = "CREATE TABLE IF NOT EXISTS address (" //
-                    + "id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
-                    + "street varchar(64) NOT NULL, " //
-                    + "city varchar(32) NOT NULL, " //
-                    + "user_id bigint, " //
-                    + "FOREIGN KEY (user_id) REFERENCES user1(id) ON DELETE CASCADE)";
+            final String sql_address_creat_table = """
+                CREATE TABLE IF NOT EXISTS address (\
+                id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
+                street varchar(64) NOT NULL, \
+                city varchar(32) NOT NULL, \
+                user_id bigint, \
+                FOREIGN KEY (user_id) REFERENCES user1(id) ON DELETE CASCADE)""";
 
             JdbcUtil.executeUpdate(dataSource, sql_address_creat_table);
 
             // this code is copied from: https://www.baeldung.com/hibernate-many-to-many
 
             final String sql_employee_drop_table = "DROP TABLE IF EXISTS employee";
-            final String sql_employee_creat_table = "CREATE TABLE IF NOT EXISTS employee (" //
-                    + "employee_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
-                    + "first_name varchar(50) DEFAULT NULL, " //
-                    + "last_name varchar(50) DEFAULT NULL)";
+            final String sql_employee_creat_table = """
+                CREATE TABLE IF NOT EXISTS employee (\
+                employee_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, \
+                first_name varchar(50) DEFAULT NULL, \
+                last_name varchar(50) DEFAULT NULL)""";
 
             JdbcUtil.executeUpdate(dataSource, sql_employee_drop_table);
             JdbcUtil.executeUpdate(dataSource, sql_employee_creat_table);
 
             final String sql_project_drop_table = "DROP TABLE IF EXISTS project";
-            final String sql_project_creat_table = "CREATE TABLE IF NOT EXISTS project (" //
-                    + "project_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, " //
-                    + "title varchar(50) DEFAULT NULL)";
+            final String sql_project_creat_table = """
+                CREATE TABLE IF NOT EXISTS project (\
+                project_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, \
+                title varchar(50) DEFAULT NULL)""";
 
             JdbcUtil.executeUpdate(dataSource, sql_project_drop_table);
             JdbcUtil.executeUpdate(dataSource, sql_project_creat_table);
 
             final String sql_employee_dept_relationship_drop_table = "DROP TABLE IF EXISTS employee_project";
-            final String sql_employee_dept_relationship_creat_table = "CREATE TABLE IF NOT EXISTS employee_project (" //
-                    + "employee_id int NOT NULL, " //
-                    + "project_id int NOT NULL, " //
-                    + "create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)";
+            final String sql_employee_dept_relationship_creat_table = """
+                CREATE TABLE IF NOT EXISTS employee_project (\
+                employee_id int NOT NULL, \
+                project_id int NOT NULL, \
+                create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)""";
 
             JdbcUtil.executeUpdate(dataSource, sql_employee_dept_relationship_drop_table);
             JdbcUtil.executeUpdate(dataSource, sql_employee_dept_relationship_creat_table);
 
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -180,7 +200,7 @@ public class JdbcTest {
     public void test_iterateAllResultSets() throws SQLException {
         // JdbcUtil.setMinExecutionTimeForSqlPerfLog(1);
 
-        List<User> users = IntStream.range(1, 1000)
+        final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
@@ -199,10 +219,10 @@ public class JdbcTest {
 
         assertEquals(users.size(), userDao.batchUpdate(users));
 
-        String query1 = NSC.selectFrom(User.class).where(CF.lt("id", 0)).sql();
-        String query2 = NSC.selectFrom(User.class).where(CF.gt("id", 200)).sql();
+        final String query1 = NSC.selectFrom(User.class).where(CF.lt("id", 0)).sql();
+        final String query2 = NSC.selectFrom(User.class).where(CF.gt("id", 200)).sql();
 
-        Tuple2<DataSet, DataSet> result = JdbcUtil.prepareNamedQuery(dataSource, Strings.concat(query1 + "; " + query2))
+        final Tuple2<DataSet, DataSet> result = JdbcUtil.prepareNamedQuery(dataSource, Strings.concat(query1 + "; " + query2))
                 .setInt(1, 10)
                 .setInt(2, 300)
                 .query2Resultsets(BiResultExtractor.TO_DATA_SET, BiResultExtractor.TO_DATA_SET);
@@ -226,12 +246,12 @@ public class JdbcTest {
     public void test_perf_log() throws SQLException {
         // JdbcUtil.setMinExecutionTimeForSqlPerfLog(1);
 
-        List<User> users = IntStream.range(1, 1000)
+        final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
-        Connection conn = null;
-        PreparedStatement stmt = null;
+        final Connection conn = null;
+        final PreparedStatement stmt = null;
 
         try {
             final String sql = NSC.insertInto(User.class).sql();
@@ -381,10 +401,10 @@ public class JdbcTest {
      */
     @Test
     public void crud_by_Dao() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
 
         // There are so much more can be done by findFirst/list/stream/
@@ -409,13 +429,13 @@ public class JdbcTest {
     public void crud_by_UsreDao12() throws SQLException {
         userDao12.delete(CF.alwaysTrue());
 
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao12.insert(user);
 
-        List<User> entities = userDao12.prepareQuery("select * from user2").list(User.class);
+        final List<User> entities = userDao12.prepareQuery("select * from user2").list(User.class);
         assertEquals(user.getEmail(), entities.get(0).getEmail());
 
-        User userFromDB = userDao12.gett(100L);
+        final User userFromDB = userDao12.gett(100L);
         System.out.println(userFromDB);
 
         // There are so much more can be done by findFirst/list/stream/
@@ -438,10 +458,10 @@ public class JdbcTest {
      */
     @Test
     public void test_transaction() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
 
         try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
@@ -449,7 +469,7 @@ public class JdbcTest {
 
             userDao.queryForBoolean("firstName", CF.eq("id", 100)); // throw exception.
             tran.commit();
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             // ignore
         }
 
@@ -490,22 +510,22 @@ public class JdbcTest {
     @Test
     public void test_page() throws SQLException {
 
-        List<User> users = IntStream.range(0, 31)
+        final List<User> users = IntStream.range(0, 31)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
-        List<Long> ids = userDao.batchInsertWithId(users);
+        final List<Long> ids = userDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
-        long nextStartId = 0; //  0 => start id
+        final long nextStartId = 0; //  0 => start id
 
-        List<List<User>> list1 = JdbcUtil
+        final List<List<User>> list1 = JdbcUtil
                 .queryByPage(dataSource, "select * from user1 where id > ? order by id limit 10", 10,
                         (stmt, ret) -> stmt.setLong(1, ret == null ? 0 : N.lastElement(ret).get().getId()), ResultExtractor.toList(User.class))
                 .toList();
 
-        List<List<User>> list2 = Stream.of(Holder.of(nextStartId)).cycled().mapE(it -> {
-            List<User> page = JdbcUtil.prepareQuery(dataSource, "select * from user1 where id > ?  order by id limit 10")
+        final List<List<User>> list2 = Stream.of(Holder.of(nextStartId)).cycled().mapE(it -> {
+            final List<User> page = JdbcUtil.prepareQuery(dataSource, "select * from user1 where id > ?  order by id limit 10")
                     .setFetchDirectionToForward()
                     .setFetchSize(10)
                     .setLong(1, it.value())
@@ -532,11 +552,11 @@ public class JdbcTest {
             JdbcUtil.prepareQuery(dataSource, "delete from user1").update();
             JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
 
-            List<User> users = IntStream.range(1, 9999)
+            final List<User> users = IntStream.range(1, 9999)
                     .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                     .toList();
 
-            List<Long> ids = userDao.batchInsertWithId(users);
+            final List<Long> ids = userDao.batchInsertWithId(users);
             assertEquals(users.size(), ids.size());
 
             assertTrue(JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class).size() == 0);
@@ -554,11 +574,11 @@ public class JdbcTest {
             JdbcUtil.prepareQuery(dataSource, "delete from user1").update();
             JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
 
-            List<User> users = IntStream.range(1, 9999)
+            final List<User> users = IntStream.range(1, 9999)
                     .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                     .toList();
 
-            List<Long> ids = userDao.batchInsertWithId(users);
+            final List<Long> ids = userDao.batchInsertWithId(users);
             assertEquals(users.size(), ids.size());
 
             assertTrue(JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class).size() == 0);

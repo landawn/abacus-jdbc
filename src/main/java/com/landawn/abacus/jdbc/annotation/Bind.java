@@ -28,9 +28,9 @@ import java.lang.annotation.Target;
 public @interface Bind {
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     String value() default "";
 }

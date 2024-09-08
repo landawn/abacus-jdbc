@@ -33,9 +33,9 @@ import com.landawn.abacus.jdbc.OnDeleteAction;
 public @interface OnDelete {
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     OnDeleteAction action() default OnDeleteAction.NO_ACTION;
 }

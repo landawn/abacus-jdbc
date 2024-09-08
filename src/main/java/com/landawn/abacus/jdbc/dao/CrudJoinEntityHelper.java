@@ -172,7 +172,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
         if (result != null) {
-            for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+            for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                 loadJoinEntities(result, joinEntityClass);
             }
         }
@@ -322,12 +322,12 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
         if (N.notEmpty(result) && N.notEmpty(joinEntitiesToLoad)) {
             if (result.size() > batchSize) {
                 StreamEx.of(result).splitToList(batchSize).forEach(it -> {
-                    for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                         loadJoinEntities(it, joinEntityClass);
                     }
                 });
             } else {
-                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                     loadJoinEntities(result, joinEntityClass);
                 }
             }

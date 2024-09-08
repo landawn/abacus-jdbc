@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2024 HaiYang Li
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package com.landawn.abacus.samples;
 
 import static com.landawn.abacus.samples.JdbcTest.addressDao;
@@ -73,7 +86,7 @@ public class DaoTest {
     @Test
     public void test_paginate() throws Exception {
 
-        List<User> users = IntStream.range(0, 20)
+        final List<User> users = IntStream.range(0, 20)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
@@ -153,7 +166,7 @@ public class DaoTest {
             users.add(User.builder().id(100 + i).firstName("Forrest").lastName("Gump").email("123@email.com").build());
         }
 
-        List<Long> ids = userDao.batchInsert(users);
+        final List<Long> ids = userDao.batchInsert(users);
 
         assertEquals(users.size(), userDao.count(ids));
         assertEquals(users.size(), userDao.list(CF.criteria().distinct()).size());
@@ -185,7 +198,7 @@ public class DaoTest {
             users.add(User.builder().id(100 + i).firstName("Forrest").lastName("Gump").email("123@email.com").build());
         }
 
-        List<Long> ids = userDao.batchInsert(users);
+        final List<Long> ids = userDao.batchInsert(users);
 
         assertEquals(users.size(), userDao.count(ids));
         assertEquals(users.size(), userDao.count(N.repeatCollectionToSize(ids, ids.size() * 3)));
@@ -241,13 +254,13 @@ public class DaoTest {
     @Test
     public void test_parallel() throws Exception {
 
-        List<User> users = IntStream.range(1, 1000)
+        final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
         userDao.batchInsertWithId(users);
 
-        List<User> dbUsers = LongStream.range(1, 1000)
+        final List<User> dbUsers = LongStream.range(1, 1000)
                 .boxed()
                 .parallel()
                 .map(Fn.ff(it -> userDao.gett(it)))
@@ -269,7 +282,7 @@ public class DaoTest {
     @Test
     public void test_batchUpsert() throws Exception {
 
-        List<User> users = IntStream.range(1, 1000)
+        final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder()
                         .id(i)
                         .firstName("Forrest" + i)
@@ -345,7 +358,7 @@ public class DaoTest {
      */
     @Test
     public void test_exportCSV() throws Exception {
-        List<User> users = IntStream.range(1, 30)
+        final List<User> users = IntStream.range(1, 30)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
@@ -377,14 +390,14 @@ public class DaoTest {
     @Test
     public void test_refresh() throws Exception {
 
-        List<User> users = IntStream.range(1, 1000)
+        final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
-        List<Long> ids = userDao.batchInsertWithId(users);
+        final List<Long> ids = userDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
-        List<User> dbUsers = userDao.batchGet(ids).stream().map(N::copy).collect(Collectors.toList());
+        final List<User> dbUsers = userDao.batchGet(ids).stream().map(N::copy).collect(Collectors.toList());
 
         dbUsers.forEach(it -> it.setFirstName(Strings.uuid()));
 
@@ -410,11 +423,11 @@ public class DaoTest {
     @Test
     public void test_define() throws Exception {
 
-        List<User> users = IntStream.range(1, 1000)
+        final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
-        List<Long> ids = userDao.batchInsertWithId(users);
+        final List<Long> ids = userDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
         assertNotNull(userDao.selectByIdWithDefine("user1", "last_name", ids.get(0)));
@@ -445,15 +458,15 @@ public class DaoTest {
     @Test
     public void test_BindList() throws Exception {
 
-        List<User> users = IntStream.range(1, 1000)
+        final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
-        List<Long> ids = userDao.batchInsertWithId(users);
+        final List<Long> ids = userDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
-        int[] intIds = Stream.of(ids).mapToInt(Long::intValue).toArray();
-        long[] longIds = N.toLongArray(ids);
+        final int[] intIds = Stream.of(ids).mapToInt(Long::intValue).toArray();
+        final long[] longIds = N.toLongArray(ids);
         assertEquals(ids.size(), userDao.listByIds(intIds).size());
 
         assertEquals(ids.size(), userDao.listByIds_01("xxx", longIds, "xxx").size());
@@ -491,7 +504,7 @@ public class DaoTest {
     @Test
     public void test_orderBy() throws SQLException {
         JdbcUtil.enableSqlLog();
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
 
         User userFromDB = userDao.gett(100L);
@@ -500,7 +513,7 @@ public class DaoTest {
 
         userDao.deleteById(100L);
 
-        long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
+        final long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
         userFromDB = userDao.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
@@ -518,11 +531,11 @@ public class DaoTest {
      */
     @Test
     public void test_cache() throws SQLException {
-        User user = User.builder().firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
-        long id = user.getId();
-        User userFromDB = noUpdateUserDao.gett(id);
+        final long id = user.getId();
+        final User userFromDB = noUpdateUserDao.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
@@ -545,10 +558,10 @@ public class DaoTest {
      */
     @Test
     public void test_handler() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insert(user, N.asList(x.id, Account.x.firstName, "lastName", "email"));
 
-        User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
@@ -583,7 +596,7 @@ public class DaoTest {
                     System.out.println("+++: Not enable log for Thread: " + Thread.currentThread());
                 }
 
-                User user = User.builder().id(idx).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+                final User user = User.builder().id(idx).firstName("Forrest").lastName("Gump").email("123@email.com").build();
                 userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
                 assertNotNull(userDao.gett(idx));
@@ -607,7 +620,7 @@ public class DaoTest {
     @Test
     public void test_operation_log() throws SQLException {
 
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
         userDao.delete_propagation_SUPPORTS(100);
@@ -620,10 +633,10 @@ public class DaoTest {
      */
     @Test
     public void test_propagation() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
-        User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
@@ -673,7 +686,7 @@ public class DaoTest {
     @Test
     public void test_batch() throws SQLException {
 
-        List<User> users = IntStream.range(1, 1000)
+        final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
@@ -703,7 +716,7 @@ public class DaoTest {
      */
     @Test
     public void test_save_insert() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
 
         User userFromDB = userDao.gett(100L);
@@ -716,7 +729,7 @@ public class DaoTest {
 
         userDao.deleteById(100L);
 
-        long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
+        final long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
         userFromDB = userDao.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
@@ -732,7 +745,7 @@ public class DaoTest {
      */
     @Test
     public void test_save_insert_2() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao2.save(user, N.asList("id", "firstName", "lastName", "email"));
 
         User userFromDB = userDao2.gett(100L);
@@ -741,7 +754,7 @@ public class DaoTest {
 
         userDao2.deleteById(100);
 
-        long id = userDao2.insert(user, N.asList("firstName", "lastName", "email"));
+        final long id = userDao2.insert(user, N.asList("firstName", "lastName", "email"));
         userFromDB = userDao2.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
@@ -758,14 +771,14 @@ public class DaoTest {
     @SuppressWarnings("deprecation")
     @Test
     public void test_readOnlyDao() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
 
         try {
             readOnlyUserDao.save(user);
             fail("Should throw UnsupportedOperationException");
-        } catch (UnsupportedOperationException e) {
+        } catch (final UnsupportedOperationException e) {
             //
-        } catch (Exception e) {
+        } catch (final Exception e) {
             //
             e.printStackTrace();
         }
@@ -773,29 +786,29 @@ public class DaoTest {
         try {
             readOnlyUserDao.batchSave(N.asList(user));
             fail("Should throw UnsupportedOperationException");
-        } catch (UnsupportedOperationException e) {
+        } catch (final UnsupportedOperationException e) {
             //
-        } catch (Exception e) {
+        } catch (final Exception e) {
             //
             e.printStackTrace();
         }
 
         noUpdateUserDao.save(user);
 
-        User userFromDB = readOnlyUserDao.gett(100L);
+        final User userFromDB = readOnlyUserDao.gett(100L);
         System.out.println(userFromDB);
 
         try {
             readOnlyUserDao.delete(user);
             fail("Should throw UnsupportedOperationException");
-        } catch (UnsupportedOperationException e) {
+        } catch (final UnsupportedOperationException e) {
             //
         }
 
         try {
             noUpdateUserDao.delete(user);
             fail("Should throw UnsupportedOperationException");
-        } catch (UnsupportedOperationException e) {
+        } catch (final UnsupportedOperationException e) {
             //
         }
 
@@ -804,7 +817,7 @@ public class DaoTest {
         try {
             readOnlyUserDao.prepareQuery("delete from user").execute();
             fail("Should throw UnsupportedOperationException");
-        } catch (UnsupportedOperationException e) {
+        } catch (final UnsupportedOperationException e) {
             //
         }
 
@@ -818,7 +831,7 @@ public class DaoTest {
      */
     @Test
     public void test_update() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
 
         User userFromDB = userDao.gett(100L);
@@ -847,7 +860,7 @@ public class DaoTest {
 
         userDao.deleteById(100L);
 
-        long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
+        final long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
         userFromDB = userDao.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
@@ -863,7 +876,7 @@ public class DaoTest {
      */
     @Test
     public void test_queryForSingle() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
 
         User userFromDB = userDao.gett(100L);
@@ -881,7 +894,7 @@ public class DaoTest {
 
         userDao.deleteById(100L);
 
-        long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
+        final long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
         userFromDB = userDao.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
@@ -897,10 +910,10 @@ public class DaoTest {
      */
     @Test
     public void test_batchGet() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 100; i++) {
@@ -971,10 +984,10 @@ public class DaoTest {
      */
     @Test
     public void test_findFirst() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
@@ -1010,10 +1023,10 @@ public class DaoTest {
      */
     @Test
     public void test_list() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
@@ -1034,7 +1047,7 @@ public class DaoTest {
             userDao.stream("firstName", CF.alwaysTrue()).forEach(Fn.println());
         }
 
-        Map<?, ?> map = userDao.mappedById(0);
+        final Map<?, ?> map = userDao.mappedById(0);
         N.println(map);
         assertEquals(1, map.size());
 
@@ -1074,13 +1087,13 @@ public class DaoTest {
      */
     @Test
     public void test_stream() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
         user.setId(101);
         userDao.insertWithId(user);
 
-        User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
@@ -1135,19 +1148,19 @@ public class DaoTest {
         N.println(userDao.targetDaoInterface());
         N.println(userDao.executor());
 
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
 
-        Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
+        final Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
         deviceDao.insert(device);
 
-        Device device2 = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 12").build();
+        final Device device2 = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 12").build();
         deviceDao.insert(device2);
 
-        Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
+        final Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
         addressDao.insert(address);
 
         N.copy(userFromDB);
@@ -1175,19 +1188,19 @@ public class DaoTest {
         N.println(userDao.targetDaoInterface());
         N.println(userDao.executor());
 
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
 
-        Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
+        final Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
         deviceDao.insert(device);
 
-        Device device2 = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 12").build();
+        final Device device2 = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 12").build();
         deviceDao.insert(device2);
 
-        Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
+        final Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
         addressDao.insert(address);
 
         N.copy(userFromDB);
@@ -1220,16 +1233,16 @@ public class DaoTest {
         N.println(userDao.targetDaoInterface());
         N.println(userDao.executor());
 
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
         User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
 
-        Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
+        final Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
         deviceDao.insert(device);
 
-        Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
+        final Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
         addressDao.insert(address);
 
         N.copy(userFromDB);
@@ -1272,17 +1285,17 @@ public class DaoTest {
         final List<User> users = new ArrayList<>();
 
         for (int i = 0; i < 1999; i++) {
-            User user = User.builder().id(100 + i).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+            final User user = User.builder().id(100 + i).firstName("Forrest").lastName("Gump").email("123@email.com").build();
             userDao.insertWithId(user);
 
-            User userFromDB = userDao.gett(100L + i);
+            final User userFromDB = userDao.gett(100L + i);
             System.out.println(userFromDB);
             users.add(userFromDB);
 
-            Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
+            final Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
             deviceDao.insert(device);
 
-            Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
+            final Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
             addressDao.insert(address);
         }
 
@@ -1327,7 +1340,7 @@ public class DaoTest {
      */
     @Test
     public void test_SQLParser() {
-        String sql = "SELECT employee_id AS \"employeeId\", first_name AS \"firstName\", last_name AS \"lastName\" FROM employee WHERE 1 < 2";
+        final String sql = "SELECT employee_id AS \"employeeId\", first_name AS \"firstName\", last_name AS \"lastName\" FROM employee WHERE 1 < 2";
         SQLParser.parse(sql).forEach(Fn.println());
     }
 
@@ -1349,7 +1362,7 @@ public class DaoTest {
         Project project = Project.builder().projectId(1000).title("Project X").build();
         projectDao.insert(project);
 
-        Project projectFromDB = projectDao.gett(project.getProjectId());
+        final Project projectFromDB = projectDao.gett(project.getProjectId());
         projectDao.loadAllJoinEntities(projectFromDB);
         System.out.println(projectFromDB);
 
@@ -1389,17 +1402,17 @@ public class DaoTest {
         N.println(entityId);
 
         employeeProject = EmployeeProject.builder().employeeId(100).projectId(project.getProjectId()).build();
-        EmployeeProject entityId2 = employeeProjectDao2.insert(employeeProject);
+        final EmployeeProject entityId2 = employeeProjectDao2.insert(employeeProject);
         N.println(entityId2);
 
-        List<Employee> employees = employeeDao.list(CF.alwaysTrue());
+        final List<Employee> employees = employeeDao.list(CF.alwaysTrue());
         employeeDao.loadAllJoinEntities(employees);
         System.out.println(employees);
 
         employeeDao.loadJoinEntities(employees, Project.class, N.asList("title"));
         System.out.println(employees);
 
-        List<Project> projects = projectDao.list(CF.alwaysTrue());
+        final List<Project> projects = projectDao.list(CF.alwaysTrue());
         projectDao.loadAllJoinEntities(projects);
         System.out.println(projects);
 
@@ -1436,16 +1449,16 @@ public class DaoTest {
      */
     @Test
     public void test_mergedEntity() throws SQLException {
-        Employee employee = Employee.builder().employeeId(100).firstName("Forrest").lastName("Gump").build();
+        final Employee employee = Employee.builder().employeeId(100).firstName("Forrest").lastName("Gump").build();
         employeeDao.insert(employee);
 
-        Project project = Project.builder().title("Project X").build();
+        final Project project = Project.builder().title("Project X").build();
         projectDao.insert(project);
 
-        Project project2 = Project.builder().title("Project Y").build();
+        final Project project2 = Project.builder().title("Project Y").build();
         projectDao.insert(project2);
 
-        Project project3 = Project.builder().title("Project Z").build();
+        final Project project3 = Project.builder().title("Project Z").build();
         projectDao.insert(project3);
 
         EmployeeProject employeeProject = EmployeeProject.builder().employeeId(employee.getEmployeeId()).projectId(project.getProjectId()).build();
@@ -1465,7 +1478,7 @@ public class DaoTest {
 
         // String query = "select e.employee_id AS \"employeeId\", e.first_name AS \"firstName\", p.project_id AS \"projects.projectId\", p.title AS \"projects.title\" from employee e, employee_project ep left join project p on employee_id = ep.employee_id AND ep.project_id = p.project_id";
 
-        String query = PSC.select(Employee.class, true)
+        final String query = PSC.select(Employee.class, true)
                 .from("employee e")
                 .leftJoin("employee_project ep")
                 .on("employee_id = ep.employee_id")
@@ -1473,7 +1486,7 @@ public class DaoTest {
                 .on("ep.project_id = project.project_id")
                 .sql();
 
-        List<Employee> employees = employeeDao.prepareQuery(query).query().toMergedEntities(Employee.class);
+        final List<Employee> employees = employeeDao.prepareQuery(query).query().toMergedEntities(Employee.class);
 
         N.println(employees);
 
@@ -1489,7 +1502,7 @@ public class DaoTest {
      */
     @Test
     public void test_innerHandler() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
         userDao.testInnerHandler(100).forEach(Fn.println());
@@ -1504,7 +1517,7 @@ public class DaoTest {
      */
     @Test
     public void test_toDisposableObjArray() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
         userDao.forEach(CF.eq("firstName", "Forrest"), Jdbc.RowConsumer.oneOff(a -> N.println(a.join(", "))));
@@ -1529,7 +1542,7 @@ public class DaoTest {
      */
     @Test
     public void test_myUserDao() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         myUserDaoA.save(user, N.asList("id", "firstName", "lastName", "email"));
 
         User userFromDB = myUserDaoA.gett(100L);
@@ -1542,7 +1555,7 @@ public class DaoTest {
 
         myUserDaoA.deleteById(100L);
 
-        long id = myUserDaoA.insert(user, N.asList("firstName", "lastName", "email"));
+        final long id = myUserDaoA.insert(user, N.asList("firstName", "lastName", "email"));
         userFromDB = myUserDaoA.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);

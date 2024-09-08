@@ -30,9 +30,9 @@ import com.landawn.abacus.annotation.Beta;
 public @interface BindList {
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     String value() default "";
 

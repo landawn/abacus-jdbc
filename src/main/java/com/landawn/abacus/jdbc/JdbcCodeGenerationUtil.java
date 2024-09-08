@@ -168,15 +168,15 @@ public final class JdbcCodeGenerationUtil {
         return generateEntityClass(ds, tableName, createQueryByTableName(tableName), config);
     }
 
-    public static String generateEntityClass(final DataSource ds, final String entityName, String query) {
+    public static String generateEntityClass(final DataSource ds, final String entityName, final String query) {
         return generateEntityClass(ds, entityName, query, null);
     }
 
-    public static String generateEntityClass(final DataSource ds, final String entityName, String query, final EntityCodeConfig config) {
+    public static String generateEntityClass(final DataSource ds, final String entityName, final String query, final EntityCodeConfig config) {
         try (Connection conn = ds.getConnection()) {
             return generateEntityClass(conn, entityName, query, config);
 
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -196,16 +196,16 @@ public final class JdbcCodeGenerationUtil {
         return generateEntityClass(conn, tableName, createQueryByTableName(tableName), config);
     }
 
-    public static String generateEntityClass(final Connection conn, final String entityName, String query) {
+    public static String generateEntityClass(final Connection conn, final String entityName, final String query) {
         return generateEntityClass(conn, entityName, query, null);
     }
 
-    public static String generateEntityClass(final Connection conn, final String entityName, String query, final EntityCodeConfig config) {
+    public static String generateEntityClass(final Connection conn, final String entityName, final String query, final EntityCodeConfig config) {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 ResultSet rs = stmt.executeQuery()) {
 
             return generateEntityClass(entityName, rs, config);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -257,7 +257,7 @@ public final class JdbcCodeGenerationUtil {
                 || "jakarta.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass));
 
         try {
-            String finalClassName = Strings.isEmpty(className) ? Strings.capitalize(Strings.toCamelCase(entityName)) : className;
+            final String finalClassName = Strings.isEmpty(className) ? Strings.capitalize(Strings.toCamelCase(entityName)) : className;
 
             if (N.commonSet(readOnlyFields, nonUpdatableFields).size() > 0) {
                 throw new RuntimeException("Fields: " + N.commonSet(readOnlyFields, nonUpdatableFields)
@@ -273,7 +273,7 @@ public final class JdbcCodeGenerationUtil {
                             .filter(it -> Strings.startsWithAny(it, "private ", "protected ", "public ") && it.endsWith(";"))
                             .map(it -> Strings.substringBetween(it, " ", ";").trim())
                             .map(it -> {
-                                int idx = it.lastIndexOf(' ');
+                                final int idx = it.lastIndexOf(' ');
                                 return Tuple.of(it.substring(0, idx).trim(), it.substring(idx + 1).trim());
                             })
                             .toList();
@@ -325,15 +325,15 @@ public final class JdbcCodeGenerationUtil {
 
             String headPart = "";
 
-            for (Tuple2<String, String> tp : additionalFields) {
+            for (final Tuple2<String, String> tp : additionalFields) {
                 if (tp._1.indexOf('<') > 0) { //NOSONAR
-                    String clsName = tp._1.substring(0, tp._1.indexOf('<'));
+                    final String clsName = tp._1.substring(0, tp._1.indexOf('<'));
 
                     try { //NOSONAR
                         if (ClassUtil.forClass("java.util." + clsName) != null) {
                             headPart += LINE_SEPERATOR + "import java.util." + clsName + ";"; //NOSONAR
                         }
-                    } catch (Exception e) {
+                    } catch (final Exception e) {
                         // ignore.
                     }
                 }
@@ -408,7 +408,7 @@ public final class JdbcCodeGenerationUtil {
             sb.append(headPart);
 
             if (configToUse.getJsonXmlConfig() != null) {
-                EntityCodeConfig.JsonXmlConfig eccJsonXmlConfig = configToUse.getJsonXmlConfig();
+                final EntityCodeConfig.JsonXmlConfig eccJsonXmlConfig = configToUse.getJsonXmlConfig();
 
                 final List<String> tmp = new ArrayList<>();
 
@@ -506,11 +506,11 @@ public final class JdbcCodeGenerationUtil {
                         .append("        final " + className + " copy = new " + className + "();")
                         .append(LINE_SEPERATOR); //
 
-                for (String fieldName : fieldNameList) {
+                for (final String fieldName : fieldNameList) {
                     sb.append("        copy." + fieldName + " = this." + fieldName + ";").append(LINE_SEPERATOR);
                 }
 
-                for (Tuple2<String, String> tp : additionalFields) {
+                for (final Tuple2<String, String> tp : additionalFields) {
                     sb.append("        copy." + tp._2 + " = this." + tp._2 + ";").append(LINE_SEPERATOR);
                 }
 
@@ -533,7 +533,7 @@ public final class JdbcCodeGenerationUtil {
                         .append(LINE_SEPERATOR)
                         .append(LINE_SEPERATOR); //
 
-                for (String fieldName : fieldNameList) {
+                for (final String fieldName : fieldNameList) {
                     sb.append("        /** Property(field) name {@code \"" + fieldName + "\"} */")
                             .append(LINE_SEPERATOR)
                             .append("        String " + fieldName + " = \"" + fieldName + "\";")
@@ -546,7 +546,7 @@ public final class JdbcCodeGenerationUtil {
 
             sb.append(LINE_SEPERATOR).append("}").append(LINE_SEPERATOR);
 
-            String result = sb.toString();
+            final String result = sb.toString();
 
             if (Strings.isNotEmpty(srcDir)) {
                 String packageDir = srcDir;
@@ -561,7 +561,7 @@ public final class JdbcCodeGenerationUtil {
 
                 IOUtil.mkdirsIfNotExists(new File(packageDir));
 
-                File file = new File(packageDir + IOUtil.DIR_SEPARATOR + finalClassName + ".java");
+                final File file = new File(packageDir + IOUtil.DIR_SEPARATOR + finalClassName + ".java");
 
                 IOUtil.createIfNotExists(file);
 
@@ -569,14 +569,14 @@ public final class JdbcCodeGenerationUtil {
             }
 
             return result;
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
-        } catch (IOException e) {
+        } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
-    private static String createQueryByTableName(String tableName) {
+    private static String createQueryByTableName(final String tableName) {
         return "select * from " + tableName + " where 1 > 2";
     }
 
@@ -585,7 +585,7 @@ public final class JdbcCodeGenerationUtil {
 
         try {
             columnClassName = ClassUtil.getCanonicalClassName(ClassUtil.forClass(columnClassName));
-        } catch (Throwable e) {
+        } catch (final Throwable e) {
             // ignore.
         }
 
@@ -634,7 +634,7 @@ public final class JdbcCodeGenerationUtil {
     public static String generateSelectSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
         try (Connection conn = dataSource.getConnection()) {
             return generateSelectSql(conn, tableName);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -647,7 +647,7 @@ public final class JdbcCodeGenerationUtil {
      * @return
      */
     public static String generateSelectSql(final Connection conn, final String tableName) {
-        String query = "select * from " + tableName + " where 1 > 2";
+        final String query = "select * from " + tableName + " where 1 > 2";
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 final ResultSet rs = stmt.executeQuery()) {
@@ -655,7 +655,7 @@ public final class JdbcCodeGenerationUtil {
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
 
             return Strings.join(checkColumnName(columnLabelList), ", ", "select ", " from " + checkTableName(tableName));
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -671,7 +671,7 @@ public final class JdbcCodeGenerationUtil {
     public static String generateInsertSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
         try (Connection conn = dataSource.getConnection()) {
             return generateInsertSql(conn, tableName);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -684,7 +684,7 @@ public final class JdbcCodeGenerationUtil {
      * @return
      */
     public static String generateInsertSql(final Connection conn, final String tableName) {
-        String query = "select * from " + tableName + " where 1 > 2";
+        final String query = "select * from " + tableName + " where 1 > 2";
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 final ResultSet rs = stmt.executeQuery()) {
@@ -693,7 +693,7 @@ public final class JdbcCodeGenerationUtil {
 
             return Strings.join(checkColumnName(columnLabelList), ", ", "insert into " + checkTableName(tableName) + "(",
                     ") values (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -709,7 +709,7 @@ public final class JdbcCodeGenerationUtil {
     public static String generateNamedInsertSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
         try (Connection conn = dataSource.getConnection()) {
             return generateNamedInsertSql(conn, tableName);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -722,7 +722,7 @@ public final class JdbcCodeGenerationUtil {
      * @return
      */
     public static String generateNamedInsertSql(final Connection conn, final String tableName) {
-        String query = "select * from " + tableName + " where 1 > 2";
+        final String query = "select * from " + tableName + " where 1 > 2";
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 final ResultSet rs = stmt.executeQuery()) {
@@ -731,7 +731,7 @@ public final class JdbcCodeGenerationUtil {
 
             return Strings.join(checkColumnName(columnLabelList), ", ", "insert into " + checkTableName(tableName) + "(",
                     Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") values (", ")"));
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -747,7 +747,7 @@ public final class JdbcCodeGenerationUtil {
     public static String generateUpdateSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
         try (Connection conn = dataSource.getConnection()) {
             return generateUpdateSql(conn, tableName);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -760,7 +760,7 @@ public final class JdbcCodeGenerationUtil {
      * @return
      */
     public static String generateUpdateSql(final Connection conn, final String tableName) {
-        String query = "select * from " + tableName + " where 1 > 2";
+        final String query = "select * from " + tableName + " where 1 > 2";
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 final ResultSet rs = stmt.executeQuery()) {
@@ -769,7 +769,7 @@ public final class JdbcCodeGenerationUtil {
 
             return "update " + checkTableName(tableName) + " set "
                     + Stream.of(columnLabelList).map(columnLabel -> checkColumnName(columnLabel) + " = ?").join(", ");
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -785,7 +785,7 @@ public final class JdbcCodeGenerationUtil {
     public static String generateNamedUpdateSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
         try (Connection conn = dataSource.getConnection()) {
             return generateNamedUpdateSql(conn, tableName);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -798,7 +798,7 @@ public final class JdbcCodeGenerationUtil {
      * @return
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName) {
-        String query = "select * from " + tableName + " where 1 > 2";
+        final String query = "select * from " + tableName + " where 1 > 2";
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 final ResultSet rs = stmt.executeQuery()) {
@@ -807,7 +807,7 @@ public final class JdbcCodeGenerationUtil {
 
             return "update " + checkTableName(tableName) + " set "
                     + Stream.of(columnLabelList).map(columnLabel -> checkColumnName(columnLabel) + " = :" + Strings.toCamelCase(columnLabel)).join(", ");
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }

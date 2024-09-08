@@ -49,9 +49,9 @@ import java.lang.annotation.Target;
 public @interface Define {
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     String value() default "";
 }

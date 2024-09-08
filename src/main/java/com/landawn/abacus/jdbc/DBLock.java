@@ -95,7 +95,7 @@ public final class DBLock {
         // ..
         refreshSQL = "UPDATE " + tableName + " SET update_time = ? WHERE target = ? AND code = ?";
 
-        String schema = "CREATE TABLE " + tableName + "(host_name VARCHAR(64), target VARCHAR(255) NOT NULL, code VARCHAR(64), status VARCHAR(16) NOT NULL, "
+        final String schema = "CREATE TABLE " + tableName + "(host_name VARCHAR(64), target VARCHAR(255) NOT NULL, code VARCHAR(64), status VARCHAR(16) NOT NULL, "
                 + "expiry_time TIMESTAMP NOT NULL, update_time TIMESTAMP NOT NULL, create_time TIMESTAMP NOT NULL, UNIQUE (target))";
 
         final Connection conn = JdbcUtil.getConnection(ds);
@@ -107,11 +107,11 @@ public final class DBLock {
                 throw new RuntimeException("Failed to create table: " + tableName);
             }
 
-            String removeDeadLockSQL = "DELETE FROM " + tableName + " WHERE host_name = ? and create_time < ?";
+            final String removeDeadLockSQL = "DELETE FROM " + tableName + " WHERE host_name = ? and create_time < ?";
 
             JdbcUtil.executeUpdate(conn, removeDeadLockSQL, IOUtil.getHostName(),
                     DateUtil.createTimestamp(ManagementFactory.getRuntimeMXBean().getStartTime()));
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
             JdbcUtil.releaseConnection(conn, ds);
@@ -125,10 +125,10 @@ public final class DBLock {
                     m.putAll(targetCodePool);
 
                     try {
-                        for (Map.Entry<String, String> entry : m.entrySet()) {
+                        for (final Map.Entry<String, String> entry : m.entrySet()) {
                             JdbcUtil.executeUpdate(conn, refreshSQL, DateUtil.currentTimestamp(), entry.getKey(), m.get(entry.getKey()));
                         }
-                    } catch (SQLException e) {
+                    } catch (final SQLException e) {
                         throw new UncheckedSQLException(e);
                     } finally {
                         JdbcUtil.releaseConnection(conn, ds);
@@ -147,7 +147,7 @@ public final class DBLock {
      * @param target
      * @return
      */
-    public String lock(String target) {
+    public String lock(final String target) {
         return lock(target, DEFAULT_LOCK_LIVE_TIME, DEFAULT_TIMEOUT);
     }
 
@@ -157,7 +157,7 @@ public final class DBLock {
      * @param timeout
      * @return
      */
-    public String lock(String target, long timeout) {
+    public String lock(final String target, final long timeout) {
         return lock(target, DEFAULT_LOCK_LIVE_TIME, timeout);
     }
 
@@ -168,7 +168,7 @@ public final class DBLock {
      * @param timeout
      * @return
      */
-    public String lock(String target, long liveTime, long timeout) {
+    public String lock(final String target, final long liveTime, final long timeout) {
         return lock(target, liveTime, timeout, 0);
     }
 
@@ -182,7 +182,7 @@ public final class DBLock {
      * @return <code>null</code> if the target can't be locked in the period specified by <code>timeout</code>
      * @throws IllegalStateException if this is closed
      */
-    public String lock(String target, long liveTime, long timeout, long retryPeriod) throws IllegalStateException {
+    public String lock(final String target, final long liveTime, final long timeout, final long retryPeriod) throws IllegalStateException {
         assertNotClosed();
 
         try {
@@ -190,7 +190,7 @@ public final class DBLock {
                     DateUtil.addMilliseconds(DateUtil.currentTimestamp(), -MAX_IDLE_TIME)) > 0) && logger.isWarnEnabled()) {
                 logger.warn("Succeeded to remove expired lock for target: " + target);
             }
-        } catch (Exception e) {
+        } catch (final Exception e) {
             if (logger.isWarnEnabled()) {
                 logger.warn("Error occurred when try to remove expired lock for target: " + target, e);
             }
@@ -209,7 +209,7 @@ public final class DBLock {
 
                     return code;
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 // ignore;
             }
 
@@ -231,7 +231,7 @@ public final class DBLock {
      * @return true, if successful
      * @throws IllegalStateException if this is closed
      */
-    public boolean unlock(String target, String code) throws IllegalStateException {
+    public boolean unlock(final String target, final String code) throws IllegalStateException {
         assertNotClosed();
 
         if (N.equals(targetCodePool.get(target), code)) {
@@ -240,7 +240,7 @@ public final class DBLock {
 
         try {
             return JdbcUtil.executeUpdate(ds, unlockSQL, target, code) > 0;
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }

@@ -52,16 +52,16 @@ public @interface MappedByKey {
     String value() default "";
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     String keyName() default "";
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     @SuppressWarnings("rawtypes")
     Class<? extends Map> mapClass() default HashMap.class;

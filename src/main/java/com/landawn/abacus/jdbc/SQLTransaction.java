@@ -76,15 +76,15 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
         N.checkArgNotNull(conn);
         N.checkArgNotNull(isolationLevel);
 
-        this._id = getTransactionId(ds, creator);
-        this._timedId = _id + "_" + System.currentTimeMillis();
-        this._ds = ds;
-        this._conn = conn;
-        this._isolationLevel = isolationLevel;
-        this._closeConnection = closeConnection;
+        _id = getTransactionId(ds, creator);
+        _timedId = _id + "_" + System.currentTimeMillis();
+        _ds = ds;
+        _conn = conn;
+        _isolationLevel = isolationLevel;
+        _closeConnection = closeConnection;
 
-        this._originalAutoCommit = conn.getAutoCommit();
-        this._originalIsolationLevel = conn.getTransactionIsolation();
+        _originalAutoCommit = conn.getAutoCommit();
+        _originalIsolationLevel = conn.getTransactionIsolation();
 
         conn.setAutoCommit(false);
 
@@ -193,7 +193,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * @throws UncheckedSQLException
      */
     @Override
-    public void commit(Runnable actoinAfterCommit) throws UncheckedSQLException {
+    public void commit(final Runnable actoinAfterCommit) throws UncheckedSQLException {
         final int refCount = decrementAndGetRef();
         _isMarkedByCommitPreviously = true;
 
@@ -224,7 +224,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
             }
 
             _status = Status.COMMITTED;
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException("Failed to commit transaction(id=" + _id + ")", e);
         } finally {
             if (_status == Status.COMMITTED) {
@@ -349,7 +349,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
             }
 
             _status = Status.ROLLED_BACK;
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
             if (_status == Status.ROLLED_BACK) {
@@ -371,7 +371,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
         try {
             _conn.setAutoCommit(_originalAutoCommit);
             _conn.setTransactionIsolation(_originalIsolationLevel);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             logger.warn("Failed to reset connection", e);
         } finally {
             if (_closeConnection) {
@@ -401,18 +401,18 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
                 } else {
                     _conn.setTransactionIsolation(isolationLevel.intValue());
                 }
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 throw new UncheckedSQLException(e);
             }
         }
 
         if (_refCount.get() > 0) {
-            this._isolationLevelStack.push(this._isolationLevel);
-            this._isForUpdateOnlyStack.push(this._isForUpdateOnly);
+            _isolationLevelStack.push(_isolationLevel);
+            _isForUpdateOnlyStack.push(_isForUpdateOnly);
         }
 
-        this._isolationLevel = isolationLevel;
-        this._isForUpdateOnly = forUpdateOnly;
+        _isolationLevel = isolationLevel;
+        _isForUpdateOnly = forUpdateOnly;
 
         return _refCount.incrementAndGet();
     }
@@ -433,8 +433,8 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
             logger.debug("Remaining active transactions: {}", threadTransactionMap.values());
         } else if (res > 0) {
-            this._isolationLevel = _isolationLevelStack.pop();
-            this._isForUpdateOnly = _isForUpdateOnlyStack.pop();
+            _isolationLevel = _isolationLevelStack.pop();
+            _isForUpdateOnly = _isForUpdateOnlyStack.pop();
 
             if (_conn != null) {
                 try {
@@ -443,7 +443,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
                     } else {
                         _conn.setTransactionIsolation(_isolationLevel.intValue());
                     }
-                } catch (SQLException e) {
+                } catch (final SQLException e) {
                     throw new UncheckedSQLException(e);
                 }
             }
@@ -467,7 +467,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * @param creator
      * @return
      */
-    static String getTransactionId(javax.sql.DataSource ds, final CreatedBy creator) {
+    static String getTransactionId(final javax.sql.DataSource ds, final CreatedBy creator) {
         return Strings.concat(System.identityHashCode(ds), "_", Thread.currentThread().getId(), "_", Thread.currentThread().getName(), "_", creator.ordinal());
     }
 
@@ -497,7 +497,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * @param cmd
      * @throws E
      */
-    public <E extends Throwable> void runNotInMe(Throwables.Runnable<E> cmd) throws E {
+    public <E extends Throwable> void runNotInMe(final Throwables.Runnable<E> cmd) throws E {
         synchronized (_id) { //NOSONAR
             threadTransactionMap.remove(_id);
 
@@ -520,7 +520,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * @return
      * @throws E
      */
-    public <R, E extends Throwable> R callNotInMe(Throwables.Callable<R, E> cmd) throws E {
+    public <R, E extends Throwable> R callNotInMe(final Throwables.Callable<R, E> cmd) throws E {
         synchronized (_id) { //NOSONAR
             threadTransactionMap.remove(_id);
 
@@ -560,7 +560,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * @return true, if successful
      */
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(final Object obj) {
         return obj instanceof SQLTransaction && _timedId.equals(((SQLTransaction) obj)._timedId);
     }
 

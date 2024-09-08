@@ -42,8 +42,8 @@ public @interface MergedById {
     /**
      * <code> @MergedById("id, date") </code>.
      *
-     * @return 
-     * @deprecated 
+     * @return
+     * @deprecated
      */
     @Deprecated
     String value() default "";

@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2024 HaiYang Li
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package com.landawn.abacus.samples;
 
 import static com.landawn.abacus.samples.JdbcTest.dataSource;
@@ -34,20 +47,20 @@ public class PreparedQueryTest {
     @Test
     public void test_queryForSingleResult() throws SQLException {
 
-        String firstName = N.toJson(N.asList("a", "b", "c"));
+        final String firstName = N.toJson(N.asList("a", "b", "c"));
 
-        User user = User.builder().firstName(firstName).lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().firstName(firstName).lastName("Gump").email("123@email.com").build();
 
-        Long id = userDao.insert(user);
+        final Long id = userDao.insert(user);
 
-        List<String> firstNameV = JdbcUtil.prepareQuery(dataSource, "select first_name from user1 where id = ?") //
+        final List<String> firstNameV = JdbcUtil.prepareQuery(dataSource, "select first_name from user1 where id = ?") //
                 .setLong(1, id)
                 .queryForSingleResult(Type.ofList(String.class))
                 .orElseNull();
 
         N.println(firstNameV);
 
-        String sql = PSC.deleteFrom(User.class).where("id >= ?").sql();
+        final String sql = PSC.deleteFrom(User.class).where("id >= ?").sql();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, id)
                 .update();
@@ -62,14 +75,14 @@ public class PreparedQueryTest {
     @Test
     public void test_alias() throws SQLException {
 
-        List<User> users = IntStream.range(1, 9)
+        final List<User> users = IntStream.range(1, 9)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump").email("123@email.com" + i).build())
                 .toList();
 
-        List<Long> ids = userDao.batchInsertWithId(users);
+        final List<Long> ids = userDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
-        long minId = N.min(ids);
+        final long minId = N.min(ids);
 
         String sql = "SELECT acc.id AS \"acc.id\", acc.FIRST_NAME AS \"acc.firstName\", acc.last_name AS \"lastName\", acc.prop1 AS \"nickName\", acc.email AS \"email\", acc.create_time AS \"createTime\" FROM user1 acc";
 
@@ -95,14 +108,14 @@ public class PreparedQueryTest {
     @Test
     public void test_listToMap() throws SQLException {
 
-        List<User> users = IntStream.range(1, 9)
+        final List<User> users = IntStream.range(1, 9)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump").email("123@email.com" + i).build())
                 .toList();
 
-        List<Long> ids = userDao.batchInsertWithId(users);
+        final List<Long> ids = userDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
-        long minId = N.min(ids);
+        final long minId = N.min(ids);
 
         String sql = PSC.selectFrom(User.class).where("id >= ?").sql();
 
@@ -117,7 +130,7 @@ public class PreparedQueryTest {
                     .query(Jdbc.ResultExtractor.toMap(rs -> rs.getString(s.lastName), rs -> rs.getLong(1)))
                     .forEach(Fn.println("="));
             fail("Should throw IllegalStateException");
-        } catch (IllegalStateException e) {
+        } catch (final IllegalStateException e) {
         }
 
         JdbcUtil.prepareQuery(dataSource, sql) //

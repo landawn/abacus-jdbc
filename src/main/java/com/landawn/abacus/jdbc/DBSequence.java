@@ -54,7 +54,7 @@ public final class DBSequence {
 
     private final AtomicLong highSeqId;
 
-    DBSequence(final DataSource ds, String tableName, String seqName, long startVal, int seqBufferSize) {
+    DBSequence(final DataSource ds, final String tableName, final String seqName, final long startVal, final int seqBufferSize) {
         this.ds = ds;
         this.seqName = seqName;
         this.seqBufferSize = seqBufferSize;
@@ -81,7 +81,7 @@ public final class DBSequence {
         lowSeqId = new AtomicLong(startVal);
         highSeqId = new AtomicLong(startVal);
 
-        String schema = "CREATE TABLE " + tableName
+        final String schema = "CREATE TABLE " + tableName
                 + "(seq_name VARCHAR(64), next_val BIGINT, update_time TIMESTAMP NOT NULL, create_time TIMESTAMP NOT NULL, UNIQUE (seq_name))";
 
         final Connection conn = JdbcUtil.getConnection(ds);
@@ -90,7 +90,7 @@ public final class DBSequence {
             if (!JdbcUtil.doesTableExist(conn, tableName)) {
                 try { //NOSONAR
                     JdbcUtil.createTableIfNotExists(conn, tableName, schema);
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     if (logger.isWarnEnabled()) {
                         logger.warn("Failed to create table: " + tableName);
                     }
@@ -101,13 +101,13 @@ public final class DBSequence {
                 }
             }
 
-            Timestamp now = DateUtil.currentTimestamp();
+            final Timestamp now = DateUtil.currentTimestamp();
 
             if (JdbcUtil.prepareQuery(conn, "SELECT 1 FROM " + tableName + " WHERE seq_name = ?").setString(1, seqName).queryForInt().orElse(0) < 1) {
                 try { //NOSONAR
                     JdbcUtil.executeUpdate(conn, "INSERT INTO " + tableName + "(seq_name, next_val, update_time, create_time) VALUES (?, ?, ?, ?)", seqName,
                             startVal, now, now);
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     if (logger.isWarnEnabled()) {
                         logger.warn("Failed to initialize sequence: " + seqName + " within table: " + tableName);
                     }
@@ -123,7 +123,7 @@ public final class DBSequence {
                     .orElse(0) < startVal) {
                 throw new RuntimeException("Failed to initialize sequence: " + seqName + " within table: " + tableName);
             }
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
             JdbcUtil.releaseConnection(conn, ds);
@@ -147,7 +147,7 @@ public final class DBSequence {
                         break;
                     }
                 }
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 throw new UncheckedSQLException(e);
             }
         }
@@ -161,12 +161,12 @@ public final class DBSequence {
      * @param seqBufferSize
      */
     @SuppressWarnings("hiding")
-    public void reset(long startVal, int seqBufferSize) {
+    public void reset(final long startVal, final int seqBufferSize) {
         this.seqBufferSize = seqBufferSize;
 
         try {
             JdbcUtil.executeUpdate(ds, resetSQL, startVal, DateUtil.currentTimestamp(), seqName);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }

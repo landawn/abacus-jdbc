@@ -32,16 +32,16 @@ import com.landawn.abacus.jdbc.Propagation;
 public @interface Transactional {
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     Propagation propagation() default Propagation.REQUIRED;
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     IsolationLevel isolation() default IsolationLevel.DEFAULT;
 }

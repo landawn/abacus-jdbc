@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2024 HaiYang Li
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package com.landawn.abacus.samples;
 
 import java.util.Random;
@@ -13,21 +26,21 @@ public class DataSetTest {
     static final Random RAND = new Random();
 
     /**
-     * 
+     *
      */
     @Test
     public void test_join() {
-        User user = User.builder().id(1001).firstName("Tom").build();
-        Address address = Address.builder().id(2001).userId(1001).street("1 Rd").build();
+        final User user = User.builder().id(1001).firstName("Tom").build();
+        final Address address = Address.builder().id(2001).userId(1001).street("1 Rd").build();
 
-        DataSet ds1 = N.newDataSet(N.asList("id", "firstName"), N.asList(user));
+        final DataSet ds1 = N.newDataSet(N.asList("id", "firstName"), N.asList(user));
         ds1.println();
 
-        DataSet ds2 = N.newDataSet(N.asList("id", "userId", "street"), N.asList(address));
+        final DataSet ds2 = N.newDataSet(N.asList("id", "userId", "street"), N.asList(address));
         ds2.renameColumn("id", "addressId");
         ds2.println();
 
-        DataSet ds3 = ds1.innerJoin(ds2, N.asMap("id", "userId"));
+        final DataSet ds3 = ds1.innerJoin(ds2, N.asMap("id", "userId"));
         ds3.println();
     }
 

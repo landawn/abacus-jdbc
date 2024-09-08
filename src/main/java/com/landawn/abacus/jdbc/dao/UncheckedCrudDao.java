@@ -630,13 +630,13 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws UncheckedSQLException;
 
     /**
-    *
-    * @param propName
-    * @param propValue
-    * @param id
-    * @return
-    * @throws UncheckedSQLException the unchecked SQL exception
-    */
+     *
+     * @param propName
+     * @param propValue
+     * @param id
+     * @return
+     * @throws UncheckedSQLException the unchecked SQL exception
+     */
     @Override
     default int update(final String propName, final Object propValue, final ID id) throws UncheckedSQLException {
         final Map<String, Object> updateProps = new HashMap<>();
@@ -839,7 +839,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
         final com.landawn.abacus.util.function.Function<T, EntityId> entityIdExtractor = it -> {
             final Seid entityId = Seid.of(entityInfo.simpleClassName);
 
-            for (PropInfo propInfo : uniquePropInfos) {
+            for (final PropInfo propInfo : uniquePropInfos) {
                 entityId.set(propInfo.name, propInfo.getPropValue(it));
             }
 
@@ -929,7 +929,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Override
     @SuppressWarnings("deprecation")
-    default boolean refresh(final T entity, Collection<String> propNamesToRefresh) throws UncheckedSQLException {
+    default boolean refresh(final T entity, final Collection<String> propNamesToRefresh) throws UncheckedSQLException {
         N.checkArgNotNull(entity, "entity");
         N.checkArgNotEmpty(propNamesToRefresh, "propNamesToRefresh");
 
@@ -1004,7 +1004,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Override
     @SuppressWarnings("deprecation")
-    default int batchRefresh(final Collection<? extends T> entities, Collection<String> propNamesToRefresh, final int batchSize) throws UncheckedSQLException {
+    default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize) throws UncheckedSQLException {
         N.checkArgNotEmpty(propNamesToRefresh, "propNamesToRefresh");
         N.checkArgPositive(batchSize, "batchSize");
 
@@ -1031,7 +1031,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
                 final List<T> tmp = idEntityMap.get(id);
 
                 if (N.notEmpty(tmp)) {
-                    for (T entity : tmp) {
+                    for (final T entity : tmp) {
                         N.merge(dbEntity, entity, propNamesToRefresh);
                     }
                 }

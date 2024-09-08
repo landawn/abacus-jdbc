@@ -158,13 +158,11 @@ public final class JdbcUtil {
             clsName = stmtToUse.getClass().getName();
         }
 
-        if (clsName.startsWith("oracle.jdbc")) {
-            if (stmtToUse instanceof oracle.jdbc.internal.OraclePreparedStatement) { //NOSONAR
-                try {
-                    return ((oracle.jdbc.internal.OraclePreparedStatement) stmtToUse).getOriginalSql();
-                } catch (SQLException e) {
-                    // ignore.
-                }
+        if (clsName.startsWith("oracle.jdbc") && (stmtToUse instanceof oracle.jdbc.internal.OraclePreparedStatement)) { //NOSONAR
+            try {
+                return ((oracle.jdbc.internal.OraclePreparedStatement) stmtToUse).getOriginalSql();
+            } catch (final SQLException e) {
+                // ignore.
             }
         }
 
@@ -215,7 +213,7 @@ public final class JdbcUtil {
         try {
             conn = ds.getConnection();
             return getDBProductInfo(conn);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
             JdbcUtil.releaseConnection(conn, ds);
@@ -294,7 +292,7 @@ public final class JdbcUtil {
             }
 
             return new DBProductInfo(dbProudctName, dbProudctName, dbVersion);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -315,7 +313,7 @@ public final class JdbcUtil {
             config.setPassword(password);
 
             return new com.zaxxer.hikari.HikariDataSource(config);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw N.toRuntimeException(e);
         }
     }
@@ -336,7 +334,7 @@ public final class JdbcUtil {
             cpds.setPassword(password);
 
             return cpds;
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw N.toRuntimeException(e);
         }
     }
@@ -387,7 +385,7 @@ public final class JdbcUtil {
             DriverManager.registerDriver(N.newInstance(driverClass));
 
             return DriverManager.getConnection(url, user, password);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException("Failed to close create connection", e);
         }
     }
@@ -435,7 +433,7 @@ public final class JdbcUtil {
     static {
         try {
             isInSpring = ClassUtil.forClass("org.springframework.datasource.DataSourceUtils") != null;
-        } catch (Throwable e) {
+        } catch (final Throwable e) {
             isInSpring = false;
         }
     }
@@ -453,19 +451,19 @@ public final class JdbcUtil {
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             try {
                 return org.springframework.jdbc.datasource.DataSourceUtils.getConnection(ds);
-            } catch (NoClassDefFoundError e) {
+            } catch (final NoClassDefFoundError e) {
                 isInSpring = false;
 
                 try {
                     return ds.getConnection();
-                } catch (SQLException e1) {
+                } catch (final SQLException e1) {
                     throw new UncheckedSQLException(e1);
                 }
             }
         } else {
             try {
                 return ds.getConnection();
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 throw new UncheckedSQLException(e);
             }
         }
@@ -487,7 +485,7 @@ public final class JdbcUtil {
         if (isInSpring && ds != null && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             try {
                 org.springframework.jdbc.datasource.DataSourceUtils.releaseConnection(conn, ds);
-            } catch (NoClassDefFoundError e) {
+            } catch (final NoClassDefFoundError e) {
                 isInSpring = false;
                 JdbcUtil.closeQuietly(conn);
             }
@@ -516,7 +514,7 @@ public final class JdbcUtil {
         if (rs != null) {
             try {
                 rs.close();
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 throw new UncheckedSQLException(e);
             }
         }
@@ -561,7 +559,7 @@ public final class JdbcUtil {
             if (closeConnection && stmt != null) {
                 conn = stmt.getConnection();
             }
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
             close(rs, stmt, conn);
@@ -577,7 +575,7 @@ public final class JdbcUtil {
         if (stmt != null) {
             try {
                 stmt.close();
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 throw new UncheckedSQLException(e);
             }
         }
@@ -594,7 +592,7 @@ public final class JdbcUtil {
         if (conn != null) {
             try {
                 conn.close();
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 throw new UncheckedSQLException(e);
             }
         }
@@ -611,14 +609,14 @@ public final class JdbcUtil {
             if (rs != null) {
                 rs.close();
             }
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
             try {
                 if (stmt != null) {
                     stmt.close();
                 }
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 throw new UncheckedSQLException(e); //NOSONAR
             }
         }
@@ -635,14 +633,14 @@ public final class JdbcUtil {
             if (stmt != null) {
                 stmt.close();
             }
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
             try {
                 if (conn != null) {
                     conn.close();
                 }
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 throw new UncheckedSQLException(e); //NOSONAR
             }
         }
@@ -660,21 +658,21 @@ public final class JdbcUtil {
             if (rs != null) {
                 rs.close();
             }
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
             try {
                 if (stmt != null) {
                     stmt.close();
                 }
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 throw new UncheckedSQLException(e); //NOSONAR
             } finally {
                 try {
                     if (conn != null) {
                         conn.close();
                     }
-                } catch (SQLException e) {
+                } catch (final SQLException e) {
                     throw new UncheckedSQLException(e); //NOSONAR
                 }
             }
@@ -730,7 +728,7 @@ public final class JdbcUtil {
             if (closeConnection && stmt != null) {
                 conn = stmt.getConnection();
             }
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             logger.error("Failed to get Statement or Connection by ResultSet", e);
         } finally {
             closeQuietly(rs, stmt, conn);
@@ -803,7 +801,7 @@ public final class JdbcUtil {
         if (rs != null) {
             try {
                 rs.close();
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.error("Failed to close ResultSet", e);
             }
         }
@@ -811,7 +809,7 @@ public final class JdbcUtil {
         if (stmt != null) {
             try {
                 stmt.close();
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.error("Failed to close Statement", e);
             }
         }
@@ -819,7 +817,7 @@ public final class JdbcUtil {
         if (conn != null) {
             try {
                 conn.close();
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.error("Failed to close Connection", e);
             }
         }
@@ -832,7 +830,7 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    public static int skip(final ResultSet rs, int n) throws SQLException {
+    public static int skip(final ResultSet rs, final int n) throws SQLException {
         return skip(rs, (long) n);
     }
 
@@ -854,26 +852,20 @@ public final class JdbcUtil {
         } else {
             final int currentRow = rs.getRow();
 
-            if (n <= Integer.MAX_VALUE) {
-                if (n > Integer.MAX_VALUE - currentRow
-                        || (resultSetClassNotSupportAbsolute.size() > 0 && resultSetClassNotSupportAbsolute.contains(rs.getClass()))) {
+            if ((n > Integer.MAX_VALUE) || (n > Integer.MAX_VALUE - currentRow
+                    || (resultSetClassNotSupportAbsolute.size() > 0 && resultSetClassNotSupportAbsolute.contains(rs.getClass())))) {
+                while (n-- > 0L && rs.next()) {
+                    // continue.
+                }
+            } else {
+                try {
+                    rs.absolute((int) n + currentRow);
+                } catch (final SQLException e) {
                     while (n-- > 0L && rs.next()) {
                         // continue.
                     }
-                } else {
-                    try {
-                        rs.absolute((int) n + currentRow);
-                    } catch (SQLException e) {
-                        while (n-- > 0L && rs.next()) {
-                            // continue.
-                        }
 
-                        resultSetClassNotSupportAbsolute.add(rs.getClass());
-                    }
-                }
-            } else {
-                while (n-- > 0L && rs.next()) {
-                    // continue.
+                    resultSetClassNotSupportAbsolute.add(rs.getClass());
                 }
             }
 
@@ -888,7 +880,7 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    public static int getColumnCount(ResultSet rs) throws SQLException {
+    public static int getColumnCount(final ResultSet rs) throws SQLException {
         return rs.getMetaData().getColumnCount();
     }
 
@@ -930,7 +922,7 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    public static List<String> getColumnLabelList(ResultSet rs) throws SQLException {
+    public static List<String> getColumnLabelList(final ResultSet rs) throws SQLException {
         final ResultSetMetaData metaData = rs.getMetaData();
         final int columnCount = metaData.getColumnCount();
         final List<String> labelList = new ArrayList<>(columnCount);
@@ -967,7 +959,7 @@ public final class JdbcUtil {
     public static int getColumnIndex(final ResultSet resultSet, final String columnName) throws UncheckedSQLException {
         try {
             return getColumnIndex(resultSet.getMetaData(), columnName);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
     }
@@ -1111,9 +1103,9 @@ public final class JdbcUtil {
             return ret;
         }
 
-        if (ret instanceof Blob blob) {
+        if (ret instanceof final Blob blob) {
             ret = blob.getBytes(1, (int) blob.length());
-        } else if (ret instanceof Clob clob) {
+        } else if (ret instanceof final Clob clob) {
             ret = clob.getSubString(1, (int) clob.length());
         } else if (checkDateType) {
             ret = columnConverterByIndex.apply(rs, columnIndex, ret);
@@ -1155,9 +1147,9 @@ public final class JdbcUtil {
             return ret;
         }
 
-        if (ret instanceof Blob blob) {
+        if (ret instanceof final Blob blob) {
             ret = blob.getBytes(1, (int) blob.length());
-        } else if (ret instanceof Clob clob) {
+        } else if (ret instanceof final Clob clob) {
             ret = clob.getSubString(1, (int) clob.length());
         } else if (checkDateType) {
             ret = columnConverterByLabel.apply(rs, columnLabel, ret);
@@ -1348,7 +1340,7 @@ public final class JdbcUtil {
      * @param entityClass
      * @return
      */
-    public static ImmutableMap<String, String> getColumn2FieldNameMap(Class<?> entityClass) {
+    public static ImmutableMap<String, String> getColumn2FieldNameMap(final Class<?> entityClass) {
         return QueryUtil.getColumn2PropNameMap(entityClass);
     }
 
@@ -1369,7 +1361,7 @@ public final class JdbcUtil {
                 conn = getConnection(ds);
 
                 return org.springframework.jdbc.datasource.DataSourceUtils.isConnectionTransactional(conn, ds);
-            } catch (NoClassDefFoundError e) {
+            } catch (final NoClassDefFoundError e) {
                 isInSpring = false;
             } finally {
                 releaseConnection(conn, ds);
@@ -1512,7 +1504,7 @@ public final class JdbcUtil {
                 tran.incrementAndGetRef(isolationLevel, isForUpdateOnly);
 
                 noException = true;
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 throw new UncheckedSQLException(e);
             } finally {
                 if (!noException) {
@@ -1808,7 +1800,7 @@ public final class JdbcUtil {
      * @param sql
      * @return
      */
-    static SQLOperation getSQLOperation(String sql) {
+    static SQLOperation getSQLOperation(final String sql) {
         if (Strings.startsWithIgnoreCase(sql.trim(), "select ")) {
             return SQLOperation.SELECT;
         } else if (Strings.startsWithIgnoreCase(sql.trim(), "update ")) {
@@ -1820,7 +1812,7 @@ public final class JdbcUtil {
         } else if (Strings.startsWithIgnoreCase(sql.trim(), "merge ")) {
             return SQLOperation.MERGE;
         } else {
-            for (SQLOperation so : SQLOperation.values()) {
+            for (final SQLOperation so : SQLOperation.values()) {
                 if (Strings.startsWithIgnoreCase(sql.trim(), so.name())) {
                     return so;
                 }
@@ -3184,7 +3176,7 @@ public final class JdbcUtil {
         final ParsedSql parsedSql = ParsedSql.parse(sql);
         final PreparedStatement stmt = prepareStatement(conn, parsedSql);
 
-        for (Object parameters : parametersList) {
+        for (final Object parameters : parametersList) {
             setParameters(parsedSql, stmt, N.asArray(parameters));
             stmt.addBatch();
         }
@@ -3207,7 +3199,7 @@ public final class JdbcUtil {
         final ParsedSql parsedSql = ParsedSql.parse(sql);
         final CallableStatement stmt = prepareCallable(conn, parsedSql);
 
-        for (Object parameters : parametersList) {
+        for (final Object parameters : parametersList) {
             setParameters(parsedSql, stmt, N.asArray(parameters));
             stmt.addBatch();
         }
@@ -3488,7 +3480,7 @@ public final class JdbcUtil {
             int res = 0;
             int idx = 0;
 
-            for (Object parameter : listOfParameters) {
+            for (final Object parameter : listOfParameters) {
                 parameters[0] = parameter;
 
                 setParameters(parsedSql, stmt, parameters);
@@ -3630,7 +3622,7 @@ public final class JdbcUtil {
             long res = 0;
             int idx = 0;
 
-            for (Object parameter : listOfParameters) {
+            for (final Object parameter : listOfParameters) {
                 parameters[0] = parameter;
 
                 setParameters(parsedSql, stmt, parameters);
@@ -3725,7 +3717,7 @@ public final class JdbcUtil {
         }
     }
 
-    static ResultSet executeQuery(PreparedStatement stmt) throws SQLException {
+    static ResultSet executeQuery(final PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
         if (isToHandleSqlLog(sqlLogConfig)) {
@@ -3747,7 +3739,7 @@ public final class JdbcUtil {
         }
     }
 
-    static int executeUpdate(PreparedStatement stmt) throws SQLException {
+    static int executeUpdate(final PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
         if (isToHandleSqlLog(sqlLogConfig)) {
@@ -3769,7 +3761,7 @@ public final class JdbcUtil {
         }
     }
 
-    static long executeLargeUpdate(PreparedStatement stmt) throws SQLException {
+    static long executeLargeUpdate(final PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
         if (isToHandleSqlLog(sqlLogConfig)) {
@@ -3782,7 +3774,7 @@ public final class JdbcUtil {
 
                 try {
                     stmt.clearBatch();
-                } catch (SQLException e) {
+                } catch (final SQLException e) {
                     logger.error("Failed to clear batch parameters after executeLargeUpdate", e);
                 }
             }
@@ -3792,14 +3784,14 @@ public final class JdbcUtil {
             } finally {
                 try {
                     stmt.clearBatch();
-                } catch (SQLException e) {
+                } catch (final SQLException e) {
                     logger.error("Failed to clear batch parameters after executeLargeUpdate", e);
                 }
             }
         }
     }
 
-    static int[] executeBatch(Statement stmt) throws SQLException {
+    static int[] executeBatch(final Statement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
         if (isToHandleSqlLog(sqlLogConfig)) {
@@ -3812,7 +3804,7 @@ public final class JdbcUtil {
 
                 try {
                     stmt.clearBatch();
-                } catch (SQLException e) {
+                } catch (final SQLException e) {
                     logger.error("Failed to clear batch parameters after executeBatch", e);
                 }
             }
@@ -3822,14 +3814,14 @@ public final class JdbcUtil {
             } finally {
                 try {
                     stmt.clearBatch();
-                } catch (SQLException e) {
+                } catch (final SQLException e) {
                     logger.error("Failed to clear batch parameters after executeBatch", e);
                 }
             }
         }
     }
 
-    static long[] executeLargeBatch(Statement stmt) throws SQLException {
+    static long[] executeLargeBatch(final Statement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
         if (isToHandleSqlLog(sqlLogConfig)) {
@@ -3842,7 +3834,7 @@ public final class JdbcUtil {
 
                 try {
                     stmt.clearBatch();
-                } catch (SQLException e) {
+                } catch (final SQLException e) {
                     logger.error("Failed to clear batch parameters after executeLargeBatch", e);
                 }
             }
@@ -3852,14 +3844,14 @@ public final class JdbcUtil {
             } finally {
                 try {
                     stmt.clearBatch();
-                } catch (SQLException e) {
+                } catch (final SQLException e) {
                     logger.error("Failed to clear batch parameters after executeLargeBatch", e);
                 }
             }
         }
     }
 
-    static boolean execute(PreparedStatement stmt) throws SQLException {
+    static boolean execute(final PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = minExecutionTimeForSqlPerfLog_TL.get();
 
         if (isToHandleSqlLog(sqlLogConfig)) {
@@ -3892,7 +3884,7 @@ public final class JdbcUtil {
         } else {
             try {
                 stmt.clearParameters();
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 logger.error("Failed to clear parameters after execution", e);
             }
         }
@@ -4110,7 +4102,7 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    public static DataSet extractData(final ResultSet rs, int offset, int count, final RowFilter filter, final boolean closeResultSet) throws SQLException {
+    public static DataSet extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final boolean closeResultSet) throws SQLException {
         return extractData(rs, offset, count, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, closeResultSet);
     }
 
@@ -4124,7 +4116,7 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    public static DataSet extractData(final ResultSet rs, int offset, int count, final RowExtractor rowExtractor, final boolean closeResultSet)
+    public static DataSet extractData(final ResultSet rs, final int offset, final int count, final RowExtractor rowExtractor, final boolean closeResultSet)
             throws SQLException {
         return extractData(rs, offset, count, INTERNAL_DUMMY_ROW_FILTER, rowExtractor, closeResultSet);
     }
@@ -4142,7 +4134,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException
      * @throws SQLException
      */
-    public static DataSet extractData(final ResultSet rs, int offset, int count, final RowFilter filter, final RowExtractor rowExtractor,
+    public static DataSet extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final RowExtractor rowExtractor,
             final boolean closeResultSet) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(rs, "ResultSet");
         N.checkArgNotNegative(offset, "offset");
@@ -4160,7 +4152,7 @@ public final class JdbcUtil {
         }
     }
 
-    static DataSet extractResultSetToDataSet(final ResultSet rs, int offset, int count, final RowFilter filter, final RowExtractor rowExtractor,
+    static DataSet extractResultSetToDataSet(final ResultSet rs, final int offset, int count, final RowFilter filter, final RowExtractor rowExtractor,
             final boolean checkDateType) throws SQLException {
         final ResultSetMetaData rsmd = rs.getMetaData();
         final int columnCount = rsmd.getColumnCount();
@@ -4228,7 +4220,7 @@ public final class JdbcUtil {
         return new RowDataSet(columnNameList, columnList);
     }
 
-    static <R> R extractAndCloseResultSet(ResultSet rs, final ResultExtractor<? extends R> resultExtractor) throws SQLException {
+    static <R> R extractAndCloseResultSet(final ResultSet rs, final ResultExtractor<? extends R> resultExtractor) throws SQLException {
         try {
             return checkNotResultSet(resultExtractor.apply(rs));
         } finally {
@@ -4236,7 +4228,7 @@ public final class JdbcUtil {
         }
     }
 
-    static <R> R extractAndCloseResultSet(ResultSet rs, final BiResultExtractor<? extends R> resultExtractor) throws SQLException {
+    static <R> R extractAndCloseResultSet(final ResultSet rs, final BiResultExtractor<? extends R> resultExtractor) throws SQLException {
         try {
             return checkNotResultSet(resultExtractor.apply(rs, getColumnLabelList(rs)));
         } finally {
@@ -4379,7 +4371,7 @@ public final class JdbcUtil {
             }
 
             @Override
-            public void advance(long n) throws IllegalArgumentException, SQLException {
+            public void advance(final long n) throws IllegalArgumentException, SQLException {
                 N.checkArgNotNegative(n, "n");
 
                 final long m = hasNext ? n - 1 : n;
@@ -4523,7 +4515,7 @@ public final class JdbcUtil {
             }
 
             @Override
-            public void advance(long n) throws IllegalArgumentException, SQLException {
+            public void advance(final long n) throws IllegalArgumentException, SQLException {
                 N.checkArgNotNegative(n, "n");
 
                 final long m = hasNext ? n - 1 : n;
@@ -4652,7 +4644,7 @@ public final class JdbcUtil {
             private boolean checkDateType = true;
 
             @Override
-            public T apply(ResultSet rs) throws SQLException {
+            public T apply(final ResultSet rs) throws SQLException {
                 if (columnIndex == -1) {
                     columnIndex = getColumnIndex(resultSet, columnName);
                     checkDateType = JdbcUtil.checkDateType(resultSet);
@@ -5016,7 +5008,7 @@ public final class JdbcUtil {
     }
 
     @SuppressWarnings("rawtypes")
-    static boolean isNotEmptyResult(Object ret) {
+    static boolean isNotEmptyResult(final Object ret) {
         if (ret == null) {
             return false;
         }
@@ -5036,7 +5028,7 @@ public final class JdbcUtil {
         return true;
     }
 
-    static <R> R checkNotResultSet(R result) {
+    static <R> R checkNotResultSet(final R result) {
         if (result instanceof ResultSet) {
             throw new UnsupportedOperationException("The result value of ResultExtractor/BiResultExtractor.apply can't be ResultSet");
         }
@@ -5047,7 +5039,7 @@ public final class JdbcUtil {
     static boolean checkDateType(final ResultSet rs) {
         try {
             return checkDateType(rs.getStatement());
-        } catch (Exception e) {
+        } catch (final Exception e) {
             return true;
         }
     }
@@ -5055,7 +5047,7 @@ public final class JdbcUtil {
     static boolean checkDateType(final Statement stmt) {
         try {
             return Strings.containsIgnoreCase(JdbcUtil.getDBProductInfo(stmt.getConnection()).getProductName(), "Oracle");
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             return true;
         }
     }
@@ -5385,7 +5377,7 @@ public final class JdbcUtil {
         Object key = null;
         Object value = null;
 
-        for (OutParam outParam : outParams) {
+        for (final OutParam outParam : outParams) {
             outParameterGetter = sqlTypeGetterMap.getOrDefault(outParam.getSqlType(), objOutParameterGetter);
 
             if (outParam.getParameterIndex() > 0) {
@@ -5396,15 +5388,15 @@ public final class JdbcUtil {
                 value = outParameterGetter.getOutParameter(stmt, outParam.getParameterName());
             }
 
-            if (value instanceof ResultSet rs) {
+            if (value instanceof final ResultSet rs) {
                 try {
                     value = JdbcUtil.extractData(rs);
                 } finally {
                     JdbcUtil.closeQuietly(rs);
                 }
-            } else if (value instanceof Blob blob) {
+            } else if (value instanceof final Blob blob) {
                 value = blob.getBytes(1, (int) blob.length());
-            } else if (value instanceof Clob clob) {
+            } else if (value instanceof final Clob clob) {
                 value = clob.getSubString(1, (int) clob.length());
             }
 
@@ -5426,7 +5418,7 @@ public final class JdbcUtil {
             executeQuery(conn, "SELECT 1 FROM " + tableName + " WHERE 1 > 2");
 
             return true;
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             if (isTableNotExistsException(e)) {
                 return false;
             }
@@ -5452,7 +5444,7 @@ public final class JdbcUtil {
             execute(conn, schema);
 
             return true;
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             return false;
         }
     }
@@ -5471,7 +5463,7 @@ public final class JdbcUtil {
 
                 return true;
             }
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             // ignore.
         }
 
@@ -5523,14 +5515,14 @@ public final class JdbcUtil {
      * @return true, if is table not exists exception
      */
     static boolean isTableNotExistsException(final Throwable e) {
-        if (e instanceof SQLException sqlException) {
+        if (e instanceof final SQLException sqlException) {
             if (sqlException.getSQLState() != null && sqlStateForTableNotExists.contains(sqlException.getSQLState())) {
                 return true;
             }
 
             final String msg = N.defaultIfNull(e.getMessage(), "").toLowerCase();
             return Strings.isNotEmpty(msg) && (msg.contains("not exist") || msg.contains("doesn't exist") || msg.contains("not found"));
-        } else if (e instanceof UncheckedSQLException sqlException) {
+        } else if (e instanceof final UncheckedSQLException sqlException) {
             return isTableNotExistsException(sqlException.getCause());
         }
 
@@ -5781,7 +5773,7 @@ public final class JdbcUtil {
      * @deprecated replaced by {@link #doNotUseSpringTransactional(boolean)}
      */
     @Deprecated
-    public static void disableSpringTransactional(boolean b) {
+    public static void disableSpringTransactional(final boolean b) {
         doNotUseSpringTransactional(b);
     }
 
@@ -5792,7 +5784,7 @@ public final class JdbcUtil {
      *
      * @param b {@code true} to not share, {@code false} to share it again.
      */
-    public static void doNotUseSpringTransactional(boolean b) {
+    public static void doNotUseSpringTransactional(final boolean b) {
         // synchronized (isSpringTransactionalDisabled_TL) {
         if (isInSpring) {
             if (logger.isWarnEnabled() && isSpringTransactionalDisabled_TL.get() != b) { //NOSONAR
@@ -5969,7 +5961,7 @@ public final class JdbcUtil {
 
         try {
             sqlAction.run();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw N.toRuntimeException(e);
         }
     }
@@ -5988,7 +5980,7 @@ public final class JdbcUtil {
 
         try {
             sqlAction.accept(t);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw N.toRuntimeException(e);
         }
     }
@@ -6010,7 +6002,7 @@ public final class JdbcUtil {
 
         try {
             sqlAction.accept(t, u);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw N.toRuntimeException(e);
         }
     }
@@ -6034,7 +6026,7 @@ public final class JdbcUtil {
 
         try {
             sqlAction.accept(a, b, c);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw N.toRuntimeException(e);
         }
     }
@@ -6053,7 +6045,7 @@ public final class JdbcUtil {
 
         try {
             return sqlAction.call();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw N.toRuntimeException(e);
         }
     }
@@ -6074,7 +6066,7 @@ public final class JdbcUtil {
 
         try {
             return sqlAction.apply(t);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw N.toRuntimeException(e);
         }
     }
@@ -6098,7 +6090,7 @@ public final class JdbcUtil {
 
         try {
             return sqlAction.apply(t, u);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw N.toRuntimeException(e);
         }
     }
@@ -6124,7 +6116,7 @@ public final class JdbcUtil {
 
         try {
             return sqlAction.apply(a, b, c);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw N.toRuntimeException(e);
         }
     }
@@ -6395,7 +6387,7 @@ public final class JdbcUtil {
 
     private static final Map<Class<?>, Map<String, Optional<PropInfo>>> entityPropInfoQueueMap = new ConcurrentHashMap<>();
 
-    static PropInfo getSubPropInfo(final Class<?> entityClass, String propName) {
+    static PropInfo getSubPropInfo(final Class<?> entityClass, final String propName) {
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
         Map<String, Optional<PropInfo>> propInfoQueueMap = entityPropInfoQueueMap.get(entityClass);
         Optional<PropInfo> propInfoHolder = null;
@@ -6491,7 +6483,7 @@ public final class JdbcUtil {
                             : (isEntityId ? entity -> {
                                 final Seid ret = Seid.of(ClassUtil.getSimpleClassName(entityClass));
 
-                                for (PropInfo propInfo : idPropInfoList) {
+                                for (final PropInfo propInfo : idPropInfoList) {
                                     ret.set(propInfo.name, propInfo.getPropValue(entity));
                                 }
 
@@ -6499,7 +6491,7 @@ public final class JdbcUtil {
                             } : entity -> {
                                 final Object ret = idBeanInfo.createBeanResult();
 
-                                for (PropInfo propInfo : idPropInfoList) {
+                                for (final PropInfo propInfo : idPropInfoList) {
                                     ClassUtil.setPropValue(ret, propInfo.name, propInfo.getPropValue(entity));
                                 }
 
@@ -6509,10 +6501,10 @@ public final class JdbcUtil {
             final com.landawn.abacus.util.function.BiConsumer<ID, Object> idSetter = isNoId ? noIdGeneratorGetterSetter._3 //
                     : (isOneId ? (id, entity) -> idPropInfo.setPropValue(entity, id) //
                             : (isEntityId ? (id, entity) -> {
-                                if (id instanceof EntityId entityId) {
+                                if (id instanceof final EntityId entityId) {
                                     PropInfo propInfo = null;
 
-                                    for (String propName : entityId.keySet()) {
+                                    for (final String propName : entityId.keySet()) {
                                         propInfo = entityInfo.getPropInfo(propName);
 
                                         if ((propInfo = entityInfo.getPropInfo(propName)) != null) {
@@ -6526,7 +6518,7 @@ public final class JdbcUtil {
                                 if (id != null && ClassUtil.isBeanClass(id.getClass())) {
                                     final Object entityId = id;
 
-                                    for (PropInfo propInfo : idPropInfoList) {
+                                    for (final PropInfo propInfo : idPropInfoList) {
                                         propInfo.setPropValue(entity, ClassUtil.getPropValue(entityId, propInfo.name));
                                     }
                                 } else {
@@ -6536,7 +6528,7 @@ public final class JdbcUtil {
 
             map = new EnumMap<>(NamingPolicy.class);
 
-            for (NamingPolicy np : NamingPolicy.values()) {
+            for (final NamingPolicy np : NamingPolicy.values()) {
                 final ImmutableMap<String, String> propColumnNameMap = QueryUtil.getProp2ColumnNameMap(entityClass, namingPolicy);
 
                 final ImmutableMap<String, String> columnPropNameMap = EntryStream.of(propColumnNameMap)
@@ -6577,7 +6569,7 @@ public final class JdbcUtil {
                                                         .toList();
                                                 final Object id = idBeanInfo.createBeanResult();
 
-                                                for (Tuple2<String, PropInfo> tp : tpList) {
+                                                for (final Tuple2<String, PropInfo> tp : tpList) {
                                                     tp._2.setPropValue(id, tp._2.dbType.get(rs, tp._1));
                                                 }
 
@@ -6932,7 +6924,7 @@ public final class JdbcUtil {
      * @param sql
      * @return
      */
-    public static List<String> getNamedParameters(String sql) {
+    public static List<String> getNamedParameters(final String sql) {
         return ParsedSql.parse(sql).getNamedParameters();
     }
 
@@ -6942,7 +6934,7 @@ public final class JdbcUtil {
      * @return
      * @see ParsedSql#parse(String)
      */
-    public static ParsedSql parseSql(String sql) {
+    public static ParsedSql parseSql(final String sql) {
         return ParsedSql.parse(sql);
     }
 

@@ -31,9 +31,9 @@ import java.util.Collection;
 public @interface DefineList {
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     String value() default "";
 }

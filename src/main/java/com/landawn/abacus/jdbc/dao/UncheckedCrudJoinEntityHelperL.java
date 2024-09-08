@@ -179,7 +179,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
         if (result != null) {
-            for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+            for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                 loadJoinEntities(result, joinEntityClass);
             }
         }

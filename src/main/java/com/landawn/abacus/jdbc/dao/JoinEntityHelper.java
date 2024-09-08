@@ -121,7 +121,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         final Optional<T> result = DaoUtil.getDao(this).findFirst(selectPropNames, cond);
 
         if (result.isPresent()) {
-            for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+            for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                 loadJoinEntities(result.get(), joinEntityClass);
             }
         }
@@ -181,7 +181,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
 
         if (result.isPresent()) {
-            for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+            for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                 loadJoinEntities(result.get(), joinEntityClass);
             }
         }
@@ -247,12 +247,12 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         if (N.notEmpty(result) && N.notEmpty(joinEntitiesToLoad)) {
             if (result.size() > JdbcUtil.DEFAULT_BATCH_SIZE) {
                 StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(it -> {
-                    for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                         loadJoinEntities(it, joinEntityClass);
                     }
                 });
             } else {
-                for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                     loadJoinEntities(result, joinEntityClass);
                 }
             }
@@ -314,7 +314,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
                 .stream(selectPropNames, cond)
                 .splitToList(JdbcUtil.DEFAULT_BATCH_SIZE) //
                 .onEach(it -> {
-                    for (Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                         loadJoinEntities(it, joinEntityClass);
                     }
                 })
@@ -365,7 +365,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
 
-        for (String joinEntityPropName : joinEntityPropNames) {
+        for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntities(entity, joinEntityPropName, selectPropNames);
         }
     }
@@ -397,7 +397,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
 
-        for (String joinEntityPropName : joinEntityPropNames) {
+        for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntities(entities, joinEntityPropName, selectPropNames);
         }
     }
@@ -451,7 +451,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             return;
         }
 
-        for (String joinEntityPropName : joinEntityPropNames) {
+        for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntities(entity, joinEntityPropName);
         }
     }
@@ -504,7 +504,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             return;
         }
 
-        for (String joinEntityPropName : joinEntityPropNames) {
+        for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntities(entities, joinEntityPropName);
         }
     }
@@ -552,7 +552,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param entity
      * @throws SQLException
      */
-    default void loadAllJoinEntities(T entity) throws SQLException {
+    default void loadAllJoinEntities(final T entity) throws SQLException {
         loadJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
     }
 
@@ -648,7 +648,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
 
-        for (String joinEntityPropName : joinEntityPropNames) {
+        for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntitiesIfNull(entity, joinEntityPropName, selectPropNames);
         }
     }
@@ -684,7 +684,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         if (joinEntityPropNames.size() == 1) {
             loadJoinEntitiesIfNull(entities, joinEntityPropNames.get(0), selectPropNames);
         } else {
-            for (String joinEntityPropName : joinEntityPropNames) {
+            for (final String joinEntityPropName : joinEntityPropNames) {
                 loadJoinEntitiesIfNull(entities, joinEntityPropName, selectPropNames);
             }
         }
@@ -760,7 +760,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             return;
         }
 
-        for (String joinEntityPropName : joinEntityPropNames) {
+        for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntitiesIfNull(entity, joinEntityPropName);
         }
     }
@@ -813,7 +813,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             return;
         }
 
-        for (String joinEntityPropName : joinEntityPropNames) {
+        for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntitiesIfNull(entities, joinEntityPropName);
         }
     }
@@ -863,7 +863,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param entity
      * @throws SQLException
      */
-    default void loadJoinEntitiesIfNull(T entity) throws SQLException {
+    default void loadJoinEntitiesIfNull(final T entity) throws SQLException {
         loadJoinEntitiesIfNull(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
     }
 
@@ -966,7 +966,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
             try {
-                for (String joinEntityPropName : joinEntityPropNames) {
+                for (final String joinEntityPropName : joinEntityPropNames) {
                     result += deleteJoinEntities(entity, joinEntityPropName);
                 }
                 tran.commit();
@@ -1003,7 +1003,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
             try {
-                for (String joinEntityPropName : joinEntityPropNames) {
+                for (final String joinEntityPropName : joinEntityPropNames) {
                     result += deleteJoinEntities(entities, joinEntityPropName);
                 }
                 tran.commit();
@@ -1055,7 +1055,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
             try {
-                for (String joinEntityPropName : joinEntityPropNames) {
+                for (final String joinEntityPropName : joinEntityPropNames) {
                     result += deleteJoinEntities(entity, joinEntityPropName);
                 }
                 tran.commit();
@@ -1130,7 +1130,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
             try {
-                for (String joinEntityPropName : joinEntityPropNames) {
+                for (final String joinEntityPropName : joinEntityPropNames) {
                     result += deleteJoinEntities(entities, joinEntityPropName);
                 }
                 tran.commit();
@@ -1192,7 +1192,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @return the total count of updated/deleted records.
      * @throws SQLException
      */
-    default int deleteAllJoinEntities(T entity) throws SQLException {
+    default int deleteAllJoinEntities(final T entity) throws SQLException {
         return deleteJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
     }
 

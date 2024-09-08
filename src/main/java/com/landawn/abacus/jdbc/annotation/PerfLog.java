@@ -33,9 +33,9 @@ public @interface PerfLog {
     long minExecutionTimeForSql() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG; // 1000
 
     /**
-     * 
      *
-     * @return 
+     *
+     * @return
      */
     int maxSqlLogLength() default JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH; // 1024
 

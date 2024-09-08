@@ -27,8 +27,8 @@ public @interface PrefixFieldMapping {
     /**
      * <code> @PrefixFieldMapping("d=device, c=contact") </code>.
      *
-     * @return 
-     * @deprecated 
+     * @return
+     * @deprecated
      */
     @Deprecated
     String value() default "";

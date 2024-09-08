@@ -49,7 +49,7 @@ import java.sql.PreparedStatement;
  */
 public final class PreparedQuery extends AbstractQuery<PreparedStatement, PreparedQuery> {
 
-    PreparedQuery(PreparedStatement stmt) {
+    PreparedQuery(final PreparedStatement stmt) {
         super(stmt);
     }
 }

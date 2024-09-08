@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2024 HaiYang Li
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package com.landawn.abacus.samples;
 
 import static com.landawn.abacus.samples.JdbcTest.addressDao;
@@ -49,16 +62,16 @@ import com.landawn.abacus.util.stream.Stream;
 public class UncheckedDaoTest {
 
     /**
-     * 
+     *
      */
     @Test
     public void test_define() {
 
-        List<User> users = IntStream.range(1, 1000)
+        final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
-        List<Long> ids = uncheckedUserDao.batchInsertWithId(users);
+        final List<Long> ids = uncheckedUserDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
         assertNotNull(uncheckedUserDao.selectByIdWithDefine("user1", N.asList("last_name", "first_name"), ids.get(0)));
@@ -94,12 +107,12 @@ public class UncheckedDaoTest {
     //    }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_orderBy() {
         JdbcUtil.enableSqlLog();
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.save(user, N.asList("id", "firstName", "lastName", "email"));
 
         User userFromDB = uncheckedUserDao.gett(100L);
@@ -108,7 +121,7 @@ public class UncheckedDaoTest {
 
         uncheckedUserDao.deleteById(100L);
 
-        long id = uncheckedUserDao.insert(user, N.asList("firstName", "lastName", "email"));
+        final long id = uncheckedUserDao.insert(user, N.asList("firstName", "lastName", "email"));
         userFromDB = uncheckedUserDao.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
@@ -120,14 +133,14 @@ public class UncheckedDaoTest {
     }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_cache() {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
-        User userFromDB = uncheckedUserDao.gett(100L);
+        final User userFromDB = uncheckedUserDao.gett(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
@@ -144,14 +157,14 @@ public class UncheckedDaoTest {
     }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_handler() {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
-        User userFromDB = uncheckedUserDao.gett(100L);
+        final User userFromDB = uncheckedUserDao.gett(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
@@ -169,7 +182,7 @@ public class UncheckedDaoTest {
     }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_sql_log() {
@@ -184,7 +197,7 @@ public class UncheckedDaoTest {
                     System.out.println("+++: Not enable log for Thread: " + Thread.currentThread());
                 }
 
-                User user = User.builder().id(idx).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+                final User user = User.builder().id(idx).firstName("Forrest").lastName("Gump").email("123@email.com").build();
                 uncheckedUserDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
                 assertNotNull(uncheckedUserDao.gett(idx));
@@ -201,26 +214,26 @@ public class UncheckedDaoTest {
     }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_operation_log() {
 
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
         uncheckedUserDao.delete_propagation_SUPPORTS(100);
     }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_propagation() {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
-        User userFromDB = uncheckedUserDao.gett(100L);
+        final User userFromDB = uncheckedUserDao.gett(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
@@ -263,12 +276,12 @@ public class UncheckedDaoTest {
     //    }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_batch() {
 
-        List<User> users = IntStream.range(1, 1000)
+        final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
@@ -292,11 +305,11 @@ public class UncheckedDaoTest {
     }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_save_insert() {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.save(user, N.asList("id", "firstName", "lastName", "email"));
 
         User userFromDB = uncheckedUserDao.gett(100L);
@@ -305,7 +318,7 @@ public class UncheckedDaoTest {
 
         uncheckedUserDao.deleteById(100L);
 
-        long id = uncheckedUserDao.insert(user, N.asList("firstName", "lastName", "email"));
+        final long id = uncheckedUserDao.insert(user, N.asList("firstName", "lastName", "email"));
         userFromDB = uncheckedUserDao.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
@@ -315,11 +328,11 @@ public class UncheckedDaoTest {
     }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_save_insert_2() {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao2.save(user, N.asList("id", "firstName", "lastName", "email"));
 
         User userFromDB = uncheckedUserDao2.gett(100L);
@@ -328,7 +341,7 @@ public class UncheckedDaoTest {
 
         uncheckedUserDao2.deleteById(100);
 
-        long id = uncheckedUserDao2.insert(user, N.asList("firstName", "lastName", "email"));
+        final long id = uncheckedUserDao2.insert(user, N.asList("firstName", "lastName", "email"));
         userFromDB = uncheckedUserDao2.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
@@ -339,21 +352,21 @@ public class UncheckedDaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @SuppressWarnings("deprecation")
     @Test
     public void test_readOnlyDao() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
 
         try {
             readOnlyUserDao.save(user);
             fail("Should throw UnsupportedOperationException");
-        } catch (UnsupportedOperationException e) {
+        } catch (final UnsupportedOperationException e) {
             //
-        } catch (Exception e) {
+        } catch (final Exception e) {
             //
             e.printStackTrace();
         }
@@ -361,9 +374,9 @@ public class UncheckedDaoTest {
         try {
             readOnlyUserDao.batchSave(N.asList(user));
             fail("Should throw UnsupportedOperationException");
-        } catch (UnsupportedOperationException e) {
+        } catch (final UnsupportedOperationException e) {
             //
-        } catch (Exception e) {
+        } catch (final Exception e) {
             //
             e.printStackTrace();
         }
@@ -371,26 +384,26 @@ public class UncheckedDaoTest {
         try {
             uncheckedUserDao2.deleteJoinEntities(user, Device.class);
             fail("Should throw UnsupportedOperationException");
-        } catch (UnsupportedOperationException e) {
+        } catch (final UnsupportedOperationException e) {
             //
         }
 
         noUpdateUserDao.save(user);
 
-        User userFromDB = readOnlyUserDao.gett(100L);
+        final User userFromDB = readOnlyUserDao.gett(100L);
         System.out.println(userFromDB);
 
         try {
             readOnlyUserDao.delete(user);
             fail("Should throw UnsupportedOperationException");
-        } catch (UnsupportedOperationException e) {
+        } catch (final UnsupportedOperationException e) {
             //
         }
 
         try {
             noUpdateUserDao.delete(user);
             fail("Should throw UnsupportedOperationException");
-        } catch (UnsupportedOperationException e) {
+        } catch (final UnsupportedOperationException e) {
             //
         }
 
@@ -398,14 +411,14 @@ public class UncheckedDaoTest {
     }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_batchGet() {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insertWithId(user);
 
-        User userFromDB = uncheckedUserDao.gett(100L);
+        final User userFromDB = uncheckedUserDao.gett(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 100; i++) {
@@ -432,7 +445,7 @@ public class UncheckedDaoTest {
     }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_batchDelete() {
@@ -468,14 +481,14 @@ public class UncheckedDaoTest {
     }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_findFirst() {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insertWithId(user);
 
-        User userFromDB = uncheckedUserDao.gett(100L);
+        final User userFromDB = uncheckedUserDao.gett(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
@@ -500,14 +513,14 @@ public class UncheckedDaoTest {
     }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_list() {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insertWithId(user);
 
-        User userFromDB = uncheckedUserDao.gett(100L);
+        final User userFromDB = uncheckedUserDao.gett(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
@@ -542,19 +555,19 @@ public class UncheckedDaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void test_stream() throws SQLException {
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insertWithId(user);
 
         user.setId(101);
         uncheckedUserDao.insertWithId(user);
 
-        User userFromDB = uncheckedUserDao.gett(100L);
+        final User userFromDB = uncheckedUserDao.gett(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
@@ -597,9 +610,9 @@ public class UncheckedDaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     @SuppressWarnings("deprecation")
@@ -608,16 +621,16 @@ public class UncheckedDaoTest {
         N.println(uncheckedUserDao.targetDaoInterface());
         N.println(uncheckedUserDao.executor());
 
-        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insertWithId(user);
 
         User userFromDB = uncheckedUserDao.gett(100L);
         System.out.println(userFromDB);
 
-        Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
+        final Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
         deviceDao.insert(device);
 
-        Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
+        final Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
         addressDao.insert(address);
 
         N.copy(userFromDB);
@@ -651,26 +664,26 @@ public class UncheckedDaoTest {
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void crud_joinedBy_2() throws SQLException {
         final List<User> users = new ArrayList<>();
 
         for (int i = 0; i < 100; i++) {
-            User user = User.builder().id(100 + i).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+            final User user = User.builder().id(100 + i).firstName("Forrest").lastName("Gump").email("123@email.com").build();
             uncheckedUserDao.insertWithId(user);
 
-            User userFromDB = uncheckedUserDao.gett(100L + i);
+            final User userFromDB = uncheckedUserDao.gett(100L + i);
             System.out.println(userFromDB);
             users.add(userFromDB);
 
-            Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
+            final Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
             deviceDao.insert(device);
 
-            Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
+            final Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
             addressDao.insert(address);
         }
 
@@ -711,18 +724,18 @@ public class UncheckedDaoTest {
     }
 
     /**
-     * 
+     *
      */
     @Test
     public void test_SQLParser() {
-        String sql = "SELECT employee_id AS \"employeeId\", first_name AS \"firstName\", last_name AS \"lastName\" FROM employee WHERE 1 < 2";
+        final String sql = "SELECT employee_id AS \"employeeId\", first_name AS \"firstName\", last_name AS \"lastName\" FROM employee WHERE 1 < 2";
         SQLParser.parse(sql).forEach(Fn.println());
     }
 
     /**
-     * 
      *
-     * @throws SQLException 
+     *
+     * @throws SQLException
      */
     @Test
     public void crud_many_to_many() throws SQLException {
@@ -730,14 +743,14 @@ public class UncheckedDaoTest {
         Employee employee = Employee.builder().employeeId(100).firstName("Forrest").lastName("Gump").build();
         employeeDao.insert(employee);
 
-        Employee employeeFromDB = employeeDao.gett(employee.getEmployeeId());
+        final Employee employeeFromDB = employeeDao.gett(employee.getEmployeeId());
         employeeDao.loadAllJoinEntities(employeeFromDB);
         System.out.println(employeeFromDB);
 
         Project project = Project.builder().projectId(1000).title("Project X").build();
         projectDao.insert(project);
 
-        Project projectFromDB = projectDao.gett(project.getProjectId());
+        final Project projectFromDB = projectDao.gett(project.getProjectId());
         projectDao.loadAllJoinEntities(projectFromDB);
         System.out.println(projectFromDB);
 
@@ -768,17 +781,17 @@ public class UncheckedDaoTest {
         N.println(entityId);
 
         employeeProject = EmployeeProject.builder().employeeId(100).projectId(project.getProjectId()).build();
-        EmployeeProject entityId2 = employeeProjectDao2.insert(employeeProject);
+        final EmployeeProject entityId2 = employeeProjectDao2.insert(employeeProject);
         N.println(entityId2);
 
-        List<Employee> employees = employeeDao.list(CF.alwaysTrue());
+        final List<Employee> employees = employeeDao.list(CF.alwaysTrue());
         employeeDao.loadAllJoinEntities(employees);
         System.out.println(employees);
 
         employeeDao.loadJoinEntities(employees, Project.class, N.asList("title"));
         System.out.println(employees);
 
-        List<Project> projects = projectDao.list(CF.alwaysTrue());
+        final List<Project> projects = projectDao.list(CF.alwaysTrue());
         projectDao.loadAllJoinEntities(projects);
         System.out.println(projects);
 

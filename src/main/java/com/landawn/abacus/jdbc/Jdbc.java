@@ -48,6 +48,7 @@ import java.util.stream.Collector;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
+import com.landawn.abacus.jdbc.Jdbc.Columns;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -179,7 +180,7 @@ public final class Jdbc {
                 private Type[] fieldTypes = null;
 
                 @Override
-                public void accept(PreparedStatement stmt, T[] params) throws SQLException {
+                public void accept(final PreparedStatement stmt, final T[] params) throws SQLException {
                     if (fieldTypes == null) {
                         final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
                         @SuppressWarnings("rawtypes")
@@ -189,7 +190,7 @@ public final class Jdbc {
                             localFieldTypes[i] = entityInfo.getPropInfo(fieldNameList.get(i)).dbType;
                         }
 
-                        this.fieldTypes = localFieldTypes;
+                        fieldTypes = localFieldTypes;
                     }
 
                     for (int i = 0; i < len; i++) {
@@ -218,7 +219,7 @@ public final class Jdbc {
                 private Type[] fieldTypes = null;
 
                 @Override
-                public void accept(PreparedStatement stmt, List<T> params) throws SQLException {
+                public void accept(final PreparedStatement stmt, final List<T> params) throws SQLException {
                     if (fieldTypes == null) {
                         final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
                         @SuppressWarnings("rawtypes")
@@ -228,7 +229,7 @@ public final class Jdbc {
                             localFieldTypes[i] = entityInfo.getPropInfo(fieldNameList.get(i)).dbType;
                         }
 
-                        this.fieldTypes = localFieldTypes;
+                        fieldTypes = localFieldTypes;
                     }
 
                     for (int i = 0; i < len; i++) {
@@ -248,11 +249,8 @@ public final class Jdbc {
     @FunctionalInterface
     public interface TriParametersSetter<QS, T> extends Throwables.TriConsumer<ParsedSql, QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
-        TriParametersSetter DO_NOTHING = new TriParametersSetter<>() {
-            @Override
-            public void accept(ParsedSql parsedSql, Object preparedQuery, Object param) throws SQLException {
-                // Do nothing.
-            }
+        TriParametersSetter DO_NOTHING = (parsedSql, preparedQuery, param) -> {
+            // Do nothing.
         };
 
         /**
@@ -577,7 +575,7 @@ public final class Jdbc {
                     downstreamAccumulator.accept(container, valueExtractor.apply(rs));
                 }
 
-                for (Map.Entry<K, D> entry : result.entrySet()) {
+                for (final Map.Entry<K, D> entry : result.entrySet()) {
                     entry.setValue(downstreamFinisher.apply(entry.getValue()));
                 }
 
@@ -604,7 +602,7 @@ public final class Jdbc {
          * @param rowMapper
          * @return
          */
-        static <T> ResultExtractor<List<T>> toList(final RowFilter rowFilter, RowMapper<? extends T> rowMapper) {
+        static <T> ResultExtractor<List<T>> toList(final RowFilter rowFilter, final RowMapper<? extends T> rowMapper) {
             N.checkArgNotNull(rowFilter, "rowFilter");
             N.checkArgNotNull(rowMapper, "rowMapper");
 
@@ -683,7 +681,7 @@ public final class Jdbc {
          * @return
          * @see DataSet#toMergedEntities(Collection, Collection, Class)
          */
-        static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, Collection<String> idPropNamesForMerge) {
+        static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, final Collection<String> idPropNamesForMerge) {
             N.checkArgNotNull(targetClass, "targetClass");
 
             return rs -> {
@@ -1071,7 +1069,7 @@ public final class Jdbc {
                     downstreamAccumulator.accept(container, valueExtractor.apply(rs, columnLabels));
                 }
 
-                for (Map.Entry<K, D> entry : result.entrySet()) {
+                for (final Map.Entry<K, D> entry : result.entrySet()) {
                     entry.setValue(downstreamFinisher.apply(entry.getValue()));
                 }
 
@@ -1593,7 +1591,7 @@ public final class Jdbc {
              * @param type
              * @return
              */
-            public RowMapperBuilder getObject(final int columnIndex, Class<?> type) {
+            public RowMapperBuilder getObject(final int columnIndex, final Class<?> type) {
                 return get(columnIndex, ColumnGetter.get(type));
             }
 
@@ -1829,7 +1827,7 @@ public final class Jdbc {
             //        }
             //    }
 
-            ColumnGetter<?>[] initColumnGetter(ResultSet rs) throws SQLException { //NOSONAR
+            ColumnGetter<?>[] initColumnGetter(final ResultSet rs) throws SQLException { //NOSONAR
                 return initColumnGetter(rs.getMetaData().getColumnCount());
             }
 
@@ -1859,7 +1857,7 @@ public final class Jdbc {
                     private int rsColumnCount = -1;
 
                     @Override
-                    public Object[] apply(ResultSet rs) throws SQLException {
+                    public Object[] apply(final ResultSet rs) throws SQLException {
                         if (rsColumnGetters == null) {
                             rsColumnGetters = initColumnGetter(rs);
                             rsColumnCount = rsColumnGetters.length - 1;
@@ -1891,7 +1889,7 @@ public final class Jdbc {
                     private int rsColumnCount = -1;
 
                     @Override
-                    public List<Object> apply(ResultSet rs) throws SQLException {
+                    public List<Object> apply(final ResultSet rs) throws SQLException {
                         if (rsColumnGetters == null) {
                             rsColumnGetters = initColumnGetter(rs);
                             rsColumnCount = rsColumnGetters.length - 1;
@@ -1925,12 +1923,12 @@ public final class Jdbc {
                     private DisposableObjArray output;
 
                     @Override
-                    public R apply(ResultSet rs) throws SQLException {
+                    public R apply(final ResultSet rs) throws SQLException {
                         if (rsColumnGetters == null) {
                             rsColumnGetters = initColumnGetter(rs);
-                            this.rsColumnCount = rsColumnGetters.length - 1;
-                            this.outputRow = new Object[rsColumnCount];
-                            this.output = DisposableObjArray.wrap(outputRow);
+                            rsColumnCount = rsColumnGetters.length - 1;
+                            outputRow = new Object[rsColumnCount];
+                            output = DisposableObjArray.wrap(outputRow);
                         }
 
                         for (int i = 0; i < rsColumnCount; i++) {
@@ -2056,7 +2054,7 @@ public final class Jdbc {
                 private List<String> cls = null;
 
                 @Override
-                public T apply(ResultSet rs) throws IllegalArgumentException, SQLException {
+                public T apply(final ResultSet rs) throws IllegalArgumentException, SQLException {
                     if (cls == null) {
                         cls = JdbcUtil.getColumnLabelList(rs);
                     }
@@ -2228,19 +2226,16 @@ public final class Jdbc {
             } else if (List.class.isAssignableFrom(targetClass)) {
                 if ((columnNameFilter == null || Objects.equals(columnNameFilter, Fn.alwaysTrue()))
                         && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()))) {
-                    return new BiRowMapper<>() {
-                        @Override
-                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            final int columnCount = columnLabelList.size();
-                            @SuppressWarnings("rawtypes")
-                            final Collection<Object> c = N.newCollection((Class<Collection>) targetClass, columnCount);
+                    return (rs, columnLabelList) -> {
+                        final int columnCount = columnLabelList.size();
+                        @SuppressWarnings("rawtypes")
+                        final Collection<Object> c = N.newCollection((Class<Collection>) targetClass, columnCount);
 
-                            for (int i = 0; i < columnCount; i++) {
-                                c.add(JdbcUtil.getColumnValue(rs, i + 1));
-                            }
-
-                            return (T) c;
+                        for (int i = 0; i < columnCount; i++) {
+                            c.add(JdbcUtil.getColumnValue(rs, i + 1));
                         }
+
+                        return (T) c;
                     };
                 } else {
                     return new BiRowMapper<>() {
@@ -2891,19 +2886,15 @@ public final class Jdbc {
          */
         @Beta
         static BiRowMapper<Object[]> toArray(final ColumnGetter<?> columnGetterForAll) {
-            return new BiRowMapper<>() {
+            return (rs, columnLabels) -> {
+                final int columnCount = columnLabels.size();
+                final Object[] result = new Object[columnCount];
 
-                @Override
-                public Object[] apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                    final int columnCount = columnLabels.size();
-                    final Object[] result = new Object[columnCount];
-
-                    for (int i = 0; i < columnCount; i++) {
-                        result[i] = columnGetterForAll.apply(rs, i + 1);
-                    }
-
-                    return result;
+                for (int i = 0; i < columnCount; i++) {
+                    result[i] = columnGetterForAll.apply(rs, i + 1);
                 }
+
+                return result;
             };
         }
 
@@ -2928,20 +2919,16 @@ public final class Jdbc {
          */
         @Beta
         static <C extends Collection<?>> BiRowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<C> supplier) {
-            return new BiRowMapper<>() {
+            return (rs, columnLabels) -> {
+                final int columnCount = columnLabels.size();
 
-                @Override
-                public C apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                    final int columnCount = columnLabels.size();
+                final Collection<Object> result = (Collection<Object>) supplier.apply(columnCount);
 
-                    final Collection<Object> result = (Collection<Object>) supplier.apply(columnCount);
-
-                    for (int i = 0; i < columnCount; i++) {
-                        result.add(columnGetterForAll.apply(rs, i + 1));
-                    }
-
-                    return (C) result;
+                for (int i = 0; i < columnCount; i++) {
+                    result.add(columnGetterForAll.apply(rs, i + 1));
                 }
+
+                return (C) result;
             };
         }
 
@@ -3213,7 +3200,7 @@ public final class Jdbc {
              * @param type
              * @return
              */
-            public BiRowMapperBuilder getObject(final String columnName, Class<?> type) {
+            public BiRowMapperBuilder getObject(final String columnName, final Class<?> type) {
                 return get(columnName, ColumnGetter.get(type));
             }
 
@@ -3438,7 +3425,7 @@ public final class Jdbc {
                                     }
                                 }
 
-                                this.propInfos = localPropInfos;
+                                propInfos = localPropInfos;
                             }
 
                             final Object result = entityInfo.createBeanResult();
@@ -3524,7 +3511,7 @@ public final class Jdbc {
          * @return
          */
         default BiRowConsumer toBiRowConsumer() {
-            return (rs, columnLabels) -> this.accept(rs);
+            return (rs, columnLabels) -> accept(rs);
         }
 
         /**
@@ -3536,7 +3523,7 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static RowConsumer create(Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
+        static RowConsumer create(final Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
             N.checkArgNotNull(consumerForAll, "consumerForAll");
 
             return new RowConsumer() {
@@ -3712,17 +3699,14 @@ public final class Jdbc {
          * @return
          */
         @Beta
-        static BiRowConsumer create(Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
+        static BiRowConsumer create(final Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
             N.checkArgNotNull(consumerForAll, "consumerForAll");
 
-            return new BiRowConsumer() {
-                @Override
-                public void accept(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                    final int columnCount = columnLabels.size();
+            return (rs, columnLabels) -> {
+                final int columnCount = columnLabels.size();
 
-                    for (int i = 0; i < columnCount; i++) {
-                        consumerForAll.accept(rs, i + 1);
-                    }
+                for (int i = 0; i < columnCount; i++) {
+                    consumerForAll.accept(rs, i + 1);
                 }
             };
         }
@@ -3882,7 +3866,7 @@ public final class Jdbc {
          * @return
          */
         default BiRowFilter toBiRowFilter() {
-            return (rs, columnLabels) -> this.test(rs);
+            return (rs, columnLabels) -> test(rs);
         }
     }
 
@@ -4016,7 +4000,7 @@ public final class Jdbc {
                 private int columnCount = -1;
 
                 @Override
-                public void accept(ResultSet rs, Object[] outputRow) throws SQLException {
+                public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
                     if (columnTypes == null) {
                         final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClassForFetch);
                         final List<String> columnLabelList = N.isEmpty(columnLabels) ? JdbcUtil.getColumnLabelList(rs) : columnLabels;
@@ -4257,7 +4241,7 @@ public final class Jdbc {
              * @param type
              * @return
              */
-            public RowExtractorBuilder getObject(final int columnIndex, Class<?> type) {
+            public RowExtractorBuilder getObject(final int columnIndex, final Class<?> type) {
                 return get(columnIndex, ColumnGetter.get(type));
             }
 
@@ -4283,7 +4267,7 @@ public final class Jdbc {
                 return this;
             }
 
-            ColumnGetter<?>[] initColumnGetter(ResultSet rs) throws SQLException { //NOSONAR
+            ColumnGetter<?>[] initColumnGetter(final ResultSet rs) throws SQLException { //NOSONAR
                 return initColumnGetter(rs.getMetaData().getColumnCount());
             }
 
@@ -5069,7 +5053,7 @@ public final class Jdbc {
          * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
          */
         @SuppressWarnings("unused")
-        default void afterInvoke(final Object result, final P proxy, final Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+        default void afterInvoke(final Object result, final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             // empty action.
         }
     }
@@ -5092,7 +5076,7 @@ public final class Jdbc {
 
             try {
                 tmp = new SpringApplicationContext();
-            } catch (Throwable e) {
+            } catch (final Throwable e) {
                 // ignore.
             }
 
@@ -5158,7 +5142,7 @@ public final class Jdbc {
             Handler<?> result = handlerPool.get(qualifier);
 
             if (result == null && spingAppContext != null) {
-                Object bean = spingAppContext.getBean(qualifier);
+                final Object bean = spingAppContext.getBean(qualifier);
 
                 if (bean instanceof Handler) {
                     result = (Handler<?>) bean;
@@ -5187,7 +5171,7 @@ public final class Jdbc {
                 result = spingAppContext.getBean(handlerClass);
 
                 if (result == null) {
-                    Object bean = spingAppContext.getBean(qualifier);
+                    final Object bean = spingAppContext.getBean(qualifier);
 
                     if (bean instanceof Handler) {
                         result = (Handler<?>) bean;
@@ -5220,7 +5204,7 @@ public final class Jdbc {
                     if (result != null) {
                         register(result);
                     }
-                } catch (Throwable e) {
+                } catch (final Throwable e) {
                     // ignore
                 }
             }
@@ -5311,7 +5295,7 @@ public final class Jdbc {
         }
     }
 
-    static <K, V> void merge(Map<K, V> map, K key, V value, BinaryOperator<V> remappingFunction) {
+    static <K, V> void merge(final Map<K, V> map, final K key, final V value, final BinaryOperator<V> remappingFunction) {
         final V oldValue = map.get(key);
 
         if (oldValue == null && !map.containsKey(key)) {

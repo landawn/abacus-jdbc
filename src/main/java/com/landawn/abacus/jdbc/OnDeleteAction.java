@@ -41,9 +41,9 @@ public enum OnDeleteAction {
     /**
      * Field intValue.
      */
-    private int intValue;
+    private final int intValue;
 
-    OnDeleteAction(int intValue) {
+    OnDeleteAction(final int intValue) {
         this.intValue = intValue;
     }
 
@@ -60,7 +60,7 @@ public enum OnDeleteAction {
      * @param name
      * @return ConstraintType
      */
-    public static OnDeleteAction get(String name) {
+    public static OnDeleteAction get(final String name) {
         if ("noAction".equalsIgnoreCase(name)) {
             return NO_ACTION;
         } else if ("setNull".equalsIgnoreCase(name)) {

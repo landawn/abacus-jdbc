@@ -84,9 +84,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     final CallableStatement cstmt;
     List<Jdbc.OutParam> outParams;
 
-    CallableQuery(CallableStatement stmt) {
+    CallableQuery(final CallableStatement stmt) {
         super(stmt);
-        this.cstmt = stmt;
+        cstmt = stmt;
     }
 
     /**
@@ -114,7 +114,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public CallableQuery setNull(final String parameterName, final int sqlType, String typeName) throws SQLException {
+    public CallableQuery setNull(final String parameterName, final int sqlType, final String typeName) throws SQLException {
         cstmt.setNull(parameterName, sqlType, typeName);
 
         return this;
@@ -146,7 +146,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         if (x == null) {
             cstmt.setNull(parameterName, java.sql.Types.BOOLEAN);
         } else {
-            cstmt.setBoolean(parameterName, x.booleanValue());
+            cstmt.setBoolean(parameterName, x);
         }
 
         return this;
@@ -178,7 +178,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         if (x == null) {
             cstmt.setNull(parameterName, java.sql.Types.TINYINT);
         } else {
-            cstmt.setByte(parameterName, x.byteValue());
+            cstmt.setByte(parameterName, x);
         }
 
         return this;
@@ -210,7 +210,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         if (x == null) {
             cstmt.setNull(parameterName, java.sql.Types.SMALLINT);
         } else {
-            cstmt.setShort(parameterName, x.shortValue());
+            cstmt.setShort(parameterName, x);
         }
 
         return this;
@@ -242,7 +242,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         if (x == null) {
             cstmt.setNull(parameterName, java.sql.Types.INTEGER);
         } else {
-            cstmt.setInt(parameterName, x.intValue());
+            cstmt.setInt(parameterName, x);
         }
 
         return this;
@@ -274,7 +274,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         if (x == null) {
             cstmt.setNull(parameterName, java.sql.Types.BIGINT);
         } else {
-            cstmt.setLong(parameterName, x.longValue());
+            cstmt.setLong(parameterName, x);
         }
 
         return this;
@@ -324,7 +324,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         if (x == null) {
             cstmt.setNull(parameterName, java.sql.Types.FLOAT);
         } else {
-            cstmt.setFloat(parameterName, x.floatValue());
+            cstmt.setFloat(parameterName, x);
         }
 
         return this;
@@ -356,7 +356,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         if (x == null) {
             cstmt.setNull(parameterName, java.sql.Types.DOUBLE);
         } else {
-            cstmt.setDouble(parameterName, x.doubleValue());
+            cstmt.setDouble(parameterName, x);
         }
 
         return this;
@@ -939,7 +939,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     public CallableQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
 
-        for (Map.Entry<String, ?> entry : parameters.entrySet()) {
+        for (final Map.Entry<String, ?> entry : parameters.entrySet()) {
             setObject(entry.getKey(), entry.getValue());
         }
 
@@ -967,7 +967,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
         PropInfo propInfo = null;
 
-        for (String parameterName : parameterNames) {
+        for (final String parameterName : parameterNames) {
             propInfo = entityInfo.getPropInfo(parameterName);
             propInfo.dbType.set(cstmt, parameterName, propInfo.getPropValue(entity));
         }
@@ -984,7 +984,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public CallableQuery registerOutParameter(int parameterIndex, final int sqlType) throws SQLException {
+    public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType);
 
         addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType, null, -1));
@@ -1002,7 +1002,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public CallableQuery registerOutParameter(int parameterIndex, final int sqlType, int scale) throws SQLException {
+    public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType, final int scale) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType, scale);
 
         addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType, null, scale));
@@ -1020,7 +1020,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public CallableQuery registerOutParameter(int parameterIndex, final int sqlType, String typeName) throws SQLException {
+    public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType, final String typeName) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType, typeName);
 
         addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType, typeName, -1));
@@ -1055,7 +1055,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public CallableQuery registerOutParameter(final String parameterName, final int sqlType, int scale) throws SQLException {
+    public CallableQuery registerOutParameter(final String parameterName, final int sqlType, final int scale) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType, scale);
 
         addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType, null, scale));
@@ -1073,7 +1073,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public CallableQuery registerOutParameter(final String parameterName, final int sqlType, String typeName) throws SQLException {
+    public CallableQuery registerOutParameter(final String parameterName, final int sqlType, final String typeName) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType, typeName);
 
         addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType, typeName, -1));
@@ -1089,7 +1089,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery registerOutParameter(int parameterIndex, final SQLType sqlType) throws SQLException {
+    public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType);
 
         addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), null, -1));
@@ -1106,7 +1106,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery registerOutParameter(int parameterIndex, final SQLType sqlType, int scale) throws SQLException {
+    public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType, final int scale) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType, scale);
 
         addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), null, scale));
@@ -1123,7 +1123,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery registerOutParameter(int parameterIndex, final SQLType sqlType, String typeName) throws SQLException {
+    public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType, final String typeName) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType, typeName);
 
         addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), typeName, -1));
@@ -1156,7 +1156,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType, int scale) throws SQLException {
+    public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType, final int scale) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType, scale);
 
         addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), null, scale));
@@ -1173,7 +1173,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return
      * @throws SQLException the SQL exception
      */
-    public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType, String typeName) throws SQLException {
+    public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType, final String typeName) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType, typeName);
 
         addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), typeName, -1));
@@ -1235,7 +1235,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         return this;
     }
 
-    private void addOutParameters(Jdbc.OutParam outParameter) {
+    private void addOutParameters(final Jdbc.OutParam outParameter) {
         if (outParams == null) {
             outParams = new ArrayList<>();
         }
@@ -1933,7 +1933,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     protected void closeStatement() {
         try {
             cstmt.clearParameters();
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             logger.warn("failed to reset statement", e);
         } finally {
             super.closeStatement();

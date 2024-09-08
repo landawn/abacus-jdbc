@@ -87,8 +87,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     NamedQuery(final PreparedStatement stmt, final ParsedSql namedSql) {
         super(stmt);
         this.namedSql = namedSql;
-        this.parameterNames = namedSql.getNamedParameters();
-        this.parameterCount = namedSql.getParameterCount();
+        parameterNames = namedSql.getNamedParameters();
+        parameterCount = namedSql.getParameterCount();
 
         if (N.size(namedSql.getNamedParameters()) != parameterCount) {
             throw new IllegalArgumentException("Invalid named sql: " + namedSql.sql());
@@ -102,7 +102,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         paramNameIndexMap = new HashMap<>(parameterCount);
         int index = 1;
 
-        for (String paramName : parameterNames) {
+        for (final String paramName : parameterNames) {
             IntList indexes = paramNameIndexMap.get(paramName);
 
             if (indexes == null) {
@@ -179,7 +179,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws SQLException the SQL exception
      * @see java.sql.Types
      */
-    public NamedQuery setNull(final String parameterName, final int sqlType, String typeName) throws SQLException {
+    public NamedQuery setNull(final String parameterName, final int sqlType, final String typeName) throws SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2880,7 +2880,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     public NamedQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, "parameters");
 
-        for (String paramName : parameterNames) {
+        for (final String paramName : parameterNames) {
             if (parameters.containsKey(paramName)) {
                 setObject(paramName, parameters.get(paramName));
             }
@@ -2889,8 +2889,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         return this;
     }
 
-    void setParameters(EntityId entityId) throws SQLException {
-        for (String paramName : parameterNames) {
+    void setParameters(final EntityId entityId) throws SQLException {
+        for (final String paramName : parameterNames) {
             if (entityId.containsKey(paramName)) {
                 setObject(paramName, entityId.get(paramName));
             }
@@ -2969,7 +2969,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             Type<Object> dbType = null;
             IntList indexes = null;
 
-            for (String parameterName : parameterNames) {
+            for (final String parameterName : parameterNames) {
                 propInfo = entityInfo.getPropInfo(parameterName);
 
                 if (propInfo == null) {
@@ -3021,7 +3021,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws IllegalArgumentException
      * @throws SQLException the SQL exception
      */
-    public <T> NamedQuery setParameters(final T paramaters, Jdbc.TriParametersSetter<? super NamedQuery, ? super T> paramsSetter)
+    public <T> NamedQuery setParameters(final T paramaters, final Jdbc.TriParametersSetter<? super NamedQuery, ? super T> paramsSetter)
             throws IllegalArgumentException, SQLException {
         checkArgNotNull(paramsSetter, "paramsSetter");
 
