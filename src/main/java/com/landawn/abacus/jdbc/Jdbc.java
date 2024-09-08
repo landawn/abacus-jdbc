@@ -48,7 +48,6 @@ import java.util.stream.Collector;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
-import com.landawn.abacus.jdbc.Jdbc.Columns;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -249,8 +248,11 @@ public final class Jdbc {
     @FunctionalInterface
     public interface TriParametersSetter<QS, T> extends Throwables.TriConsumer<ParsedSql, QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
-        TriParametersSetter DO_NOTHING = (parsedSql, preparedQuery, param) -> {
-            // Do nothing.
+        TriParametersSetter DO_NOTHING = new TriParametersSetter<>() {
+            @Override
+            public void accept(ParsedSql parsedSql, Object preparedQuery, Object param) throws SQLException {
+                // Do nothing.
+            }
         };
 
         /**
