@@ -24,7 +24,14 @@ import java.net.URL;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.SQLType;
+import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -1152,6 +1159,20 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Sets the date.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public NamedQuery setDate(final String parameterName, final LocalDate x) throws SQLException {
+        setDate(parameterName, x == null ? null : java.sql.Date.valueOf(x));
+
+        return this;
+    }
+
+    /**
      * Sets the time.
      *
      * @param parameterName
@@ -1220,6 +1241,20 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Sets the time.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public NamedQuery setTime(final String parameterName, final LocalTime x) throws SQLException {
+        setTime(parameterName, x == null ? null : java.sql.Time.valueOf(x));
+
+        return this;
+    }
+
+    /**
      * Sets the timestamp.
      *
      * @param parameterName
@@ -1283,6 +1318,62 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      */
     public NamedQuery setTimestamp(final String parameterName, final java.util.Date x) throws SQLException {
         setTimestamp(parameterName, x == null ? null : x instanceof java.sql.Timestamp ? (java.sql.Timestamp) x : new java.sql.Timestamp(x.getTime()));
+
+        return this;
+    }
+
+    /**
+     * Sets the timestamp.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public NamedQuery setTimestamp(final String parameterName, final LocalDateTime x) throws SQLException {
+        setTimestamp(parameterName, x == null ? null : Timestamp.valueOf(x));
+
+        return this;
+    }
+
+    /**
+     * Sets the timestamp.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public NamedQuery setTimestamp(final String parameterName, final ZonedDateTime x) throws SQLException {
+        setTimestamp(parameterName, x == null ? null : Timestamp.from(x.toInstant()));
+
+        return this;
+    }
+
+    /**
+     * Sets the timestamp.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public NamedQuery setTimestamp(final String parameterName, final OffsetDateTime x) throws SQLException {
+        setTimestamp(parameterName, x == null ? null : Timestamp.from(x.toInstant()));
+
+        return this;
+    }
+
+    /**
+     * Sets the timestamp.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public NamedQuery setTimestamp(final String parameterName, final Instant x) throws SQLException {
+        setTimestamp(parameterName, x == null ? null : Timestamp.from(x));
 
         return this;
     }
@@ -2823,7 +2914,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return
      * @throws SQLException the SQL exception
      */
-    public NamedQuery setObject(final String parameterName, final Object x, final Type<Object> type) throws SQLException {
+    public <T> NamedQuery setObject(final String parameterName, final T x, final Type<T> type) throws SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 

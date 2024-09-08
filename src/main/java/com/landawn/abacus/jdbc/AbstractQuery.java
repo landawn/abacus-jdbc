@@ -27,7 +27,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLType;
+import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -952,6 +959,20 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Sets the date.
+     *
+     * @param parameterIndex starts from 1, not 0.
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public This setDate(final int parameterIndex, final LocalDate x) throws SQLException {
+        stmt.setDate(parameterIndex, x == null ? null : java.sql.Date.valueOf(x));
+
+        return (This) this;
+    }
+
+    /**
      * Sets the time.
      *
      * @param parameterIndex starts from 1, not 0.
@@ -995,6 +1016,20 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Sets the time.
+     *
+     * @param parameterIndex starts from 1, not 0.
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public This setTime(final int parameterIndex, final LocalTime x) throws SQLException {
+        stmt.setTime(parameterIndex, x == null ? null : java.sql.Time.valueOf(x));
+
+        return (This) this;
+    }
+
+    /**
      * Sets the timestamp.
      *
      * @param parameterIndex starts from 1, not 0.
@@ -1033,6 +1068,62 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public This setTimestamp(final int parameterIndex, final java.sql.Timestamp x, final Calendar cal) throws SQLException {
         stmt.setTimestamp(parameterIndex, x, cal);
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the timestamp.
+     *
+     * @param parameterIndex starts from 1, not 0.
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public This setTimestamp(final int parameterIndex, final LocalDateTime x) throws SQLException {
+        stmt.setTimestamp(parameterIndex, x == null ? null : Timestamp.valueOf(x));
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the timestamp.
+     *
+     * @param parameterIndex starts from 1, not 0.
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public This setTimestamp(final int parameterIndex, final ZonedDateTime x) throws SQLException {
+        stmt.setTimestamp(parameterIndex, x == null ? null : Timestamp.from(x.toInstant()));
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the timestamp.
+     *
+     * @param parameterIndex starts from 1, not 0.
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public This setTimestamp(final int parameterIndex, final OffsetDateTime x) throws SQLException {
+        stmt.setTimestamp(parameterIndex, x == null ? null : Timestamp.from(x.toInstant()));
+
+        return (This) this;
+    }
+
+    /**
+     * Sets the timestamp.
+     *
+     * @param parameterIndex starts from 1, not 0.
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public This setTimestamp(final int parameterIndex, final Instant x) throws SQLException {
+        stmt.setTimestamp(parameterIndex, x == null ? null : Timestamp.from(x));
 
         return (This) this;
     }
@@ -1503,7 +1594,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException
      * @throws SQLException
      */
-    public This setObject(final int parameterIndex, final Object x, final Type<Object> type) throws IllegalArgumentException, SQLException {
+    public <T> This setObject(final int parameterIndex, final T x, final Type<T> type) throws IllegalArgumentException, SQLException {
         type.set(stmt, parameterIndex, x);
 
         return (This) this;
@@ -4264,7 +4355,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @deprecated Use {@code stream(RowFilter, RowMapper).first()} instead.
      */
     @Deprecated
-    public <T> Optional<T> findFirst(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) throws SQLException, IllegalArgumentException {
+    public <T> Optional<T> findFirst(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
+            throws SQLException, IllegalArgumentException {
         return Optional.ofNullable(findFirstOrNull(rowFilter, rowMapper));
     }
 
@@ -4291,7 +4383,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @deprecated Use {@code stream(BiRowFilter, BiRowMapper).first()} instead.
      */
     @Deprecated
-    public <T> Optional<T> findFirst(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException, IllegalArgumentException {
+    public <T> Optional<T> findFirst(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
+            throws SQLException, IllegalArgumentException {
         return Optional.ofNullable(findFirstOrNull(rowFilter, rowMapper));
     }
 

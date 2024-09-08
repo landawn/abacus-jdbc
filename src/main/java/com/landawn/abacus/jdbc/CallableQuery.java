@@ -26,7 +26,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLType;
+import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -521,6 +528,20 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Sets the date.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public CallableQuery setDate(final String parameterName, final LocalDate x) throws SQLException {
+        setDate(parameterName, x == null ? null : java.sql.Date.valueOf(x));
+
+        return this;
+    }
+
+    /**
      * Sets the time.
      *
      * @param parameterName
@@ -549,6 +570,20 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Sets the time.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public CallableQuery setTime(final String parameterName, final LocalTime x) throws SQLException {
+        setTime(parameterName, x == null ? null : java.sql.Time.valueOf(x));
+
+        return this;
+    }
+
+    /**
      * Sets the timestamp.
      *
      * @param parameterName
@@ -572,6 +607,62 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public CallableQuery setTimestamp(final String parameterName, final java.util.Date x) throws SQLException {
         cstmt.setTimestamp(parameterName, x == null ? null : x instanceof java.sql.Timestamp ? (java.sql.Timestamp) x : new java.sql.Timestamp(x.getTime()));
+
+        return this;
+    }
+
+    /**
+     * Sets the timestamp.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public CallableQuery setTimestamp(final String parameterName, final LocalDateTime x) throws SQLException {
+        setTimestamp(parameterName, x == null ? null : Timestamp.valueOf(x));
+
+        return this;
+    }
+
+    /**
+     * Sets the timestamp.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public CallableQuery setTimestamp(final String parameterName, final ZonedDateTime x) throws SQLException {
+        setTimestamp(parameterName, x == null ? null : Timestamp.from(x.toInstant()));
+
+        return this;
+    }
+
+    /**
+     * Sets the timestamp.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public CallableQuery setTimestamp(final String parameterName, final OffsetDateTime x) throws SQLException {
+        setTimestamp(parameterName, x == null ? null : Timestamp.from(x.toInstant()));
+
+        return this;
+    }
+
+    /**
+     * Sets the timestamp.
+     *
+     * @param parameterName
+     * @param x
+     * @return
+     * @throws SQLException
+     */
+    public CallableQuery setTimestamp(final String parameterName, final Instant x) throws SQLException {
+        setTimestamp(parameterName, x == null ? null : Timestamp.from(x));
 
         return this;
     }
