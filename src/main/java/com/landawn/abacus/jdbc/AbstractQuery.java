@@ -64,7 +64,6 @@ import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
-import com.landawn.abacus.util.Numbers;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
@@ -432,33 +431,33 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return (This) this;
     }
 
-    /**
-     * Sets the int.
-     *
-     * @param parameterIndex
-     * @param x
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    public This setInt(final int parameterIndex, final String x) throws SQLException {
-        if (Strings.isEmpty(x)) {
-            stmt.setNull(parameterIndex, java.sql.Types.INTEGER);
-        } else {
-            boolean noException = false;
-
-            try {
-                stmt.setInt(parameterIndex, Numbers.toInt(x));
-                noException = true;
-            } finally {
-                if (!noException) {
-                    close();
-                }
-            }
-        }
-
-        return (This) this;
-    }
+    //    /**
+    //     * Sets the int.
+    //     *
+    //     * @param parameterIndex
+    //     * @param x
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    @Beta
+    //    public This setInt(final int parameterIndex, final String x) throws SQLException {
+    //        if (Strings.isEmpty(x)) {
+    //            stmt.setNull(parameterIndex, java.sql.Types.INTEGER);
+    //        } else {
+    //            boolean noException = false;
+    //
+    //            try {
+    //                stmt.setInt(parameterIndex, Numbers.toInt(x));
+    //                noException = true;
+    //            } finally {
+    //                if (!noException) {
+    //                    close();
+    //                }
+    //            }
+    //        }
+    //
+    //        return (This) this;
+    //    }
 
     /**
      *
@@ -552,33 +551,33 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return (This) this;
     }
 
-    /**
-     * Sets the long.
-     *
-     * @param parameterIndex
-     * @param x
-     * @return
-     * @throws SQLException
-     */
-    @Beta
-    public This setLong(final int parameterIndex, final String x) throws SQLException {
-        if (Strings.isEmpty(x)) {
-            stmt.setNull(parameterIndex, java.sql.Types.BIGINT);
-        } else {
-            boolean noException = false;
-
-            try {
-                stmt.setLong(parameterIndex, Numbers.toLong(x));
-                noException = true;
-            } finally {
-                if (!noException) {
-                    close();
-                }
-            }
-        }
-
-        return (This) this;
-    }
+    //    /**
+    //     * Sets the long.
+    //     *
+    //     * @param parameterIndex
+    //     * @param x
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    @Beta
+    //    public This setLong(final int parameterIndex, final String x) throws SQLException {
+    //        if (Strings.isEmpty(x)) {
+    //            stmt.setNull(parameterIndex, java.sql.Types.BIGINT);
+    //        } else {
+    //            boolean noException = false;
+    //
+    //            try {
+    //                stmt.setLong(parameterIndex, Numbers.toLong(x));
+    //                noException = true;
+    //            } finally {
+    //                if (!noException) {
+    //                    close();
+    //                }
+    //            }
+    //        }
+    //
+    //        return (This) this;
+    //    }
 
     /**
      * Sets the long.
@@ -658,33 +657,33 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return (This) this;
     }
 
-    /**
-     * Sets the float.
-     *
-     * @param parameterIndex
-     * @param x
-     * @return
-     * @throws SQLException
-     */
-    public This setFloat(final int parameterIndex, final String x) throws SQLException {
-        if (Strings.isEmpty(x)) {
-            stmt.setNull(parameterIndex, java.sql.Types.FLOAT);
-        } else {
-            boolean noException = false;
-
-            try {
-                stmt.setFloat(parameterIndex, Numbers.toFloat(x));
-                noException = true;
-            } finally {
-                if (!noException) {
-                    close();
-                }
-            }
-
-        }
-
-        return (This) this;
-    }
+    //    /**
+    //     * Sets the float.
+    //     *
+    //     * @param parameterIndex
+    //     * @param x
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    public This setFloat(final int parameterIndex, final String x) throws SQLException {
+    //        if (Strings.isEmpty(x)) {
+    //            stmt.setNull(parameterIndex, java.sql.Types.FLOAT);
+    //        } else {
+    //            boolean noException = false;
+    //
+    //            try {
+    //                stmt.setFloat(parameterIndex, Numbers.toFloat(x));
+    //                noException = true;
+    //            } finally {
+    //                if (!noException) {
+    //                    close();
+    //                }
+    //            }
+    //
+    //        }
+    //
+    //        return (This) this;
+    //    }
 
     /**
      * Sets the double.
@@ -737,33 +736,33 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return (This) this;
     }
 
-    /**
-     * Sets the double.
-     *
-     * @param parameterIndex
-     * @param x
-     * @return
-     * @throws SQLException
-     */
-    public This setDouble(final int parameterIndex, final String x) throws SQLException {
-        if (Strings.isEmpty(x)) {
-            stmt.setNull(parameterIndex, java.sql.Types.DOUBLE);
-        } else {
-            boolean noException = false;
-
-            try {
-                stmt.setDouble(parameterIndex, Numbers.toDouble(x));
-                noException = true;
-            } finally {
-                if (!noException) {
-                    close();
-                }
-            }
-
-        }
-
-        return (This) this;
-    }
+    //    /**
+    //     * Sets the double.
+    //     *
+    //     * @param parameterIndex
+    //     * @param x
+    //     * @return
+    //     * @throws SQLException
+    //     */
+    //    public This setDouble(final int parameterIndex, final String x) throws SQLException {
+    //        if (Strings.isEmpty(x)) {
+    //            stmt.setNull(parameterIndex, java.sql.Types.DOUBLE);
+    //        } else {
+    //            boolean noException = false;
+    //
+    //            try {
+    //                stmt.setDouble(parameterIndex, Numbers.toDouble(x));
+    //                noException = true;
+    //            } finally {
+    //                if (!noException) {
+    //                    close();
+    //                }
+    //            }
+    //
+    //        }
+    //
+    //        return (This) this;
+    //    }
 
     /**
      * Sets the big decimal.
@@ -877,6 +876,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return
      * @throws SQLException
      */
+    @Beta
     public This setString(final int parameterIndex, final BigInteger x) throws SQLException {
         if (x == null) {
             stmt.setNull(parameterIndex, Types.VARCHAR);
