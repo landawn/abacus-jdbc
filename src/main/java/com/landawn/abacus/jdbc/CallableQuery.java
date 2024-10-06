@@ -1485,23 +1485,28 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns the result set and out parameters.
+     * The result set is converted to a DataSet object.
      *
-     * @return the {@code DataSet} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @return A Tuple2 object where the first element is a DataSet object that represents the result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws SQLException if a database access error occurs or this method is called on a closed CallableStatement
      */
     public Tuple2<DataSet, Jdbc.OutParamResult> queryAndGetOutParameters() throws SQLException {
         return queryAndGetOutParameters(Jdbc.ResultExtractor.TO_DATA_SET);
     }
 
     /**
+     * Executes the stored procedure and returns the result set and out parameters.
+     * The result set is converted to a type R object using the provided ResultExtractor.
      *
-     *
-     * @param <R>
-     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return the {@code R} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException
-     * @throws IllegalStateException if this is closed
-     * @throws SQLException
+     * @param <R> The type of the object that the result set will be converted to.
+     * @param resultExtractor The ResultExtractor to use for converting the result set to an object of type R.
+     * @return A Tuple2 object where the first element is an object of type R that represents the result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if resultExtractor is null.
+     * @throws IllegalStateException if this method is called on a closed CallableStatement.
+     * @throws SQLException if a database access error occurs.
      */
     public <R> Tuple2<R, Jdbc.OutParamResult> queryAndGetOutParameters(final Jdbc.ResultExtractor<? extends R> resultExtractor)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -1552,9 +1557,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns multiple result sets and out parameters.
+     * Each result set is converted to a DataSet object.
      *
-     * @return a list of {@code DataSet} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @return A Tuple2 object where the first element is a List of DataSet objects, each representing a result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws SQLException if a database access error occurs or this method is called on a closed CallableStatement
      */
     public Tuple2<List<DataSet>, Jdbc.OutParamResult> queryMultiResultsetsAndGetOutParameters() throws SQLException {
         return queryMultiResultsetsAndGetOutParameters(ResultExtractor.TO_DATA_SET);

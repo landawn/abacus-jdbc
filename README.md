@@ -21,7 +21,7 @@ String query = PSC.select("id", "firstName, "lastName", "email").from(User.class
 // Or if select all columns from user:
 String query = PSC.selectFrom(User.class).where(CF.eq("firstName")).sql();
 
-// Sql scripts can also placed in sql mapper xml file and then associated with a DAO object.
+// Sql scripts can also be placed in sql mapper xml file and then associated with a DAO object.
 UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
 ```
 `userSqlMapper.xml`
@@ -55,7 +55,7 @@ PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...);
 				    //....  									   
 																		   
 
-// Sql can also associated to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
+// Sql can also be associated to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
 public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
     // This is just a sample. Normally there are pre-defined methods available for this query: userDao.list(Condition cond).
     // Methods defined in Dao interface don't require implementation. Of course, Customized implemnetation is also supported by default method.
