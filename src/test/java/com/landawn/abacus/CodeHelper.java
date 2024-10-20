@@ -23,6 +23,7 @@ public class CodeHelper {
 
     @Test
     public void replace_parameter_string() throws Exception {
+        final String clsName = "s";
         final File parentPath = new File("./src/main/java/");
 
         final Map<String, Field> map = Stream.of(s.class.getFields())
@@ -30,7 +31,7 @@ public class CodeHelper {
                         && Modifier.isFinal(it.getModifiers()))
                 .toMap(it -> (String) it.get((Object) null), Fn.identity());
 
-        final List<String> fieldNames = Stream.of(map.keySet()).map(it -> "s." + it).toList();
+        final List<String> fieldNames = Stream.of(map.keySet()).map(it -> clsName + "." + it).toList();
 
         final Set<String> parameterNamesToAdd = new HashSet<>();
 
@@ -63,7 +64,7 @@ public class CodeHelper {
                                     parameterNamesToAdd.add(paramName);
                                 }
 
-                                line = Strings.replaceFirst(line, substrs[1], "s." + paramName);
+                                line = Strings.replaceFirst(line, substrs[1], clsName + "." + paramName);
 
                                 lines.set(i, line);
                                 updated = true;
@@ -72,7 +73,7 @@ public class CodeHelper {
                     }
 
                     if (updated && !Strings.substringBeforeLast(file.getAbsolutePath(), "\\").endsWith(path)
-                            && !lines.stream().anyMatch(it -> it.startsWith("import com.landawn.abacus.jdbc.cs"))) {
+                            && !lines.stream().anyMatch(it -> it.startsWith("import com.landawn.abacus.jdbc.s"))) {
                         for (int i = 0, size = lines.size(); i < size; i++) {
                             final String line = lines.get(i);
 

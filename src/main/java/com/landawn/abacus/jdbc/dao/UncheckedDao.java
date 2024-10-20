@@ -30,6 +30,7 @@ import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.s;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
@@ -1181,7 +1182,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      */
     @Override
     default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {
-        N.checkArgNotNull(cond, "cond");
+        N.checkArgNotNull(cond, s.cond);
 
         final T dbEntity = findOnlyOne(cond).orElseNull();
 

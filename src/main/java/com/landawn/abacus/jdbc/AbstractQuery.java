@@ -194,7 +194,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @SuppressWarnings("hiding")
     public This onClose(final Runnable closeHandler) throws IllegalArgumentException, IllegalStateException {
-        checkArgNotNull(closeHandler, "closeHandler");
+        checkArgNotNull(closeHandler, s.closeHandler);
         assertNotClosed();
 
         if (this.closeHandler == null) {
@@ -2055,7 +2055,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public This setParameters(final Jdbc.ParametersSetter<? super Stmt> paramsSetter) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(paramsSetter, "paramsSetter");
+        checkArgNotNull(paramsSetter, s.paramsSetter);
 
         boolean noException = false;
 
@@ -2108,7 +2108,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <T> This setParameters(final T parameters, final Jdbc.BiParametersSetter<? super Stmt, ? super T> paramsSetter)
             throws IllegalArgumentException, SQLException {
-        checkArgNotNull(paramsSetter, "paramsSetter");
+        checkArgNotNull(paramsSetter, s.paramsSetter);
 
         boolean noException = false;
 
@@ -2135,7 +2135,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public This settParameters(int startParameterIndex, final int[] parameters) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(parameters, "parameters");
+        checkArgNotNull(parameters, s.parameters);
 
         for (final int param : parameters) {
             stmt.setInt(startParameterIndex++, param);
@@ -2154,7 +2154,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public This settParameters(int startParameterIndex, final long[] parameters) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(parameters, "parameters");
+        checkArgNotNull(parameters, s.parameters);
 
         for (final long param : parameters) {
             stmt.setLong(startParameterIndex++, param);
@@ -2173,7 +2173,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public This settParameters(int startParameterIndex, final String[] parameters) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(parameters, "parameters");
+        checkArgNotNull(parameters, s.parameters);
 
         for (final String param : parameters) {
             stmt.setString(startParameterIndex++, param);
@@ -2193,7 +2193,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public <T> This settParameters(int startParameterIndex, final T[] parameters) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(parameters, "parameters");
+        checkArgNotNull(parameters, s.parameters);
 
         final Class<?> componentType = parameters.getClass().getComponentType();
 
@@ -2222,7 +2222,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public This settParameters(int startParameterIndex, final Collection<?> parameters) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(parameters, "parameters");
+        checkArgNotNull(parameters, s.parameters);
 
         for (final Object param : parameters) {
             setObject(startParameterIndex++, param);
@@ -2244,8 +2244,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <T> This settParameters(int startParameterIndex, final Collection<? extends T> parameters, final Class<T> type)
             throws IllegalArgumentException, SQLException {
-        checkArgNotNull(parameters, "parameters");
-        checkArgNotNull(type, "type");
+        checkArgNotNull(parameters, s.parameters);
+        checkArgNotNull(type, s.type);
 
         final Type<T> eleType = N.typeOf(type);
 
@@ -2309,7 +2309,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public This settParameters(final Jdbc.ParametersSetter<? super This> paramsSetter) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(paramsSetter, "paramsSetter");
+        checkArgNotNull(paramsSetter, s.paramsSetter);
 
         boolean noException = false;
 
@@ -2339,7 +2339,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T> This settParameters(final T parameters, final Jdbc.BiParametersSetter<? super This, ? super T> paramsSetter)
             throws IllegalArgumentException, SQLException {
-        checkArgNotNull(paramsSetter, "paramsSetter");
+        checkArgNotNull(paramsSetter, s.paramsSetter);
 
         boolean noException = false;
 
@@ -2732,7 +2732,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public This addBatchParameters(final Collection<?> batchParameters) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(batchParameters, "batchParameters");
+        checkArgNotNull(batchParameters, s.batchParameters);
 
         if (N.isEmpty(batchParameters)) {
             return (This) this;
@@ -2753,8 +2753,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public <T> This addBatchParameters(final Collection<? extends T> batchParameters, final Class<T> type) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(batchParameters, "batchParameters");
-        checkArgNotNull(type, "type");
+        checkArgNotNull(batchParameters, s.batchParameters);
+        checkArgNotNull(type, s.type);
 
         if (N.isEmpty(batchParameters)) {
             return (This) this;
@@ -2774,7 +2774,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     @SuppressWarnings("rawtypes")
     public This addBatchParameters(final Iterator<?> batchParameters) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(batchParameters, "batchParameters");
+        checkArgNotNull(batchParameters, s.batchParameters);
 
         final Iterator<?> iter = batchParameters;
         boolean noException = false;
@@ -2837,8 +2837,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public <T> This addBatchParameters(final Iterator<? extends T> batchParameters, final Class<T> type) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(batchParameters, "batchParameters");
-        checkArgNotNull(type, "type");
+        checkArgNotNull(batchParameters, s.batchParameters);
+        checkArgNotNull(type, s.type);
 
         final Iterator<? extends T> iter = batchParameters;
         final Type<T> setter = N.typeOf(type);
@@ -2920,8 +2920,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T> This addBatchParameters(final Collection<? extends T> batchParameters, final Jdbc.BiParametersSetter<? super This, ? super T> parametersSetter)
             throws SQLException {
-        checkArgNotNull(batchParameters, "batchParameters");
-        checkArgNotNull(parametersSetter, "parametersSetter");
+        checkArgNotNull(batchParameters, s.batchParameters);
+        checkArgNotNull(parametersSetter, s.parametersSetter);
 
         return addBatchParameters(batchParameters.iterator(), parametersSetter);
     }
@@ -2937,8 +2937,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T> This addBatchParameters(final Iterator<? extends T> batchParameters, final Jdbc.BiParametersSetter<? super This, ? super T> parametersSetter)
             throws SQLException {
-        checkArgNotNull(batchParameters, "batchParameters");
-        checkArgNotNull(parametersSetter, "parametersSetter");
+        checkArgNotNull(batchParameters, s.batchParameters);
+        checkArgNotNull(parametersSetter, s.parametersSetter);
 
         final This it = (This) this;
         boolean noException = false;
@@ -3024,8 +3024,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public <T> This addBatchParameters(final Collection<? extends T> batchParameters,
             final Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException> parametersSetter)
             throws IllegalArgumentException, SQLException {
-        checkArgNotNull(batchParameters, "batchParameters");
-        checkArgNotNull(parametersSetter, "parametersSetter");
+        checkArgNotNull(batchParameters, s.batchParameters);
+        checkArgNotNull(parametersSetter, s.parametersSetter);
 
         return addBatchParameters(batchParameters.iterator(), parametersSetter);
     }
@@ -3044,8 +3044,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public <T> This addBatchParameters(final Iterator<? extends T> batchParameters,
             final Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException> parametersSetter)
             throws IllegalArgumentException, SQLException {
-        checkArgNotNull(batchParameters, "batchParameters");
-        checkArgNotNull(parametersSetter, "parametersSetter");
+        checkArgNotNull(batchParameters, s.batchParameters);
+        checkArgNotNull(parametersSetter, s.parametersSetter);
 
         final This it = (This) this;
         boolean noException = false;
@@ -3240,7 +3240,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public This configStmt(final Throwables.Consumer<? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(stmtSetter, "stmtSetter");
+        checkArgNotNull(stmtSetter, s.stmtSetter);
         boolean noException = false;
 
         try {
@@ -3275,7 +3275,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public This configStmt(final Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException> stmtSetter)
             throws IllegalArgumentException, SQLException {
-        checkArgNotNull(stmtSetter, "stmtSetter");
+        checkArgNotNull(stmtSetter, s.stmtSetter);
 
         boolean noException = false;
 
@@ -3576,7 +3576,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetType) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(targetType, "targetType");
+        checkArgNotNull(targetType, s.targetType);
         assertNotClosed();
 
         return queryForSingleResult(Type.of(targetType));
@@ -3593,7 +3593,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public <V> Nullable<V> queryForSingleResult(final Type<? extends V> targetType) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(targetType, "targetType");
+        checkArgNotNull(targetType, s.targetType);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -3614,7 +3614,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetType) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(targetType, "targetType");
+        checkArgNotNull(targetType, s.targetType);
         assertNotClosed();
 
         return queryForSingleNonNull(Type.of(targetType));
@@ -3631,7 +3631,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public <V> Optional<V> queryForSingleNonNull(final Type<? extends V> targetType) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(targetType, "targetType");
+        checkArgNotNull(targetType, s.targetType);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -3654,7 +3654,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetType)
             throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException {
-        checkArgNotNull(targetType, "targetType");
+        checkArgNotNull(targetType, s.targetType);
         assertNotClosed();
 
         return queryForUniqueResult(Type.of(targetType));
@@ -3673,7 +3673,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <V> Nullable<V> queryForUniqueResult(final Type<? extends V> targetType)
             throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException {
-        checkArgNotNull(targetType, "targetType");
+        checkArgNotNull(targetType, s.targetType);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -3703,7 +3703,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetType)
             throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException {
-        checkArgNotNull(targetType, "targetType");
+        checkArgNotNull(targetType, s.targetType);
         assertNotClosed();
 
         return queryForUniqueNonNull(Type.of(targetType));
@@ -3722,7 +3722,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <V> Optional<V> queryForUniqueNonNull(final Type<? extends V> targetType)
             throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException {
-        checkArgNotNull(targetType, "targetType");
+        checkArgNotNull(targetType, s.targetType);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -3786,7 +3786,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public <R> R query(final Jdbc.ResultExtractor<? extends R> resultExtractor) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(resultExtractor, "resultExtractor");
+        checkArgNotNull(resultExtractor, s.resultExtractor);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -3807,7 +3807,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public <R> R query(final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(resultExtractor, "resultExtractor");
+        checkArgNotNull(resultExtractor, s.resultExtractor);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -3833,8 +3833,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <R1, R2> Tuple2<R1, R2> query2Resultsets(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
             final Jdbc.BiResultExtractor<? extends R2> resultExtractor2) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(resultExtractor1, "resultExtractor1");
-        checkArgNotNull(resultExtractor2, "resultExtractor2");
+        checkArgNotNull(resultExtractor1, s.resultExtractor1);
+        checkArgNotNull(resultExtractor2, s.resultExtractor2);
         assertNotClosed();
 
         Throwables.Iterator<ResultSet, SQLException> iter = null;
@@ -3885,9 +3885,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public <R1, R2, R3> Tuple3<R1, R2, R3> query3Resultsets(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
             final Jdbc.BiResultExtractor<? extends R2> resultExtractor2, final Jdbc.BiResultExtractor<? extends R3> resultExtractor3)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(resultExtractor1, "resultExtractor1");
-        checkArgNotNull(resultExtractor2, "resultExtractor2");
-        checkArgNotNull(resultExtractor3, "resultExtractor3");
+        checkArgNotNull(resultExtractor1, s.resultExtractor1);
+        checkArgNotNull(resultExtractor2, s.resultExtractor2);
+        checkArgNotNull(resultExtractor3, s.resultExtractor3);
         assertNotClosed();
 
         Throwables.Iterator<ResultSet, SQLException> iter = null;
@@ -3947,7 +3947,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <R> List<R> queryMultiResultsets(final Jdbc.ResultExtractor<? extends R> resultExtractor)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(resultExtractor, "resultExtractor");
+        checkArgNotNull(resultExtractor, s.resultExtractor);
         assertNotClosed();
 
         Throwables.Iterator<ResultSet, SQLException> iter = null;
@@ -3987,7 +3987,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <R> List<R> queryMultiResultsets(final Jdbc.BiResultExtractor<? extends R> resultExtractor)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(resultExtractor, "resultExtractor");
+        checkArgNotNull(resultExtractor, s.resultExtractor);
         assertNotClosed();
 
         Throwables.Iterator<ResultSet, SQLException> iter = null;
@@ -4235,7 +4235,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <T> T findOnlyOneOrNull(final Class<? extends T> targetType)
             throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException {
-        checkArgNotNull(targetType, "targetType");
+        checkArgNotNull(targetType, s.targetType);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -4268,7 +4268,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <T> T findOnlyOneOrNull(final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalStateException, DuplicatedResultException, SQLException, IllegalArgumentException {
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -4302,7 +4302,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <T> T findOnlyOneOrNull(final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalStateException, DuplicatedResultException, SQLException, IllegalArgumentException {
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -4419,7 +4419,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public <T> T findFirstOrNull(final Class<? extends T> targetType) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(targetType, "targetType");
+        checkArgNotNull(targetType, s.targetType);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -4444,7 +4444,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      */
     public <T> T findFirstOrNull(final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalStateException, SQLException, IllegalArgumentException {
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -4473,8 +4473,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Deprecated
     public <T> T findFirstOrNull(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalStateException, SQLException, IllegalArgumentException {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowFilter, s.rowFilter);
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -4501,7 +4501,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
      */
     public <T> T findFirstOrNull(final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalStateException, SQLException, IllegalArgumentException {
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -4530,8 +4530,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Deprecated
     public <T> T findFirstOrNull(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalStateException, SQLException, IllegalArgumentException {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowFilter, s.rowFilter);
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -4640,8 +4640,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <T> List<T> list(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper, int maxResult)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowFilter, s.rowFilter);
+        checkArgNotNull(rowMapper, s.rowMapper);
         checkArg(maxResult >= 0, "'maxResult' can' be negative: " + maxResult);
         assertNotClosed();
 
@@ -4715,8 +4715,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <T> List<T> list(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper, int maxResult)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowFilter, s.rowFilter);
+        checkArgNotNull(rowMapper, s.rowMapper);
         checkArg(maxResult >= 0, "'maxResult' can' be negative: " + maxResult);
         assertNotClosed();
 
@@ -4748,7 +4748,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public <T> List<List<T>> listMultiResultsets(final Class<? extends T> targetType) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(targetType, "targetType");
+        checkArgNotNull(targetType, s.targetType);
         assertNotClosed();
 
         try {
@@ -4772,7 +4772,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <T> List<List<T>> listMultiResultsets(final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         try {
@@ -4797,8 +4797,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <T> List<List<T>> listMultiResultsets(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowFilter, s.rowFilter);
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         try {
@@ -4822,7 +4822,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <T> List<List<T>> listMultiResultsets(final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         try {
@@ -4847,8 +4847,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <T> List<List<T>> listMultiResultsets(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowFilter, s.rowFilter);
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         try {
@@ -5023,7 +5023,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @SuppressWarnings("resource")
     @LazyEvaluation
     public <T> CheckedStream<T, SQLException> stream(final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
@@ -5058,7 +5058,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @SuppressWarnings("resource")
     @LazyEvaluation
     public <T> CheckedStream<T, SQLException> stream(final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
@@ -5095,8 +5095,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @LazyEvaluation
     public <T> CheckedStream<T, SQLException> stream(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowFilter, s.rowFilter);
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
@@ -5133,8 +5133,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @LazyEvaluation
     public <T> CheckedStream<T, SQLException> stream(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowFilter, s.rowFilter);
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
@@ -5160,7 +5160,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @SuppressWarnings("resource")
     public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Class<? extends T> targetType)
             throws IllegalArgumentException, IllegalStateException {
-        checkArgNotNull(targetType, "targetType");
+        checkArgNotNull(targetType, s.targetType);
         assertNotClosed();
 
         final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(stmt);
@@ -5186,7 +5186,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @SuppressWarnings("resource")
     public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException {
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(stmt);
@@ -5212,8 +5212,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @SuppressWarnings("resource")
     public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Jdbc.RowFilter rowFilter,
             final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowFilter, s.rowFilter);
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(stmt);
@@ -5238,7 +5238,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @SuppressWarnings("resource")
     public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException {
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(stmt);
@@ -5264,8 +5264,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @SuppressWarnings("resource")
     public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamMultiResultsets(final Jdbc.BiRowFilter rowFilter,
             final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowMapper, "rowMapper");
+        checkArgNotNull(rowFilter, s.rowFilter);
+        checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
         final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(stmt);
@@ -5316,7 +5316,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public void ifExists(final Jdbc.RowConsumer rowConsumer) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowConsumer, "rowConsumer");
+        checkArgNotNull(rowConsumer, s.rowConsumer);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5337,7 +5337,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public void ifExists(final Jdbc.BiRowConsumer rowConsumer) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowConsumer, "rowConsumer");
+        checkArgNotNull(rowConsumer, s.rowConsumer);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5360,8 +5360,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public void ifExistsOrElse(final Jdbc.RowConsumer rowConsumer, final Throwables.Runnable<SQLException> orElseAction)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowConsumer, "rowConsumer");
-        checkArgNotNull(orElseAction, "orElseAction");
+        checkArgNotNull(rowConsumer, s.rowConsumer);
+        checkArgNotNull(orElseAction, s.orElseAction);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5386,8 +5386,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public void ifExistsOrElse(final Jdbc.BiRowConsumer rowConsumer, final Throwables.Runnable<SQLException> orElseAction)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowConsumer, "rowConsumer");
-        checkArgNotNull(orElseAction, "orElseAction");
+        checkArgNotNull(rowConsumer, s.rowConsumer);
+        checkArgNotNull(orElseAction, s.orElseAction);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5437,7 +5437,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public int count(final Jdbc.RowFilter rowFilter) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowFilter, "rowFilter");
+        checkArgNotNull(rowFilter, s.rowFilter);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5465,7 +5465,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public int count(final Jdbc.BiRowFilter rowFilter) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowFilter, "rowFilter");
+        checkArgNotNull(rowFilter, s.rowFilter);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5494,7 +5494,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public boolean anyMatch(final Jdbc.RowFilter rowFilter) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowFilter, "rowFilter");
+        checkArgNotNull(rowFilter, s.rowFilter);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5520,7 +5520,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public boolean anyMatch(final Jdbc.BiRowFilter rowFilter) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowFilter, "rowFilter");
+        checkArgNotNull(rowFilter, s.rowFilter);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5548,7 +5548,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public boolean allMatch(final Jdbc.RowFilter rowFilter) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowFilter, "rowFilter");
+        checkArgNotNull(rowFilter, s.rowFilter);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5574,7 +5574,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public boolean allMatch(final Jdbc.BiRowFilter rowFilter) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowFilter, "rowFilter");
+        checkArgNotNull(rowFilter, s.rowFilter);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5624,7 +5624,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public void forEach(final Jdbc.RowConsumer rowConsumer) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowConsumer, "rowConsumer");
+        checkArgNotNull(rowConsumer, s.rowConsumer);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5648,8 +5648,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public void forEach(final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowConsumer, "rowConsumer");
+        checkArgNotNull(rowFilter, s.rowFilter);
+        checkArgNotNull(rowConsumer, s.rowConsumer);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5673,7 +5673,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException
      */
     public void forEach(final Jdbc.BiRowConsumer rowConsumer) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowConsumer, "rowConsumer");
+        checkArgNotNull(rowConsumer, s.rowConsumer);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5699,8 +5699,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public void forEach(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(rowFilter, "rowFilter");
-        checkArgNotNull(rowConsumer, "rowConsumer");
+        checkArgNotNull(rowFilter, s.rowFilter);
+        checkArgNotNull(rowConsumer, s.rowConsumer);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5738,7 +5738,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public void foreach(final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
-        checkArgNotNull(rowConsumer, "rowConsumer");
+        checkArgNotNull(rowConsumer, s.rowConsumer);
 
         forEach(Jdbc.RowConsumer.oneOff(rowConsumer));
     }
@@ -5752,7 +5752,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public void foreach(final Class<?> entityClass, final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
-        checkArgNotNull(rowConsumer, "rowConsumer");
+        checkArgNotNull(rowConsumer, s.rowConsumer);
 
         forEach(Jdbc.RowConsumer.oneOff(entityClass, rowConsumer));
     }
@@ -5799,8 +5799,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     <ID> Optional<ID> insert(final Jdbc.RowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
         assertNotClosed();
-        checkArgNotNull(autoGeneratedKeyExtractor, "autoGeneratedKeyExtractor");
-        checkArgNotNull(isDefaultIdTester, "isDefaultIdTester");
+        checkArgNotNull(autoGeneratedKeyExtractor, s.autoGeneratedKeyExtractor);
+        checkArgNotNull(isDefaultIdTester, s.isDefaultIdTester);
 
         try {
             JdbcUtil.executeUpdate(stmt);
@@ -5823,8 +5823,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     <ID> Optional<ID> insert(final Jdbc.BiRowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
         assertNotClosed();
-        checkArgNotNull(autoGeneratedKeyExtractor, "autoGeneratedKeyExtractor");
-        checkArgNotNull(isDefaultIdTester, "isDefaultIdTester");
+        checkArgNotNull(autoGeneratedKeyExtractor, s.autoGeneratedKeyExtractor);
+        checkArgNotNull(isDefaultIdTester, s.isDefaultIdTester);
 
         try {
             JdbcUtil.executeUpdate(stmt);
@@ -5885,8 +5885,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     <ID> List<ID> batchInsert(final Jdbc.RowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
         assertNotClosed();
-        checkArgNotNull(autoGeneratedKeyExtractor, "autoGeneratedKeyExtractor");
-        checkArgNotNull(isDefaultIdTester, "isDefaultIdTester");
+        checkArgNotNull(autoGeneratedKeyExtractor, s.autoGeneratedKeyExtractor);
+        checkArgNotNull(isDefaultIdTester, s.isDefaultIdTester);
 
         try {
             JdbcUtil.executeBatch(stmt);
@@ -5918,8 +5918,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     <ID> List<ID> batchInsert(final Jdbc.BiRowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
         assertNotClosed();
-        checkArgNotNull(autoGeneratedKeyExtractor, "autoGeneratedKeyExtractor");
-        checkArgNotNull(isDefaultIdTester, "isDefaultIdTester");
+        checkArgNotNull(autoGeneratedKeyExtractor, s.autoGeneratedKeyExtractor);
+        checkArgNotNull(isDefaultIdTester, s.isDefaultIdTester);
 
         try {
             JdbcUtil.executeBatch(stmt);
@@ -5974,7 +5974,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public <T> Tuple2<Integer, List<T>> updateAndReturnGeneratedKeys(final Jdbc.RowMapper<T> autoGeneratedKeyExtractor)
             throws IllegalArgumentException, IllegalStateException, SQLException {
         assertNotClosed();
-        checkArgNotNull(autoGeneratedKeyExtractor, "autoGeneratedKeyExtractor");
+        checkArgNotNull(autoGeneratedKeyExtractor, s.autoGeneratedKeyExtractor);
 
         try {
             final int updatedRowCount = JdbcUtil.executeUpdate(stmt);
@@ -6005,7 +6005,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public <T> Tuple2<Integer, List<T>> updateAndReturnGeneratedKeys(final Jdbc.BiRowMapper<T> autoGeneratedKeyExtractor)
             throws IllegalArgumentException, IllegalStateException, SQLException {
         assertNotClosed();
-        checkArgNotNull(autoGeneratedKeyExtractor, "autoGeneratedKeyExtractor");
+        checkArgNotNull(autoGeneratedKeyExtractor, s.autoGeneratedKeyExtractor);
 
         try {
             final int updatedRowCount = JdbcUtil.executeUpdate(stmt);
@@ -6066,7 +6066,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public <T> Tuple2<int[], List<T>> batchUpdateAndReturnGeneratedKeys(final Jdbc.RowMapper<T> autoGeneratedKeyExtractor)
             throws IllegalArgumentException, IllegalStateException, SQLException {
         assertNotClosed();
-        checkArgNotNull(autoGeneratedKeyExtractor, "autoGeneratedKeyExtractor");
+        checkArgNotNull(autoGeneratedKeyExtractor, s.autoGeneratedKeyExtractor);
 
         try {
             final int[] updatedRowCount = JdbcUtil.executeBatch(stmt);
@@ -6097,7 +6097,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public <T> Tuple2<int[], List<T>> batchUpdateAndReturnGeneratedKeys(final Jdbc.BiRowMapper<T> autoGeneratedKeyExtractor)
             throws IllegalArgumentException, IllegalStateException, SQLException {
         assertNotClosed();
-        checkArgNotNull(autoGeneratedKeyExtractor, "autoGeneratedKeyExtractor");
+        checkArgNotNull(autoGeneratedKeyExtractor, s.autoGeneratedKeyExtractor);
 
         try {
             final int[] updatedRowCount = JdbcUtil.executeBatch(stmt);
@@ -6180,7 +6180,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <R> R executeThenApply(final Throwables.Function<? super Stmt, ? extends R, SQLException> getter)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(getter, "getter");
+        checkArgNotNull(getter, s.getter);
         assertNotClosed();
 
         try {
@@ -6204,7 +6204,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <R> R executeThenApply(final Throwables.BiFunction<Boolean, ? super Stmt, ? extends R, SQLException> getter)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(getter, "getter");
+        checkArgNotNull(getter, s.getter);
         assertNotClosed();
 
         try {
@@ -6226,7 +6226,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public void executeThenAccept(final Throwables.Consumer<? super Stmt, SQLException> consumer)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(consumer, "consumer");
+        checkArgNotNull(consumer, s.consumer);
         assertNotClosed();
 
         try {
@@ -6248,7 +6248,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public void executeThenAccept(final Throwables.BiConsumer<Boolean, ? super Stmt, SQLException> consumer)
             throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(consumer, "consumer");
+        checkArgNotNull(consumer, s.consumer);
         assertNotClosed();
 
         try {
@@ -6272,7 +6272,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction)
             throws IllegalArgumentException, IllegalStateException {
-        checkArgNotNull(sqlAction, "sqlAction");
+        checkArgNotNull(sqlAction, s.sqlAction);
         assertNotClosed();
 
         final This q = (This) this;
@@ -6293,8 +6293,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction, final Executor executor)
             throws IllegalArgumentException, IllegalStateException {
-        checkArgNotNull(sqlAction, "sqlAction");
-        checkArgNotNull(executor, "executor");
+        checkArgNotNull(sqlAction, s.sqlAction);
+        checkArgNotNull(executor, s.executor);
         assertNotClosed();
 
         final This q = (This) this;
@@ -6313,7 +6313,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super This, SQLException> sqlAction)
             throws IllegalArgumentException, IllegalStateException {
-        checkArgNotNull(sqlAction, "sqlAction");
+        checkArgNotNull(sqlAction, s.sqlAction);
         assertNotClosed();
 
         final This q = (This) this;
@@ -6333,8 +6333,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super This, SQLException> sqlAction, final Executor executor)
             throws IllegalArgumentException, IllegalStateException {
-        checkArgNotNull(sqlAction, "sqlAction");
-        checkArgNotNull(executor, "executor");
+        checkArgNotNull(sqlAction, s.sqlAction);
+        checkArgNotNull(executor, s.executor);
         assertNotClosed();
 
         final This q = (This) this;
