@@ -38,7 +38,6 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
  *
- * @author haiyangl
  *
  * @param <T>
  * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
@@ -1048,7 +1047,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param inParallel
      * @return the total count of updated/deleted records.
      * @throws UncheckedSQLException the unchecked SQL exception
-     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
+     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is {@code true}.
      */
     @Beta
     @Deprecated
@@ -1127,7 +1126,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param inParallel
      * @return the total count of updated/deleted records.
      * @throws UncheckedSQLException the unchecked SQL exception
-     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
+     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is {@code true}.
      */
     @Beta
     @Deprecated
@@ -1185,7 +1184,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param inParallel
      * @return the total count of updated/deleted records.
      * @throws UncheckedSQLException the unchecked SQL exception
-     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
+     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is {@code true}.
      */
     @Beta
     @Deprecated
@@ -1235,7 +1234,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param inParallel
      * @return the total count of updated/deleted records.
      * @throws UncheckedSQLException the unchecked SQL exception
-     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
+     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is {@code true}.
      */
     @Beta
     @Deprecated

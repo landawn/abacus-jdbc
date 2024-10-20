@@ -579,7 +579,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      *
      * @param id
-     * @return true, if successful
+     * @return {@code true}, if successful
      * @throws UncheckedSQLException the unchecked SQL exception
      * @see AbstractQuery#exists()
      */
@@ -907,7 +907,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      *
      * @param entity
-     * @return true, if successful
+     * @return {@code true}, if successful
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -1004,7 +1004,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Override
     @SuppressWarnings("deprecation")
-    default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize) throws UncheckedSQLException {
+    default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize)
+            throws UncheckedSQLException {
         N.checkArgNotEmpty(propNamesToRefresh, "propNamesToRefresh");
         N.checkArgPositive(batchSize, "batchSize");
 

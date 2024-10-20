@@ -230,7 +230,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
 
     /**
      *
-     * @param namedQuery the named query
+     * @param namedQuery
      * @return
      * @throws SQLException
      * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
@@ -248,7 +248,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
 
     /**
      *
-     * @param namedQuery the named query
+     * @param namedQuery
      * @param generateKeys
      * @return
      * @throws SQLException
@@ -305,7 +305,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
 
     /**
      *
-     * @param namedQuery the named query
+     * @param namedQuery
      * @param stmtCreator
      * @return
      * @throws SQLException

@@ -33,8 +33,6 @@ import com.landawn.abacus.util.Throwables;
 /**
  * DO NOT CLOSE the connection manually. It will be automatically closed after the transaction is committed or rolled back.
  *
- * @author Haiyang Li
- * @since 0.8
  */
 public final class SQLTransaction implements Transaction, AutoCloseable {
 
@@ -135,7 +133,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     /**
      * Checks if is active.
      *
-     * @return true, if is active
+     * @return {@code true}, if is active
      */
     @Override
     public boolean isActive() {
@@ -455,7 +453,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     /**
      * Checks if is for update only.
      *
-     * @return true, if is for update only
+     * @return {@code true}, if is for update only
      */
     boolean isForUpdateOnly() {
         return _isForUpdateOnly;
@@ -557,7 +555,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     /**
      *
      * @param obj
-     * @return true, if successful
+     * @return {@code true}, if successful
      */
     @Override
     public boolean equals(final Object obj) {

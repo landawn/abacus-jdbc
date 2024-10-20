@@ -23,7 +23,6 @@ import java.lang.annotation.Target;
 import com.landawn.abacus.jdbc.OnDeleteAction;
 
 /**
- * Unsupported operation.
  *
  * @deprecated won't be implemented. It should be defined and done in DB server side.
  */

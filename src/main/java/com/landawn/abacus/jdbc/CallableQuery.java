@@ -71,7 +71,6 @@ import com.landawn.abacus.util.Tuple.Tuple4;
  * <br />
  * Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.
  *
- * @author haiyangl
  *
  * @see {@link com.landawn.abacus.annotation.ReadOnly}
  * @see {@link com.landawn.abacus.annotation.ReadOnlyId}
@@ -97,7 +96,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the null.
+     * Sets the {@code null}.
      *
      * @param parameterName
      * @param sqlType
@@ -112,7 +111,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the null.
+     * Sets the {@code null}.
      *
      * @param parameterName
      * @param sqlType
@@ -1504,7 +1503,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param resultExtractor The ResultExtractor to use for converting the result set to an object of type R.
      * @return A Tuple2 object where the first element is an object of type R that represents the result set returned by the stored procedure,
      *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
-     * @throws IllegalArgumentException if resultExtractor is null.
+     * @throws IllegalArgumentException if resultExtractor is {@code null}.
      * @throws IllegalStateException if this method is called on a closed CallableStatement.
      * @throws SQLException if a database access error occurs.
      */

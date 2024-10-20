@@ -41,7 +41,6 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
  *
- * @author haiyangl
  *
  * @param <T>
  * @param <SB>
@@ -1074,7 +1073,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel
      * @return the total count of updated/deleted records.
      * @throws SQLException
-     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
+     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is {@code true}.
      */
     @Deprecated
     @Beta
@@ -1150,7 +1149,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel
      * @return the total count of updated/deleted records.
      * @throws SQLException
-     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
+     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is {@code true}.
      */
     @Deprecated
     @Beta
@@ -1202,7 +1201,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel
      * @return the total count of updated/deleted records.
      * @throws SQLException
-     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
+     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is {@code true}.
      */
     @Deprecated
     @Beta
@@ -1248,7 +1247,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel
      * @return the total count of updated/deleted records.
      * @throws SQLException
-     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is true.
+     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is {@code true}.
      */
     @Deprecated
     @Beta

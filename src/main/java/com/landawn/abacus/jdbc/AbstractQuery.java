@@ -99,9 +99,9 @@ import com.landawn.abacus.util.u.OptionalShort;
  * <br />
  * Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.
  *
- * @author haiyangl
  * @param <Stmt>
  * @param <This>
+ * @see PreparedStatement
  */
 @SuppressWarnings("java:S1192")
 public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends AbstractQuery<Stmt, This>> implements AutoCloseable {
@@ -166,11 +166,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //        }
 
     /**
+     * Sets the flag to close the statement after execution.
      *
-     *
-     * @param closeAfterExecution default is {@code true}.
-     * @return
-     * @throws IllegalStateException if this is closed
+     * @param closeAfterExecution If {@code true}, the statement will be closed after execution. Default is {@code true}.
+     * @return The current instance of the query.
+     * @throws IllegalStateException If the query is already closed.
      */
     public This closeAfterExecution(final boolean closeAfterExecution) throws IllegalStateException {
         assertNotClosed();
@@ -185,12 +185,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Registers a task to be executed when this query is closed.
      *
-     *
-     * @param closeHandler A task to execute after this {@code Query} is closed
-     * @return
-     * @throws IllegalArgumentException
-     * @throws IllegalStateException if this is closed
+     * @param closeHandler A task to execute after this {@code Query} is closed.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If the provided closeHandler is {@code null}.
+     * @throws IllegalStateException If this query is already closed.
      */
     @SuppressWarnings("hiding")
     public This onClose(final Runnable closeHandler) throws IllegalArgumentException, IllegalStateException {
@@ -215,13 +215,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the null.
+     * Sets {@code null} value for the specified parameter index.
      *
-     * @param parameterIndex starts from 1, not 0.
-     * @param sqlType
-     * @return
-     * @throws SQLException
-     * @see java.sql.Types
+     * @param parameterIndex The index of the parameter to set to {@code null}, starting from 1.
+     * @param sqlType The SQL type code defined in {@link java.sql.Types}.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setNull(final int parameterIndex, final int sqlType) throws SQLException {
         stmt.setNull(parameterIndex, sqlType);
@@ -230,14 +229,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the null.
+     * Sets {@code null} value for the specified parameter index with a specified SQL type and type name.
      *
-     * @param parameterIndex starts from 1, not 0.
-     * @param sqlType
-     * @param typeName
-     * @return
-     * @throws SQLException
-     * @see java.sql.Types
+     * @param parameterIndex The index of the parameter to set to {@code null}, starting from 1.
+     * @param sqlType The SQL type code defined in {@link java.sql.Types}.
+     * @param typeName The SQL type name.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setNull(final int parameterIndex, final int sqlType, final String typeName) throws SQLException {
         stmt.setNull(parameterIndex, sqlType, typeName);
@@ -246,12 +244,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the boolean.
+     * Sets the boolean value for the specified parameter index.
      *
-     * @param parameterIndex starts from 1, not 0.
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The boolean value to set.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setBoolean(final int parameterIndex, final boolean x) throws SQLException {
         stmt.setBoolean(parameterIndex, x);
@@ -260,12 +258,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the boolean.
+     * Sets the boolean value for the specified parameter index.
      *
-     * @param parameterIndex
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The boolean value to set, or {@code null} to set the parameter to SQL {@code NULL}.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setBoolean(final int parameterIndex, final Boolean x) throws SQLException {
         if (x == null) {
@@ -278,12 +276,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the byte.
+     * Sets the byte value for the specified parameter index.
      *
-     * @param parameterIndex starts from 1, not 0.
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The byte value to set.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setByte(final int parameterIndex, final byte x) throws SQLException {
         stmt.setByte(parameterIndex, x);
@@ -292,12 +290,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the byte.
+     * Sets the byte value for the specified parameter index.
      *
-     * @param parameterIndex
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The byte value to set, or {@code null} to set the parameter to SQL {@code NULL}.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setByte(final int parameterIndex, final Byte x) throws SQLException {
         if (x == null) {
@@ -310,13 +308,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the short.
+     * Sets the byte value for the specified parameter index.
      *
-     * @param parameterIndex
-     * @param x
-     * @param defaultValueForNull
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The byte value to set, or {@code null} to use the default value.
+     * @param defaultValueForNull The default byte value to set if {@code x} is {@code null}.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setByte(final int parameterIndex, final Byte x, final byte defaultValueForNull) throws SQLException {
         if (x == null) {
@@ -329,12 +327,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the short.
+     * Sets the short value for the specified parameter index.
      *
-     * @param parameterIndex starts from 1, not 0.
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The short value to set.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setShort(final int parameterIndex, final short x) throws SQLException {
         stmt.setShort(parameterIndex, x);
@@ -343,12 +341,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the short.
+     * Sets the short value for the specified parameter index.
      *
-     * @param parameterIndex
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The short value to set, or {@code null} to set the parameter to SQL {@code NULL}.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setShort(final int parameterIndex, final Short x) throws SQLException {
         if (x == null) {
@@ -361,13 +359,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the short.
+     * Sets the short value for the specified parameter index.
      *
-     * @param parameterIndex
-     * @param x
-     * @param defaultValueForNull
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The short value to set, or {@code null} to use the default value.
+     * @param defaultValueForNull The default short value to set if {@code x} is {@code null}.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setShort(final int parameterIndex, final Short x, final short defaultValueForNull) throws SQLException {
         if (x == null) {
@@ -380,12 +378,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the int.
+     * Sets the integer value for the specified parameter index.
      *
-     * @param parameterIndex starts from 1, not 0.
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The integer value to set.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setInt(final int parameterIndex, final int x) throws SQLException {
         stmt.setInt(parameterIndex, x);
@@ -394,12 +392,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the int.
+     * Sets the integer value for the specified parameter index.
      *
-     * @param parameterIndex
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The integer value to set, or {@code null} to set the parameter to SQL {@code NULL}.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setInt(final int parameterIndex, final Integer x) throws SQLException {
         if (x == null) {
@@ -412,13 +410,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the long.
+     * Sets the integer value for the specified parameter index.
      *
-     * @param parameterIndex
-     * @param x
-     * @param defaultValueForNull
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The integer value to set, or {@code null} to use the default value.
+     * @param defaultValueForNull The default integer value to set if {@code x} is {@code null}.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     @Beta
     public This setInt(final int parameterIndex, final Integer x, final int defaultValueForNull) throws SQLException {
@@ -460,14 +458,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //    }
 
     /**
+     * Sets the integer value for the specified parameter index using a character.
      *
-     *
-     * @param parameterIndex starts from 1, not 0.
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The character value to set as an integer.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
+     * @deprecated Generally, {@code char} should be saved as {@code String} in the database.
      * @see #setString(int, char)
-     * @deprecated generally {@code char} should be saved as {@code String} in db.
      */
     @Deprecated
     @Beta
@@ -478,14 +476,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Sets the integer value for the specified parameter index using a Character.
      *
-     *
-     * @param parameterIndex
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The Character value to set as an integer, or {@code null} to set the parameter to SQL {@code NULL}.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
+     * @deprecated Generally, {@code char} should be saved as {@code String} in the database.
      * @see #setString(int, Character)
-     * @deprecated generally {@code char} should be saved as {@code String} in db.
      */
     @Deprecated
     @Beta
@@ -500,12 +498,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the long.
+     * Sets the long value for the specified parameter index.
      *
-     * @param parameterIndex starts from 1, not 0.
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The long value to set.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setLong(final int parameterIndex, final long x) throws SQLException {
         stmt.setLong(parameterIndex, x);
@@ -514,12 +512,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the long.
+     * Sets the long value for the specified parameter index.
      *
-     * @param parameterIndex
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The long value to set, or {@code null} to set the parameter to SQL {@code NULL}.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setLong(final int parameterIndex, final Long x) throws SQLException {
         if (x == null) {
@@ -532,13 +530,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the long.
+     * Sets the long value for the specified parameter index.
      *
-     * @param parameterIndex
-     * @param x
-     * @param defaultValueForNull
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The long value to set, or {@code null} to use the default value.
+     * @param defaultValueForNull The default long value to set if {@code x} is {@code null}.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     @Beta
     public This setLong(final int parameterIndex, final Long x, final long defaultValueForNull) throws SQLException {
@@ -1569,14 +1567,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the object.
+     * Sets the object for the specified parameter index using the provided SQL type and scale or length.
      *
-     * @param parameterIndex
-     * @param x
-     * @param sqlType
-     * @param scaleOrLength
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The object to set.
+     * @param sqlType The SQL type of the object.
+     * @param scaleOrLength The scale or length of the object.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setObject(final int parameterIndex, final Object x, final SQLType sqlType, final int scaleOrLength) throws SQLException {
         stmt.setObject(parameterIndex, x, sqlType, scaleOrLength);
@@ -1585,14 +1583,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Sets the object for the specified parameter index using the provided type.
      *
-     *
-     * @param parameterIndex
-     * @param x
-     * @param type
-     * @return
-     * @throws IllegalArgumentException
-     * @throws SQLException
+     * @param <T> The type of the object to set.
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The object to set.
+     * @param type The type of the object.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If the provided type is invalid.
+     * @throws SQLException If a database access error occurs.
      */
     public <T> This setObject(final int parameterIndex, final T x, final Type<T> type) throws IllegalArgumentException, SQLException {
         type.set(stmt, parameterIndex, x);
@@ -1637,12 +1636,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //    }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the prepared statement starting from index {@code 1}.
      *
-     * @param param1
-     * @param param2
-     * @return
-     * @throws SQLException
+     * @param param1 The first parameter to set.
+     * @param param2 The second parameter to set.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If an illegal argument is provided.
+     * @throws SQLException If a database access error occurs.
      */
     public This setParameters(final String param1, final String param2) throws SQLException {
         stmt.setString(1, param1);
@@ -1652,13 +1652,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the prepared statement starting from index {@code 1}.
      *
-     * @param param1
-     * @param param2
-     * @param param3
-     * @return
-     * @throws SQLException
+     * @param param1 The first parameter to set.
+     * @param param2 The second parameter to set.
+     * @param param3 The third parameter to set.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If an illegal argument is provided.
+     * @throws SQLException If a database access error occurs.
      */
     public This setParameters(final String param1, final String param2, final String param3) throws SQLException {
         stmt.setString(1, param1);
@@ -1669,14 +1670,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the prepared statement starting from index {@code 1}.
      *
-     * @param param1
-     * @param param2
-     * @param param3
-     * @param param4
-     * @return
-     * @throws SQLException
+     * @param param1 The first parameter to set.
+     * @param param2 The second parameter to set.
+     * @param param3 The third parameter to set.
+     * @param param4 The fourth parameter to set.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If an illegal argument is provided.
+     * @throws SQLException If a database access error occurs.
      */
     public This setParameters(final String param1, final String param2, final String param3, final String param4) throws SQLException {
         stmt.setString(1, param1);
@@ -1688,15 +1690,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the prepared statement starting from index {@code 1}.
      *
-     * @param param1
-     * @param param2
-     * @param param3
-     * @param param4
-     * @param param5
-     * @return
-     * @throws SQLException
+     * @param param1 The first parameter to set.
+     * @param param2 The second parameter to set.
+     * @param param3 The third parameter to set.
+     * @param param4 The fourth parameter to set.
+     * @param param5 The fifth parameter to set.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If an illegal argument is provided.
+     * @throws SQLException If a database access error occurs.
      */
     public This setParameters(final String param1, final String param2, final String param3, final String param4, final String param5) throws SQLException {
         stmt.setString(1, param1);
@@ -1709,16 +1712,17 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the prepared statement starting from index {@code 1}.
      *
-     * @param param1
-     * @param param2
-     * @param param3
-     * @param param4
-     * @param param5
-     * @param param6
-     * @return
-     * @throws SQLException
+     * @param param1 The first parameter to set.
+     * @param param2 The second parameter to set.
+     * @param param3 The third parameter to set.
+     * @param param4 The fourth parameter to set.
+     * @param param5 The fifth parameter to set.
+     * @param param6 The sixth parameter to set.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If an illegal argument is provided.
+     * @throws SQLException If a database access error occurs.
      */
     public This setParameters(final String param1, final String param2, final String param3, final String param4, final String param5, final String param6)
             throws SQLException {
@@ -1733,17 +1737,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the prepared statement starting from index {@code 1}.
      *
-     * @param param1
-     * @param param2
-     * @param param3
-     * @param param4
-     * @param param5
-     * @param param6
-     * @param param7
-     * @return
-     * @throws SQLException
+     * @param param1 The first parameter to set.
+     * @param param2 The second parameter to set.
+     * @param param3 The third parameter to set.
+     * @param param4 The fourth parameter to set.
+     * @param param5 The fifth parameter to set.
+     * @param param6 The sixth parameter to set.
+     * @param param7 The seventh parameter to set.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If an illegal argument is provided.
+     * @throws SQLException If a database access error occurs.
      */
     public This setParameters(final String param1, final String param2, final String param3, final String param4, final String param5, final String param6,
             final String param7) throws SQLException {
@@ -1776,13 +1781,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //    }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the prepared statement starting from index {@code 1}.
      *
-     * @param param1
-     * @param param2
-     * @param param3
-     * @return
-     * @throws SQLException
+     * @param param1 The first parameter to set.
+     * @param param2 The second parameter to set.
+     * @param param3 The third parameter to set.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If an illegal argument is provided.
+     * @throws SQLException If a database access error occurs.
      */
     public This setParameters(final Object param1, final Object param2, final Object param3) throws SQLException {
         setObject(1, param1);
@@ -1793,14 +1799,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the prepared statement starting from index {@code 1}.
      *
-     * @param param1
-     * @param param2
-     * @param param3
-     * @param param4
-     * @return
-     * @throws SQLException
+     * @param param1 The first parameter to set.
+     * @param param2 The second parameter to set.
+     * @param param3 The third parameter to set.
+     * @param param4 The fourth parameter to set.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If an illegal argument is provided.
+     * @throws SQLException If a database access error occurs.
      */
     public This setParameters(final Object param1, final Object param2, final Object param3, final Object param4) throws SQLException {
         setObject(1, param1);
@@ -1812,15 +1819,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the prepared statement starting from index {@code 1}.
      *
-     * @param param1
-     * @param param2
-     * @param param3
-     * @param param4
-     * @param param5
-     * @return
-     * @throws SQLException
+     * @param param1 The first parameter to set.
+     * @param param2 The second parameter to set.
+     * @param param3 The third parameter to set.
+     * @param param4 The fourth parameter to set.
+     * @param param5 The fifth parameter to set.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If an illegal argument is provided.
+     * @throws SQLException If a database access error occurs.
      */
     public This setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5) throws SQLException {
         setObject(1, param1);
@@ -1833,16 +1841,17 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the prepared statement starting from index {@code 1}.
      *
-     * @param param1
-     * @param param2
-     * @param param3
-     * @param param4
-     * @param param5
-     * @param param6
-     * @return
-     * @throws SQLException
+     * @param param1 The first parameter to set.
+     * @param param2 The second parameter to set.
+     * @param param3 The third parameter to set.
+     * @param param4 The fourth parameter to set.
+     * @param param5 The fifth parameter to set.
+     * @param param6 The sixth parameter to set.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If an illegal argument is provided.
+     * @throws SQLException If a database access error occurs.
      */
     public This setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6)
             throws SQLException {
@@ -1857,17 +1866,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the prepared statement starting from index {@code 1}.
      *
-     * @param param1
-     * @param param2
-     * @param param3
-     * @param param4
-     * @param param5
-     * @param param6
-     * @param param7
-     * @return
-     * @throws SQLException
+     * @param param1 The first parameter to set.
+     * @param param2 The second parameter to set.
+     * @param param3 The third parameter to set.
+     * @param param4 The fourth parameter to set.
+     * @param param5 The fifth parameter to set.
+     * @param param6 The sixth parameter to set.
+     * @param param7 The seventh parameter to set.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If an illegal argument is provided.
+     * @throws SQLException If a database access error occurs.
      */
     public This setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6,
             final Object param7) throws SQLException {
@@ -1883,18 +1893,19 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the prepared statement starting from index {@code 1}.
      *
-     * @param param1
-     * @param param2
-     * @param param3
-     * @param param4
-     * @param param5
-     * @param param6
-     * @param param7
-     * @param param8
-     * @return
-     * @throws SQLException
+     * @param param1 The first parameter to set.
+     * @param param2 The second parameter to set.
+     * @param param3 The third parameter to set.
+     * @param param4 The fourth parameter to set.
+     * @param param5 The fifth parameter to set.
+     * @param param6 The sixth parameter to set.
+     * @param param7 The seventh parameter to set.
+     * @param param8 The eighth parameter to set.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If an illegal argument is provided.
+     * @throws SQLException If a database access error occurs.
      */
     public This setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6,
             final Object param7, final Object param8) throws SQLException {
@@ -1911,20 +1922,20 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the prepared statement starting from index {@code 1}.
      *
-     * @param param1
-     * @param param2
-     * @param param3
-     * @param param4
-     * @param param5
-     * @param param6
-     * @param param7
-     * @param param8
-     * @param param9
-     * @return
-     * @throws IllegalArgumentException
-     * @throws SQLException
+     * @param param1 The first parameter to set.
+     * @param param2 The second parameter to set.
+     * @param param3 The third parameter to set.
+     * @param param4 The fourth parameter to set.
+     * @param param5 The fifth parameter to set.
+     * @param param6 The sixth parameter to set.
+     * @param param7 The seventh parameter to set.
+     * @param param8 The eighth parameter to set.
+     * @param param9 The ninth parameter to set.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If an illegal argument is provided.
+     * @throws SQLException If a database access error occurs.
      */
     public This setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6,
             final Object param7, final Object param8, final Object param9) throws IllegalArgumentException, SQLException {
@@ -1961,12 +1972,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //    }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the prepared statement.
      *
-     * @param parameters
-     * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
-     * @throws SQLException
+     * @param parameters The array of parameters to set.
+     * @return The current instance of the query.
+     * @throws IllegalArgumentException If an illegal argument is provided.
+     * @throws SQLException If a database access error occurs.
      */
     public This setParameters(final int[] parameters) throws IllegalArgumentException, SQLException {
         return settParameters(1, parameters);
@@ -1977,7 +1988,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param parameters
      * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is {@code null}.
      * @throws SQLException
      */
     public This setParameters(final long[] parameters) throws IllegalArgumentException, SQLException {
@@ -1989,7 +2000,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param parameters
      * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is {@code null}.
      * @throws SQLException
      */
     public This setParameters(final String[] parameters) throws IllegalArgumentException, SQLException {
@@ -2002,7 +2013,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T>
      * @param parameters it should be an array of concrete types. For example: {@code String[]}, {@code Date[]}.
      * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is {@code null}.
      * @throws SQLException
      */
     public <T> This setParameters(final T[] parameters) throws IllegalArgumentException, SQLException {
@@ -2028,7 +2039,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameters
      * @param type
      * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is {@code null}.
      * @throws SQLException
      */
     public <T> This setParameters(final Collection<? extends T> parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
@@ -2120,7 +2131,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param startParameterIndex
      * @param parameters
      * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is {@code null}.
      * @throws SQLException
      */
     public This settParameters(int startParameterIndex, final int[] parameters) throws IllegalArgumentException, SQLException {
@@ -2139,7 +2150,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param startParameterIndex
      * @param parameters
      * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is {@code null}.
      * @throws SQLException
      */
     public This settParameters(int startParameterIndex, final long[] parameters) throws IllegalArgumentException, SQLException {
@@ -2158,7 +2169,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param startParameterIndex
      * @param parameters
      * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is {@code null}.
      * @throws SQLException
      */
     public This settParameters(int startParameterIndex, final String[] parameters) throws IllegalArgumentException, SQLException {
@@ -2178,7 +2189,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param startParameterIndex
      * @param parameters it should be an array of concrete types. For example: {@code String[]}, {@code Date[]}.
      * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is {@code null}.
      * @throws SQLException
      */
     public <T> This settParameters(int startParameterIndex, final T[] parameters) throws IllegalArgumentException, SQLException {
@@ -2207,7 +2218,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param startParameterIndex
      * @param parameters
      * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is {@code null}.
      * @throws SQLException
      */
     public This settParameters(int startParameterIndex, final Collection<?> parameters) throws IllegalArgumentException, SQLException {
@@ -2228,7 +2239,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameters
      * @param type
      * @return
-     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is null.
+     * @throws IllegalArgumentException if specified {@code parameters} or {@code type} is {@code null}.
      * @throws SQLException
      */
     public <T> This settParameters(int startParameterIndex, final Collection<? extends T> parameters, final Class<T> type)
@@ -3114,8 +3125,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the fetch direction.
      *
-     * @param direction one of <code>ResultSet.FETCH_FORWARD</code>,
-     * <code>ResultSet.FETCH_REVERSE</code>, or <code>ResultSet.FETCH_UNKNOWN</code>
+     * @param direction one of {@code ResultSet.FETCH_FORWARD},
+     * {@code ResultSet.FETCH_REVERSE}, or {@code ResultSet.FETCH_UNKNOWN}
      * @return
      * @throws SQLException
      * @see {@link java.sql.Statement#setFetchDirection(int)}
@@ -4970,7 +4981,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * lazy-execution, lazy-fetch.
      *
      * <br />
      *
@@ -5268,7 +5278,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Note: using {@code select 1 from ...}, not {@code select count(*) from ...}.
      *
-     * @return true, if there is at least one record found.
+     * @return {@code true}, if there is at least one record found.
      * @throws IllegalStateException if this is closed
      * @throws SQLException
      */
@@ -5288,7 +5298,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <br />
      * Note: using {@code select 1 from ...}, not {@code select count(*) from ...}.
      *
-     * @return true, if there is no record found.
+     * @return {@code true}, if there is no record found.
      * @throws SQLException
      * @see #exists()
      */
@@ -5478,7 +5488,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      *
      * @param rowFilter
-     * @return true, if successful
+     * @return {@code true}, if successful
      * @throws IllegalArgumentException
      * @throws IllegalStateException if this is closed
      * @throws SQLException
@@ -5504,7 +5514,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      *
      * @param rowFilter
-     * @return true, if successful
+     * @return {@code true}, if successful
      * @throws IllegalArgumentException
      * @throws IllegalStateException if this is closed
      * @throws SQLException
@@ -5532,7 +5542,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      *
      * @param rowFilter
-     * @return true, if successful
+     * @return {@code true}, if successful
      * @throws IllegalArgumentException
      * @throws IllegalStateException if this is closed
      * @throws SQLException
@@ -5558,7 +5568,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      *
      * @param rowFilter
-     * @return true, if successful
+     * @return {@code true}, if successful
      * @throws IllegalArgumentException
      * @throws IllegalStateException if this is closed
      * @throws SQLException
@@ -5585,7 +5595,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      *
      * @param rowFilter
-     * @return true, if successful
+     * @return {@code true}, if successful
      * @throws SQLException
      */
     public boolean noneMatch(final Jdbc.RowFilter rowFilter) throws SQLException {
@@ -5595,7 +5605,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      *
      * @param rowFilter
-     * @return true, if successful
+     * @return {@code true}, if successful
      * @throws SQLException
      */
     public boolean noneMatch(final Jdbc.BiRowFilter rowFilter) throws SQLException {
@@ -6144,7 +6154,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      *
      *
-     * @return true, if successful
+     * @return {@code true}, if successful
      * @throws IllegalStateException if this is closed
      * @throws SQLException
      */
@@ -6333,7 +6343,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Check arg not null.
+     * Check arg not {@code null}.
      *
      * @param arg
      * @param argName

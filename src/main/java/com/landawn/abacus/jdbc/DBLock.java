@@ -41,8 +41,6 @@ import com.landawn.abacus.util.Strings;
 /**
  * Supports global lock by db table.
  *
- * @author Haiyang Li
- * @since 0.8
  */
 public final class DBLock {
 
@@ -95,7 +93,8 @@ public final class DBLock {
         // ..
         refreshSQL = "UPDATE " + tableName + " SET update_time = ? WHERE target = ? AND code = ?";
 
-        final String schema = "CREATE TABLE " + tableName + "(host_name VARCHAR(64), target VARCHAR(255) NOT NULL, code VARCHAR(64), status VARCHAR(16) NOT NULL, "
+        final String schema = "CREATE TABLE " + tableName
+                + "(host_name VARCHAR(64), target VARCHAR(255) NOT NULL, code VARCHAR(64), status VARCHAR(16) NOT NULL, "
                 + "expiry_time TIMESTAMP NOT NULL, update_time TIMESTAMP NOT NULL, create_time TIMESTAMP NOT NULL, UNIQUE (target))";
 
         final Connection conn = JdbcUtil.getConnection(ds);
@@ -179,7 +178,7 @@ public final class DBLock {
      * @param liveTime
      * @param timeout
      * @param retryPeriod the period to retry inserting record in database table to lock the target.
-     * @return <code>null</code> if the target can't be locked in the period specified by <code>timeout</code>
+     * @return {@code null} if the target can't be locked in the period specified by {@code timeout}
      * @throws IllegalStateException if this is closed
      */
     public String lock(final String target, final long liveTime, final long timeout, final long retryPeriod) throws IllegalStateException {
@@ -228,7 +227,7 @@ public final class DBLock {
      *
      * @param target
      * @param code
-     * @return true, if successful
+     * @return {@code true}, if successful
      * @throws IllegalStateException if this is closed
      */
     public boolean unlock(final String target, final String code) throws IllegalStateException {

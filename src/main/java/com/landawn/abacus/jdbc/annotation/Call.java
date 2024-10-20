@@ -63,15 +63,15 @@ public @interface Call {
     int queryTimeout() default -1;
 
     /**
-     * Set it to true if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
+     * Set it to {@code true} if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
      *
      * @return
      */
     boolean isSingleParameter() default false;
 
     /**
-     * Set it to true if want to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/listAll/streamAll}.
-     * It is false by default. The reason is all the query methods extended from {@code AbstractQuery} only retrieve the first {@code ResultSet}.
+     * Set it to {@code true} if want to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/listAll/streamAll}.
+     * It is {@code false} by default. The reason is all the query methods extended from {@code AbstractQuery} only retrieve the first {@code ResultSet}.
      *
      * @return
      */

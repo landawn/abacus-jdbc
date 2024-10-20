@@ -33,7 +33,6 @@ import java.lang.annotation.Target;
  * <br />
  * <br />
  *
- * @author haiyangl
  *
  */
 @Retention(RetentionPolicy.RUNTIME)

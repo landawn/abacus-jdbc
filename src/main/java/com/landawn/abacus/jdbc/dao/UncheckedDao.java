@@ -51,7 +51,6 @@ import com.landawn.abacus.util.u.OptionalShort;
 
 /**
  *
- * @author haiyangl
  *
  * @param <T>
  * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
@@ -169,7 +168,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     /**
      *
      * @param cond
-     * @return true, if there is at least one record found.
+     * @return {@code true}, if there is at least one record found.
      * @throws UncheckedSQLException the unchecked SQL exception
      * @see AbstractQuery#exists()
      */
@@ -179,7 +178,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     /**
      *
      * @param cond
-     * @return true, if there is no record found.
+     * @return {@code true}, if there is no record found.
      * @throws UncheckedSQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF

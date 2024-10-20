@@ -62,7 +62,6 @@ import com.landawn.abacus.util.WD;
 
 /**
  *
- * @author Haiyang Li
  * @see {@link com.landawn.abacus.util.CSVUtil}
  * @see {@link com.landawn.abacus.condition.ConditionFactory}
  * @see {@link com.landawn.abacus.condition.ConditionFactory.CF}
@@ -76,7 +75,6 @@ import com.landawn.abacus.util.WD;
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html</a>
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html">http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html</a>
- * @since 0.8
  */
 public final class JdbcUtils {
 
@@ -91,7 +89,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param sourceDataSource
@@ -115,7 +113,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param conn
@@ -133,7 +131,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param selectColumnNames
@@ -153,7 +151,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param selectColumnNames
@@ -175,7 +173,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param selectColumnNames
@@ -199,7 +197,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param <E>
      * @param dataset
@@ -230,7 +228,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param conn
@@ -251,7 +249,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param offset
@@ -274,7 +272,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param offset
@@ -299,7 +297,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param <E>
      * @param dataset
@@ -331,7 +329,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param conn
@@ -351,7 +349,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param offset
@@ -373,7 +371,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param offset
@@ -398,7 +396,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param <E>
      * @param dataset
@@ -430,7 +428,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param stmt the column order in the sql must be consistent with the column order in the DataSet.
@@ -442,7 +440,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param selectColumnNames
@@ -455,7 +453,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param selectColumnNames
@@ -471,7 +469,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param selectColumnNames
@@ -489,7 +487,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param <E>
      * @param dataset
@@ -518,7 +516,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param stmt the column order in the sql must be consistent with the column order in the DataSet.
@@ -532,7 +530,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param offset
@@ -549,7 +547,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param offset
@@ -568,7 +566,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param <E>
      * @param dataset
@@ -648,7 +646,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param offset
@@ -664,7 +662,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param dataset
      * @param offset
@@ -683,7 +681,7 @@ public final class JdbcUtils {
     }
 
     /**
-     * Imports the data from <code>DataSet</code> to database.
+     * Imports the data from {@code DataSet} to database.
      *
      * @param <E>
      * @param dataset
@@ -834,7 +832,7 @@ public final class JdbcUtils {
      * @param stmt
      * @param batchSize
      * @param batchIntervalInMillis
-     * @param func convert line to the parameters for record insert. Returns a <code>null</code> array to skip the line.
+     * @param func convert line to the parameters for record insert. Returns a {@code null} array to skip the line.
      * @return
      * @throws SQLException
      * @throws IOException
@@ -938,7 +936,7 @@ public final class JdbcUtils {
      * @param stmt
      * @param batchSize
      * @param batchIntervalInMillis
-     * @param func convert line to the parameters for record insert. Returns a <code>null</code> array to skip the line.
+     * @param func convert line to the parameters for record insert. Returns a {@code null} array to skip the line.
      * @return
      * @throws SQLException
      * @throws IOException
@@ -1042,7 +1040,7 @@ public final class JdbcUtils {
      * @param stmt
      * @param batchSize
      * @param batchIntervalInMillis
-     * @param func convert line to the parameters for record insert. Returns a <code>null</code> array to skip the line.
+     * @param func convert line to the parameters for record insert. Returns a {@code null} array to skip the line.
      * @return
      * @throws IllegalArgumentException
      * @throws SQLException

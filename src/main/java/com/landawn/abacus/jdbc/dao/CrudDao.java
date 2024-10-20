@@ -550,7 +550,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      *
      * @param id
-     * @return true, if successful
+     * @return {@code true}, if successful
      * @throws SQLException
      * @see AbstractQuery#exists()
      */
@@ -846,7 +846,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      *
      * @param entity
-     * @return true, if successful
+     * @return {@code true}, if successful
      * @throws SQLException
      */
     default boolean refresh(final T entity) throws SQLException {

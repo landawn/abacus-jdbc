@@ -129,8 +129,6 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html</a>
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
  * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html">http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html</a>
- * @since 0.8
- * @author Haiyang Li
  */
 @SuppressWarnings({ "java:S1192", "java:S6539" })
 public final class JdbcUtil {
@@ -680,7 +678,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Unconditionally close an <code>ResultSet</code>.
+     * Unconditionally close an {@code ResultSet}.
      * <p>
      * Equivalent to {@link ResultSet#close()}, except any exceptions will be ignored.
      * This is typically used in finally blocks.
@@ -736,7 +734,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Unconditionally close an <code>Statement</code>.
+     * Unconditionally close an {@code Statement}.
      * <p>
      * Equivalent to {@link Statement#close()}, except any exceptions will be ignored.
      * This is typically used in finally blocks.
@@ -748,7 +746,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Unconditionally close an <code>Connection</code>.
+     * Unconditionally close an {@code Connection}.
      * <p>
      * Equivalent to {@link Connection#close()}, except any exceptions will be ignored.
      * This is typically used in finally blocks.
@@ -3697,7 +3695,7 @@ public final class JdbcUtil {
      * @param conn
      * @param sql
      * @param parameters
-     * @return true, if successful
+     * @return {@code true}, if successful
      * @throws IllegalArgumentException
      * @throws SQLException
      */
@@ -4102,7 +4100,8 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    public static DataSet extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final boolean closeResultSet) throws SQLException {
+    public static DataSet extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final boolean closeResultSet)
+            throws SQLException {
         return extractData(rs, offset, count, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, closeResultSet);
     }
 
@@ -4237,7 +4236,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code stmt} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.extractAllResultSets(stmt).onClose(Fn.closeQuietly(stmt))...}
      *
@@ -4249,7 +4248,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code stmt} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.extractAllResultSets(stmt, resultExtractor).onClose(Fn.closeQuietly(stmt))...}
      *
@@ -4274,7 +4273,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code stmt} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.extractAllResultSets(stmt, resultExtractor).onClose(Fn.closeQuietly(stmt))...}
      *
@@ -4299,7 +4298,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
@@ -4311,7 +4310,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
@@ -4329,7 +4328,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
@@ -4403,7 +4402,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
@@ -4467,7 +4466,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
@@ -4547,7 +4546,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
@@ -4604,7 +4603,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
@@ -4625,7 +4624,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>resultSet</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.stream(resultset).onClose(Fn.closeQuietly(resultSet))...}
      *
@@ -4658,7 +4657,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code stmt} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.streamAllResultSets(stmt, targetClass).onClose(Fn.closeQuietly(stmt))...}
      *
@@ -4689,7 +4688,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code stmt} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.streamAllResultSets(stmt, rowMapper).onClose(Fn.closeQuietly(stmt))...}
      *
@@ -4716,7 +4715,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code stmt} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).onClose(Fn.closeQuietly(stmt))...}
      *
@@ -4745,7 +4744,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code stmt} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.streamAllResultSets(stmt, rowMapper).onClose(Fn.closeQuietly(stmt))...}
      *
@@ -4772,7 +4771,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * It's user's responsibility to close the input <code>stmt</code> after the stream is finished, or call:
+     * It's user's responsibility to close the input {@code stmt} after the stream is finished, or call:
      * <br />
      * {@code JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).onClose(Fn.closeQuietly(stmt))...}
      *
@@ -5411,7 +5410,7 @@ public final class JdbcUtil {
      *
      * @param conn
      * @param tableName
-     * @return true, if successful
+     * @return {@code true}, if successful
      */
     public static boolean doesTableExist(final Connection conn, final String tableName) {
         try {
@@ -5433,7 +5432,7 @@ public final class JdbcUtil {
      * @param conn
      * @param tableName
      * @param schema
-     * @return true, if successful
+     * @return {@code true}, if successful
      */
     public static boolean createTableIfNotExists(final Connection conn, final String tableName, final String schema) {
         if (doesTableExist(conn, tableName)) {
@@ -5454,7 +5453,7 @@ public final class JdbcUtil {
      *
      * @param conn
      * @param tableName
-     * @return true, if successful
+     * @return {@code true}, if successful
      */
     public static boolean dropTableIfExists(final Connection conn, final String tableName) {
         try {
@@ -5512,7 +5511,7 @@ public final class JdbcUtil {
      * Checks if is table not exists exception.
      *
      * @param e
-     * @return true, if is table not exists exception
+     * @return {@code true}, if is table not exists exception
      */
     static boolean isTableNotExistsException(final Throwable e) {
         if (e instanceof final SQLException sqlException) {
@@ -5916,7 +5915,7 @@ public final class JdbcUtil {
      * Checks if is default id prop value.
      *
      * @param value
-     * @return true, if is default id prop value
+     * @return {@code true}, if is default id prop value
      * @deprecated for internal only.
      */
     @Deprecated

@@ -33,7 +33,6 @@ import java.sql.PreparedStatement;
  * <br />
  * Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.
  *
- * @author haiyangl
  *
  * @see {@link com.landawn.abacus.annotation.ReadOnly}
  * @see {@link com.landawn.abacus.annotation.ReadOnlyId}

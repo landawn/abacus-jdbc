@@ -74,7 +74,7 @@ public @interface Update {
     int queryTimeout() default -1;
 
     /**
-     * Set it to true if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
+     * Set it to {@code true} if there is only one input parameter and the type is Collection/Object Array, and the target db column type is Collection/Object Array.
      *
      * @return
      */

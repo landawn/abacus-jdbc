@@ -65,7 +65,6 @@ import com.landawn.abacus.util.ParsedSql;
  * <br />
  * Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.
  *
- * @author haiyangl
  *
  * @see {@link com.landawn.abacus.annotation.ReadOnly}
  * @see {@link com.landawn.abacus.annotation.ReadOnlyId}
@@ -122,7 +121,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the null.
+     * Sets the {@code null}.
      *
      * @param parameterName
      * @param sqlType
@@ -177,7 +176,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the null.
+     * Sets the {@code null}.
      *
      * @param parameterName
      * @param sqlType

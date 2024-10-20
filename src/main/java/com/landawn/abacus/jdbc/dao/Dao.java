@@ -876,7 +876,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      *
      * @param cond
-     * @return true, if there is at least one record found.
+     * @return {@code true}, if there is at least one record found.
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -887,7 +887,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      *
      * @param cond
-     * @return true, if there is no record found.
+     * @return {@code true}, if there is no record found.
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -1700,7 +1700,6 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     // Will it cause confusion if it's called in transaction?
     /**
-     * lazy-execution, lazy-fetch.
      *
      * @param <R>
      * @param cond

@@ -20,8 +20,6 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 // TODO: Auto-generated Javadoc
 /**
  *
- * @author Haiyang Li
- * @since 0.8
  */
 public interface Transaction {
 
@@ -48,7 +46,7 @@ public interface Transaction {
     /**
      * Checks if is active.
      *
-     * @return true, if is active
+     * @return {@code true}, if is active
      */
     boolean isActive();
 
@@ -88,7 +86,6 @@ public interface Transaction {
     /**
      * The Enum Status.
      *
-     * @author Haiyang Li
      * @version $Revision: 0.8 $ 07/01/15
      */
     enum Status {
@@ -121,7 +118,6 @@ public interface Transaction {
     /**
      * The Enum Action.
      *
-     * @author Haiyang Li
      */
     enum Action {
 

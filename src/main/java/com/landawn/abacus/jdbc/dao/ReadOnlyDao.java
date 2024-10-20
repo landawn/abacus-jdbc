@@ -170,7 +170,7 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
 
     /**
      *
-     * @param namedQuery the named query
+     * @param namedQuery
      * @return
      * @throws SQLException
      * @throws UnsupportedOperationException if the specified {@code namedQuery} is not a {@code select} sql statement.
@@ -187,7 +187,7 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
 
     /**
      *
-     * @param namedQuery the named query
+     * @param namedQuery
      * @param generateKeys
      * @return
      * @throws SQLException
