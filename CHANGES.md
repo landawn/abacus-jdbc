@@ -1,3 +1,8 @@
+### 3.7.12
+
+* Improve JavaDoc.
+* Improvements and bug fix.
+
 ### 3.7.11
 
 * Improvements and bug fix.

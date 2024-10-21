@@ -250,8 +250,11 @@ public final class Jdbc {
     @FunctionalInterface
     public interface TriParametersSetter<QS, T> extends Throwables.TriConsumer<ParsedSql, QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
-        TriParametersSetter DO_NOTHING = (parsedSql, preparedQuery, param) -> {
-            // Do nothing.
+        TriParametersSetter DO_NOTHING = new TriParametersSetter<>() {
+            @Override
+            public void accept(ParsedSql parsedSql, Object preparedQuery, Object param) throws SQLException {
+                // Do nothing.
+            }
         };
 
         /**
