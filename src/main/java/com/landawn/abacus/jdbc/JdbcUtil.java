@@ -1649,7 +1649,7 @@ public final class JdbcUtil {
 
     /**
      * Executes the given command outside of any started transaction for the specified DataSource.
-     * If a transaction is already started, a new connection which is not used to started transaction will be used to execute the command.
+     * If a transaction is already started in current thread, a new connection which is not used to started transaction will be used to execute the command.
      *
      * @param <T> The type of the result returned by the command.
      * @param <E> The type of exception that the command may throw.
@@ -1692,7 +1692,7 @@ public final class JdbcUtil {
 
     /**
      * Executes the given command outside of any started transaction for the specified DataSource.
-     * If a transaction is already started, a new connection which is not used to started transaction will be used to execute the command.
+     * If a transaction is already started in current thread, a new connection which is not used to started transaction will be used to execute the command.
      *
      * @param <T> The type of the result returned by the command.
      * @param <E> The type of exception that the command may throw.
@@ -1735,7 +1735,7 @@ public final class JdbcUtil {
 
     /**
      * Executes the given command outside of any started transaction for the specified DataSource.
-     * If a transaction is already started, a new connection which is not used to started transaction will be used to execute the command.
+     * If a transaction is already started in current thread, a new connection which is not used to started transaction will be used to execute the command.
      *
      * @param <E> The type of exception that the command may throw.
      * @param dataSource The DataSource for which to execute the command.
@@ -1776,7 +1776,7 @@ public final class JdbcUtil {
 
     /**
      * Executes the given command outside of any started transaction for the specified DataSource.
-     * If a transaction is already started, a new connection which is not used to started transaction will be used to execute the command.
+     * If a transaction is already started in current thread, a new connection which is not used to started transaction will be used to execute the command.
      *
      * @param <E> The type of exception that the command may throw.
      * @param dataSource The DataSource for which to execute the command.
@@ -5846,7 +5846,7 @@ public final class JdbcUtil {
      */
     @Deprecated
     public static boolean isSpringTransactionalDisabled() {
-        return isSpringTransactionalDisabled_TL.get();
+        return !isInSpring || isSpringTransactionalDisabled_TL.get();
     }
 
     /**
@@ -5855,7 +5855,7 @@ public final class JdbcUtil {
      * @return {@code true} if it's not shared, otherwise {@code false} is returned.
      */
     public static boolean isSpringTransactionalNotUsed() {
-        return isSpringTransactionalDisabled_TL.get();
+        return !isInSpring || isSpringTransactionalDisabled_TL.get();
     }
 
     /**
