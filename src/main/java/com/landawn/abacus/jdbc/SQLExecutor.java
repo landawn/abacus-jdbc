@@ -74,7 +74,7 @@ package com.landawn.abacus.jdbc;
  * Transaction can be started:
  * <pre>
  * <code>
- * final SQLTransaction tran = sqlExecutor.beginTransaction(IsolationLevel.READ_COMMITTED);
+ * final SQLTransaction tran = JdbcUtil.beginTransaction(IsolationLevel.READ_COMMITTED);
  *
  * try {
  *     // sqlExecutor.insert(...);
@@ -4119,7 +4119,7 @@ public final class SQLExecutor {
     //     *
     //     * <pre>
     //     * <code>
-    //     *   final SQLTransaction tran = sqlExecutor.beginTransaction(IsolationLevel.READ_COMMITTED);
+    //     *   final SQLTransaction tran = JdbcUtil.beginTransaction(IsolationLevel.READ_COMMITTED);
     //     *   try {
     //     *       // sqlExecutor.insert(...);
     //     *       // sqlExecutor.update(...);
