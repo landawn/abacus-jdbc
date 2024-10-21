@@ -169,6 +169,7 @@ public final class Jdbc {
          * @return
          */
         @Beta
+        @Stateful
         static <T> BiParametersSetter<PreparedStatement, T[]> createForArray(final List<String> fieldNameList, final Class<?> entityClass) {
             N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
             N.checkArgument(ClassUtil.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
@@ -208,6 +209,7 @@ public final class Jdbc {
          * @return
          */
         @Beta
+        @Stateful
         static <T> BiParametersSetter<PreparedStatement, List<T>> createForList(final List<String> fieldNameList, final Class<?> entityClass) {
             N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
             N.checkArgument(ClassUtil.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
@@ -248,11 +250,8 @@ public final class Jdbc {
     @FunctionalInterface
     public interface TriParametersSetter<QS, T> extends Throwables.TriConsumer<ParsedSql, QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
-        TriParametersSetter DO_NOTHING = new TriParametersSetter<>() {
-            @Override
-            public void accept(ParsedSql parsedSql, Object preparedQuery, Object param) throws SQLException {
-                // Do nothing.
-            }
+        TriParametersSetter DO_NOTHING = (parsedSql, preparedQuery, param) -> {
+            // Do nothing.
         };
 
         /**
@@ -316,12 +315,13 @@ public final class Jdbc {
         }
 
         /**
+         * Converts the result set into a map using the provided key and value extractors.
          *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param keyExtractor
-         * @param valueExtractor
-         * @return
+         * @param <K> The type of keys maintained by the map.
+         * @param <V> The type of mapped values.
+         * @param keyExtractor The function to extract keys from the result set.
+         * @param valueExtractor The function to extract values from the result set.
+         * @return A map containing the extracted keys and values.
          */
         static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor) {
             return toMap(keyExtractor, valueExtractor, Suppliers.<K, V> ofMap());
@@ -360,15 +360,17 @@ public final class Jdbc {
         }
 
         /**
+         * Converts the result set into a map using the provided key and value extractors,
+         * merge function, and map supplier.
          *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <M>
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param mergeFunction
-         * @param supplier
-         * @return
+         * @param <K> The type of keys maintained by the map.
+         * @param <V> The type of mapped values.
+         * @param <M> The type of the map.
+         * @param keyExtractor The function to extract keys from the result set.
+         * @param valueExtractor The function to extract values from the result set.
+         * @param mergeFunction The function to merge values if the same key is encountered.
+         * @param supplier The supplier to provide a new map instance.
+         * @return A map containing the extracted keys and values.
          * @see {@link Fn.throwingMerger()}
          * @see {@link Fn.replacingMerger()}
          * @see {@link Fn.ignoringMerger()}
@@ -1030,16 +1032,18 @@ public final class Jdbc {
         }
 
         /**
+         * Groups the result set into a map using the provided key and value extractors,
+         * downstream collector, and map supplier.
          *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <D>
-         * @param <M>
-         * @param keyExtractor
-         * @param valueExtractor
-         * @param downstream
-         * @param supplier
-         * @return
+         * @param <K> The type of keys maintained by the map.
+         * @param <V> The type of mapped values.
+         * @param <D> The type of the result of the downstream collector.
+         * @param <M> The type of the map.
+         * @param keyExtractor The function to extract keys from the result set.
+         * @param valueExtractor The function to extract values from the result set.
+         * @param downstream The collector to accumulate values associated with a key.
+         * @param supplier The supplier to provide a new map instance.
+         * @return A map containing the grouped keys and collected values.
          */
         static <K, V, D, M extends Map<K, D>> BiResultExtractor<M> groupTo(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor, final Collector<? super V, ?, D> downstream, final Supplier<? extends M> supplier) {
@@ -1123,6 +1127,7 @@ public final class Jdbc {
          * @return
          */
         @SequentialOnly
+        @Stateful
         static <T> BiResultExtractor<List<T>> toList(final Class<? extends T> targetClass) {
             N.checkArgNotNull(targetClass, s.targetClass);
 

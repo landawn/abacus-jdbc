@@ -92,9 +92,9 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     }
 
     /**
+     * Returns the unique identifier of the transaction.
      *
-     *
-     * @return
+     * @return the unique identifier of the transaction.
      */
     @Override
     public String id() {
@@ -102,18 +102,18 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     }
 
     /**
+     * Returns the connection associated with this transaction.
      *
-     *
-     * @return
+     * @return the connection associated with this transaction.
      */
     public Connection connection() {
         return _conn;
     }
 
     /**
+     * Returns the isolation level of the transaction.
      *
-     *
-     * @return
+     * @return the isolation level of the transaction.
      */
     @Override
     public IsolationLevel isolationLevel() {
@@ -121,9 +121,9 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     }
 
     /**
+     * Returns the current status of the transaction.
      *
-     *
-     * @return
+     * @return the current status of the transaction.
      */
     @Override
     public Transaction.Status status() {
@@ -131,9 +131,9 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Checks if is active.
+     * Checks if the transaction is active.
      *
-     * @return {@code true}, if is active
+     * @return {@code true} if the transaction is active, {@code false} otherwise.
      */
     @Override
     public boolean isActive() {
@@ -176,8 +176,9 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     //    }
 
     /**
+     * Commits the current transaction.
      *
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedSQLException if an SQL error occurs during the commit.
      */
     @Override
     public void commit() throws UncheckedSQLException {
@@ -185,10 +186,10 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     }
 
     /**
+     * Commits the current transaction and executes the specified action after the commit.
      *
-     *
-     * @param actoinAfterCommit
-     * @throws UncheckedSQLException
+     * @param actoinAfterCommit the action to be executed after the current transaction is committed successfully.
+     * @throws UncheckedSQLException if an SQL error occurs during the commit.
      */
     @Override
     public void commit(final Runnable actoinAfterCommit) throws UncheckedSQLException {
@@ -239,7 +240,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Transaction can be started:
+     * Rolls back the current transaction.
      *
      * <pre>
      * <code>
@@ -268,10 +269,10 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     }
 
     /**
+     * Rolls back the current transaction and executes the specified action after the rollback.
      *
-     *
-     * @param actionAfterRollback
-     * @throws UncheckedSQLException
+     * @param actionAfterRollback the action to be executed after the current transaction is rolled back, not successfully or not.
+     * @throws UncheckedSQLException if an SQL error occurs during the rollback.
      */
     @Override
     public void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
@@ -294,9 +295,9 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Rollback if not committed.
+     * Rolls back the transaction if it has not been committed successfully.
      *
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedSQLException if an SQL error occurs during the rollback.
      */
     @Override
     public void rollbackIfNotCommitted() throws UncheckedSQLException {
@@ -489,11 +490,11 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Execute the specified {@code Runnable} not this transaction.
+     * Executes the specified {@code Runnable} outside of this transaction.
      *
-     * @param <E>
-     * @param cmd
-     * @throws E
+     * @param <E> the type of exception that the {@code Runnable} might throw.
+     * @param cmd the {@code Runnable} to be executed outside of this transaction.
+     * @throws E if the {@code Runnable} throws an exception.
      */
     public <E extends Throwable> void runNotInMe(final Throwables.Runnable<E> cmd) throws E {
         synchronized (_id) { //NOSONAR
@@ -510,13 +511,13 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Execute the specified {@code Callable} not this transaction.
+     * Executes the specified {@code Callable} outside of this transaction.
      *
-     * @param <R>
-     * @param <E>
-     * @param cmd
-     * @return
-     * @throws E
+     * @param <R> the type of the result returned by the {@code Callable}.
+     * @param <E> the type of exception that the {@code Callable} might throw.
+     * @param cmd the {@code Callable} to be executed outside of this transaction.
+     * @return the result returned by the {@code Callable}.
+     * @throws E if the {@code Callable} throws an exception.
      */
     public <R, E extends Throwable> R callNotInMe(final Throwables.Callable<R, E> cmd) throws E {
         synchronized (_id) { //NOSONAR

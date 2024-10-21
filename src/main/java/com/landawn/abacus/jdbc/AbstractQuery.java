@@ -101,7 +101,11 @@ import com.landawn.abacus.util.u.OptionalShort;
  *
  * @param <Stmt>
  * @param <This>
- * @see PreparedStatement
+ *
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Connection.html">Connection</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Statement.html">Statement</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/PreparedStatement.html">PreparedStatement</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/ResultSet.html">ResultSet</a>
  */
 @SuppressWarnings("java:S1192")
 public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends AbstractQuery<Stmt, This>> implements AutoCloseable {
@@ -795,12 +799,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the BigInteger value for the specified parameter index as a String.
+     * Sets the BigInteger value for the specified parameter index as a String. It's same as {@code setString(int, BigInteger)}.
      *
      * @param parameterIndex The index of the parameter to set, starting from 1.
      * @param x The BigInteger value to set, or {@code null} to set the parameter to SQL {@code NULL}.
      * @return The current instance of the query.
      * @throws SQLException If a database access error occurs.
+     * @see #setString(int, BigInteger)
      */
     @Beta
     public This setBigIntegerAsString(final int parameterIndex, final BigInteger x) throws SQLException {
@@ -864,12 +869,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the BigInteger.
+     * Sets the BigInteger value for the specified parameter index as a String. It's same as {@code setBigIntegerAsString(int, BigInteger)}.
      *
-     * @param parameterIndex starts from 1, not 0.
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The BigInteger value to set, or {@code null} to set the parameter to SQL {@code NULL}.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
+     * @see #setBigIntegerAsString(int, BigInteger)
      */
     @Beta
     public This setString(final int parameterIndex, final BigInteger x) throws SQLException {
@@ -6268,7 +6274,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Executes the SQL statement in this {@code PreparedStatement} object and applies the provided function to the statement.
      *
      * @param <R> the type of the result
-     * @param getter the function to apply to the {@code PreparedStatement}
+     * @param getter the function to apply to the {@code PreparedStatement}. The first parameter indicates if the first result is a {@code ResultSet} object,
+     *               the second parameter is the executed {@code PreparedStatement}.
      * @return the result of applying the function to the {@code PreparedStatement}
      * @throws IllegalArgumentException if the provided function is invalid
      * @throws IllegalStateException if this instance is closed
@@ -6313,7 +6320,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the SQL statement in this {@code PreparedStatement} object and applies the provided consumer to the statement.
      *
-     * @param consumer the consumer to apply to the {@code PreparedStatement}
+     * @param consumer the consumer to apply to the {@code PreparedStatement}. The first parameter indicates if the first result is a {@code ResultSet} object,
+     *               the second parameter is the executed {@code PreparedStatement}.
      * @throws IllegalArgumentException if the provided consumer is invalid
      * @throws IllegalStateException if this instance is closed
      * @throws SQLException if a database access error occurs

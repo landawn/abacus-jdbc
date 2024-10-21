@@ -35,6 +35,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -79,10 +80,10 @@ import com.landawn.abacus.util.Tuple.Tuple4;
  * @see {@link com.landawn.abacus.annotation.Table}
  * @see {@link com.landawn.abacus.annotation.Column}
  *
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html</a>
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html</a>
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html">http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Connection.html">Connection</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Statement.html">Statement</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/PreparedStatement.html">PreparedStatement</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/ResultSet.html">ResultSet</a>
  */
 @SuppressWarnings("java:S1192")
 public final class CallableQuery extends AbstractQuery<CallableStatement, CallableQuery> {
@@ -98,10 +99,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the {@code null}.
      *
-     * @param parameterName
-     * @param sqlType
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param sqlType the SQL type code defined in {@link java.sql.Types}
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
     public CallableQuery setNull(final String parameterName, final int sqlType) throws SQLException {
@@ -111,13 +112,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the {@code null}.
+     * Sets the {@code null} value for the specified parameter.
      *
-     * @param parameterName
-     * @param sqlType
-     * @param typeName
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param sqlType the SQL type code defined in {@link java.sql.Types}
+     * @param typeName the SQL type name
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
     public CallableQuery setNull(final String parameterName, final int sqlType, final String typeName) throws SQLException {
@@ -127,12 +128,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the boolean.
+     * Sets the boolean value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the boolean value to set
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setBoolean(final String parameterName, final boolean x) throws SQLException {
         cstmt.setBoolean(parameterName, x);
@@ -141,12 +142,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the boolean.
+     * Sets the boolean value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the boolean value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setBoolean(final String parameterName, final Boolean x) throws SQLException {
         if (x == null) {
@@ -159,12 +160,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the byte.
+     * Sets the byte value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the byte value to set
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setByte(final String parameterName, final byte x) throws SQLException {
         cstmt.setByte(parameterName, x);
@@ -173,12 +174,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the byte.
+     * Sets the byte value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the byte value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setByte(final String parameterName, final Byte x) throws SQLException {
         if (x == null) {
@@ -191,12 +192,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the short.
+     * Sets the short value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the short value to set
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setShort(final String parameterName, final short x) throws SQLException {
         cstmt.setShort(parameterName, x);
@@ -205,12 +206,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the short.
+     * Sets the short value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the short value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setShort(final String parameterName, final Short x) throws SQLException {
         if (x == null) {
@@ -223,12 +224,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the int.
+     * Sets the int value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the int value to set
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setInt(final String parameterName, final int x) throws SQLException {
         cstmt.setInt(parameterName, x);
@@ -237,12 +238,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the int.
+     * Sets the int value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the int value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setInt(final String parameterName, final Integer x) throws SQLException {
         if (x == null) {
@@ -255,12 +256,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the long.
+     * Sets the long value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the long value to set
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setLong(final String parameterName, final long x) throws SQLException {
         cstmt.setLong(parameterName, x);
@@ -269,12 +270,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the long.
+     * Sets the long value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the long value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setLong(final String parameterName, final Long x) throws SQLException {
         if (x == null) {
@@ -287,12 +288,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the long.
+     * Sets the long value for the specified parameter using a BigInteger.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the BigInteger value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setLong(final String parameterName, final BigInteger x) throws SQLException {
         if (x == null) {
@@ -305,12 +306,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the float.
+     * Sets the float value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the float value to set
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setFloat(final String parameterName, final float x) throws SQLException {
         cstmt.setFloat(parameterName, x);
@@ -319,12 +320,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the float.
+     * Sets the float value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the float value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setFloat(final String parameterName, final Float x) throws SQLException {
         if (x == null) {
@@ -337,12 +338,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the double.
+     * Sets the double value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the double value to set
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setDouble(final String parameterName, final double x) throws SQLException {
         cstmt.setDouble(parameterName, x);
@@ -351,12 +352,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the double.
+     * Sets the double value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the double value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setDouble(final String parameterName, final Double x) throws SQLException {
         if (x == null) {
@@ -369,12 +370,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the big decimal.
+     * Sets the BigDecimal value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the BigDecimal value to set
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setBigDecimal(final String parameterName, final BigDecimal x) throws SQLException {
         cstmt.setBigDecimal(parameterName, x);
@@ -383,12 +384,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the big decimal.
+     * Sets the BigDecimal value for the specified parameter using a BigInteger.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the BigInteger value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setBigDecimal(final String parameterName, final BigInteger x) throws SQLException {
         if (x == null) {
@@ -401,15 +402,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the BigInteger.
+     * Sets the string value for the specified parameter using a BigInteger.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException
-     * @see {@link #setString(String, BigInteger)}
-     * @see {@link #setBigDecimal(String, BigInteger)}
-     * @see {@link #setLong(String, BigInteger)}
+     * @param parameterName the name of the parameter
+     * @param x the BigInteger value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
+     * @see #setString(String, BigInteger)
+     * @see #setBigDecimal(String, BigInteger)
+     * @see #setLong(String, BigInteger)
      */
     @Beta
     public CallableQuery setBigIntegerAsString(final String parameterName, final BigInteger x) throws SQLException {
@@ -527,12 +528,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the date.
+     * Sets the date value for the specified parameter using a LocalDate.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterName the name of the parameter
+     * @param x the LocalDate value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setDate(final String parameterName, final LocalDate x) throws SQLException {
         setDate(parameterName, x == null ? null : java.sql.Date.valueOf(x));
@@ -569,12 +570,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the time.
+     * Sets the time value for the specified parameter using a LocalTime.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterName the name of the parameter
+     * @param x the LocalTime value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTime(final String parameterName, final LocalTime x) throws SQLException {
         setTime(parameterName, x == null ? null : java.sql.Time.valueOf(x));
@@ -611,12 +612,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the timestamp.
+     * Sets the timestamp value for the specified parameter using a LocalDateTime.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterName the name of the parameter
+     * @param x the LocalDateTime value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTimestamp(final String parameterName, final LocalDateTime x) throws SQLException {
         setTimestamp(parameterName, x == null ? null : Timestamp.valueOf(x));
@@ -625,12 +626,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the timestamp.
+     * Sets the timestamp value for the specified parameter using a ZonedDateTime.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterName the name of the parameter
+     * @param x the ZonedDateTime value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTimestamp(final String parameterName, final ZonedDateTime x) throws SQLException {
         setTimestamp(parameterName, x == null ? null : Timestamp.from(x.toInstant()));
@@ -639,12 +640,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the timestamp.
+     * Sets the timestamp value for the specified parameter using an OffsetDateTime.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterName the name of the parameter
+     * @param x the OffsetDateTime value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTimestamp(final String parameterName, final OffsetDateTime x) throws SQLException {
         setTimestamp(parameterName, x == null ? null : Timestamp.from(x.toInstant()));
@@ -653,12 +654,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the timestamp.
+     * Sets the timestamp value for the specified parameter using an Instant.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterName the name of the parameter
+     * @param x the Instant value to set, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTimestamp(final String parameterName, final Instant x) throws SQLException {
         setTimestamp(parameterName, x == null ? null : Timestamp.from(x));
@@ -968,12 +969,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the object.
+     * Sets the object value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the object value to set
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setObject(final String parameterName, final Object x) throws SQLException {
         if (x == null) {
@@ -986,13 +987,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the object.
+     * Sets the object value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @param sqlType
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the object value to set
+     * @param sqlType the SQL type code defined in {@link java.sql.Types}
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
     public CallableQuery setObject(final String parameterName, final Object x, final int sqlType) throws SQLException {
@@ -1002,14 +1003,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the object.
+     * Sets the object value for the specified parameter.
      *
-     * @param parameterName
-     * @param x
-     * @param sqlType
-     * @param scaleOrLength
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param x the object value to set
+     * @param sqlType the SQL type code defined in {@link java.sql.Types}
+     * @param scaleOrLength the number of digits after the decimal point for numeric types, or the length for other types
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
     public CallableQuery setObject(final String parameterName, final Object x, final int sqlType, final int scaleOrLength) throws SQLException {
@@ -1019,12 +1020,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the CallableQuery.
      *
-     * @param parameters
-     * @return
-     * @throws IllegalArgumentException
-     * @throws SQLException the SQL exception
+     * @param parameters a map containing parameter names and their corresponding values
+     * @return the current instance of {@code CallableQuery}
+     * @throws IllegalArgumentException if the parameters map is null
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, s.parameters);
@@ -1037,17 +1038,17 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the CallableQuery using the specified entity and parameter names.
      *
-     * @param entity
-     * @param parameterNames
-     * @return
-     * @throws IllegalArgumentException
-     * @throws SQLException the SQL exception
-     * @see {@link ClassUtil#getPropNameList(Class)}
-     * @see {@link ClassUtil#getPropNameListExclusively(Class, Set)}
-     * @see {@link ClassUtil#getPropNameListExclusively(Class, Collection)}
-     * @see {@link JdbcUtil#getNamedParameters(String)}
+     * @param entity the entity object containing the parameters
+     * @param parameterNames a collection of parameter names to be set
+     * @return the current instance of {@code NamedQuery}
+     * @throws IllegalArgumentException if the entity or parameter names are null
+     * @throws SQLException if a database access error occurs
+     * @see ClassUtil#getPropNameList(Class)
+     * @see ClassUtil#getPropNames(Class, Collection)
+     * @see ClassUtil#getpropNames(Class, Set)
+     * @see JdbcUtil#getNamedParameters(String)
      */
     public CallableQuery setParameters(final Object entity, final List<String> parameterNames) throws IllegalArgumentException, SQLException {
         checkArgNotNull(entity, s.entity);
@@ -1066,12 +1067,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Register out parameter.
+     * Registers the specified parameter to be an OUT parameter.
      *
-     * @param parameterIndex starts from 1, not 0.
-     * @param sqlType
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterIndex the index of the parameter (starts from 1, not 0)
+     * @param sqlType the SQL type code defined in {@link java.sql.Types}
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
+     * @see java.sql.CallableStatement#registerOutParameter(int, int)
      * @see java.sql.Types
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType) throws SQLException {
@@ -1083,13 +1085,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Register out parameter.
+     * Registers the specified parameter to be an OUT parameter with a specified scale.
      *
-     * @param parameterIndex starts from 1, not 0.
-     * @param sqlType
-     * @param scale
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterIndex the index of the parameter (starts from 1, not 0)
+     * @param sqlType the SQL type code defined in {@link java.sql.Types}
+     * @param scale the number of digits to the right of the decimal point
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
+     * @see java.sql.CallableStatement#registerOutParameter(int, int, int
      * @see java.sql.Types
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType, final int scale) throws SQLException {
@@ -1101,13 +1104,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Register out parameter.
+     * Registers the specified parameter to be an OUT parameter with a specified type name.
      *
-     * @param parameterIndex starts from 1, not 0.
-     * @param sqlType
-     * @param typeName
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterIndex the index of the parameter (starts from 1, not 0)
+     * @param sqlType the SQL type code defined in {@link java.sql.Types}
+     * @param typeName the SQL type name
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
+     * @see java.sql.CallableStatement#registerOutParameter(int, int, String)
      * @see java.sql.Types
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType, final String typeName) throws SQLException {
@@ -1119,12 +1123,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Register out parameter.
+     * Registers the specified parameter to be an OUT parameter.
      *
-     * @param parameterName
-     * @param sqlType
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param sqlType the SQL type code defined in {@link java.sql.Types}
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
+     * @see java.sql.CallableStatement#registerOutParameter(String, int)
      * @see java.sql.Types
      */
     public CallableQuery registerOutParameter(final String parameterName, final int sqlType) throws SQLException {
@@ -1136,13 +1141,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Register out parameter.
+     * Registers the specified parameter to be an OUT parameter with a specified scale.
      *
-     * @param parameterName
-     * @param sqlType
-     * @param scale
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param sqlType the SQL type code defined in {@link java.sql.Types}
+     * @param scale the number of digits to the right of the decimal point
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
+     * @see java.sql.CallableStatement#registerOutParameter(String, int, int)
      * @see java.sql.Types
      */
     public CallableQuery registerOutParameter(final String parameterName, final int sqlType, final int scale) throws SQLException {
@@ -1154,13 +1160,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Register out parameter.
+     * Registers the specified parameter to be an OUT parameter with a specified type name.
      *
-     * @param parameterName
-     * @param sqlType
-     * @param typeName
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param sqlType the SQL type code defined in {@link java.sql.Types}
+     * @param typeName the SQL type name
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
+     * @see java.sql.CallableStatement#registerOutParameter(String, int, String)
      * @see java.sql.Types
      */
     public CallableQuery registerOutParameter(final String parameterName, final int sqlType, final String typeName) throws SQLException {
@@ -1172,12 +1179,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Register out parameter.
+     * Registers the specified parameter to be an OUT parameter.
      *
-     * @param parameterIndex starts from 1, not 0.
-     * @param sqlType
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterIndex the index of the parameter (starts from 1, not 0)
+     * @param sqlType the SQL type code defined in {@link java.sql.SQLType}
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
+     * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType)
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType);
@@ -1188,13 +1196,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Register out parameter.
+     * Registers the specified parameter to be an OUT parameter with a specified scale.
      *
-     * @param parameterIndex starts from 1, not 0.
-     * @param sqlType
-     * @param scale
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterIndex the index of the parameter (starts from 1, not 0)
+     * @param sqlType the SQL type code defined in {@link java.sql.SQLType}
+     * @param scale the number of digits to the right of the decimal point
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
+     * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType, int)
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType, final int scale) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType, scale);
@@ -1205,13 +1214,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Register out parameter.
+     * Registers the specified parameter to be an OUT parameter with a specified type name.
      *
-     * @param parameterIndex starts from 1, not 0.
-     * @param sqlType
-     * @param typeName
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterIndex the index of the parameter (starts from 1, not 0)
+     * @param sqlType the SQL type code defined in {@link java.sql.SQLType}
+     * @param typeName the SQL type name
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
+     * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType, String)
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType, final String typeName) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType, typeName);
@@ -1222,12 +1232,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Register out parameter.
+     * Registers the specified parameter to be an OUT parameter.
      *
-     * @param parameterName
-     * @param sqlType
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param sqlType the SQL type code defined in {@link java.sql.SQLType}
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
+     * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType)
      */
     public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType);
@@ -1238,13 +1249,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Register out parameter.
+     * Registers the specified parameter to be an OUT parameter with a specified scale.
      *
-     * @param parameterName
-     * @param sqlType
-     * @param scale
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param sqlType the SQL type code defined in {@link java.sql.SQLType}
+     * @param scale the number of digits to the right of the decimal point
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
+     * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType, int)
      */
     public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType, final int scale) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType, scale);
@@ -1255,13 +1267,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Register out parameter.
+     * Registers the specified parameter to be an OUT parameter with a specified type name.
      *
-     * @param parameterName
-     * @param sqlType
-     * @param typeName
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter
+     * @param sqlType the SQL type code defined in {@link java.sql.SQLType}
+     * @param typeName the SQL type name
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
+     * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType, String)
      */
     public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType, final String typeName) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType, typeName);
@@ -1272,12 +1285,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Register out parameters.
+     * Registers multiple OUT parameters using the specified ParametersSetter.
      *
-     * @param register
-     * @return
-     * @throws IllegalArgumentException
-     * @throws SQLException the SQL exception
+     * @param register the ParametersSetter to register the OUT parameters
+     * @return the current instance of {@code CallableQuery}
+     * @throws IllegalArgumentException if the register is null
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery registerOutParameters(final Jdbc.ParametersSetter<? super CallableQuery> register) throws IllegalArgumentException, SQLException {
         checkArgNotNull(register, s.register);
@@ -1298,13 +1311,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Register out parameters.
+     * Registers multiple OUT parameters using the specified BiParametersSetter.
      *
-     * @param <T>
-     * @param parameter
-     * @param register
-     * @return
-     * @throws SQLException the SQL exception
+     * @param <T> the type of the parameter
+     * @param parameter the parameter to be used in the BiParametersSetter
+     * @param register the BiParametersSetter to register the OUT parameters
+     * @return the current instance of {@code CallableQuery}
+     * @throws SQLException if a database access error occurs
      */
     public <T> CallableQuery registerOutParameters(final T parameter, final Jdbc.BiParametersSetter<? super CallableQuery, ? super T> register)
             throws SQLException {
@@ -1355,12 +1368,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Execute then apply.
+     * Executes the CallableStatement and applies the provided function to the result.
      *
-     * @param <R>
-     * @param getter
-     * @return
-     * @throws SQLException the SQL exception
+     * @param <R> the type of the result
+     * @param getter the function to apply to the CallableStatement
+     * @return the result of applying the function to the CallableStatement
+     * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
@@ -1371,12 +1384,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Execute then apply.
+     * Executes the CallableStatement and applies the provided BiFunction to the result.
      *
-     * @param <R>
-     * @param getter
-     * @return
-     * @throws SQLException the SQL exception
+     * @param <R> the type of the result
+     * @param getter the BiFunction to apply to the CallableStatement. The first parameter indicates if the first result is a {@code ResultSet} object,
+     *                 the second parameter is the executed {@code CallableStatement}.
+     * @return the result of applying the BiFunction to the CallableStatement
+     * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
@@ -1387,12 +1401,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Execute then apply.
+     * Executes the CallableStatement and applies the provided TriFunction to the result.
      *
-     * @param <R>
-     * @param getter the first parameter is {@code isFirstResultSet}, the second one is {@code outParametes} and third one is the executed {@code CallableStatement}.
-     * @return
-     * @throws SQLException the SQL exception
+     * @param <R> the type of the result
+     * @param getter the TriFunction to apply to the CallableStatement. The first parameter indicates if the first result is a {@code ResultSet} object,
+     *               the second parameter is the list of OUT parameters, and the third parameter is the executed {@code CallableStatement}.
+     * @return the result of applying the TriFunction to the CallableStatement
+     * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
@@ -1413,10 +1428,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Execute then accept.
+     * Executes the CallableStatement and applies the provided consumer to the statement.
      *
-     * @param consumer
-     * @throws SQLException the SQL exception
+     * @param consumer the consumer to apply to the CallableStatement
+     * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
@@ -1427,10 +1442,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Execute then accept.
+     * Executes the CallableStatement and applies the provided BiConsumer to the statement.
      *
-     * @param consumer
-     * @throws SQLException the SQL exception
+     * @param consumer the BiConsumer to apply to the CallableStatement. The first parameter indicates if the first result is a {@code ResultSet} object,
+     *                 the second parameter is the executed {@code CallableStatement}.
+     * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
@@ -1441,10 +1457,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Execute then apply.
+     * Executes the CallableStatement and applies the provided TriConsumer to the statement.
      *
-     * @param consumer the first parameter is {@code isFirstResultSet}, the second one is {@code outParametes} and third one is the executed {@code CallableStatement}.
-     * @throws SQLException the SQL exception
+     * @param consumer the TriConsumer to apply to the CallableStatement. The first parameter indicates if the first result is a {@code ResultSet} object,
+     *                 the second parameter is the list of OUT parameters, and the third parameter is the executed {@code CallableStatement}.
+     * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
      * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
@@ -1465,11 +1482,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     *
+     * Executes the stored procedure and returns the out parameters.
      *
      * @return a list of {@code Out Parameters}.
      * @throws IllegalStateException if this is closed
-     * @throws SQLException
+     * @throws SQLException if a database access error occurs
      */
     public Jdbc.OutParamResult executeAndGetOutParameters() throws IllegalStateException, SQLException {
         assertNotClosed();
@@ -1503,7 +1520,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param resultExtractor The ResultExtractor to use for converting the result set to an object of type R.
      * @return A Tuple2 object where the first element is an object of type R that represents the result set returned by the stored procedure,
      *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
-     * @throws IllegalArgumentException if resultExtractor is {@code null}.
+     * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}.
      * @throws IllegalStateException if this method is called on a closed CallableStatement.
      * @throws SQLException if a database access error occurs.
      */
@@ -1527,14 +1544,16 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns the result set and out parameters.
+     * The result set is converted to a type R object using the provided BiResultExtractor.
      *
-     *
-     * @param <R>
-     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return the {@code R} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException
-     * @throws IllegalStateException if this is closed
-     * @throws SQLException
+     * @param <R> The type of the object that the result set will be converted to.
+     * @param resultExtractor The BiResultExtractor to use for converting the result set to an object of type R.
+     * @return A Tuple2 object where the first element is an object of type R that represents the result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}.
+     * @throws IllegalStateException if this method is called on a closed CallableStatement.
+     * @throws SQLException if a database access error occurs.
      */
     public <R> Tuple2<R, Jdbc.OutParamResult> queryAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R> resultExtractor)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -1556,7 +1575,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Executes the stored procedure and returns multiple result sets and out parameters.
+     * Executes the stored procedure and returns all result sets and out parameters.
      * Each result set is converted to a DataSet object.
      *
      * @return A Tuple2 object where the first element is a List of DataSet objects, each representing a result set returned by the stored procedure,
@@ -1568,11 +1587,16 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns all result sets and out parameters.
+     * Each result set is converted to a type R object using the provided ResultExtractor.
      *
-     * @param <R>
-     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @param <R> The type of the object that each result set will be converted to.
+     * @param resultExtractor The ResultExtractor to use for converting each result set to an object of type R. Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @return A Tuple2 object where the first element is a List of objects of type R, each representing a result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}.
+     * @throws IllegalStateException if this method is called on a closed CallableStatement.
+     * @throws SQLException if a database access error occurs.
      */
     public <R> Tuple2<List<R>, Jdbc.OutParamResult> queryAllResultsetsAndGetOutParameters(final Jdbc.ResultExtractor<? extends R> resultExtractor)
             throws SQLException {
@@ -1605,11 +1629,16 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns all result sets and out parameters.
+     * Each result set is converted to a type R object using the provided BiResultExtractor.
      *
-     * @param <R>
-     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return a list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @param <R> The type of the object that each result set will be converted to.
+     * @param resultExtractor The BiResultExtractor to use for converting each result set to an object of type R. Don't save/return {@code ResultSet}. It will be closed after this call.
+     * @return A Tuple2 object where the first element is a List of objects of type R, each representing a result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}.
+     * @throws IllegalStateException if this method is called on a closed CallableStatement.
+     * @throws SQLException if a database access error occurs.
      */
     public <R> Tuple2<List<R>, Jdbc.OutParamResult> queryAllResultsetsAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R> resultExtractor)
             throws SQLException {
@@ -1642,16 +1671,19 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns the first two result sets and out parameters.
+     * Each result set is converted to a type R1 and R2 object using the provided BiResultExtractors.
      *
-     *
-     * @param <R1>
-     * @param <R2>
-     * @param resultExtractor1 Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @param resultExtractor2 Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return {@code R1/R2} extracted from the first two {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException
-     * @throws IllegalStateException if this is closed
-     * @throws SQLException
+     * @param <R1> The type of the object that the first result set will be converted to.
+     * @param <R2> The type of the object that the second result set will be converted to.
+     * @param resultExtractor1 The BiResultExtractor to use for converting the first result set to an object of type R1.
+     * @param resultExtractor2 The BiResultExtractor to use for converting the second result set to an object of type R2.
+     * @return A Tuple3 object where the first element is an object of type R1 that represents the first result set returned by the stored procedure,
+     *         the second element is an object of type R2 that represents the second result set returned by the stored procedure,
+     *         and the third element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if resultExtractor1 or resultExtractor2 is {@code null}.
+     * @throws IllegalStateException if this method is called on a closed CallableStatement.
+     * @throws SQLException if a database access error occurs.
      */
     @Beta
     public <R1, R2> Tuple3<R1, R2, Jdbc.OutParamResult> query2ResultsetsAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
@@ -1691,18 +1723,22 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns the first three result sets and out parameters.
+     * Each result set is converted to a type R1, R2, and R3 object using the provided BiResultExtractors.
      *
-     *
-     * @param <R1>
-     * @param <R2>
-     * @param <R3>
-     * @param resultExtractor1 Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @param resultExtractor2 Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @param resultExtractor3 Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return {@code R1/R2/R3} extracted from the first three {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException
-     * @throws IllegalStateException if this is closed
-     * @throws SQLException
+     * @param <R1> The type of the object that the first result set will be converted to.
+     * @param <R2> The type of the object that the second result set will be converted to.
+     * @param <R3> The type of the object that the third result set will be converted to.
+     * @param resultExtractor1 The BiResultExtractor to use for converting the first result set to an object of type R1.
+     * @param resultExtractor2 The BiResultExtractor to use for converting the second result set to an object of type R2.
+     * @param resultExtractor3 The BiResultExtractor to use for converting the third result set to an object of type R3.
+     * @return A Tuple4 object where the first element is an object of type R1 that represents the first result set returned by the stored procedure,
+     *         the second element is an object of type R2 that represents the second result set returned by the stored procedure,
+     *         the third element is an object of type R3 that represents the third result set returned by the stored procedure,
+     *         and the fourth element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if resultExtractor1, resultExtractor2, or resultExtractor3 is {@code null}.
+     * @throws IllegalStateException if this method is called on a closed CallableStatement.
+     * @throws SQLException if a database access error occurs.
      */
     @Beta
     public <R1, R2, R3> Tuple4<R1, R2, R3, Jdbc.OutParamResult> query3ResultsetsAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
@@ -1749,13 +1785,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns the result set and out parameters.
+     * The result set is converted to a list of objects of type T using the provided target type.
      *
-     *
-     * @param <T>
-     * @param targetType
-     * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException
-     * @throws SQLException
+     * @param <T> The type of the object that the result set will be converted to.
+     * @param targetType The class of the type T to which the result set will be converted.
+     * @return A Tuple2 object where the first element is a List of objects of type T, each representing a row in the result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if targetType is {@code null}.
+     * @throws SQLException if a database access error occurs.
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Class<? extends T> targetType) throws IllegalArgumentException, SQLException {
         checkArgNotNull(targetType, s.targetType);
@@ -1764,14 +1802,16 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns the result set and out parameters.
+     * The result set is converted to a list of objects of type T using the provided RowMapper.
      *
-     *
-     * @param <T>
-     * @param rowMapper
-     * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException
-     * @throws IllegalStateException if this is closed
-     * @throws SQLException
+     * @param <T> The type of the object that the result set will be converted to.
+     * @param rowMapper The RowMapper to use for converting the result set to a list of objects of type T.
+     * @return A Tuple2 object where the first element is a List of objects of type T, each representing a row in the result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}.
+     * @throws IllegalStateException if this method is called on a closed CallableStatement.
+     * @throws SQLException if a database access error occurs.
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -1795,12 +1835,17 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns the result set and out parameters.
+     * The result set is filtered using the provided RowFilter and converted to a list of objects of type T using the provided RowMapper.
      *
-     * @param <T>
-     * @param rowFilter
-     * @param rowMapper
-     * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @param <T> The type of the object that the result set will be converted to.
+     * @param rowFilter The RowFilter to use for filtering the result set.
+     * @param rowMapper The RowMapper to use for converting the result set to a list of objects of type T.
+     * @return A Tuple2 object where the first element is a List of objects of type T, each representing a row in the filtered result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}.
+     * @throws IllegalStateException if this method is called on a closed CallableStatement.
+     * @throws SQLException if a database access error occurs.
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
             throws SQLException {
@@ -1827,14 +1872,16 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns the result set and out parameters.
+     * The result set is converted to a list of objects of type T using the provided BiRowMapper.
      *
-     *
-     * @param <T>
-     * @param rowMapper
-     * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException
-     * @throws IllegalStateException if this is closed
-     * @throws SQLException
+     * @param <T> The type of the object that the result set will be converted to.
+     * @param rowMapper The BiRowMapper to use for converting the result set to a list of objects of type T.
+     * @return A Tuple2 object where the first element is a List of objects of type T, each representing a row in the result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}.
+     * @throws IllegalStateException if this method is called on a closed CallableStatement.
+     * @throws SQLException if a database access error occurs.
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -1860,12 +1907,17 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns the result set and out parameters.
+     * The result set is filtered using the provided BiRowFilter and converted to a list of objects of type T using the provided BiRowMapper.
      *
-     * @param <T>
-     * @param rowFilter
-     * @param rowMapper
-     * @return the {@code List<T>} extracted from first {@code ResultSet} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @param <T> The type of the object that the result set will be converted to.
+     * @param rowFilter The BiRowFilter to use for filtering the result set.
+     * @param rowMapper The BiRowMapper to use for converting the result set to a list of objects of type T.
+     * @return A Tuple2 object where the first element is a List of objects of type T, each representing a row in the filtered result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}.
+     * @throws IllegalStateException if this method is called on a closed CallableStatement.
+     * @throws SQLException if a database access error occurs.
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws SQLException {
@@ -1894,14 +1946,16 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns all result sets and out parameters.
+     * Each result set is converted to a list of objects of type T using the provided target type.
      *
-     *
-     * @param <T>
-     * @param targetType
-     * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException
-     * @throws IllegalStateException if this is closed
-     * @throws SQLException
+     * @param <T> The type of the object that each result set will be converted to.
+     * @param targetType The class of the type T to which each result set will be converted.
+     * @return A Tuple2 object where the first element is a List of Lists of objects of type T, each representing a result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if targetType is {@code null}.
+     * @throws IllegalStateException if this method is called on a closed CallableStatement.
+     * @throws SQLException if a database access error occurs.
      */
     public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listAllResultsetsAndGetOutParameters(final Class<? extends T> targetType)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -1920,14 +1974,19 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns all result sets and out parameters.
+     * Each result set is converted to a list of objects of type T using the provided RowMapper.
      *
-     * @param <T>
-     * @param rowMapper
-     * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @param <T> The type of the object that each result set will be converted to.
+     * @param rowMapper The RowMapper to use for converting each result set to a list of objects of type T.
+     * @return A Tuple2 object where the first element is a List of Lists of objects of type T, each representing a result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}.
+     * @throws IllegalStateException if this method is called on a closed CallableStatement.
+     * @throws SQLException if a database access error occurs.
      */
     public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listAllResultsetsAndGetOutParameters(final Jdbc.RowMapper<? extends T> rowMapper)
-            throws SQLException {
+            throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
@@ -1943,15 +2002,17 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns all result sets and out parameters.
+     * Each result set is filtered using the provided RowFilter and converted to a list of objects of type T using the provided RowMapper.
      *
-     *
-     * @param <T>
-     * @param rowFilter
-     * @param rowMapper
-     * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException
-     * @throws IllegalStateException if this is closed
-     * @throws SQLException
+     * @param <T> The type of the object that each result set will be converted to.
+     * @param rowFilter The RowFilter to use for filtering each result set.
+     * @param rowMapper The RowMapper to use for converting each result set to a list of objects of type T.
+     * @return A Tuple2 object where the first element is a List of Lists of objects of type T, each representing a result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}.
+     * @throws IllegalStateException if this method is called on a closed CallableStatement.
+     * @throws SQLException if a database access error occurs.
      */
     public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listAllResultsetsAndGetOutParameters(final Jdbc.RowFilter rowFilter,
             final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -1971,14 +2032,19 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns all result sets and out parameters.
+     * Each result set is converted to a list of objects of type T using the provided BiRowMapper.
      *
-     * @param <T>
-     * @param rowMapper
-     * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws SQLException
+     * @param <T> The type of the object that each result set will be converted to.
+     * @param rowMapper The BiRowMapper to use for converting each result set to a list of objects of type T.
+     * @return A Tuple2 object where the first element is a List of Lists of objects of type T, each representing a result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}.
+     * @throws IllegalStateException if this method is called on a closed CallableStatement.
+     * @throws SQLException if a database access error occurs.
      */
     public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listAllResultsetsAndGetOutParameters(final Jdbc.BiRowMapper<? extends T> rowMapper)
-            throws SQLException {
+            throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
@@ -1994,15 +2060,17 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Executes the stored procedure and returns all result sets and out parameters.
+     * Each result set is filtered using the provided BiRowFilter and converted to a list of objects of type T using the provided BiRowMapper.
      *
-     *
-     * @param <T>
-     * @param rowFilter
-     * @param rowMapper
-     * @return the {@code List<T>} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException
-     * @throws IllegalStateException if this is closed
-     * @throws SQLException
+     * @param <T> The type of the object that each result set will be converted to.
+     * @param rowFilter The BiRowFilter to use for filtering each result set.
+     * @param rowMapper The BiRowMapper to use for converting each result set to a list of objects of type T.
+     * @return A Tuple2 object where the first element is a List of Lists of objects of type T, each representing a result set returned by the stored procedure,
+     *         and the second element is a Jdbc.OutParamResult object that contains the out parameters returned by the stored procedure.
+     * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}.
+     * @throws IllegalStateException if this method is called on a closed CallableStatement.
+     * @throws SQLException if a database access error occurs.
      */
     public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listAllResultsetsAndGetOutParameters(final Jdbc.BiRowFilter rowFilter,
             final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException, SQLException {

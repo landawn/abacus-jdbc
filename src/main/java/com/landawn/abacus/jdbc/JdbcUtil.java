@@ -125,10 +125,11 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see {@link com.landawn.abacus.annotation.Transient}
  * @see {@link com.landawn.abacus.annotation.Table}
  * @see {@link com.landawn.abacus.annotation.Column}
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html</a>
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html</a>
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html">http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html</a>
+ *
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Connection.html">Connection</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Statement.html">Statement</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/PreparedStatement.html">PreparedStatement</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/ResultSet.html">ResultSet</a>
  */
 @SuppressWarnings({ "java:S1192", "java:S6539" })
 public final class JdbcUtil {
@@ -199,11 +200,11 @@ public final class JdbcUtil {
     }
 
     /**
+     * Retrieves the database product information from the given DataSource.
      *
-     *
-     * @param ds
-     * @return
-     * @throws UncheckedSQLException
+     * @param ds The DataSource from which to retrieve the database product information.
+     * @return The database product information.
+     * @throws UncheckedSQLException If a SQL exception occurs while retrieving the database product information.
      */
     public static DBProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws UncheckedSQLException {
         Connection conn = null;
@@ -219,11 +220,11 @@ public final class JdbcUtil {
     }
 
     /**
+     * Retrieves the database product information from the given connection.
      *
-     *
-     * @param conn
-     * @return
-     * @throws UncheckedSQLException
+     * @param conn The connection to the database.
+     * @return The database product information.
+     * @throws UncheckedSQLException If a SQL exception occurs while retrieving the database product information.
      */
     public static DBProductInfo getDBProductInfo(final Connection conn) throws UncheckedSQLException {
         try {
@@ -296,12 +297,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * Creates the DataSource.
+     * Creates a HikariCP DataSource with the specified database connection details.
      *
-     * @param url
-     * @param user
-     * @param password
-     * @return
+     * @param url The JDBC URL for the database connection.
+     * @param user The username for the database connection.
+     * @param password The password for the database connection.
+     * @return A DataSource configured with the specified connection details.
      */
     public static javax.sql.DataSource createHikariDataSource(final String url, final String user, final String password) {
         try {
@@ -317,13 +318,14 @@ public final class JdbcUtil {
     }
 
     /**
-     * Creates the DataSource.
+     * Creates a C3P0 DataSource with the specified database connection details.
      *
-     * @param url
-     * @param user
-     * @param password
-     * @return
+     * @param url The JDBC URL for the database connection.
+     * @param user The username for the database connection.
+     * @param password The password for the database connection.
+     * @return A DataSource configured with the specified connection details.
      */
+    @Beta
     public static javax.sql.DataSource createC3p0DataSource(final String url, final String user, final String password) {
         try {
             final com.mchange.v2.c3p0.ComboPooledDataSource cpds = new com.mchange.v2.c3p0.ComboPooledDataSource();
@@ -338,27 +340,27 @@ public final class JdbcUtil {
     }
 
     /**
-     * Creates the connection.
+     * Creates a connection to the database using the specified URL, username, and password.
      *
-     * @param url
-     * @param user
-     * @param password
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @param url The JDBC URL for the database connection.
+     * @param user The username for the database connection.
+     * @param password The password for the database connection.
+     * @return A Connection object that represents a connection to the database.
+     * @throws UncheckedSQLException If a SQL exception occurs while creating the connection.
      */
     public static Connection createConnection(final String url, final String user, final String password) throws UncheckedSQLException {
         return createConnection(getDriverClasssByUrl(url), url, user, password);
     }
 
     /**
-     * Creates the connection.
+     * Creates a connection to the database using the specified driver class, URL, username, and password.
      *
-     * @param driverClass
-     * @param url
-     * @param user
-     * @param password
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @param driverClass The fully qualified name of the JDBC driver class.
+     * @param url The JDBC URL for the database connection.
+     * @param user The username for the database connection.
+     * @param password The password for the database connection.
+     * @return A Connection object that represents a connection to the database.
+     * @throws UncheckedSQLException If a SQL exception occurs while creating the connection.
      */
     public static Connection createConnection(final String driverClass, final String url, final String user, final String password)
             throws UncheckedSQLException {
@@ -368,14 +370,14 @@ public final class JdbcUtil {
     }
 
     /**
-     * Creates the connection.
+     * Creates a connection to the database using the specified driver class, URL, username, and password.
      *
-     * @param driverClass
-     * @param url
-     * @param user
-     * @param password
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @param driverClass The fully qualified name of the JDBC driver class.
+     * @param url The JDBC URL for the database connection.
+     * @param user The username for the database connection.
+     * @param password The password for the database connection.
+     * @return A Connection object that represents a connection to the database.
+     * @throws UncheckedSQLException If a SQL exception occurs while creating the connection.
      */
     public static Connection createConnection(final Class<? extends Driver> driverClass, final String url, final String user, final String password)
             throws UncheckedSQLException {
@@ -437,13 +439,14 @@ public final class JdbcUtil {
     }
 
     /**
-     * Spring Transaction is supported and Integrated.
-     * If this method is called where a Spring transaction is started with the specified {@code DataSource},
-     * the {@code Connection} started the Spring Transaction will be returned. Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be returned.
+     * Retrieves a connection from the specified DataSource.
+     * If Spring transaction management is enabled and a transaction is active,
+     * it will return the connection associated with the current transaction.
+     * Otherwise, it will return a new connection from the DataSource.
      *
-     * @param ds
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @param ds The DataSource from which to retrieve the connection.
+     * @return A Connection object that represents a connection to the database.
+     * @throws UncheckedSQLException If a SQL exception occurs while retrieving the connection.
      */
     public static Connection getConnection(final javax.sql.DataSource ds) throws UncheckedSQLException {
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
@@ -468,12 +471,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Spring Transaction is supported and Integrated.
-     * If this method is called where a Spring transaction is started with the specified {@code DataSource},
-     * the specified {@code Connection} won't be returned to {@code DataSource}(Connection pool) until the transaction is committed or rolled back. Otherwise the specified {@code Connection} will be directly returned back to {@code DataSource}(Connection pool).
+     * Releases the given connection back to the DataSource.
+     * If Spring transaction management is enabled and a transaction is active,
+     * it will release the connection associated with the current transaction.
+     * Otherwise, it will close the connection directly.
      *
-     * @param conn
-     * @param ds
+     * @param conn The Connection to be released.
+     * @param ds The DataSource from which the connection was obtained.
      */
     public static void releaseConnection(final Connection conn, final javax.sql.DataSource ds) {
         if (conn == null) {
@@ -822,11 +826,12 @@ public final class JdbcUtil {
     }
 
     /**
+     * Skips the specified number of rows in the given ResultSet.
      *
-     * @param rs
-     * @param n the count of row to move ahead.
-     * @return
-     * @throws SQLException
+     * @param rs The ResultSet to skip rows in.
+     * @param n The number of rows to skip.
+     * @return The number of rows actually skipped.
+     * @throws SQLException If a SQL exception occurs while skipping rows.
      */
     public static int skip(final ResultSet rs, final int n) throws SQLException {
         return skip(rs, (long) n);
@@ -835,12 +840,13 @@ public final class JdbcUtil {
     private static final Set<Class<?>> resultSetClassNotSupportAbsolute = ConcurrentHashMap.newKeySet();
 
     /**
+     * Skips the specified number of rows in the given ResultSet.
      *
-     * @param rs
-     * @param n the count of row to move ahead.
-     * @return
-     * @throws SQLException
-     * @see {@link ResultSet#absolute(int)}
+     * @param rs The ResultSet to skip rows in.
+     * @param n The number of rows to skip.
+     * @return The number of rows actually skipped.
+     * @throws SQLException If a SQL exception occurs while skipping rows.
+     * @see ResultSet#absolute(int)
      */
     public static int skip(final ResultSet rs, long n) throws SQLException {
         if (n <= 0) {
@@ -1073,24 +1079,26 @@ public final class JdbcUtil {
             val);
 
     /**
-     * Gets the column value.
+     * Retrieves the value of the specified column in the current row of the given ResultSet.
      *
-     * @param rs
-     * @param columnIndex starts with 1, not 0.
-     * @return
-     * @throws SQLException
+     * @param rs The ResultSet from which to retrieve the column value.
+     * @param columnIndex The index of the column to retrieve, starting from 1.
+     * @return The value of the specified column in the current row of the ResultSet.
+     * @throws SQLException If a SQL exception occurs while retrieving the column value.
      */
     public static Object getColumnValue(final ResultSet rs, final int columnIndex) throws SQLException {
         return getColumnValue(rs, columnIndex, true);
     }
 
     /**
+     * Retrieves the value of the specified column in the current row of the given ResultSet.
+     * This method also checks the data type of the column value if specified.
      *
-     * @param rs
-     * @param columnIndex starts with 1, not 0.
-     * @param checkDateType
-     * @return
-     * @throws SQLException
+     * @param rs The ResultSet from which to retrieve the column value.
+     * @param columnIndex The index of the column to retrieve, starting from 1.
+     * @param checkDateType Whether to check the data type of the column value.
+     * @return The value of the specified column in the current row of the ResultSet.
+     * @throws SQLException If a SQL exception occurs while retrieving the column value.
      */
     static Object getColumnValue(final ResultSet rs, final int columnIndex, final boolean checkDateType) throws SQLException {
         // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
@@ -1113,13 +1121,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the column value.
+     * Retrieves the value of the specified column in the current row of the given ResultSet.
      *
-     * @param rs
-     * @param columnLabel
-     * @return
-     * @throws SQLException
-     * @deprecated please consider using {@link #getColumnValue(ResultSet, int)}
+     * @param rs The ResultSet from which to retrieve the column value.
+     * @param columnLabel The label of the column to retrieve.
+     * @return The value of the specified column in the current row of the ResultSet.
+     * @throws SQLException If a SQL exception occurs while retrieving the column value.
+     * @deprecated Please consider using {@link #getColumnValue(ResultSet, int)} instead.
      */
     @Deprecated
     public static Object getColumnValue(final ResultSet rs, final String columnLabel) throws SQLException {
@@ -1157,13 +1165,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the column value.
+     * Retrieves all values of the specified column in the given ResultSet.
      *
-     * @param <T>
-     * @param rs
-     * @param columnIndex starts with 1, not 0.
-     * @return
-     * @throws SQLException
+     * @param <T> The type of the column values.
+     * @param rs The ResultSet from which to retrieve the column values.
+     * @param columnIndex The index of the column to retrieve, starting from 1.
+     * @return A list of all values in the specified column.
+     * @throws SQLException If a SQL exception occurs while retrieving the column values.
      */
     public static <T> List<T> getAllColumnValues(final ResultSet rs, final int columnIndex) throws SQLException {
         // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
@@ -1252,13 +1260,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the column value.
+     * Retrieves all values of the specified column in the given ResultSet.
      *
-     * @param <T>
-     * @param rs
-     * @param columnLabel
-     * @return
-     * @throws SQLException
+     * @param <T> The type of the column values.
+     * @param rs The ResultSet from which to retrieve the column values.
+     * @param columnLabel The label of the column to retrieve.
+     * @return A list of all values in the specified column.
+     * @throws SQLException If a SQL exception occurs while retrieving the column values.
      */
     public static <T> List<T> getAllColumnValues(final ResultSet rs, final String columnLabel) throws SQLException {
         final int columnIndex = JdbcUtil.getColumnIndex(rs, columnLabel);
@@ -1271,29 +1279,29 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the column value.
+     * Retrieves the value of the specified column in the current row of the given ResultSet.
      *
-     * @param <T>
-     * @param rs
-     * @param columnIndex
-     * @param targetClass
-     * @return
-     * @throws SQLException
+     * @param <T> The type of the column value.
+     * @param rs The ResultSet from which to retrieve the column value.
+     * @param columnIndex The index of the column to retrieve, starting from 1.
+     * @param targetClass The class of the column value to retrieve.
+     * @return The value of the specified column in the current row of the ResultSet.
+     * @throws SQLException If a SQL exception occurs while retrieving the column value.
      */
     public static <T> T getColumnValue(final ResultSet rs, final int columnIndex, final Class<? extends T> targetClass) throws SQLException {
         return N.<T> typeOf(targetClass).get(rs, columnIndex);
     }
 
     /**
-     * Gets the column value.
+     * Retrieves the value of the specified column in the current row of the given ResultSet.
      *
-     * @param <T>
-     * @param rs
-     * @param columnLabel
-     * @param targetClass
-     * @return
-     * @throws SQLException
-     * @deprecated please consider using {@link #getColumnValue(ResultSet, int, Class)}
+     * @param <T> The type of the column value.
+     * @param rs The ResultSet from which to retrieve the column value.
+     * @param columnLabel The label of the column to retrieve.
+     * @param targetClass The class of the column value to retrieve.
+     * @return The value of the specified column in the current row of the ResultSet.
+     * @throws SQLException If a SQL exception occurs while retrieving the column value.
+     * @deprecated Please consider using {@link #getColumnValue(ResultSet, int, Class)} instead.
      */
     @Deprecated
     public static <T> T getColumnValue(final ResultSet rs, final String columnLabel, final Class<? extends T> targetClass) throws SQLException {
@@ -1333,19 +1341,20 @@ public final class JdbcUtil {
     //    }
 
     /**
+     * Retrieves a mapping of column names to field names for the specified entity class.
      *
-     *
-     * @param entityClass
-     * @return
+     * @param entityClass The class of the entity for which to retrieve the column-to-field name mapping.
+     * @return An immutable map where the keys are column names and the values are field names.
      */
     public static ImmutableMap<String, String> getColumn2FieldNameMap(final Class<?> entityClass) {
         return QueryUtil.getColumn2PropNameMap(entityClass);
     }
 
     /**
+     * Checks if there is an active transaction for the given DataSource in current thread.
      *
-     * @param ds
-     * @return
+     * @param ds The DataSource to check for an active transaction.
+     * @return {@code true} if there is an active transaction, {@code false} otherwise.
      */
     public static boolean isInTransaction(final javax.sql.DataSource ds) {
         if (SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL) != null) {
@@ -1370,25 +1379,25 @@ public final class JdbcUtil {
     }
 
     /**
-     * Refer to: {@code beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}.
+     * Begins a new transaction for the given DataSource.
      *
-     * @param dataSource
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @see {@link #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}
+     * @param dataSource The DataSource for which to begin the transaction.
+     * @return A SQLTransaction object representing the new transaction.
+     * @throws UncheckedSQLException If a SQL exception occurs while beginning the transaction.
+     * @see #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
      */
     public static SQLTransaction beginTransaction(final javax.sql.DataSource dataSource) throws UncheckedSQLException {
         return beginTransaction(dataSource, IsolationLevel.DEFAULT);
     }
 
     /**
-     * Refer to: {@code beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}.
+     * Begins a new transaction for the given DataSource with the specified isolation level.
      *
-     * @param dataSource
-     * @param isolationLevel
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @see {@link #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}
+     * @param dataSource The DataSource for which to begin the transaction.
+     * @param isolationLevel The isolation level for the transaction.
+     * @return A SQLTransaction object representing the new transaction.
+     * @throws UncheckedSQLException If a SQL exception occurs while beginning the transaction.
+     * @see #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
      */
     public static SQLTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel) throws UncheckedSQLException {
         return beginTransaction(dataSource, isolationLevel, false);
@@ -1521,15 +1530,17 @@ public final class JdbcUtil {
     }
 
     /**
+     * Executes the given command within a transaction for the specified DataSource.
+     * If the command completes successfully, the transaction is committed.
+     * If an exception occurs, the transaction is rolled back.
      *
-     *
-     * @param <T>
-     * @param <E>
-     * @param dataSource
-     * @param cmd
-     * @return
-     * @throws IllegalArgumentException
-     * @throws E
+     * @param <T> The type of the result returned by the command.
+     * @param <E> The type of exception that the command may throw.
+     * @param dataSource The DataSource for which to begin the transaction.
+     * @param cmd The command to execute within the transaction.
+     * @return The result of the command execution.
+     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws E If the command throws an exception.
      */
     @Beta
     public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd)
@@ -1551,13 +1562,17 @@ public final class JdbcUtil {
     }
 
     /**
+     * Executes the given command within a transaction for the specified DataSource.
+     * If the command completes successfully, the transaction is committed.
+     * If an exception occurs, the transaction is rolled back.
      *
-     * @param <T>
-     * @param <E>
-     * @param dataSource
-     * @param cmd
-     * @return
-     * @throws E
+     * @param <T> The type of the result returned by the command.
+     * @param <E> The type of exception that the command may throw.
+     * @param dataSource The DataSource for which to begin the transaction.
+     * @param cmd The command to execute within the transaction.
+     * @return The result of the command execution.
+     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws E If the command throws an exception.
      */
     @Beta
     public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource dataSource, final Throwables.Function<Connection, T, E> cmd)
@@ -1579,13 +1594,15 @@ public final class JdbcUtil {
     }
 
     /**
+     * Executes the given command within a transaction for the specified DataSource.
+     * If the command completes successfully, the transaction is committed.
+     * If an exception occurs, the transaction is rolled back.
      *
-     *
-     * @param <E>
-     * @param dataSource
-     * @param cmd
-     * @throws IllegalArgumentException
-     * @throws E
+     * @param <E> The type of exception that the command may throw.
+     * @param dataSource The DataSource for which to begin the transaction.
+     * @param cmd The command to execute within the transaction.
+     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws E If the command throws an exception.
      */
     @Beta
     public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd)
@@ -1604,13 +1621,15 @@ public final class JdbcUtil {
     }
 
     /**
+     * Executes the given command within a transaction for the specified DataSource.
+     * If the command completes successfully, the transaction is committed.
+     * If an exception occurs, the transaction is rolled back.
      *
-     *
-     * @param <E>
-     * @param dataSource
-     * @param cmd
-     * @throws IllegalArgumentException
-     * @throws E
+     * @param <E> The type of exception that the command may throw.
+     * @param dataSource The DataSource for which to begin the transaction.
+     * @param cmd The command to execute within the transaction.
+     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws E If the command throws an exception.
      */
     @Beta
     public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Consumer<Connection, E> cmd)
@@ -1629,15 +1648,16 @@ public final class JdbcUtil {
     }
 
     /**
+     * Executes the given command outside of any started transaction for the specified DataSource.
+     * If a transaction is already started, a new connection which is not used to started transaction will be used to execute the command.
      *
-     *
-     * @param <T>
-     * @param <E>
-     * @param dataSource
-     * @param cmd
-     * @return
-     * @throws IllegalArgumentException
-     * @throws E
+     * @param <T> The type of the result returned by the command.
+     * @param <E> The type of exception that the command may throw.
+     * @param dataSource The DataSource for which to execute the command.
+     * @param cmd The command to execute outside of any started transaction.
+     * @return The result of the command execution.
+     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws E If the command throws an exception.
      */
     @Beta
     public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd)
@@ -1671,15 +1691,16 @@ public final class JdbcUtil {
     }
 
     /**
+     * Executes the given command outside of any started transaction for the specified DataSource.
+     * If a transaction is already started, a new connection which is not used to started transaction will be used to execute the command.
      *
-     *
-     * @param <T>
-     * @param <E>
-     * @param dataSource
-     * @param cmd
-     * @return
-     * @throws IllegalArgumentException
-     * @throws E
+     * @param <T> The type of the result returned by the command.
+     * @param <E> The type of exception that the command may throw.
+     * @param dataSource The DataSource for which to execute the command.
+     * @param cmd The command to execute outside of any started transaction.
+     * @return The result of the command execution.
+     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws E If the command throws an exception.
      */
     @Beta
     public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource,
@@ -1713,13 +1734,14 @@ public final class JdbcUtil {
     }
 
     /**
+     * Executes the given command outside of any started transaction for the specified DataSource.
+     * If a transaction is already started, a new connection which is not used to started transaction will be used to execute the command.
      *
-     *
-     * @param <E>
-     * @param dataSource
-     * @param cmd
-     * @throws IllegalArgumentException
-     * @throws E
+     * @param <E> The type of exception that the command may throw.
+     * @param dataSource The DataSource for which to execute the command.
+     * @param cmd The command to execute outside of any started transaction.
+     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws E If the command throws an exception.
      */
     @Beta
     public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd)
@@ -1753,13 +1775,14 @@ public final class JdbcUtil {
     }
 
     /**
+     * Executes the given command outside of any started transaction for the specified DataSource.
+     * If a transaction is already started, a new connection which is not used to started transaction will be used to execute the command.
      *
-     *
-     * @param <E>
-     * @param dataSource
-     * @param cmd
-     * @throws IllegalArgumentException
-     * @throws E
+     * @param <E> The type of exception that the command may throw.
+     * @param dataSource The DataSource for which to execute the command.
+     * @param cmd The command to execute outside of any started transaction.
+     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws E If the command throws an exception.
      */
     @Beta
     public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource,
@@ -5356,13 +5379,13 @@ public final class JdbcUtil {
     };
 
     /**
+     * Retrieves the output parameters from the given CallableStatement.
      *
-     *
-     * @param stmt
-     * @param outParams
-     * @return
-     * @throws IllegalArgumentException
-     * @throws SQLException
+     * @param stmt The CallableStatement from which to retrieve the output parameters.
+     * @param outParams The list of OutParam objects representing the output parameters.
+     * @return An OutParamResult containing the retrieved output parameters.
+     * @throws IllegalArgumentException If the provided arguments are invalid.
+     * @throws SQLException If a SQL exception occurs while retrieving the output parameters.
      */
     public static OutParamResult getOutParameters(final CallableStatement stmt, final List<OutParam> outParams) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(stmt, s.stmt);
@@ -5406,11 +5429,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * Does table exist.
+     * Checks if a table exists in the database.
      *
-     * @param conn
-     * @param tableName
-     * @return {@code true}, if successful
+     * @param conn The database connection.
+     * @param tableName The name of the table to check.
+     * @return {@code true} if the table exists, {@code false} otherwise.
      */
     public static boolean doesTableExist(final Connection conn, final String tableName) {
         try {
@@ -5427,12 +5450,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns {@code true} if succeed to create table, otherwise {@code false} is returned.
+     * Creates a table if it does not already exist in the database.
      *
-     * @param conn
-     * @param tableName
-     * @param schema
-     * @return {@code true}, if successful
+     * @param conn The database connection.
+     * @param tableName The name of the table to create.
+     * @param schema The schema definition of the table.
+     * @return {@code true} if the table was created, {@code false} if the table already exists.
+     * @throws UncheckedSQLException If a database access error occurs.
      */
     public static boolean createTableIfNotExists(final Connection conn, final String tableName, final String schema) {
         if (doesTableExist(conn, tableName)) {
@@ -5449,11 +5473,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns {@code true} if succeed to drop table, otherwise {@code false} is returned.
+     * Drops the specified table if it exists in the database.
      *
-     * @param conn
-     * @param tableName
-     * @return {@code true}, if successful
+     * @param conn The database connection.
+     * @param tableName The name of the table to drop.
+     * @return {@code true} if the table was dropped, {@code false} otherwise.
      */
     public static boolean dropTableIfExists(final Connection conn, final String tableName) {
         try {
@@ -5470,26 +5494,26 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the DB sequence.
+     * Returns a new instance of {@code DBSequence} for the specified table and sequence.
      *
-     * @param ds
-     * @param tableName
-     * @param seqName
-     * @return
+     * @param ds The data source.
+     * @param tableName The name of the table.
+     * @param seqName The name of the sequence.
+     * @return The DBSequence object.
      */
     public static DBSequence getDBSequence(final javax.sql.DataSource ds, final String tableName, final String seqName) {
         return new DBSequence(ds, tableName, seqName, 0, 1000);
     }
 
     /**
-     * Supports global sequence by db table.
+     * Returns a new instance of {@code DBSequence} for the specified table, sequence, start value and buffer size.
      *
-     * @param ds
-     * @param tableName
-     * @param seqName
-     * @param startVal
-     * @param seqBufferSize the numbers to allocate/reserve from database table when cached numbers are used up.
-     * @return
+     * @param ds The data source.
+     * @param tableName The name of the table.
+     * @param seqName The name of the sequence.
+     * @param startVal The starting value of the sequence.
+     * @param seqBufferSize The numbers to allocate/reserve from the database table when cached numbers are used up.
+     * @return A new instance of {@code DBSequence} for the specified table and sequence.
      */
     public static DBSequence getDBSequence(final javax.sql.DataSource ds, final String tableName, final String seqName, final long startVal,
             final int seqBufferSize) {
@@ -5499,9 +5523,9 @@ public final class JdbcUtil {
     /**
      * Supports global lock by db table.
      *
-     * @param ds
-     * @param tableName
-     * @return
+     * @param ds The data source.
+     * @param tableName The name of the table.
+     * @return A new instance of {@code DBLock} for the specified table.
      */
     public static DBLock getDBLock(final javax.sql.DataSource ds, final String tableName) {
         return new DBLock(ds, tableName);
@@ -5531,7 +5555,8 @@ public final class JdbcUtil {
     static boolean isSqlLogAllowed = true;
 
     /**
-     *
+     * Turns off SQL logging globally.
+     * This method sets the flag to disable SQL logging across the entire application.
      */
     public static void turnOffSqlLogGlobally() {
         isSqlLogAllowed = false;
@@ -5540,7 +5565,8 @@ public final class JdbcUtil {
     static boolean isSqlPerfLogAllowed = true;
 
     /**
-     *
+     * Turns off SQL performance logging globally.
+     * This method sets the flag to disable SQL performance logging across the entire application.
      */
     public static void turnOffSqlPerfLogGlobally() {
         isSqlPerfLogAllowed = false;
@@ -5549,7 +5575,8 @@ public final class JdbcUtil {
     static boolean isDaoMethodPerfLogAllowed = true;
 
     /**
-     *
+     * Turns off DAO method performance logging globally.
+     * This method sets the flag to disable DAO method performance logging across the entire application.
      */
     public static void turnOffDaoMethodPerfLogGlobally() {
         isDaoMethodPerfLogAllowed = false;
@@ -5560,9 +5587,9 @@ public final class JdbcUtil {
     static final ThreadLocal<SqlLogConfig> isSQLLogEnabled_TL = ThreadLocal.withInitial(() -> new SqlLogConfig(false, DEFAULT_MAX_SQL_LOG_LENGTH));
 
     /**
-     * Enable/Disable sql log in current thread.
+     * Enables/Disables SQL logging in the current thread.
      *
-     * @param b {@code true} to enable, {@code false} to disable.
+     * @param b {@code true} to enable SQL logging, {@code false} to disable it.
      * @deprecated replaced by {@code enableSqlLog/disableSqlLog}.
      */
     @Deprecated
@@ -5571,10 +5598,10 @@ public final class JdbcUtil {
     }
 
     /**
-     * Enable/Disable sql log in current thread.
+     * Enables/Disables SQL logging in the current thread.
      *
-     * @param b {@code true} to enable, {@code false} to disable.
-     * @param maxSqlLogLength default value is 1024
+     * @param b {@code true} to enable SQL logging, {@code false} to disable it.
+     * @param maxSqlLogLength The maximum length of the SQL log. Default value is 1024.
      * @deprecated replaced by {@code enableSqlLog/disableSqlLog}.
      */
     @Deprecated
@@ -5593,34 +5620,34 @@ public final class JdbcUtil {
     }
 
     /**
-     * Enable sql log in current thread.
-     *
+     * Enables SQL logging in the current thread.
+     * This method enables SQL logging with the default maximum SQL log length.
      */
     public static void enableSqlLog() {
         enableSqlLog(DEFAULT_MAX_SQL_LOG_LENGTH);
     }
 
     /**
-     * Enable sql log in current thread.
+     * Enables SQL logging in the current thread with a specified maximum SQL log length.
      *
-     * @param maxSqlLogLength default value is 1024
+     * @param maxSqlLogLength The maximum length of the SQL log. Default value is 1024.
      */
     public static void enableSqlLog(final int maxSqlLogLength) {
         enableSqlLog(true, maxSqlLogLength);
     }
 
     /**
-     * Disable sql log in current thread.
-     *
+     * Disables SQL logging in the current thread.
+     * This method disables SQL logging while retaining the current maximum SQL log length.
      */
     public static void disableSqlLog() {
         enableSqlLog(false, isSQLLogEnabled_TL.get().maxSqlLogLength);
     }
 
     /**
-     * Checks if sql log is enabled or not in current thread.
+     * Checks if SQL logging is enabled in the current thread.
      *
-     * @return {@code true} if it's enabled, otherwise {@code false} is returned.
+     * @return {@code true} if SQL logging is enabled, otherwise {@code false}.
      */
     public static boolean isSqlLogEnabled() {
         return isSQLLogEnabled_TL.get().isEnabled;
@@ -5652,18 +5679,20 @@ public final class JdbcUtil {
     //    }
 
     /**
+     * Retrieves the current SQL extractor function.
+     * This function is used to extract SQL statements from a given Statement object.
      *
-     *
-     * @return
+     * @return The current SQL extractor function.
      */
     public static Throwables.Function<Statement, String, SQLException> getSqlExtractor() {
         return _sqlExtractor;
     }
 
     /**
+     * Sets the SQL extractor function.
+     * This function is used to extract SQL statements from a given Statement object.
      *
-     *
-     * @param sqlExtractor
+     * @param sqlExtractor The SQL extractor function to set.
      */
     public static void setSqlExtractor(final Throwables.Function<Statement, String, SQLException> sqlExtractor) {
         _sqlExtractor = sqlExtractor;
@@ -5672,17 +5701,22 @@ public final class JdbcUtil {
     private static TriConsumer<String, Long, Long> _sqlLogHandler = null; //NOSONAR
 
     /**
+     * Retrieves the SQL log handler.
+     * The SQL log handler is a TriConsumer that handles SQL log messages along with their execution times.
      *
-     *
-     * @return
+     * @return The current SQL log handler.
      */
     public static TriConsumer<String, Long, Long> getSqlLogHandler() {
         return _sqlLogHandler;
     }
 
     /**
+     * Sets the SQL log handler.
+     * The SQL log handler is a TriConsumer that handles SQL log messages along with their execution times.
      *
-     * @param sqlLogHandler 1st parameter is sql, 2nd parameter is start time of sql execution, 3rd parameter is end time of sql execution.
+     * @param sqlLogHandler 1st parameter is the SQL statement,
+     *                      2nd parameter is the start time of SQL execution,
+     *                      3rd parameter is the end time of SQL execution.
      */
     public static void setSqlLogHandler(final TriConsumer<String, Long, Long> sqlLogHandler) {
         _sqlLogHandler = sqlLogHandler;
@@ -5696,19 +5730,21 @@ public final class JdbcUtil {
             .withInitial(() -> new SqlLogConfig(DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG, DEFAULT_MAX_SQL_LOG_LENGTH));
 
     /**
-     * Set minimum execution time to log sql performance in current thread.
+     * Sets the minimum execution time to log SQL performance in the current thread.
      *
-     * @param minExecutionTimeForSqlPerfLog
+     * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds
+     *                                      for logging SQL performance.
      */
     public static void setMinExecutionTimeForSqlPerfLog(final long minExecutionTimeForSqlPerfLog) {
         setMinExecutionTimeForSqlPerfLog(minExecutionTimeForSqlPerfLog, DEFAULT_MAX_SQL_LOG_LENGTH);
     }
 
     /**
-     * Set minimum execution time to log sql performance in current thread.
+     * Sets the minimum execution time to log SQL performance in the current thread.
      *
-     * @param minExecutionTimeForSqlPerfLog Default value is 1000 (milliseconds).
-     * @param maxSqlLogLength default value is 1024
+     * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds
+     *                                      for logging SQL performance. Default value is 1000 (milliseconds).
+     * @param maxSqlLogLength the maximum length of the SQL log. Default value is 1024.
      */
     public static void setMinExecutionTimeForSqlPerfLog(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength) {
         // synchronized (minExecutionTimeForSqlPerfLog_TL) {
@@ -5725,9 +5761,10 @@ public final class JdbcUtil {
     }
 
     /**
-     * Return the minimum execution time in milliseconds to log SQL performance in current thread. Default value is 1000 (milliseconds).
+     * Returns the minimum execution time in milliseconds to log SQL performance in the current thread.
+     * The default value is 1000 milliseconds.
      *
-     * @return
+     * @return the minimum execution time for logging SQL performance in milliseconds.
      */
     public static long getMinExecutionTimeForSqlPerfLog() {
         return minExecutionTimeForSqlPerfLog_TL.get().minExecutionTimeForSqlPerfLog;
@@ -5764,7 +5801,7 @@ public final class JdbcUtil {
     static final ThreadLocal<Boolean> isSpringTransactionalDisabled_TL = ThreadLocal.withInitial(() -> false);
 
     /**
-     * Don't share or share {@code Spring Transactional} in current thread.
+     * Don't share {@code Spring Transactional} in current thread.
      *
      * {@code Spring Transactional} won't be used in fetching Connection if it's disabled.
      *
@@ -5777,7 +5814,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Don't share or share {@code Spring Transactional} in current thread.
+     * Don't share {@code Spring Transactional} in the current thread.
      *
      * {@code Spring Transactional} won't be used in fetching Connection if it's disabled.
      *
@@ -5802,9 +5839,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * Check if {@code Spring Transactional} is shared or not in current thread.
+     * Check if {@code Spring Transactional} is shared or not in the current thread.
      *
-     * @return {@code true} if it's not share, otherwise {@code false} is returned.
+     * @return {@code true} if it's not shared, otherwise {@code false} is returned.
      * @deprecated replaced by {@link #isSpringTransactionalNotUsed()}
      */
     @Deprecated
@@ -5813,9 +5850,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * Check if {@code Spring Transactional} is shared or not in current thread.
+     * Check if {@code Spring Transactional} is shared or not in the current thread.
      *
-     * @return {@code true} if it's not share, otherwise {@code false} is returned.
+     * @return {@code true} if it's not shared, otherwise {@code false} is returned.
      */
     public static boolean isSpringTransactionalNotUsed() {
         return isSpringTransactionalDisabled_TL.get();
@@ -5949,10 +5986,10 @@ public final class JdbcUtil {
     }
 
     /**
+     * Executes the specified SQL action.
      *
-     *
-     * @param sqlAction
-     * @throws IllegalArgumentException
+     * @param sqlAction The SQL action to be executed.
+     * @throws IllegalArgumentException If the SQL action is invalid.
      */
     @Beta
     public static void run(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException {
@@ -5966,12 +6003,12 @@ public final class JdbcUtil {
     }
 
     /**
+     * Executes the specified SQL action with the given input parameter.
      *
-     *
-     * @param <T>
-     * @param t
-     * @param sqlAction
-     * @throws IllegalArgumentException
+     * @param <T> The type of the input parameter.
+     * @param t The input parameter.
+     * @param sqlAction The SQL action to be executed.
+     * @throws IllegalArgumentException If the SQL action is invalid.
      */
     @Beta
     public static <T> void run(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException {
@@ -5985,14 +6022,14 @@ public final class JdbcUtil {
     }
 
     /**
+     * Executes the specified SQL action with the given input parameters.
      *
-     *
-     * @param <T>
-     * @param <U>
-     * @param t
-     * @param u
-     * @param sqlAction
-     * @throws IllegalArgumentException
+     * @param <T> The type of the first input parameter.
+     * @param <U> The type of the second input parameter.
+     * @param t The first input parameter.
+     * @param u The second input parameter.
+     * @param sqlAction The SQL action to be executed.
+     * @throws IllegalArgumentException If the SQL action is invalid.
      */
     @Beta
     public static <T, U> void run(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction)
@@ -6007,16 +6044,16 @@ public final class JdbcUtil {
     }
 
     /**
+     * Executes the specified SQL action with the given input parameters.
      *
-     *
-     * @param <A>
-     * @param <B>
-     * @param <C>
-     * @param a
-     * @param b
-     * @param c
-     * @param sqlAction
-     * @throws IllegalArgumentException
+     * @param <A> The type of the first input parameter.
+     * @param <B> The type of the second input parameter.
+     * @param <C> The type of the third input parameter.
+     * @param a The first input parameter.
+     * @param b The second input parameter.
+     * @param c The third input parameter.
+     * @param sqlAction The SQL action to be executed.
+     * @throws IllegalArgumentException If the SQL action is invalid.
      */
     @Beta
     public static <A, B, C> void run(final A a, final B b, final C c, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction)
@@ -6031,12 +6068,12 @@ public final class JdbcUtil {
     }
 
     /**
+     * Executes the specified SQL action and returns the result.
      *
-     *
-     * @param <R>
-     * @param sqlAction
-     * @return
-     * @throws IllegalArgumentException
+     * @param <R> The type of the result.
+     * @param sqlAction The SQL action to be executed.
+     * @return The result of the SQL action.
+     * @throws IllegalArgumentException If the SQL action is null.
      */
     @Beta
     public static <R> R call(final Callable<R> sqlAction) throws IllegalArgumentException {
@@ -6050,14 +6087,14 @@ public final class JdbcUtil {
     }
 
     /**
+     * Executes the specified SQL action with the given input parameter and returns the result.
      *
-     *
-     * @param <T>
-     * @param <R>
-     * @param t
-     * @param sqlAction
-     * @return
-     * @throws IllegalArgumentException
+     * @param <T> The type of the input parameter.
+     * @param <R> The type of the result.
+     * @param t The input parameter.
+     * @param sqlAction The SQL action to be executed.
+     * @return The result of the SQL action.
+     * @throws IllegalArgumentException If the SQL action is invalid.
      */
     @Beta
     public static <T, R> R call(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) throws IllegalArgumentException {
@@ -6071,16 +6108,16 @@ public final class JdbcUtil {
     }
 
     /**
+     * Calls the specified SQL action with two input parameters and returns the result.
      *
-     *
-     * @param <T>
-     * @param <U>
-     * @param <R>
-     * @param t
-     * @param u
-     * @param sqlAction
-     * @return
-     * @throws IllegalArgumentException
+     * @param <T> The type of the first input parameter.
+     * @param <U> The type of the second input parameter.
+     * @param <R> The type of the result.
+     * @param t The first input parameter.
+     * @param u The second input parameter.
+     * @param sqlAction The SQL action to be executed.
+     * @return The result of the SQL action.
+     * @throws IllegalArgumentException If the SQL action is invalid.
      */
     @Beta
     public static <T, U, R> R call(final T t, final U u, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction)
@@ -6095,18 +6132,18 @@ public final class JdbcUtil {
     }
 
     /**
+     * Calls the specified SQL action with three input parameters and returns the result.
      *
-     *
-     * @param <A>
-     * @param <B>
-     * @param <C>
-     * @param <R>
-     * @param a
-     * @param b
-     * @param c
-     * @param sqlAction
-     * @return
-     * @throws IllegalArgumentException
+     * @param <A> The type of the first input parameter.
+     * @param <B> The type of the second input parameter.
+     * @param <C> The type of the third input parameter.
+     * @param <R> The type of the result.
+     * @param a The first input parameter.
+     * @param b The second input parameter.
+     * @param c The third input parameter.
+     * @param sqlAction The SQL action to be executed.
+     * @return The result of the SQL action.
+     * @throws IllegalArgumentException If the SQL action is invalid.
      */
     @Beta
     public static <A, B, C, R> R call(final A a, final B b, final C c,
@@ -6121,11 +6158,13 @@ public final class JdbcUtil {
     }
 
     /**
+     * Asynchronously runs the specified SQL action in a separate thread.
+     * <br />
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param sqlAction
-     * @return
-     * @throws IllegalArgumentException
+     * @param sqlAction The SQL action to be executed.
+     * @return A ContinuableFuture representing the result of the asynchronous computation.
+     * @throws IllegalArgumentException If the specified SQL action is null.
      */
     @Beta
     public static ContinuableFuture<Void> asyncRun(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException {
@@ -6135,12 +6174,14 @@ public final class JdbcUtil {
     }
 
     /**
+     * Asynchronously runs the specified SQL actions in separate threads.
+     * <br />
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param sqlAction1
-     * @param sqlAction2
-     * @return
-     * @throws IllegalArgumentException
+     * @param sqlAction1 The first SQL action to be executed.
+     * @param sqlAction2 The second SQL action to be executed.
+     * @return A Tuple2 containing two ContinuableFuture objects representing the results of the asynchronous computations.
+     * @throws IllegalArgumentException If any of the SQL actions are invalid.
      */
     @Beta
     public static Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> asyncRun(final Throwables.Runnable<Exception> sqlAction1,
@@ -6152,13 +6193,15 @@ public final class JdbcUtil {
     }
 
     /**
+     * Asynchronously runs the specified SQL actions in separate threads.
+     * <br />
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param sqlAction1
-     * @param sqlAction2
-     * @param sqlAction3
-     * @return
-     * @throws IllegalArgumentException
+     * @param sqlAction1 The first SQL action to be executed.
+     * @param sqlAction2 The second SQL action to be executed.
+     * @param sqlAction3 The third SQL action to be executed.
+     * @return A Tuple3 containing three ContinuableFuture objects representing the results of the asynchronous computations.
+     * @throws IllegalArgumentException If any of the SQL actions are invalid.
      */
     @Beta
     public static Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> asyncRun(final Throwables.Runnable<Exception> sqlAction1,
@@ -6171,13 +6214,15 @@ public final class JdbcUtil {
     }
 
     /**
+     * Asynchronously runs the specified SQL action with the given parameter.
+     * <br />
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <T>
-     * @param t
-     * @param sqlAction
-     * @return
-     * @throws IllegalArgumentException
+     * @param <T> The type of the parameter.
+     * @param t The parameter to be passed to the SQL action.
+     * @param sqlAction The SQL action to be executed.
+     * @return A ContinuableFuture representing the result of the asynchronous computation.
+     * @throws IllegalArgumentException If the SQL action is invalid.
      */
     @Beta
     public static <T> ContinuableFuture<Void> asyncRun(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException {
@@ -6187,15 +6232,17 @@ public final class JdbcUtil {
     }
 
     /**
+     * Asynchronously runs the specified SQL action with two parameters.
+     * <br />
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <T>
-     * @param <U>
-     * @param t
-     * @param u
-     * @param sqlAction
-     * @return
-     * @throws IllegalArgumentException
+     * @param <T> The type of the first parameter.
+     * @param <U> The type of the second parameter.
+     * @param t The first parameter to be passed to the SQL action.
+     * @param u The second parameter to be passed to the SQL action.
+     * @param sqlAction The SQL action to be executed.
+     * @return A ContinuableFuture representing the result of the asynchronous computation.
+     * @throws IllegalArgumentException If the SQL action is invalid.
      */
     @Beta
     public static <T, U> ContinuableFuture<Void> asyncRun(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction)
@@ -6206,17 +6253,19 @@ public final class JdbcUtil {
     }
 
     /**
+     * Asynchronously runs the specified SQL action with three parameters.
+     * <br />
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <A>
-     * @param <B>
-     * @param <C>
-     * @param a
-     * @param b
-     * @param c
-     * @param sqlAction
-     * @return
-     * @throws IllegalArgumentException
+     * @param <A> The type of the first parameter.
+     * @param <B> The type of the second parameter.
+     * @param <C> The type of the third parameter.
+     * @param a The first parameter to be passed to the SQL action.
+     * @param b The second parameter to be passed to the SQL action.
+     * @param c The third parameter to be passed to the SQL action.
+     * @param sqlAction The SQL action to be executed.
+     * @return A ContinuableFuture representing the result of the asynchronous computation.
+     * @throws IllegalArgumentException If the SQL action is invalid.
      */
     @Beta
     public static <A, B, C> ContinuableFuture<Void> asyncRun(final A a, final B b, final C c,
@@ -6227,12 +6276,14 @@ public final class JdbcUtil {
     }
 
     /**
+     * Asynchronously calls the specified SQL action.
+     * <br />
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <R>
-     * @param sqlAction
-     * @return
-     * @throws IllegalArgumentException
+     * @param <R> The type of the result of the SQL action.
+     * @param sqlAction The SQL action to be executed.
+     * @return A ContinuableFuture representing the result of the asynchronous computation.
+     * @throws IllegalArgumentException If the SQL action is invalid.
      */
     @Beta
     public static <R> ContinuableFuture<R> asyncCall(final Callable<R> sqlAction) throws IllegalArgumentException {
@@ -6242,14 +6293,16 @@ public final class JdbcUtil {
     }
 
     /**
+     * Asynchronously calls the specified SQL actions with two parameters.
+     * <br />
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <R1>
-     * @param <R2>
-     * @param sqlAction1
-     * @param sqlAction2
-     * @return
-     * @throws IllegalArgumentException
+     * @param <R1> The type of the result of the first SQL action.
+     * @param <R2> The type of the result of the second SQL action.
+     * @param sqlAction1 The first SQL action to be executed.
+     * @param sqlAction2 The second SQL action to be executed.
+     * @return A Tuple2 containing two ContinuableFutures representing the results of the asynchronous computations.
+     * @throws IllegalArgumentException If any of the SQL actions are invalid.
      */
     @Beta
     public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> asyncCall(final Callable<R1> sqlAction1, final Callable<R2> sqlAction2)
@@ -6261,16 +6314,18 @@ public final class JdbcUtil {
     }
 
     /**
+     * Asynchronously calls the specified SQL actions with three parameters.
+     * <br />
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <R1>
-     * @param <R2>
-     * @param <R3>
-     * @param sqlAction1
-     * @param sqlAction2
-     * @param sqlAction3
-     * @return
-     * @throws IllegalArgumentException
+     * @param <R1> The type of the result of the first SQL action.
+     * @param <R2> The type of the result of the second SQL action.
+     * @param <R3> The type of the result of the third SQL action.
+     * @param sqlAction1 The first SQL action to be executed.
+     * @param sqlAction2 The second SQL action to be executed.
+     * @param sqlAction3 The third SQL action to be executed.
+     * @return A Tuple3 containing three ContinuableFutures representing the results of the asynchronous computations.
+     * @throws IllegalArgumentException If any of the SQL actions are invalid.
      */
     @Beta
     public static <R1, R2, R3> Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>> asyncCall(final Callable<R1> sqlAction1,
@@ -6283,14 +6338,16 @@ public final class JdbcUtil {
     }
 
     /**
+     * Asynchronously calls the specified SQL action with one parameter.
+     * <br />
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <T>
-     * @param <R>
-     * @param t
-     * @param sqlAction
-     * @return
-     * @throws IllegalArgumentException
+     * @param <T> The type of the parameter.
+     * @param <R> The type of the result.
+     * @param t The parameter.
+     * @param sqlAction The SQL action to be executed.
+     * @return A ContinuableFuture representing the result of the asynchronous computation.
+     * @throws IllegalArgumentException If the sqlAction is invalid.
      */
     @Beta
     public static <T, R> ContinuableFuture<R> asyncCall(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction)
@@ -6301,16 +6358,18 @@ public final class JdbcUtil {
     }
 
     /**
+     * Asynchronously calls the specified SQL action with two parameters.
+     * <br />
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <T>
-     * @param <U>
-     * @param <R>
-     * @param t
-     * @param u
-     * @param sqlAction
-     * @return
-     * @throws IllegalArgumentException
+     * @param <T> The type of the first parameter.
+     * @param <U> The type of the second parameter.
+     * @param <R> The type of the result.
+     * @param t The first parameter.
+     * @param u The second parameter.
+     * @param sqlAction The SQL action to be executed.
+     * @return A ContinuableFuture representing the result of the asynchronous computation.
+     * @throws IllegalArgumentException If the sqlAction is invalid.
      */
     @Beta
     public static <T, U, R> ContinuableFuture<R> asyncCall(final T t, final U u,
@@ -6321,18 +6380,20 @@ public final class JdbcUtil {
     }
 
     /**
+     * Asynchronously calls the specified SQL action with three parameters.
+     * <br />
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <A>
-     * @param <B>
-     * @param <C>
-     * @param <R>
-     * @param a
-     * @param b
-     * @param c
-     * @param sqlAction
-     * @return
-     * @throws IllegalArgumentException
+     * @param <A> The type of the first parameter.
+     * @param <B> The type of the second parameter.
+     * @param <C> The type of the third parameter.
+     * @param <R> The type of the result.
+     * @param a The first parameter.
+     * @param b The second parameter.
+     * @param c The third parameter.
+     * @param sqlAction The SQL action to be executed.
+     * @return A ContinuableFuture representing the result of the asynchronous computation.
+     * @throws IllegalArgumentException If the sqlAction is invalid.
      */
     @Beta
     public static <A, B, C, R> ContinuableFuture<R> asyncCall(final A a, final B b, final C c,
@@ -6589,15 +6650,15 @@ public final class JdbcUtil {
     private static final Map<Class<? extends Dao>, BiRowMapper<?>> idExtractorPool = new ConcurrentHashMap<>();
 
     /**
+     * Sets the ID extractor for the specified DAO interface.
      *
-     *
-     * @param <T>
-     * @param <ID>
-     * @param <SB>
-     * @param <TD>
-     * @param daoInterface
-     * @param idExtractor
-     * @throws IllegalArgumentException
+     * @param <T> The type of the entity.
+     * @param <ID> The type of the ID.
+     * @param <SB> The type of the SQLBuilder.
+     * @param <TD> The type of the CrudDao.
+     * @param daoInterface The DAO interface class.
+     * @param idExtractor The RowMapper used to extract the ID.
+     * @throws IllegalArgumentException If the daoInterface or idExtractor is invalid.
      */
     public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
             final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final RowMapper<? extends ID> idExtractor) throws IllegalArgumentException {
@@ -6608,15 +6669,15 @@ public final class JdbcUtil {
     }
 
     /**
+     * Sets the ID extractor for the specified DAO interface.
      *
-     *
-     * @param <T>
-     * @param <ID>
-     * @param <SB>
-     * @param <TD>
-     * @param daoInterface
-     * @param idExtractor
-     * @throws IllegalArgumentException
+     * @param <T> The type of the entity.
+     * @param <ID> The type of the ID.
+     * @param <SB> The type of the SQLBuilder.
+     * @param <TD> The type of the CrudDao.
+     * @param daoInterface The DAO interface class.
+     * @param idExtractor The RowMapper used to extract the ID.
+     * @throws IllegalArgumentException If the daoInterface or idExtractor is invalid.
      */
     public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
             final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final BiRowMapper<? extends ID> idExtractor) throws IllegalArgumentException {
@@ -7035,11 +7096,11 @@ public final class JdbcUtil {
     }
 
     /**
+     * Converts the given Blob to a String and close the Blob in finally block.
      *
-     *
-     * @param blob
-     * @return
-     * @throws SQLException
+     * @param blob The Blob object to be converted to a String.
+     * @return The String representation of the Blob.
+     * @throws SQLException If a SQL exception occurs while accessing the Blob.
      */
     public static String blob2String(final Blob blob) throws SQLException {
         try {
@@ -7050,12 +7111,12 @@ public final class JdbcUtil {
     }
 
     /**
+     * Converts the given Blob to a String using the specified Charset and closes the Blob in the finally block.
      *
-     *
-     * @param blob
-     * @param charset
-     * @return
-     * @throws SQLException
+     * @param blob The Blob object to be converted to a String.
+     * @param charset The Charset to be used for decoding the Blob data.
+     * @return The String representation of the Blob.
+     * @throws SQLException If a SQL exception occurs while accessing the Blob.
      */
     public static String blob2String(final Blob blob, final Charset charset) throws SQLException {
         try {
@@ -7066,13 +7127,13 @@ public final class JdbcUtil {
     }
 
     /**
+     * Writes the content of the given Blob to the specified file and closes the Blob in the finally block.
      *
-     *
-     * @param blob
-     * @param output
-     * @return
-     * @throws SQLException
-     * @throws IOException
+     * @param blob The Blob object containing the data to be written to the file.
+     * @param output The File object representing the file to which the Blob data will be written.
+     * @return The number of bytes written to the file.
+     * @throws SQLException If a SQL exception occurs while accessing the Blob.
+     * @throws IOException If an I/O error occurs while writing to the file.
      */
     public static long writeBlobToFile(final Blob blob, final File output) throws SQLException, IOException {
         try {
@@ -7083,11 +7144,11 @@ public final class JdbcUtil {
     }
 
     /**
+     * Converts the given Clob to a String and closes the Clob in the finally block.
      *
-     *
-     * @param clob
-     * @return
-     * @throws SQLException
+     * @param clob The Clob object to be converted to a String.
+     * @return The String representation of the Clob.
+     * @throws SQLException If a SQL exception occurs while accessing the Clob.
      */
     public static String clob2String(final Clob clob) throws SQLException {
         try {
@@ -7098,13 +7159,13 @@ public final class JdbcUtil {
     }
 
     /**
+     * Writes the content of the given Clob to the specified file and closes the Clob in the finally block.
      *
-     *
-     * @param clob
-     * @param output
-     * @return
-     * @throws SQLException
-     * @throws IOException
+     * @param clob The Clob object containing the data to be written to the file.
+     * @param output The File object representing the file to which the Clob data will be written.
+     * @return The number of characters written to the file.
+     * @throws SQLException If a SQL exception occurs while accessing the Clob.
+     * @throws IOException If an I/O exception occurs while writing to the file.
      */
     public static long writeClobToFile(final Clob clob, final File output) throws SQLException, IOException {
         try {
@@ -7115,10 +7176,10 @@ public final class JdbcUtil {
     }
 
     /**
+     * Checks if the given value is null or the default value for its type.
      *
-     *
-     * @param value
-     * @return
+     * @param value The value to be checked.
+     * @return true if the value is null or the default value for its type, false otherwise.
      */
     public static boolean isNullOrDefault(final Object value) {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));

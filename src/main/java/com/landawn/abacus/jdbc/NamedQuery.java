@@ -73,10 +73,10 @@ import com.landawn.abacus.util.ParsedSql;
  * @see {@link com.landawn.abacus.annotation.Table}
  * @see {@link com.landawn.abacus.annotation.Column}
  *
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html</a>
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html</a>
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html">http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Connection.html">Connection</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Statement.html">Statement</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/PreparedStatement.html">PreparedStatement</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/ResultSet.html">ResultSet</a>
  */
 public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuery> {
 
@@ -121,12 +121,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the {@code null}.
+     * Sets the specified parameter to SQL NULL.
      *
-     * @param parameterName
-     * @param sqlType
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter to be set to NULL
+     * @param sqlType the SQL type code defined in {@link java.sql.Types}
+     * @return the current instance of {@code NamedQuery}
+     * @throw IllegalArgumentException if the parameter name is not found.
+     * @throws SQLException if a database access error occurs.
      * @see java.sql.Types
      */
     public NamedQuery setNull(final String parameterName, final int sqlType) throws SQLException {
@@ -176,16 +177,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the {@code null}.
+     * Sets the specified parameter to SQL NULL with a specified SQL type and type name.
      *
-     * @param parameterName
-     * @param sqlType
-     * @param typeName
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter to be set to NULL
+     * @param sqlType the SQL type code defined in {@link java.sql.Types}
+     * @param typeName the SQL type name
+     * @return the current instance of {@code NamedQuery}
+     * @throw IllegalArgumentException if the parameter name is not found.
+     * @throws SQLException if a database access error occurs.
      * @see java.sql.Types
      */
-    public NamedQuery setNull(final String parameterName, final int sqlType, final String typeName) throws SQLException {
+    public NamedQuery setNull(final String parameterName, final int sqlType, final String typeName) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -232,14 +234,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the boolean.
+     * Sets the specified parameter to a boolean value.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter to be set
+     * @param x the boolean value to set the parameter to
+     * @return the current instance of {@code NamedQuery}
+     * @throw IllegalArgumentException if the parameter name is not found.
+     * @throws SQLException if a database access error occurs.
      */
-    public NamedQuery setBoolean(final String parameterName, final boolean x) throws SQLException {
+    public NamedQuery setBoolean(final String parameterName, final boolean x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -286,14 +289,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the boolean.
+     * Sets the specified parameter to a boolean value.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter to be set
+     * @param x the boolean value to set the parameter to, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code NamedQuery}
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setBoolean(final String parameterName, final Boolean x) throws SQLException {
+    public NamedQuery setBoolean(final String parameterName, final Boolean x) throws IllegalArgumentException, SQLException {
         if (x == null) {
             setNull(parameterName, java.sql.Types.BOOLEAN);
         } else {
@@ -304,14 +308,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the byte.
+     * Sets the specified parameter to a byte value.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter to be set
+     * @param x the byte value to set the parameter to
+     * @return the current instance of {@code NamedQuery}
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setByte(final String parameterName, final byte x) throws SQLException {
+    public NamedQuery setByte(final String parameterName, final byte x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -358,14 +363,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the byte.
+     * Sets the specified parameter to a byte value.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter to be set
+     * @param x the byte value to set the parameter to, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code NamedQuery}
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setByte(final String parameterName, final Byte x) throws SQLException {
+    public NamedQuery setByte(final String parameterName, final Byte x) throws IllegalArgumentException, SQLException {
         if (x == null) {
             setNull(parameterName, java.sql.Types.TINYINT);
         } else {
@@ -376,14 +382,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the short.
+     * Sets the specified parameter to a short value.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter to be set
+     * @param x the short value to set the parameter to
+     * @return the current instance of {@code NamedQuery}
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setShort(final String parameterName, final short x) throws SQLException {
+    public NamedQuery setShort(final String parameterName, final short x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -430,14 +437,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the short.
+     * Sets the specified parameter to a short value.
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException the SQL exception
+     * @param parameterName the name of the parameter to be set
+     * @param x the short value to set the parameter to, or null to set the parameter to SQL NULL
+     * @return the current instance of {@code NamedQuery}
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setShort(final String parameterName, final Short x) throws SQLException {
+    public NamedQuery setShort(final String parameterName, final Short x) throws IllegalArgumentException, SQLException {
         if (x == null) {
             setNull(parameterName, java.sql.Types.SMALLINT);
         } else {
@@ -453,9 +461,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setInt(final String parameterName, final int x) throws SQLException {
+    public NamedQuery setInt(final String parameterName, final int x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -507,9 +516,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setInt(final String parameterName, final Integer x) throws SQLException {
+    public NamedQuery setInt(final String parameterName, final Integer x) throws IllegalArgumentException, SQLException {
         if (x == null) {
             setNull(parameterName, java.sql.Types.INTEGER);
         } else {
@@ -530,7 +540,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @deprecated generally {@code char} should be saved as {@code String} in db.
      */
     @Deprecated
-    public NamedQuery setInt(final String parameterName, final char x) throws SQLException {
+    public NamedQuery setInt(final String parameterName, final char x) throws IllegalArgumentException, SQLException {
         return setInt(parameterName, (int) x);
     }
 
@@ -545,7 +555,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @deprecated generally {@code char} should be saved as {@code String} in db.
      */
     @Deprecated
-    public NamedQuery setInt(final String parameterName, final Character x) throws SQLException {
+    public NamedQuery setInt(final String parameterName, final Character x) throws IllegalArgumentException, SQLException {
         if (x == null) {
             setNull(parameterName, java.sql.Types.INTEGER);
         } else {
@@ -561,9 +571,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setLong(final String parameterName, final long x) throws SQLException {
+    public NamedQuery setLong(final String parameterName, final long x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -615,9 +626,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setLong(final String parameterName, final Long x) throws SQLException {
+    public NamedQuery setLong(final String parameterName, final Long x) throws IllegalArgumentException, SQLException {
         if (x == null) {
             setNull(parameterName, java.sql.Types.BIGINT);
         } else {
@@ -633,9 +645,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setLong(final String parameterName, final BigInteger x) throws SQLException {
+    public NamedQuery setLong(final String parameterName, final BigInteger x) throws IllegalArgumentException, SQLException {
         if (x == null) {
             setNull(parameterName, java.sql.Types.BIGINT);
         } else {
@@ -651,9 +664,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setFloat(final String parameterName, final float x) throws SQLException {
+    public NamedQuery setFloat(final String parameterName, final float x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -705,9 +719,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setFloat(final String parameterName, final Float x) throws SQLException {
+    public NamedQuery setFloat(final String parameterName, final Float x) throws IllegalArgumentException, SQLException {
         if (x == null) {
             setNull(parameterName, java.sql.Types.FLOAT);
         } else {
@@ -723,9 +738,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setDouble(final String parameterName, final double x) throws SQLException {
+    public NamedQuery setDouble(final String parameterName, final double x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -777,9 +793,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setDouble(final String parameterName, final Double x) throws SQLException {
+    public NamedQuery setDouble(final String parameterName, final Double x) throws IllegalArgumentException, SQLException {
         if (x == null) {
             setNull(parameterName, java.sql.Types.DOUBLE);
         } else {
@@ -795,9 +812,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setBigDecimal(final String parameterName, final BigDecimal x) throws SQLException {
+    public NamedQuery setBigDecimal(final String parameterName, final BigDecimal x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -849,9 +867,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setBigDecimal(final String parameterName, final BigInteger x) throws SQLException {
+    public NamedQuery setBigDecimal(final String parameterName, final BigInteger x) throws IllegalArgumentException, SQLException {
         if (x == null) {
             return setNull(parameterName, Types.DECIMAL);
         } else {
@@ -865,13 +884,14 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      * @see {@link #setString(String, BigInteger)}
      * @see {@link #setBigDecimal(String, BigInteger)}
      * @see {@link #setLong(String, BigInteger)}
      */
     @Beta
-    public NamedQuery setBigIntegerAsString(final String parameterName, final BigInteger x) throws SQLException {
+    public NamedQuery setBigIntegerAsString(final String parameterName, final BigInteger x) throws IllegalArgumentException, SQLException {
         return setString(parameterName, x);
     }
 
@@ -881,7 +901,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
     public NamedQuery setString(final String parameterName, final String x) throws SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -935,9 +956,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setString(final String parameterName, final CharSequence x) throws SQLException {
+    public NamedQuery setString(final String parameterName, final CharSequence x) throws IllegalArgumentException, SQLException {
         return setString(parameterName, x == null ? (String) null : x.toString()); //NOSONAR
     }
 
@@ -947,9 +969,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setString(final String parameterName, final char x) throws SQLException {
+    public NamedQuery setString(final String parameterName, final char x) throws IllegalArgumentException, SQLException {
         return setString(parameterName, String.valueOf(x));
     }
 
@@ -959,9 +982,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setString(final String parameterName, final Character x) throws SQLException {
+    public NamedQuery setString(final String parameterName, final Character x) throws IllegalArgumentException, SQLException {
         return setString(parameterName, x == null ? (String) null : x.toString()); //NOSONAR
     }
 
@@ -971,9 +995,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setString(final String parameterName, final BigInteger x) throws SQLException {
+    public NamedQuery setString(final String parameterName, final BigInteger x) throws IllegalArgumentException, SQLException {
         if (x == null) {
             return setNull(parameterName, Types.VARCHAR);
         } else {
@@ -987,9 +1012,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setNString(final String parameterName, final String x) throws SQLException {
+    public NamedQuery setNString(final String parameterName, final String x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1041,9 +1067,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setNString(final String parameterName, final CharSequence x) throws SQLException {
+    public NamedQuery setNString(final String parameterName, final CharSequence x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1095,9 +1122,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setDate(final String parameterName, final java.sql.Date x) throws SQLException {
+    public NamedQuery setDate(final String parameterName, final java.sql.Date x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1149,9 +1177,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setDate(final String parameterName, final java.util.Date x) throws SQLException {
+    public NamedQuery setDate(final String parameterName, final java.util.Date x) throws IllegalArgumentException, SQLException {
         setDate(parameterName, x == null ? null : x instanceof java.sql.Date ? (java.sql.Date) x : new java.sql.Date(x.getTime()));
 
         return this;
@@ -1163,9 +1192,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setDate(final String parameterName, final LocalDate x) throws SQLException {
+    public NamedQuery setDate(final String parameterName, final LocalDate x) throws IllegalArgumentException, SQLException {
         setDate(parameterName, x == null ? null : java.sql.Date.valueOf(x));
 
         return this;
@@ -1177,9 +1207,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setTime(final String parameterName, final java.sql.Time x) throws SQLException {
+    public NamedQuery setTime(final String parameterName, final java.sql.Time x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1231,9 +1262,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setTime(final String parameterName, final java.util.Date x) throws SQLException {
+    public NamedQuery setTime(final String parameterName, final java.util.Date x) throws IllegalArgumentException, SQLException {
         setTime(parameterName, x == null ? null : x instanceof java.sql.Time ? (java.sql.Time) x : new java.sql.Time(x.getTime()));
 
         return this;
@@ -1245,9 +1277,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setTime(final String parameterName, final LocalTime x) throws SQLException {
+    public NamedQuery setTime(final String parameterName, final LocalTime x) throws IllegalArgumentException, SQLException {
         setTime(parameterName, x == null ? null : java.sql.Time.valueOf(x));
 
         return this;
@@ -1259,9 +1292,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setTimestamp(final String parameterName, final java.sql.Timestamp x) throws SQLException {
+    public NamedQuery setTimestamp(final String parameterName, final java.sql.Timestamp x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1313,9 +1347,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setTimestamp(final String parameterName, final java.util.Date x) throws SQLException {
+    public NamedQuery setTimestamp(final String parameterName, final java.util.Date x) throws IllegalArgumentException, SQLException {
         setTimestamp(parameterName, x == null ? null : x instanceof java.sql.Timestamp ? (java.sql.Timestamp) x : new java.sql.Timestamp(x.getTime()));
 
         return this;
@@ -1327,9 +1362,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setTimestamp(final String parameterName, final LocalDateTime x) throws SQLException {
+    public NamedQuery setTimestamp(final String parameterName, final LocalDateTime x) throws IllegalArgumentException, SQLException {
         setTimestamp(parameterName, x == null ? null : Timestamp.valueOf(x));
 
         return this;
@@ -1341,9 +1377,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setTimestamp(final String parameterName, final ZonedDateTime x) throws SQLException {
+    public NamedQuery setTimestamp(final String parameterName, final ZonedDateTime x) throws IllegalArgumentException, SQLException {
         setTimestamp(parameterName, x == null ? null : Timestamp.from(x.toInstant()));
 
         return this;
@@ -1355,9 +1392,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setTimestamp(final String parameterName, final OffsetDateTime x) throws SQLException {
+    public NamedQuery setTimestamp(final String parameterName, final OffsetDateTime x) throws IllegalArgumentException, SQLException {
         setTimestamp(parameterName, x == null ? null : Timestamp.from(x.toInstant()));
 
         return this;
@@ -1369,9 +1407,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setTimestamp(final String parameterName, final Instant x) throws SQLException {
+    public NamedQuery setTimestamp(final String parameterName, final Instant x) throws IllegalArgumentException, SQLException {
         setTimestamp(parameterName, x == null ? null : Timestamp.from(x));
 
         return this;
@@ -1383,9 +1422,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setBytes(final String parameterName, final byte[] x) throws SQLException {
+    public NamedQuery setBytes(final String parameterName, final byte[] x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1437,9 +1477,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setAsciiStream(final String parameterName, final InputStream x) throws SQLException {
+    public NamedQuery setAsciiStream(final String parameterName, final InputStream x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1492,9 +1533,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param x
      * @param length
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setAsciiStream(final String parameterName, final InputStream x, final long length) throws SQLException {
+    public NamedQuery setAsciiStream(final String parameterName, final InputStream x, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1546,9 +1588,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setBinaryStream(final String parameterName, final InputStream x) throws SQLException {
+    public NamedQuery setBinaryStream(final String parameterName, final InputStream x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1601,9 +1644,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param x
      * @param length
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setBinaryStream(final String parameterName, final InputStream x, final long length) throws SQLException {
+    public NamedQuery setBinaryStream(final String parameterName, final InputStream x, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1655,9 +1699,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setCharacterStream(final String parameterName, final Reader x) throws SQLException {
+    public NamedQuery setCharacterStream(final String parameterName, final Reader x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1710,9 +1755,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param x
      * @param length
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setCharacterStream(final String parameterName, final Reader x, final long length) throws SQLException {
+    public NamedQuery setCharacterStream(final String parameterName, final Reader x, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1764,9 +1810,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setNCharacterStream(final String parameterName, final Reader x) throws SQLException {
+    public NamedQuery setNCharacterStream(final String parameterName, final Reader x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1819,9 +1866,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param x
      * @param length
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setNCharacterStream(final String parameterName, final Reader x, final long length) throws SQLException {
+    public NamedQuery setNCharacterStream(final String parameterName, final Reader x, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1873,9 +1921,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setBlob(final String parameterName, final java.sql.Blob x) throws SQLException {
+    public NamedQuery setBlob(final String parameterName, final java.sql.Blob x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1927,9 +1976,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setBlob(final String parameterName, final InputStream x) throws SQLException {
+    public NamedQuery setBlob(final String parameterName, final InputStream x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1982,9 +2032,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param x
      * @param length
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setBlob(final String parameterName, final InputStream x, final long length) throws SQLException {
+    public NamedQuery setBlob(final String parameterName, final InputStream x, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2036,9 +2087,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setClob(final String parameterName, final java.sql.Clob x) throws SQLException {
+    public NamedQuery setClob(final String parameterName, final java.sql.Clob x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2090,9 +2142,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setClob(final String parameterName, final Reader x) throws SQLException {
+    public NamedQuery setClob(final String parameterName, final Reader x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2145,9 +2198,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param x
      * @param length
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setClob(final String parameterName, final Reader x, final long length) throws SQLException {
+    public NamedQuery setClob(final String parameterName, final Reader x, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2199,9 +2253,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setNClob(final String parameterName, final java.sql.NClob x) throws SQLException {
+    public NamedQuery setNClob(final String parameterName, final java.sql.NClob x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2253,9 +2308,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setNClob(final String parameterName, final Reader x) throws SQLException {
+    public NamedQuery setNClob(final String parameterName, final Reader x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2308,9 +2364,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param x
      * @param length
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setNClob(final String parameterName, final Reader x, final long length) throws SQLException {
+    public NamedQuery setNClob(final String parameterName, final Reader x, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2362,9 +2419,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setURL(final String parameterName, final URL x) throws SQLException {
+    public NamedQuery setURL(final String parameterName, final URL x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2416,9 +2474,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setSQLXML(final String parameterName, final java.sql.SQLXML x) throws SQLException {
+    public NamedQuery setSQLXML(final String parameterName, final java.sql.SQLXML x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2470,9 +2529,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setRowId(final String parameterName, final java.sql.RowId x) throws SQLException {
+    public NamedQuery setRowId(final String parameterName, final java.sql.RowId x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2524,9 +2584,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setRef(final String parameterName, final java.sql.Ref x) throws SQLException {
+    public NamedQuery setRef(final String parameterName, final java.sql.Ref x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2578,9 +2639,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setArray(final String parameterName, final java.sql.Array x) throws SQLException {
+    public NamedQuery setArray(final String parameterName, final java.sql.Array x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2632,9 +2694,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName
      * @param x
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setObject(final String parameterName, final Object x) throws SQLException {
+    public NamedQuery setObject(final String parameterName, final Object x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2687,10 +2750,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param x
      * @param sqlType
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
-    public NamedQuery setObject(final String parameterName, final Object x, final int sqlType) throws SQLException {
+    public NamedQuery setObject(final String parameterName, final Object x, final int sqlType) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2744,10 +2808,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param sqlType
      * @param scaleOrLength
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
-    public NamedQuery setObject(final String parameterName, final Object x, final int sqlType, final int scaleOrLength) throws SQLException {
+    public NamedQuery setObject(final String parameterName, final Object x, final int sqlType, final int scaleOrLength)
+            throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2800,9 +2866,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param x
      * @param sqlType
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setObject(final String parameterName, final Object x, final SQLType sqlType) throws SQLException {
+    public NamedQuery setObject(final String parameterName, final Object x, final SQLType sqlType) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2856,9 +2923,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param sqlType
      * @param scaleOrLength
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setObject(final String parameterName, final Object x, final SQLType sqlType, final int scaleOrLength) throws SQLException {
+    public NamedQuery setObject(final String parameterName, final Object x, final SQLType sqlType, final int scaleOrLength)
+            throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2911,9 +2980,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param x
      * @param type
      * @return
-     * @throws SQLException the SQL exception
+     * @throws IllegalArgumentException if the parameter name is not found
+     * @throws SQLException if a database access error occurs
      */
-    public <T> NamedQuery setObject(final String parameterName, final T x, final Type<T> type) throws SQLException {
+    public <T> NamedQuery setObject(final String parameterName, final T x, final Type<T> type) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -2960,12 +3030,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the named query.
      *
-     * @param parameters
-     * @return
-     * @throws IllegalArgumentException
-     * @throws SQLException the SQL exception
+     * @param parameters a map containing the parameter names and their corresponding values
+     * @return the current instance of {@code NamedQuery}
+     * @throws SQLException if a database access error occurs
      */
     public NamedQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, s.parameters);
@@ -2988,12 +3057,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the named query.
      *
-     * @param parameters with getter/setter methods
-     * @return
-     * @throws IllegalArgumentException
-     * @throws SQLException the SQL exception
+     * @param parameters an object containing the parameters. It could be a bean, a map, a collection, an array or a single value.
+     * @return the current instance of {@code NamedQuery}
+     * @throws IllegalArgumentException if the parameters object is null.
+     * @throws SQLException if a database access error occurs
+     * @see JdbcUtil#getNamedParameters(String)
      */
     @SuppressWarnings("rawtypes")
     public NamedQuery setParameters(final Object parameters) throws IllegalArgumentException, SQLException {
@@ -3031,17 +3101,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the named query.
      *
-     * @param entity
-     * @param parameterNames
-     * @return
-     * @throws IllegalArgumentException
-     * @throws SQLException the SQL exception
-     * @see {@link ClassUtil#getPropNameList(Class)}
-     * @see {@link ClassUtil#getPropNameListExclusively(Class, Set)}
-     * @see {@link ClassUtil#getPropNameListExclusively(Class, Collection)}
-     * @see {@link JdbcUtil#getNamedParameters(String)}
+     * @param entity the entity object containing the parameters
+     * @param parameterNames a collection of parameter names to be set
+     * @return the current instance of {@code NamedQuery}
+     * @throws IllegalArgumentException if the entity or parameter names are null
+     * @throws SQLException if a database access error occurs
+     * @see ClassUtil#getPropNameList(Class)
+     * @see ClassUtil#getPropNames(Class, Collection)
+     * @see ClassUtil#getpropNames(Class, Set)
+     * @see JdbcUtil#getNamedParameters(String)
      */
     public NamedQuery setParameters(final Object entity, final Collection<String> parameterNames) throws IllegalArgumentException, SQLException {
         checkArgNotNull(entity, s.entity);
@@ -3102,14 +3172,14 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameters for the named query using a custom parameters setter.
      *
-     * @param <T>
-     * @param paramaters
-     * @param paramsSetter
-     * @return
-     * @throws IllegalArgumentException
-     * @throws SQLException the SQL exception
+     * @param <T> the type of the parameters object
+     * @param paramaters the parameters object
+     * @param paramsSetter a custom parameters setter
+     * @return the current instance of {@code NamedQuery}
+     * @throws IllegalArgumentException if the parameters setter is null
+     * @throws SQLException if a database access error occurs
      */
     public <T> NamedQuery setParameters(final T paramaters, final Jdbc.TriParametersSetter<? super NamedQuery, ? super T> paramsSetter)
             throws IllegalArgumentException, SQLException {
@@ -3131,12 +3201,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Adds a batch of parameters to the named query.
      *
-     *
-     * @param batchParameters
-     * @return
-     * @throws IllegalArgumentException
-     * @throws SQLException
+     * @param batchParameters a collection of batch parameters to be added
+     * @return the current instance of {@code NamedQuery}
+     * @throws IllegalArgumentException if the batch parameters are null
+     * @throws SQLException if a database access error occurs
      */
     @Override
     public NamedQuery addBatchParameters(final Collection<?> batchParameters) throws IllegalArgumentException, SQLException {
@@ -3150,12 +3220,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Adds a batch of parameters to the named query.
      *
-     *
-     * @param batchParameters
-     * @return
-     * @throws IllegalArgumentException
-     * @throws SQLException
+     * @param batchParameters an iterator of batch parameters to be added
+     * @return the current instance of {@code NamedQuery}
+     * @throws IllegalArgumentException if the batch parameters are null
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @Override

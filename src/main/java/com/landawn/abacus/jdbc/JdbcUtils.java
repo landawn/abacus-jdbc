@@ -71,10 +71,11 @@ import com.landawn.abacus.util.WD;
  * @see {@link com.landawn.abacus.annotation.Transient}
  * @see {@link com.landawn.abacus.annotation.Table}
  * @see {@link com.landawn.abacus.annotation.Column}
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html</a>
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html</a>
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html">http://docs.oracle.com/javase/8/docs/api/java/sql/PreparedStatement.html</a>
- * @see <a href="http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html">http://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html</a>
+ *
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Connection.html">Connection</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Statement.html">Statement</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/PreparedStatement.html">PreparedStatement</a>
+ * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/ResultSet.html">ResultSet</a>
  */
 public final class JdbcUtils {
 
@@ -508,7 +509,7 @@ public final class JdbcUtils {
         final Type<?> objType = N.typeOf(Object.class);
         final Map<String, Type<?>> columnTypeMap = new HashMap<>();
 
-        for (String propName : selectColumnNames) {
+        for (final String propName : selectColumnNames) {
             columnTypeMap.put(propName, objType);
         }
 
@@ -596,7 +597,7 @@ public final class JdbcUtils {
             private int[] columnIndexes = new int[columnCount];
 
             @Override
-            public void accept(PreparedQuery t, Object[] u) throws SQLException {
+            public void accept(final PreparedQuery t, final Object[] u) throws SQLException {
                 if (columnTypes == null) {
                     columnCount = columnTypeMap.size();
                     columnTypes = new Type[columnCount];
@@ -607,7 +608,7 @@ public final class JdbcUtils {
 
                     int idx = 0;
 
-                    for (String columnName : columnNameList) {
+                    for (final String columnName : columnNameList) {
                         if (columnTypeMap.containsKey(columnName)) {
                             columnIndexes[idx] = dataset.getColumnIndex(columnName);
                             columnTypes[idx] = columnTypeMap.get(columnName);
@@ -1205,7 +1206,7 @@ public final class JdbcUtils {
      * @return
      * @throws SQLException
      */
-    public static <T> long importData(final Iterator<? extends T> iter, long offset, final long count, final PreparedStatement stmt, final int batchSize,
+    public static <T> long importData(final Iterator<? extends T> iter, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
         return importData(iter, offset, count, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
@@ -2119,7 +2120,7 @@ public final class JdbcUtils {
      * @throws IOException
      * @throws E
      */
-    public static <E extends Exception> long importCSV(final InputStream is, long offset, final long count,
+    public static <E extends Exception> long importCSV(final InputStream is, final long offset, final long count,
             final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E {
         final Reader reader = IOUtil.newInputStreamReader(is);
@@ -2176,7 +2177,7 @@ public final class JdbcUtils {
      * @throws IOException
      */
     @SuppressWarnings({ "unchecked" })
-    public static long importCSV(final Reader reader, long offset, final long count, final PreparedStatement stmt, final int batchSize,
+    public static long importCSV(final Reader reader, final long offset, final long count, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter)
             throws SQLException, IOException {
         return importCSV(reader, offset, count, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
@@ -2466,7 +2467,7 @@ public final class JdbcUtils {
         }
 
         try (OutputStream os = new FileOutputStream(out)) {
-            long result = exportCSV(os, rs, selectColumnNames, offset, count, writeTitle, quoted);
+            final long result = exportCSV(os, rs, selectColumnNames, offset, count, writeTitle, quoted);
 
             os.flush();
 
@@ -2574,9 +2575,9 @@ public final class JdbcUtils {
     public static long exportCSV(final OutputStream out, final ResultSet rs, final Collection<String> selectColumnNames, final long offset, final long count,
             final boolean writeTitle, final boolean quoted) throws SQLException, IOException {
 
-        Writer writer = IOUtil.newOutputStreamWriter(out);
+        final Writer writer = IOUtil.newOutputStreamWriter(out);
 
-        long result = exportCSV(writer, rs, selectColumnNames, offset, count, writeTitle, quoted);
+        final long result = exportCSV(writer, rs, selectColumnNames, offset, count, writeTitle, quoted);
 
         writer.flush();
 
@@ -2803,23 +2804,18 @@ public final class JdbcUtils {
         return result;
     }
 
-    private static final Supplier<Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException>> supplierOfStmtSetterByRS = new Supplier<>() { // NOSONAR
+    private static final Supplier<Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException>> supplierOfStmtSetterByRS = () -> new Throwables.BiConsumer<>() {
+        private int columnCount = 0;
+
         @Override
-        public Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> get() {
-            return new Throwables.BiConsumer<>() {
-                private int columnCount = 0;
+        public void accept(final PreparedQuery stmt, final ResultSet rs) throws SQLException {
+            if (columnCount == 0) {
+                columnCount = rs.getMetaData().getColumnCount();
+            }
 
-                @Override
-                public void accept(final PreparedQuery stmt, final ResultSet rs) throws SQLException {
-                    if (columnCount == 0) {
-                        columnCount = rs.getMetaData().getColumnCount();
-                    }
-
-                    for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
-                        stmt.setObject(columnIndex, JdbcUtil.getColumnValue(rs, columnIndex));
-                    }
-                }
-            };
+            for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
+                stmt.setObject(columnIndex, JdbcUtil.getColumnValue(rs, columnIndex));
+            }
         }
     };
 
@@ -3254,7 +3250,7 @@ public final class JdbcUtils {
         PreparedStatement selectStmt = null;
         PreparedStatement insertStmt = null;
 
-        int result = 0;
+        final int result = 0;
 
         try {
             selectStmt = JdbcUtil.prepareStatement(sourceConn, selectSql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
@@ -3285,16 +3281,17 @@ public final class JdbcUtils {
     }
 
     /**
+     * Copies data selected from by {@code selectStmt} to a target data source inserted by {@code insertStmt}.
      *
-     * @param selectStmt
-     * @param offset
-     * @param count
-     * @param insertStmt
-     * @param batchSize
-     * @param batchIntervalInMillis
-     * @param stmtSetter
-     * @return
-     * @throws SQLException
+     * @param selectStmt the `PreparedStatement` used to select data from the source.
+     * @param offset the starting point from which to begin copying data.
+     * @param count the number of rows to copy.
+     * @param insertStmt the `PreparedStatement` used to insert data into the target.
+     * @param batchSize the number of rows to process in each batch.
+     * @param batchIntervalInMillis the interval in milliseconds between each batch.
+     * @param stmtSetter a `BiConsumer` that sets the parameters for the `PreparedStatement` from the `ResultSet`.
+     * @return the number of rows copied.
+     * @throws SQLException if a database access error occurs.
      */
     public static long copy(final PreparedStatement selectStmt, final long offset, final long count, final PreparedStatement insertStmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter)

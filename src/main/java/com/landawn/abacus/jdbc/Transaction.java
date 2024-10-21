@@ -24,62 +24,69 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 public interface Transaction {
 
     /**
-     * Returns the identifier of this transaction if it's supported.
+     * Returns the unique identifier of the transaction.
      *
-     * @return
+     * @return the unique identifier of the transaction.
      */
     String id();
 
     /**
+     * Returns the isolation level of the transaction.
      *
-     *
-     * @return
+     * @return the isolation level of the transaction.
      */
     IsolationLevel isolationLevel();
 
     /**
+     * Returns the current status of the transaction.
      *
-     * @return Status
+     * @return the current status of the transaction.
      */
     Status status();
 
     /**
-     * Checks if is active.
+     * Checks if the transaction is active.
      *
-     * @return {@code true}, if is active
+     * @return {@code true} if the transaction is active, {@code false} otherwise.
      */
     boolean isActive();
 
     /**
+     * Commits the current transaction.
      *
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @throws UncheckedSQLException if an SQL error occurs during the commit.
      */
     void commit() throws UncheckedSQLException;
 
     /**
-     * @param actoinAfterCommit
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * Commits the current transaction and executes the specified action after the commit.
+     *
+     * @param actoinAfterCommit the action to be executed after the current transaction is committed successfully.
+     * @throws UncheckedSQLException if an SQL error occurs during the commit.
      */
     @Beta
     void commit(Runnable actoinAfterCommit) throws UncheckedSQLException;
 
     /**
+     * Rolls back the current transaction.
      *
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     void rollback() throws UncheckedSQLException;
 
     /**
+     * Rolls back the current transaction and executes the specified action after the rollback.
      *
-     * @param actionAfterRollback
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @param actionAfterRollback the action to be executed after the current transaction is rolled back, not successfully or not.
+     * @throws UncheckedSQLException if an SQL error occurs during the rollback.
      */
     @Beta
     void rollback(Runnable actionAfterRollback) throws UncheckedSQLException;
 
     /**
+     * Rolls back the transaction if it has not been committed successfully.
      *
-     * @throws UncheckedSQLException
+     * @throws UncheckedSQLException if an SQL error occurs during the rollback.
      */
     void rollbackIfNotCommitted() throws UncheckedSQLException;
 

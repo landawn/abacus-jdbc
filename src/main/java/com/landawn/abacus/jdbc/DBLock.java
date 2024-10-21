@@ -142,44 +142,50 @@ public final class DBLock {
     }
 
     /**
+     * Acquires a lock on the specified target with the default lock live time and timeout.
      *
-     * @param target
-     * @return
+     * @param target The target to lock.
+     * @return A unique code representing the lock, or {@code null} if the target cannot be locked within the default timeout.
+     * @throws IllegalStateException if this instance is closed.
      */
     public String lock(final String target) {
         return lock(target, DEFAULT_LOCK_LIVE_TIME, DEFAULT_TIMEOUT);
     }
 
     /**
+     * Acquires a lock on the specified target with the specified timeout.
      *
-     * @param target
-     * @param timeout
-     * @return
+     * @param target The target to lock.
+     * @param timeout The maximum time to wait for the lock in milliseconds.
+     * @return A unique code representing the lock, or {@code null} if the target cannot be locked within the specified timeout.
+     * @throws IllegalStateException if this instance is closed.
      */
     public String lock(final String target, final long timeout) {
         return lock(target, DEFAULT_LOCK_LIVE_TIME, timeout);
     }
 
     /**
+     * Acquires a lock on the specified target with the specified lock live time and timeout.
      *
-     * @param target
-     * @param liveTime
-     * @param timeout
-     * @return
+     * @param target The target to lock.
+     * @param liveTime The duration for which the lock will be held in milliseconds.
+     * @param timeout The maximum time to wait for the lock in milliseconds.
+     * @return A unique code representing the lock, or {@code null} if the target cannot be locked within the specified timeout.
+     * @throws IllegalStateException if this instance is closed.
      */
     public String lock(final String target, final long liveTime, final long timeout) {
         return lock(target, liveTime, timeout, 0);
     }
 
     /**
+     * Acquires a lock on the specified target with the specified lock live time, timeout, and retry period.
      *
-     *
-     * @param target
-     * @param liveTime
-     * @param timeout
-     * @param retryPeriod the period to retry inserting record in database table to lock the target.
-     * @return {@code null} if the target can't be locked in the period specified by {@code timeout}
-     * @throws IllegalStateException if this is closed
+     * @param target The target to lock.
+     * @param liveTime The duration for which the lock will be held in milliseconds.
+     * @param timeout The maximum time to wait for the lock in milliseconds.
+     * @param retryPeriod The period to retry inserting record in database table to lock the target.
+     * @return A unique code representing the lock, or {@code null} if the target cannot be locked within the specified timeout.
+     * @throws IllegalStateException if this instance is closed.
      */
     public String lock(final String target, final long liveTime, final long timeout, final long retryPeriod) throws IllegalStateException {
         assertNotClosed();
@@ -223,12 +229,12 @@ public final class DBLock {
     }
 
     /**
+     * Releases the lock on the specified target if the provided code matches the code associated with the lock.
      *
-     *
-     * @param target
-     * @param code
-     * @return {@code true}, if successful
-     * @throws IllegalStateException if this is closed
+     * @param target The target to unlock.
+     * @param code The unique code representing the lock.
+     * @return {@code true} if the lock was successfully released, {@code false} otherwise.
+     * @throws IllegalStateException if this instance is closed.
      */
     public boolean unlock(final String target, final String code) throws IllegalStateException {
         assertNotClosed();
@@ -245,7 +251,8 @@ public final class DBLock {
     }
 
     /**
-     * Close.
+     * Closes this DBLock instance, releasing any resources held.
+     * If the instance is already closed, this method does nothing.
      */
     public void close() {
         if (isClosed) {

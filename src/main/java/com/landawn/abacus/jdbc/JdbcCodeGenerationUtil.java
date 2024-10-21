@@ -146,32 +146,49 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
+     * Generates the entity class for the specified table in the given data source.
      *
-     *
-     * @param ds
-     * @param tableName
-     * @return
+     * @param ds The data source to connect to the database.
+     * @param tableName The name of the table for which the entity class is to be generated.
+     * @return The generated entity class as a string.
      */
     public static String generateEntityClass(final DataSource ds, final String tableName) {
         return generateEntityClass(ds, tableName, (EntityCodeConfig) null);
     }
 
     /**
+     * Generates the entity class for the specified table in the given data source with the provided configuration.
      *
-     *
-     * @param ds
-     * @param tableName
-     * @param config
-     * @return
+     * @param ds The data source to connect to the database.
+     * @param tableName The name of the table for which the entity class is to be generated.
+     * @param config The configuration for generating the entity class.
+     * @return The generated entity class as a string.
      */
     public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
         return generateEntityClass(ds, tableName, createQueryByTableName(tableName), config);
     }
 
+    /**
+     * Generates the entity class for the specified table in the given data source using the provided query.
+     *
+     * @param ds The data source to connect to the database.
+     * @param entityName The name of the entity for which the class is to be generated.
+     * @param query The SQL query to execute for retrieving the table metadata.
+     * @return The generated entity class as a string.
+     */
     public static String generateEntityClass(final DataSource ds, final String entityName, final String query) {
         return generateEntityClass(ds, entityName, query, null);
     }
 
+    /**
+     * Generates the entity class for the specified table in the given data source using the provided query and configuration.
+     *
+     * @param ds The data source to connect to the database.
+     * @param entityName The name of the entity for which the class is to be generated.
+     * @param query The SQL query to execute for retrieving the table metadata.
+     * @param config The configuration for generating the entity class.
+     * @return The generated entity class as a string.
+     */
     public static String generateEntityClass(final DataSource ds, final String entityName, final String query, final EntityCodeConfig config) {
         try (Connection conn = ds.getConnection()) {
             return generateEntityClass(conn, entityName, query, config);
@@ -182,24 +199,49 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
+     * Generates the entity class for the specified table in the given connection.
      *
-     *
-     * @param conn
-     * @param tableName
-     * @return
+     * @param conn The connection to the database.
+     * @param tableName The name of the table for which the entity class is to be generated.
+     * @return The generated entity class as a string.
      */
     public static String generateEntityClass(final Connection conn, final String tableName) {
         return generateEntityClass(conn, tableName, (EntityCodeConfig) null);
     }
 
+    /**
+     * Generates the entity class for the specified table in the given connection with the provided configuration.
+     *
+     * @param conn The connection to the database.
+     * @param tableName The name of the table for which the entity class is to be generated.
+     * @param config The configuration for generating the entity class.
+     * @return The generated entity class as a string.
+     */
     public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
         return generateEntityClass(conn, tableName, createQueryByTableName(tableName), config);
     }
 
+    /**
+     * Generates the entity class for the specified table in the given connection using the provided query.
+     *
+     * @param conn The connection to the database.
+     * @param entityName The name of the entity for which the class is to be generated.
+     * @param query The SQL query to execute for retrieving the table metadata.
+     * @return The generated entity class as a string.
+     */
     public static String generateEntityClass(final Connection conn, final String entityName, final String query) {
         return generateEntityClass(conn, entityName, query, null);
     }
 
+    /**
+     * Generates the entity class for the specified table in the given connection using the provided query and configuration.
+     *
+     * @param conn The connection to the database.
+     * @param entityName The name of the entity for which the class is to be generated.
+     * @param query The SQL query to execute for retrieving the table metadata.
+     * @param config The configuration for generating the entity class.
+     * @return The generated entity class as a string.
+     */
     public static String generateEntityClass(final Connection conn, final String entityName, final String query, final EntityCodeConfig config) {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 ResultSet rs = stmt.executeQuery()) {

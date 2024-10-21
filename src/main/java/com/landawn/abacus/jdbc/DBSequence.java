@@ -129,9 +129,13 @@ public final class DBSequence {
     }
 
     /**
+     * Retrieves the next value in the sequence.
+     * This method is synchronized on the sequence name to ensure thread safety.
+     * If the current low sequence ID is greater than or equal to the high sequence ID,
+     * it fetches the next batch of sequence IDs from the database.
      *
-     *
-     * @return
+     * @return The next value in the sequence.
+     * @throws UncheckedSQLException if a database access error occurs.
      */
     public long nextVal() {
         synchronized (seqName) { //NOSONAR
@@ -154,9 +158,10 @@ public final class DBSequence {
     }
 
     /**
+     * Resets the sequence to the specified start value and buffer size.
      *
-     * @param startVal
-     * @param seqBufferSize
+     * @param startVal The new starting value for the sequence.
+     * @param seqBufferSize The new buffer size for the sequence.
      */
     @SuppressWarnings("hiding")
     public void reset(final long startVal, final int seqBufferSize) {
