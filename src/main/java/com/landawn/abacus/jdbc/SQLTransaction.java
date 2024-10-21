@@ -191,8 +191,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * @param actoinAfterCommit the action to be executed after the current transaction is committed successfully.
      * @throws UncheckedSQLException if an SQL error occurs during the commit.
      */
-    @Override
-    public void commit(final Runnable actoinAfterCommit) throws UncheckedSQLException {
+    void commit(final Runnable actoinAfterCommit) throws UncheckedSQLException {
         final int refCount = decrementAndGetRef();
         _isMarkedByCommitPreviously = true;
 
@@ -274,8 +273,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * @param actionAfterRollback the action to be executed after the current transaction is rolled back, not successfully or not.
      * @throws UncheckedSQLException if an SQL error occurs during the rollback.
      */
-    @Override
-    public void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
+    void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
         final int refCount = decrementAndGetRef();
         _isMarkedByCommitPreviously = true;
 

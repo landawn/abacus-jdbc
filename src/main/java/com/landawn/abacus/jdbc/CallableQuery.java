@@ -145,7 +145,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the boolean value for the specified parameter.
      *
      * @param parameterName the name of the parameter
-     * @param x the boolean value to set, or null to set the parameter to SQL NULL
+     * @param x the boolean value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      */
@@ -177,7 +177,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the byte value for the specified parameter.
      *
      * @param parameterName the name of the parameter
-     * @param x the byte value to set, or null to set the parameter to SQL NULL
+     * @param x the byte value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      */
@@ -209,7 +209,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the short value for the specified parameter.
      *
      * @param parameterName the name of the parameter
-     * @param x the short value to set, or null to set the parameter to SQL NULL
+     * @param x the short value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      */
@@ -241,7 +241,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the int value for the specified parameter.
      *
      * @param parameterName the name of the parameter
-     * @param x the int value to set, or null to set the parameter to SQL NULL
+     * @param x the int value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      */
@@ -273,7 +273,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the long value for the specified parameter.
      *
      * @param parameterName the name of the parameter
-     * @param x the long value to set, or null to set the parameter to SQL NULL
+     * @param x the long value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      */
@@ -291,7 +291,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the long value for the specified parameter using a BigInteger.
      *
      * @param parameterName the name of the parameter
-     * @param x the BigInteger value to set, or null to set the parameter to SQL NULL
+     * @param x the BigInteger value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      */
@@ -323,7 +323,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the float value for the specified parameter.
      *
      * @param parameterName the name of the parameter
-     * @param x the float value to set, or null to set the parameter to SQL NULL
+     * @param x the float value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      */
@@ -355,7 +355,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the double value for the specified parameter.
      *
      * @param parameterName the name of the parameter
-     * @param x the double value to set, or null to set the parameter to SQL NULL
+     * @param x the double value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      */
@@ -387,7 +387,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the BigDecimal value for the specified parameter using a BigInteger.
      *
      * @param parameterName the name of the parameter
-     * @param x the BigInteger value to set, or null to set the parameter to SQL NULL
+     * @param x the BigInteger value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      */
@@ -405,7 +405,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the string value for the specified parameter using a BigInteger.
      *
      * @param parameterName the name of the parameter
-     * @param x the BigInteger value to set, or null to set the parameter to SQL NULL
+     * @param x the BigInteger value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      * @see #setString(String, BigInteger)
@@ -531,7 +531,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the date value for the specified parameter using a LocalDate.
      *
      * @param parameterName the name of the parameter
-     * @param x the LocalDate value to set, or null to set the parameter to SQL NULL
+     * @param x the LocalDate value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      */
@@ -573,7 +573,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the time value for the specified parameter using a LocalTime.
      *
      * @param parameterName the name of the parameter
-     * @param x the LocalTime value to set, or null to set the parameter to SQL NULL
+     * @param x the LocalTime value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      */
@@ -615,7 +615,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the timestamp value for the specified parameter using a LocalDateTime.
      *
      * @param parameterName the name of the parameter
-     * @param x the LocalDateTime value to set, or null to set the parameter to SQL NULL
+     * @param x the LocalDateTime value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      */
@@ -629,7 +629,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the timestamp value for the specified parameter using a ZonedDateTime.
      *
      * @param parameterName the name of the parameter
-     * @param x the ZonedDateTime value to set, or null to set the parameter to SQL NULL
+     * @param x the ZonedDateTime value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      */
@@ -643,7 +643,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the timestamp value for the specified parameter using an OffsetDateTime.
      *
      * @param parameterName the name of the parameter
-     * @param x the OffsetDateTime value to set, or null to set the parameter to SQL NULL
+     * @param x the OffsetDateTime value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      */
@@ -657,7 +657,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the timestamp value for the specified parameter using an Instant.
      *
      * @param parameterName the name of the parameter
-     * @param x the Instant value to set, or null to set the parameter to SQL NULL
+     * @param x the Instant value to set, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code CallableQuery}
      * @throws SQLException if a database access error occurs
      */

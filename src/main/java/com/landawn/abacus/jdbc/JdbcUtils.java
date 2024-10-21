@@ -3283,13 +3283,13 @@ public final class JdbcUtils {
     /**
      * Copies data selected from by {@code selectStmt} to a target data source inserted by {@code insertStmt}.
      *
-     * @param selectStmt the `PreparedStatement` used to select data from the source.
+     * @param selectStmt the <i>PreparedStatement</i> used to select data from the source.
      * @param offset the starting point from which to begin copying data.
      * @param count the number of rows to copy.
-     * @param insertStmt the `PreparedStatement` used to insert data into the target.
+     * @param insertStmt the <i>PreparedStatement</i> used to insert data into the target.
      * @param batchSize the number of rows to process in each batch.
      * @param batchIntervalInMillis the interval in milliseconds between each batch.
-     * @param stmtSetter a `BiConsumer` that sets the parameters for the `PreparedStatement` from the `ResultSet`.
+     * @param stmtSetter a <i>BiConsumer</i> that sets the parameters for the <i>PreparedStatement</i> from the `ResultSet`.
      * @return the number of rows copied.
      * @throws SQLException if a database access error occurs.
      */

@@ -14,7 +14,6 @@
 
 package com.landawn.abacus.jdbc;
 
-import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
 
 // TODO: Auto-generated Javadoc
@@ -58,14 +57,14 @@ public interface Transaction {
      */
     void commit() throws UncheckedSQLException;
 
-    /**
-     * Commits the current transaction and executes the specified action after the commit.
-     *
-     * @param actoinAfterCommit the action to be executed after the current transaction is committed successfully.
-     * @throws UncheckedSQLException if an SQL error occurs during the commit.
-     */
-    @Beta
-    void commit(Runnable actoinAfterCommit) throws UncheckedSQLException;
+    //    /**
+    //     * Commits the current transaction and executes the specified action after the commit.
+    //     *
+    //     * @param actoinAfterCommit the action to be executed after the current transaction is committed successfully.
+    //     * @throws UncheckedSQLException if an SQL error occurs during the commit.
+    //     */
+    //    @Beta
+    //    void commit(Runnable actoinAfterCommit) throws UncheckedSQLException;
 
     /**
      * Rolls back the current transaction.
@@ -74,14 +73,14 @@ public interface Transaction {
      */
     void rollback() throws UncheckedSQLException;
 
-    /**
-     * Rolls back the current transaction and executes the specified action after the rollback.
-     *
-     * @param actionAfterRollback the action to be executed after the current transaction is rolled back, not successfully or not.
-     * @throws UncheckedSQLException if an SQL error occurs during the rollback.
-     */
-    @Beta
-    void rollback(Runnable actionAfterRollback) throws UncheckedSQLException;
+    //    /**
+    //     * Rolls back the current transaction and executes the specified action after the rollback.
+    //     *
+    //     * @param actionAfterRollback the action to be executed after the current transaction is rolled back, not successfully or not.
+    //     * @throws UncheckedSQLException if an SQL error occurs during the rollback.
+    //     */
+    //    @Beta
+    //    void rollback(Runnable actionAfterRollback) throws UncheckedSQLException;
 
     /**
      * Rolls back the transaction if it has not been committed successfully.

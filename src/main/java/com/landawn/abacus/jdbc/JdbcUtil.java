@@ -1539,7 +1539,7 @@ public final class JdbcUtil {
      * @param dataSource The DataSource for which to begin the transaction.
      * @param cmd The command to execute within the transaction.
      * @return The result of the command execution.
-     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
      * @throws E If the command throws an exception.
      */
     @Beta
@@ -1571,7 +1571,7 @@ public final class JdbcUtil {
      * @param dataSource The DataSource for which to begin the transaction.
      * @param cmd The command to execute within the transaction.
      * @return The result of the command execution.
-     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
      * @throws E If the command throws an exception.
      */
     @Beta
@@ -1601,7 +1601,7 @@ public final class JdbcUtil {
      * @param <E> The type of exception that the command may throw.
      * @param dataSource The DataSource for which to begin the transaction.
      * @param cmd The command to execute within the transaction.
-     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
      * @throws E If the command throws an exception.
      */
     @Beta
@@ -1628,7 +1628,7 @@ public final class JdbcUtil {
      * @param <E> The type of exception that the command may throw.
      * @param dataSource The DataSource for which to begin the transaction.
      * @param cmd The command to execute within the transaction.
-     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
      * @throws E If the command throws an exception.
      */
     @Beta
@@ -1656,7 +1656,7 @@ public final class JdbcUtil {
      * @param dataSource The DataSource for which to execute the command.
      * @param cmd The command to execute outside of any started transaction.
      * @return The result of the command execution.
-     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
      * @throws E If the command throws an exception.
      */
     @Beta
@@ -1699,7 +1699,7 @@ public final class JdbcUtil {
      * @param dataSource The DataSource for which to execute the command.
      * @param cmd The command to execute outside of any started transaction.
      * @return The result of the command execution.
-     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
      * @throws E If the command throws an exception.
      */
     @Beta
@@ -1740,7 +1740,7 @@ public final class JdbcUtil {
      * @param <E> The type of exception that the command may throw.
      * @param dataSource The DataSource for which to execute the command.
      * @param cmd The command to execute outside of any started transaction.
-     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
      * @throws E If the command throws an exception.
      */
     @Beta
@@ -1781,7 +1781,7 @@ public final class JdbcUtil {
      * @param <E> The type of exception that the command may throw.
      * @param dataSource The DataSource for which to execute the command.
      * @param cmd The command to execute outside of any started transaction.
-     * @throws IllegalArgumentException If the dataSource or cmd is null.
+     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
      * @throws E If the command throws an exception.
      */
     @Beta
@@ -5985,177 +5985,177 @@ public final class JdbcUtil {
         return N.notEmpty(ids) && ids.stream().allMatch(isDefaultIdTester);
     }
 
-    /**
-     * Executes the specified SQL action.
-     *
-     * @param sqlAction The SQL action to be executed.
-     * @throws IllegalArgumentException If the SQL action is invalid.
-     */
-    @Beta
-    public static void run(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException {
-        N.checkArgNotNull(sqlAction, s.sqlAction);
-
-        try {
-            sqlAction.run();
-        } catch (final Exception e) {
-            throw N.toRuntimeException(e);
-        }
-    }
-
-    /**
-     * Executes the specified SQL action with the given input parameter.
-     *
-     * @param <T> The type of the input parameter.
-     * @param t The input parameter.
-     * @param sqlAction The SQL action to be executed.
-     * @throws IllegalArgumentException If the SQL action is invalid.
-     */
-    @Beta
-    public static <T> void run(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException {
-        N.checkArgNotNull(sqlAction, s.sqlAction);
-
-        try {
-            sqlAction.accept(t);
-        } catch (final Exception e) {
-            throw N.toRuntimeException(e);
-        }
-    }
-
-    /**
-     * Executes the specified SQL action with the given input parameters.
-     *
-     * @param <T> The type of the first input parameter.
-     * @param <U> The type of the second input parameter.
-     * @param t The first input parameter.
-     * @param u The second input parameter.
-     * @param sqlAction The SQL action to be executed.
-     * @throws IllegalArgumentException If the SQL action is invalid.
-     */
-    @Beta
-    public static <T, U> void run(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction)
-            throws IllegalArgumentException {
-        N.checkArgNotNull(sqlAction, s.sqlAction);
-
-        try {
-            sqlAction.accept(t, u);
-        } catch (final Exception e) {
-            throw N.toRuntimeException(e);
-        }
-    }
-
-    /**
-     * Executes the specified SQL action with the given input parameters.
-     *
-     * @param <A> The type of the first input parameter.
-     * @param <B> The type of the second input parameter.
-     * @param <C> The type of the third input parameter.
-     * @param a The first input parameter.
-     * @param b The second input parameter.
-     * @param c The third input parameter.
-     * @param sqlAction The SQL action to be executed.
-     * @throws IllegalArgumentException If the SQL action is invalid.
-     */
-    @Beta
-    public static <A, B, C> void run(final A a, final B b, final C c, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction)
-            throws IllegalArgumentException {
-        N.checkArgNotNull(sqlAction, s.sqlAction);
-
-        try {
-            sqlAction.accept(a, b, c);
-        } catch (final Exception e) {
-            throw N.toRuntimeException(e);
-        }
-    }
-
-    /**
-     * Executes the specified SQL action and returns the result.
-     *
-     * @param <R> The type of the result.
-     * @param sqlAction The SQL action to be executed.
-     * @return The result of the SQL action.
-     * @throws IllegalArgumentException If the SQL action is null.
-     */
-    @Beta
-    public static <R> R call(final Callable<R> sqlAction) throws IllegalArgumentException {
-        N.checkArgNotNull(sqlAction, s.sqlAction);
-
-        try {
-            return sqlAction.call();
-        } catch (final Exception e) {
-            throw N.toRuntimeException(e);
-        }
-    }
-
-    /**
-     * Executes the specified SQL action with the given input parameter and returns the result.
-     *
-     * @param <T> The type of the input parameter.
-     * @param <R> The type of the result.
-     * @param t The input parameter.
-     * @param sqlAction The SQL action to be executed.
-     * @return The result of the SQL action.
-     * @throws IllegalArgumentException If the SQL action is invalid.
-     */
-    @Beta
-    public static <T, R> R call(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) throws IllegalArgumentException {
-        N.checkArgNotNull(sqlAction, s.sqlAction);
-
-        try {
-            return sqlAction.apply(t);
-        } catch (final Exception e) {
-            throw N.toRuntimeException(e);
-        }
-    }
-
-    /**
-     * Calls the specified SQL action with two input parameters and returns the result.
-     *
-     * @param <T> The type of the first input parameter.
-     * @param <U> The type of the second input parameter.
-     * @param <R> The type of the result.
-     * @param t The first input parameter.
-     * @param u The second input parameter.
-     * @param sqlAction The SQL action to be executed.
-     * @return The result of the SQL action.
-     * @throws IllegalArgumentException If the SQL action is invalid.
-     */
-    @Beta
-    public static <T, U, R> R call(final T t, final U u, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction)
-            throws IllegalArgumentException {
-        N.checkArgNotNull(sqlAction, s.sqlAction);
-
-        try {
-            return sqlAction.apply(t, u);
-        } catch (final Exception e) {
-            throw N.toRuntimeException(e);
-        }
-    }
-
-    /**
-     * Calls the specified SQL action with three input parameters and returns the result.
-     *
-     * @param <A> The type of the first input parameter.
-     * @param <B> The type of the second input parameter.
-     * @param <C> The type of the third input parameter.
-     * @param <R> The type of the result.
-     * @param a The first input parameter.
-     * @param b The second input parameter.
-     * @param c The third input parameter.
-     * @param sqlAction The SQL action to be executed.
-     * @return The result of the SQL action.
-     * @throws IllegalArgumentException If the SQL action is invalid.
-     */
-    @Beta
-    public static <A, B, C, R> R call(final A a, final B b, final C c,
-            final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException {
-        N.checkArgNotNull(sqlAction, s.sqlAction);
-
-        try {
-            return sqlAction.apply(a, b, c);
-        } catch (final Exception e) {
-            throw N.toRuntimeException(e);
-        }
-    }
+    //    /**
+    //     * Executes the specified SQL action.
+    //     *
+    //     * @param sqlAction The SQL action to be executed.
+    //     * @throws IllegalArgumentException If the SQL action is invalid.
+    //     */
+    //    @Beta
+    //    public static void run(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException {
+    //        N.checkArgNotNull(sqlAction, s.sqlAction);
+    //
+    //        try {
+    //            sqlAction.run();
+    //        } catch (final Exception e) {
+    //            throw N.toRuntimeException(e);
+    //        }
+    //    }
+    //
+    //    /**
+    //     * Executes the specified SQL action with the given input parameter.
+    //     *
+    //     * @param <T> The type of the input parameter.
+    //     * @param t The input parameter.
+    //     * @param sqlAction The SQL action to be executed.
+    //     * @throws IllegalArgumentException If the SQL action is invalid.
+    //     */
+    //    @Beta
+    //    public static <T> void run(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException {
+    //        N.checkArgNotNull(sqlAction, s.sqlAction);
+    //
+    //        try {
+    //            sqlAction.accept(t);
+    //        } catch (final Exception e) {
+    //            throw N.toRuntimeException(e);
+    //        }
+    //    }
+    //
+    //    /**
+    //     * Executes the specified SQL action with the given input parameters.
+    //     *
+    //     * @param <T> The type of the first input parameter.
+    //     * @param <U> The type of the second input parameter.
+    //     * @param t The first input parameter.
+    //     * @param u The second input parameter.
+    //     * @param sqlAction The SQL action to be executed.
+    //     * @throws IllegalArgumentException If the SQL action is invalid.
+    //     */
+    //    @Beta
+    //    public static <T, U> void run(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction)
+    //            throws IllegalArgumentException {
+    //        N.checkArgNotNull(sqlAction, s.sqlAction);
+    //
+    //        try {
+    //            sqlAction.accept(t, u);
+    //        } catch (final Exception e) {
+    //            throw N.toRuntimeException(e);
+    //        }
+    //    }
+    //
+    //    /**
+    //     * Executes the specified SQL action with the given input parameters.
+    //     *
+    //     * @param <A> The type of the first input parameter.
+    //     * @param <B> The type of the second input parameter.
+    //     * @param <C> The type of the third input parameter.
+    //     * @param a The first input parameter.
+    //     * @param b The second input parameter.
+    //     * @param c The third input parameter.
+    //     * @param sqlAction The SQL action to be executed.
+    //     * @throws IllegalArgumentException If the SQL action is invalid.
+    //     */
+    //    @Beta
+    //    public static <A, B, C> void run(final A a, final B b, final C c, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction)
+    //            throws IllegalArgumentException {
+    //        N.checkArgNotNull(sqlAction, s.sqlAction);
+    //
+    //        try {
+    //            sqlAction.accept(a, b, c);
+    //        } catch (final Exception e) {
+    //            throw N.toRuntimeException(e);
+    //        }
+    //    }
+    //
+    //    /**
+    //     * Executes the specified SQL action and returns the result.
+    //     *
+    //     * @param <R> The type of the result.
+    //     * @param sqlAction The SQL action to be executed.
+    //     * @return The result of the SQL action.
+    //     * @throws IllegalArgumentException If the SQL action is {@code null}.
+    //     */
+    //    @Beta
+    //    public static <R> R call(final Callable<R> sqlAction) throws IllegalArgumentException {
+    //        N.checkArgNotNull(sqlAction, s.sqlAction);
+    //
+    //        try {
+    //            return sqlAction.call();
+    //        } catch (final Exception e) {
+    //            throw N.toRuntimeException(e);
+    //        }
+    //    }
+    //
+    //    /**
+    //     * Executes the specified SQL action with the given input parameter and returns the result.
+    //     *
+    //     * @param <T> The type of the input parameter.
+    //     * @param <R> The type of the result.
+    //     * @param t The input parameter.
+    //     * @param sqlAction The SQL action to be executed.
+    //     * @return The result of the SQL action.
+    //     * @throws IllegalArgumentException If the SQL action is invalid.
+    //     */
+    //    @Beta
+    //    public static <T, R> R call(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) throws IllegalArgumentException {
+    //        N.checkArgNotNull(sqlAction, s.sqlAction);
+    //
+    //        try {
+    //            return sqlAction.apply(t);
+    //        } catch (final Exception e) {
+    //            throw N.toRuntimeException(e);
+    //        }
+    //    }
+    //
+    //    /**
+    //     * Calls the specified SQL action with two input parameters and returns the result.
+    //     *
+    //     * @param <T> The type of the first input parameter.
+    //     * @param <U> The type of the second input parameter.
+    //     * @param <R> The type of the result.
+    //     * @param t The first input parameter.
+    //     * @param u The second input parameter.
+    //     * @param sqlAction The SQL action to be executed.
+    //     * @return The result of the SQL action.
+    //     * @throws IllegalArgumentException If the SQL action is invalid.
+    //     */
+    //    @Beta
+    //    public static <T, U, R> R call(final T t, final U u, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction)
+    //            throws IllegalArgumentException {
+    //        N.checkArgNotNull(sqlAction, s.sqlAction);
+    //
+    //        try {
+    //            return sqlAction.apply(t, u);
+    //        } catch (final Exception e) {
+    //            throw N.toRuntimeException(e);
+    //        }
+    //    }
+    //
+    //    /**
+    //     * Calls the specified SQL action with three input parameters and returns the result.
+    //     *
+    //     * @param <A> The type of the first input parameter.
+    //     * @param <B> The type of the second input parameter.
+    //     * @param <C> The type of the third input parameter.
+    //     * @param <R> The type of the result.
+    //     * @param a The first input parameter.
+    //     * @param b The second input parameter.
+    //     * @param c The third input parameter.
+    //     * @param sqlAction The SQL action to be executed.
+    //     * @return The result of the SQL action.
+    //     * @throws IllegalArgumentException If the SQL action is invalid.
+    //     */
+    //    @Beta
+    //    public static <A, B, C, R> R call(final A a, final B b, final C c,
+    //            final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException {
+    //        N.checkArgNotNull(sqlAction, s.sqlAction);
+    //
+    //        try {
+    //            return sqlAction.apply(a, b, c);
+    //        } catch (final Exception e) {
+    //            throw N.toRuntimeException(e);
+    //        }
+    //    }
 
     /**
      * Asynchronously runs the specified SQL action in a separate thread.
@@ -6164,7 +6164,7 @@ public final class JdbcUtil {
      *
      * @param sqlAction The SQL action to be executed.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException If the specified SQL action is null.
+     * @throws IllegalArgumentException If the specified SQL action is {@code null}.
      */
     @Beta
     public static ContinuableFuture<Void> asyncRun(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException {
@@ -6979,19 +6979,20 @@ public final class JdbcUtil {
     //    }
 
     /**
-     * Gets the named parameters.
+     * Extracts the named parameters from the given SQL string.
      *
-     * @param sql
-     * @return
+     * @param sql the SQL string containing named parameters.
+     * @return a list of named parameters found in the SQL string.
      */
     public static List<String> getNamedParameters(final String sql) {
         return ParsedSql.parse(sql).getNamedParameters();
     }
 
     /**
+     * Parses the given SQL string and returns a ParsedSql object.
      *
-     * @param sql
-     * @return
+     * @param sql the SQL string to be parsed.
+     * @return a ParsedSql object representing the parsed SQL string.
      * @see ParsedSql#parse(String)
      */
     public static ParsedSql parseSql(final String sql) {
@@ -7176,10 +7177,10 @@ public final class JdbcUtil {
     }
 
     /**
-     * Checks if the given value is null or the default value for its type.
+     * Checks if the given value is {@code null} or the default value for its type.
      *
      * @param value The value to be checked.
-     * @return true if the value is null or the default value for its type, false otherwise.
+     * @return {@code true} if the value is {@code null} or the default value for its type, {@code false} otherwise.
      */
     public static boolean isNullOrDefault(final Object value) {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));

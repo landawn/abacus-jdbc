@@ -85,6 +85,10 @@ public class JavaDocHelper {
                                     .map(it -> Strings.containsAll(it, "<code>", "</code>") ? it.replace("<code>", "{@code ").replace("</code>", "}") : it)
                                     .join(" ");
 
+                            line = Stream.of(Strings.splitPreserveAllTokens(line, " "))
+                                    .map(it -> Strings.isWrappedWith(it, "`") ? "<i>" + Strings.unwrap(it, "`") + "</i>" : it)
+                                    .join(" ");
+
                             for (final String keyword : keyWords) {
                                 line = line.replace(" " + keyword + " ", " {@code " + Strings.unwrap(keyword, "<code>", "</code>") + "} ");
                             }

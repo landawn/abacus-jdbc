@@ -2051,7 +2051,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param paramsSetter The parameters setter to set the parameters.
      * @return The current instance of the query.
-     * @throws IllegalArgumentException If the provided parameters setter is null.
+     * @throws IllegalArgumentException If the provided parameters setter is {@code null}.
      * @throws SQLException If a database access error occurs.
      */
     public This setParameters(final Jdbc.ParametersSetter<? super Stmt> paramsSetter) throws IllegalArgumentException, SQLException {
@@ -2103,7 +2103,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameters The parameters to set.
      * @param paramsSetter The parameters setter to set the parameters.
      * @return The current instance of the query.
-     * @throws IllegalArgumentException If the provided parameters setter is null.
+     * @throws IllegalArgumentException If the provided parameters setter is {@code null}.
      * @throws SQLException If a database access error occurs.
      */
     public <T> This setParameters(final T parameters, final Jdbc.BiParametersSetter<? super Stmt, ? super T> paramsSetter)
@@ -2301,7 +2301,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param paramsSetter The parameters setter to set the parameters.
      * @return The current instance of the query.
-     * @throws IllegalArgumentException If the provided parameters setter is null.
+     * @throws IllegalArgumentException If the provided parameters setter is {@code null}.
      * @throws SQLException If a database access error occurs.
      */
     @Beta
@@ -2330,7 +2330,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameters The parameters to set.
      * @param paramsSetter The parameters setter to set the parameters.
      * @return The current instance of the query.
-     * @throws IllegalArgumentException If the provided parameters setter is null.
+     * @throws IllegalArgumentException If the provided parameters setter is {@code null}.
      * @throws SQLException If a database access error occurs.
      */
     @Beta
@@ -3788,7 +3788,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <R> The type of the result.
      * @param resultExtractor The extractor used to process the {@code ResultSet} and produce the result. Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return The result extracted from the {@code ResultSet}.
-     * @throws IllegalArgumentException If the provided {@code resultExtractor} is null.
+     * @throws IllegalArgumentException If the provided {@code resultExtractor} is {@code null}.
      * @throws IllegalStateException If the query is executed on a closed statement.
      * @throws SQLException If a database access error occurs.
      */
@@ -3809,7 +3809,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <R> The type of the result.
      * @param resultExtractor The extractor used to process the {@code ResultSet} and produce the result. Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return The result extracted from the {@code ResultSet}.
-     * @throws IllegalArgumentException If the provided {@code resultExtractor} is null.
+     * @throws IllegalArgumentException If the provided {@code resultExtractor} is {@code null}.
      * @throws IllegalStateException If the query is executed on a closed statement.
      * @throws SQLException If a database access error occurs.
      */
@@ -3833,7 +3833,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param resultExtractor1 The extractor used to process the first {@code ResultSet} and produce the result. Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param resultExtractor2 The extractor used to process the second {@code ResultSet} and produce the result. Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return A {@code Tuple2} containing the results extracted from the first two {@code ResultSets}.
-     * @throws IllegalArgumentException If any of the provided {@code resultExtractor} is null.
+     * @throws IllegalArgumentException If any of the provided {@code resultExtractor} is {@code null}.
      * @throws IllegalStateException If the query is executed on a closed statement.
      * @throws SQLException If a database access error occurs.
      */
@@ -3884,7 +3884,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param resultExtractor2 The extractor used to process the second {@code ResultSet} and produce the result. Don't save/return {@code ResultSet}. It will be closed after this call.
      * @param resultExtractor3 The extractor used to process the third {@code ResultSet} and produce the result. Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return A {@code Tuple3} containing the results extracted from the first three {@code ResultSets}.
-     * @throws IllegalArgumentException If any of the provided {@code resultExtractor} is null.
+     * @throws IllegalArgumentException If any of the provided {@code resultExtractor} is {@code null}.
      * @throws IllegalStateException If the query is executed on a closed statement.
      * @throws SQLException If a database access error occurs.
      */
@@ -3948,7 +3948,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <R> The type of the result extracted from each {@code ResultSet}.
      * @param resultExtractor The extractor used to process each {@code ResultSet} and produce the result. Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return A list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException If the provided {@code resultExtractor} is null.
+     * @throws IllegalArgumentException If the provided {@code resultExtractor} is {@code null}.
      * @throws IllegalStateException If the query is executed on a closed statement.
      * @throws SQLException If a database access error occurs.
      */
@@ -3988,7 +3988,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <R> The type of the result extracted from each {@code ResultSet}.
      * @param resultExtractor The extractor used to process each {@code ResultSet} and produce the result. Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return A list of {@code R} extracted from all {@code ResultSets} returned by the executed procedure and a list of {@code Out Parameters}.
-     * @throws IllegalArgumentException If the provided {@code resultExtractor} is null.
+     * @throws IllegalArgumentException If the provided {@code resultExtractor} is {@code null}.
      * @throws IllegalStateException If the query is executed on a closed statement.
      * @throws SQLException If a database access error occurs.
      */
@@ -5022,7 +5022,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> The type of the elements in the stream.
      * @param rowMapper The {@code RowMapper} to map rows of the {@code ResultSet} to the target type.
      * @return A {@code CheckedStream} of the specified type representing the rows in the first {@code ResultSet}.
-     * @throws IllegalArgumentException If the provided {@code targetType} is null.
+     * @throws IllegalArgumentException If the provided {@code targetType} is {@code null}.
      * @throws IllegalStateException If this is closed.
      * @see #query(ResultExtractor)
      * @see #query(BiResultExtractor)
@@ -6231,7 +6231,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the SQL statement in this {@code PreparedStatement} object.
      *
-     * @return {@code true} if the first result is a `ResultSet` object;
+     * @return {@code true} if the first result is a <i>ResultSet</i> object;
      *         {@code false} if it is an update count or there are no results
      * @throws IllegalStateException if this instance is closed
      * @throws SQLException if a database access error occurs

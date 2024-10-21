@@ -292,7 +292,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets the specified parameter to a boolean value.
      *
      * @param parameterName the name of the parameter to be set
-     * @param x the boolean value to set the parameter to, or null to set the parameter to SQL NULL
+     * @param x the boolean value to set the parameter to, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code NamedQuery}
      * @throws IllegalArgumentException if the parameter name is not found
      * @throws SQLException if a database access error occurs
@@ -366,7 +366,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets the specified parameter to a byte value.
      *
      * @param parameterName the name of the parameter to be set
-     * @param x the byte value to set the parameter to, or null to set the parameter to SQL NULL
+     * @param x the byte value to set the parameter to, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code NamedQuery}
      * @throws IllegalArgumentException if the parameter name is not found
      * @throws SQLException if a database access error occurs
@@ -440,7 +440,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets the specified parameter to a short value.
      *
      * @param parameterName the name of the parameter to be set
-     * @param x the short value to set the parameter to, or null to set the parameter to SQL NULL
+     * @param x the short value to set the parameter to, or {@code null} to set the parameter to SQL NULL
      * @return the current instance of {@code NamedQuery}
      * @throws IllegalArgumentException if the parameter name is not found
      * @throws SQLException if a database access error occurs
@@ -3061,7 +3061,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * @param parameters an object containing the parameters. It could be a bean, a map, a collection, an array or a single value.
      * @return the current instance of {@code NamedQuery}
-     * @throws IllegalArgumentException if the parameters object is null.
+     * @throws IllegalArgumentException if the parameters object is {@code null}.
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getNamedParameters(String)
      */

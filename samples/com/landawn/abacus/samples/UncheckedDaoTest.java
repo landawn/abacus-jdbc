@@ -61,11 +61,8 @@ import com.landawn.abacus.util.stream.Stream;
 
 public class UncheckedDaoTest {
 
-    /**
-     *
-     */
     @Test
-    public void test_define() {
+    public void test_define() throws SQLException {
 
         final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
@@ -83,7 +80,7 @@ public class UncheckedDaoTest {
         assertEquals(ids.size(), uncheckedUserDao.selectByIdWithDefine_4("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
 
         assertTrue(uncheckedUserDao.exists("user1", "last_name", ids.get(0)));
-        assertTrue(JdbcUtil.call(() -> uncheckedUserDao.isThere("user1", "last_name", ids.get(0))));
+        assertTrue(uncheckedUserDao.isThere("user1", "last_name", ids.get(0)));
 
         assertEquals(1, uncheckedUserDao.deleteByIdWithDefine("user1", ids.get(0)));
         assertEquals(ids.size() - 1, uncheckedUserDao.deleteByIdsWithDefine("user1", ids));
@@ -92,7 +89,7 @@ public class UncheckedDaoTest {
         assertEquals(0, uncheckedUserDao.selectByIdWithDefine_2("user1", "id", ids.get(0)).size());
 
         assertFalse(uncheckedUserDao.exists("user1", "last_name", ids.get(0)));
-        assertFalse(JdbcUtil.call(() -> uncheckedUserDao.isThere("user1", "last_name", ids.get(0))));
+        assertFalse(uncheckedUserDao.isThere("user1", "last_name", ids.get(0)));
     }
 
     //    @Test
@@ -275,11 +272,8 @@ public class UncheckedDaoTest {
     //        assertFalse(uncheckedUserDao.exists(id));
     //    }
 
-    /**
-     *
-     */
     @Test
-    public void test_batch() {
+    public void test_batch() throws SQLException {
 
         final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
@@ -301,7 +295,7 @@ public class UncheckedDaoTest {
 
         assertEquals(users.size(), uncheckedUserDao.batchDeleteByIds(ids));
 
-        assertEquals(0, N.sum(JdbcUtil.call(ids, it -> uncheckedUserDao.batchDeleteByIds_2(it))));
+        assertEquals(0, N.sum(uncheckedUserDao.batchDeleteByIds_2(ids)));
     }
 
     /**
