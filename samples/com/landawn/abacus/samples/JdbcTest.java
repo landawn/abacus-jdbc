@@ -114,44 +114,44 @@ public class JdbcTest {
             JdbcUtil.executeUpdate(dataSource, sql_user_drop_table);
 
             final String sql_user_creat_table = """
-                CREATE TABLE IF NOT EXISTS user1 (\
-                id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
-                first_name varchar(32) NOT NULL, \
-                last_name varchar(32) NOT NULL, \
-                prop1 varchar(32), \
-                email varchar(32), \
-                create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)""";
+                    CREATE TABLE IF NOT EXISTS user1 (\
+                    id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
+                    first_name varchar(32) NOT NULL, \
+                    last_name varchar(32) NOT NULL, \
+                    prop1 varchar(32), \
+                    email varchar(32), \
+                    create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)""";
 
             JdbcUtil.executeUpdate(dataSource, sql_user_creat_table);
 
             final String sql_user2_creat_table = """
-                CREATE TABLE IF NOT EXISTS user2 (\
-                id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
-                first_name varchar(32) NOT NULL, \
-                last_name varchar(32) NOT NULL, \
-                prop1 varchar(32), \
-                email varchar(32), \
-                create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)""";
+                    CREATE TABLE IF NOT EXISTS user2 (\
+                    id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
+                    first_name varchar(32) NOT NULL, \
+                    last_name varchar(32) NOT NULL, \
+                    prop1 varchar(32), \
+                    email varchar(32), \
+                    create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)""";
 
             JdbcUtil.executeUpdate(dataSource, sql_user2_creat_table);
 
             final String sql_device_creat_table = """
-                CREATE TABLE IF NOT EXISTS device (\
-                id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
-                manufacture varchar(64) NOT NULL, \
-                model varchar(32) NOT NULL, \
-                user_id bigint, \
-                FOREIGN KEY (user_id) REFERENCES user1(id) ON DELETE CASCADE)""";
+                    CREATE TABLE IF NOT EXISTS device (\
+                    id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
+                    manufacture varchar(64) NOT NULL, \
+                    model varchar(32) NOT NULL, \
+                    user_id bigint, \
+                    FOREIGN KEY (user_id) REFERENCES user1(id) ON DELETE CASCADE)""";
 
             JdbcUtil.executeUpdate(dataSource, sql_device_creat_table);
 
             final String sql_address_creat_table = """
-                CREATE TABLE IF NOT EXISTS address (\
-                id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
-                street varchar(64) NOT NULL, \
-                city varchar(32) NOT NULL, \
-                user_id bigint, \
-                FOREIGN KEY (user_id) REFERENCES user1(id) ON DELETE CASCADE)""";
+                    CREATE TABLE IF NOT EXISTS address (\
+                    id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
+                    street varchar(64) NOT NULL, \
+                    city varchar(32) NOT NULL, \
+                    user_id bigint, \
+                    FOREIGN KEY (user_id) REFERENCES user1(id) ON DELETE CASCADE)""";
 
             JdbcUtil.executeUpdate(dataSource, sql_address_creat_table);
 
@@ -159,29 +159,29 @@ public class JdbcTest {
 
             final String sql_employee_drop_table = "DROP TABLE IF EXISTS employee";
             final String sql_employee_creat_table = """
-                CREATE TABLE IF NOT EXISTS employee (\
-                employee_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, \
-                first_name varchar(50) DEFAULT NULL, \
-                last_name varchar(50) DEFAULT NULL)""";
+                    CREATE TABLE IF NOT EXISTS employee (\
+                    employee_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, \
+                    first_name varchar(50) DEFAULT NULL, \
+                    last_name varchar(50) DEFAULT NULL)""";
 
             JdbcUtil.executeUpdate(dataSource, sql_employee_drop_table);
             JdbcUtil.executeUpdate(dataSource, sql_employee_creat_table);
 
             final String sql_project_drop_table = "DROP TABLE IF EXISTS project";
             final String sql_project_creat_table = """
-                CREATE TABLE IF NOT EXISTS project (\
-                project_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, \
-                title varchar(50) DEFAULT NULL)""";
+                    CREATE TABLE IF NOT EXISTS project (\
+                    project_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, \
+                    title varchar(50) DEFAULT NULL)""";
 
             JdbcUtil.executeUpdate(dataSource, sql_project_drop_table);
             JdbcUtil.executeUpdate(dataSource, sql_project_creat_table);
 
             final String sql_employee_dept_relationship_drop_table = "DROP TABLE IF EXISTS employee_project";
             final String sql_employee_dept_relationship_creat_table = """
-                CREATE TABLE IF NOT EXISTS employee_project (\
-                employee_id int NOT NULL, \
-                project_id int NOT NULL, \
-                create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)""";
+                    CREATE TABLE IF NOT EXISTS employee_project (\
+                    employee_id int NOT NULL, \
+                    project_id int NOT NULL, \
+                    create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)""";
 
             JdbcUtil.executeUpdate(dataSource, sql_employee_dept_relationship_drop_table);
             JdbcUtil.executeUpdate(dataSource, sql_employee_dept_relationship_creat_table);
