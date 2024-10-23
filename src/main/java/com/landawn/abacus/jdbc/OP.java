@@ -37,14 +37,8 @@ public enum OP {
      */
     stream,
 
-    /**
-     *
-     */
     queryForSingle,
 
-    /**
-     *
-     */
     queryForUnique,
 
     /**
@@ -67,21 +61,12 @@ public enum OP {
      */
     executeAndGetOutParameters,
 
-    /**
-     *
-     */
     update,
 
-    /**
-     *
-     */
     largeUpdate,
 
     /* batchUpdate,*/
 
-    /**
-     *
-     */
     DEFAULT;
 
 }

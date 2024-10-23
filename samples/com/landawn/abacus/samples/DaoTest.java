@@ -367,7 +367,7 @@ public class DaoTest {
         try (Connection conn = JdbcTest.dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement("select * from user1");
                 ResultSet rs = stmt.executeQuery()) {
-            JdbcUtils.exportCSV(System.out, rs);
+            JdbcUtils.exportCSV(IOUtil.newOutputStreamWriter(System.out), rs);
         }
 
         N.println(IOUtil.LINE_SEPARATOR);
@@ -376,7 +376,7 @@ public class DaoTest {
         try (Connection conn = JdbcTest.dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement("select * from user1");
                 ResultSet rs = stmt.executeQuery()) {
-            JdbcUtils.exportCSV(System.out, rs, 0, 10, true, false);
+            JdbcUtils.exportCSV(IOUtil.newOutputStreamWriter(System.out), rs, JdbcUtil.getColumnLabelList(rs), true, false);
         }
 
         userDao.batchDelete(users);
@@ -1335,9 +1335,6 @@ public class DaoTest {
         userDao.batchDelete(users);
     }
 
-    /**
-     *
-     */
     @Test
     public void test_SQLParser() {
         final String sql = "SELECT employee_id AS \"employeeId\", first_name AS \"firstName\", last_name AS \"lastName\" FROM employee WHERE 1 < 2";

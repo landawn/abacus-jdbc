@@ -25,9 +25,6 @@ import com.landawn.abacus.util.N;
 public class DataSetTest {
     static final Random RAND = new Random();
 
-    /**
-     *
-     */
     @Test
     public void test_join() {
         final User user = User.builder().id(1001).firstName("Tom").build();

@@ -103,9 +103,6 @@ public class UncheckedDaoTest {
     //        assertEquals(N.asList(sql), uncheckedUserDao.getCachedSqls("selectById"));
     //    }
 
-    /**
-     *
-     */
     @Test
     public void test_orderBy() {
         JdbcUtil.enableSqlLog();
@@ -129,9 +126,6 @@ public class UncheckedDaoTest {
         assertFalse(uncheckedUserDao.exists(id));
     }
 
-    /**
-     *
-     */
     @Test
     public void test_cache() {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -153,9 +147,6 @@ public class UncheckedDaoTest {
         uncheckedUserDao.delete(userFromDB);
     }
 
-    /**
-     *
-     */
     @Test
     public void test_handler() {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -178,9 +169,6 @@ public class UncheckedDaoTest {
         assertFalse(uncheckedUserDao.exists(userFromDB.getId()));
     }
 
-    /**
-     *
-     */
     @Test
     public void test_sql_log() {
 
@@ -210,9 +198,6 @@ public class UncheckedDaoTest {
         });
     }
 
-    /**
-     *
-     */
     @Test
     public void test_operation_log() {
 
@@ -222,9 +207,6 @@ public class UncheckedDaoTest {
         uncheckedUserDao.delete_propagation_SUPPORTS(100);
     }
 
-    /**
-     *
-     */
     @Test
     public void test_propagation() {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -298,9 +280,6 @@ public class UncheckedDaoTest {
         assertEquals(0, N.sum(uncheckedUserDao.batchDeleteByIds_2(ids)));
     }
 
-    /**
-     *
-     */
     @Test
     public void test_save_insert() {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -321,9 +300,6 @@ public class UncheckedDaoTest {
         assertFalse(uncheckedUserDao.exists(id));
     }
 
-    /**
-     *
-     */
     @Test
     public void test_save_insert_2() {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -404,9 +380,6 @@ public class UncheckedDaoTest {
         uncheckedUserDao.delete(user);
     }
 
-    /**
-     *
-     */
     @Test
     public void test_batchGet() {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -438,9 +411,6 @@ public class UncheckedDaoTest {
         uncheckedUserDao.deleteById(100L);
     }
 
-    /**
-     *
-     */
     @Test
     public void test_batchDelete() {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -474,9 +444,6 @@ public class UncheckedDaoTest {
         uncheckedUserDao.deleteById(100L);
     }
 
-    /**
-     *
-     */
     @Test
     public void test_findFirst() {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -506,9 +473,6 @@ public class UncheckedDaoTest {
         uncheckedUserDao.deleteById(100L);
     }
 
-    /**
-     *
-     */
     @Test
     public void test_list() {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -717,9 +681,6 @@ public class UncheckedDaoTest {
         uncheckedUserDao.batchDelete(users);
     }
 
-    /**
-     *
-     */
     @Test
     public void test_SQLParser() {
         final String sql = "SELECT employee_id AS \"employeeId\", first_name AS \"firstName\", last_name AS \"lastName\" FROM employee WHERE 1 < 2";
