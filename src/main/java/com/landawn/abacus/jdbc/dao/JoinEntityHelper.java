@@ -44,6 +44,8 @@ import com.landawn.abacus.util.u.Optional;
  * @param <T>
  * @param <SB>
  * @param <TD>
+ *
+ * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
  */

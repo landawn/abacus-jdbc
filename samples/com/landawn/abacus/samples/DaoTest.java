@@ -78,11 +78,6 @@ import codes.entity.Account.x;
 
 public class DaoTest {
 
-    /**
-     *
-     *
-     * @throws Exception
-     */
     @Test
     public void test_paginate() throws Exception {
 
@@ -119,11 +114,6 @@ public class DaoTest {
         userDao.delete(CF.ge("id", 0));
     }
 
-    /**
-     *
-     *
-     * @throws Exception
-     */
     @Test
     public void test_setStringForMultiPositions() throws Exception {
 
@@ -246,11 +236,6 @@ public class DaoTest {
     //                .accept(sp -> JdbcUtil.executeUpdate(userDao.dataSource(), sp.sql, sp.parameters.toArray()));
     //    }
 
-    /**
-     *
-     *
-     * @throws Exception
-     */
     @Test
     public void test_parallel() throws Exception {
 
@@ -274,11 +259,6 @@ public class DaoTest {
         userDao.delete(CF.alwaysTrue());
     }
 
-    /**
-     *
-     *
-     * @throws Exception
-     */
     @Test
     public void test_batchUpsert() throws Exception {
 
@@ -351,11 +331,6 @@ public class DaoTest {
         }
     }
 
-    /**
-     *
-     *
-     * @throws Exception
-     */
     @Test
     public void test_exportCSV() throws Exception {
         final List<User> users = IntStream.range(1, 30)
@@ -382,11 +357,6 @@ public class DaoTest {
         userDao.batchDelete(users);
     }
 
-    /**
-     *
-     *
-     * @throws Exception
-     */
     @Test
     public void test_refresh() throws Exception {
 
@@ -415,11 +385,6 @@ public class DaoTest {
         userDao.batchDelete(dbUsers);
     }
 
-    /**
-     *
-     *
-     * @throws Exception
-     */
     @Test
     public void test_define() throws Exception {
 
@@ -450,11 +415,6 @@ public class DaoTest {
         assertFalse(userDao.isThere("user1", "last_name", ids.get(0)));
     }
 
-    /**
-     *
-     *
-     * @throws Exception
-     */
     @Test
     public void test_BindList() throws Exception {
 

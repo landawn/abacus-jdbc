@@ -67,11 +67,6 @@ import com.landawn.abacus.util.stream.Stream;
 // @SqlLogEnabled(true)
 public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
 
-    /**
-     *
-     *
-     * @return
-     */
     @NonDBOperation
     @Override
     default Long generateId() {
@@ -110,11 +105,6 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     @Select("SELECT first_name, last_name FROM `user1` WHERE id = :id")
     User getFirstAndLastNameBy(@Bind("id") long id) throws SQLException;
 
-    /**
-     *
-     *
-     * @return
-     */
     @SqlLogEnabled(false)
     @Select("SELECT id, first_name, last_name, email FROM user1")
     Stream<User> allUsers();

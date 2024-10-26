@@ -71,11 +71,6 @@ public interface UncheckedUserDao
     @Select("SELECT first_name, last_name FROM user1 WHERE id = :id")
     User getFirstAndLastNameBy(@Bind("id") long id);
 
-    /**
-     *
-     *
-     * @return
-     */
     @SqlLogEnabled(false)
     @Select("SELECT id, first_name, last_name, email FROM user1")
     Stream<User> allUsers();

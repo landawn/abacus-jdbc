@@ -287,6 +287,46 @@ public class JavaDocHelper {
                 });
     }
 
+    @Test
+    public void remove_empty_jdoc() throws Exception {
+        final File parentPath = new File("./samples/");
+
+        Stream.listFiles(parentPath, true) //
+                .filter(file -> file.isFile() && file.getName().endsWith(".java"))
+                // .filter(file -> Strings.startsWithAny(file.getName(), "CommonUtil.java", "N.java"))
+                .filter(file -> N.noneMatch(filesToSkipSet, it -> file.getName().startsWith(it)))
+                .peek(Fn.println())
+                .forEach(file -> {
+                    final List<String> lines = IOUtil.readAllLines(file);
+                    boolean updated = false;
+
+                    for (int i = 0, size = lines.size(); i < size; i++) {
+                        final String line = lines.get(i);
+
+                        if (line.contains("/**")) {
+                            for (int j = i; j < size; j++) {
+                                if (lines.get(j).contains("*/")) {
+                                    if ((i != j) && Stream.of(lines.subList(i, j + 1))
+                                            .map(Fn.strip())
+                                            .flattMap(it -> Strings.split(it, " ", true))
+                                            .map(Fn.strip())
+                                            .allMatch(it -> it.startsWith("/**") || it.startsWith("*/") || it.startsWith("*") || it.startsWith("@"))) {
+
+                                        lines.subList(i, j + 1).clear();
+                                        size -= j - i + 1;
+                                        updated = true;
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (updated) {
+                        IOUtil.writeLines(lines, file);
+                    }
+                });
+    }
     //    @Test
     //    public void add_assertNotClosed() throws IOException {
     //        File file = new File("./src/main/java/com/landawn/abacus/util/stream/");

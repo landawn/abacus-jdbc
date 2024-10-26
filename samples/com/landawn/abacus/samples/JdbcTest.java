@@ -490,11 +490,6 @@ public class JdbcTest {
         // then don't need to call beginTransaction because Spring transaction is integrated and supported.
     }
 
-    /**
-     *
-     *
-     * @throws Exception
-     */
     @Test
     public void test_cycled() throws Exception {
         CheckedStream.of(1).cycled(1000).map(it -> "a").println();
@@ -541,11 +536,6 @@ public class JdbcTest {
         userDao.batchDelete(users);
     }
 
-    /**
-     *
-     *
-     * @throws Exception
-     */
     @Test
     public void test_copy() throws Exception {
         {

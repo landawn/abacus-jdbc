@@ -67,6 +67,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
  * @see Dao
+ * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
  */

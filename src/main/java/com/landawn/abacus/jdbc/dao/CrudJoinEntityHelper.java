@@ -33,6 +33,10 @@ import com.landawn.abacus.util.u.Optional;
  * @param <ID> the type of the entity ID
  * @param <SB> the type of the SQL builder
  * @param <TD> the type of the CRUD DAO
+ *
+ * @see com.landawn.abacus.annotation.JoinedBy
+ * @see com.landawn.abacus.condition.ConditionFactory
+ * @see com.landawn.abacus.condition.ConditionFactory.CF
  */
 public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
 

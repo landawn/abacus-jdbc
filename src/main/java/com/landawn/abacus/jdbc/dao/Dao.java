@@ -225,6 +225,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  * @See CrudDao
  * @see SQLExecutor.Mapper
  * @see com.landawn.abacus.annotation.AccessFieldByMethod
+ * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
  *
