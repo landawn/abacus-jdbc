@@ -36,7 +36,7 @@ import com.landawn.abacus.util.Throwables;
 /**
  * Interface for a Data Access Object (DAO) that does not support update operations.
  *
- * @param <T>  the type of the entity
+ * @param <T> the type of the entity
  * @param <SB> the type of the SQL builder
  * @param <TD> the type of the DAO
  * @see com.landawn.abacus.condition.ConditionFactory

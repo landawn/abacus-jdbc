@@ -658,7 +658,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityClass} for the specified entity if they are null.
+     * Loads the join entities specified by {@code joinEntityClass} for the specified entity if they are {@code null}.
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityClass the class of the join entities to be loaded
@@ -669,7 +669,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityClass} for the specified entity if they are null.
+     * Loads the join entities specified by {@code joinEntityClass} for the specified entity if they are {@code null}.
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityClass the class of the join entities to be loaded
@@ -688,7 +688,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityClass} for the specified entities if they are null.
+     * Loads the join entities specified by {@code joinEntityClass} for the specified entities if they are {@code null}.
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityClass the class of the join entities to be loaded
@@ -699,7 +699,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityClass} for the specified entities if they are null.
+     * Loads the join entities specified by {@code joinEntityClass} for the specified entities if they are {@code null}.
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityClass the class of the join entities to be loaded
@@ -727,7 +727,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropName} for the specified entity if they are null.
+     * Loads the join entities specified by {@code joinEntityPropName} for the specified entity if they are {@code null}.
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropName the property name of the join entities to be loaded
@@ -738,7 +738,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropName} for the specified entity if they are null.
+     * Loads the join entities specified by {@code joinEntityPropName} for the specified entity if they are {@code null}.
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropName the property name of the join entities to be loaded
@@ -755,7 +755,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropName} for the specified entities if they are null.
+     * Loads the join entities specified by {@code joinEntityPropName} for the specified entities if they are {@code null}.
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropName the property name of the join entities to be loaded
@@ -766,7 +766,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropName} for the specified entities if they are null.
+     * Loads the join entities specified by {@code joinEntityPropName} for the specified entities if they are {@code null}.
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropName the property name of the join entities to be loaded
@@ -789,7 +789,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entity if they are null.
+     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entity if they are {@code null}.
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
@@ -806,7 +806,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entity if they are null.
+     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entity if they are {@code null}.
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
@@ -823,7 +823,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entity if they are null, using the provided executor to run the loading tasks in parallel.
+     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entity if they are {@code null}, using the provided executor to run the loading tasks in parallel.
      * using the provided executor to run the loading tasks in parallel.
      *
      * @param entity the entity for which to load join entities
@@ -845,7 +845,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entities if they are null.
+     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entities if they are {@code null}.
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
@@ -862,7 +862,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entities if they are null.
+     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entities if they are {@code null}.
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
@@ -880,7 +880,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entities if they are null, using the provided executor to run the loading tasks in parallel.
+     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entities if they are {@code null}, using the provided executor to run the loading tasks in parallel.
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
@@ -902,7 +902,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities for the specified entity if they are null.
+     * Loads the join entities for the specified entity if they are {@code null}.
      *
      * @param entity the entity for which to load join entities
      * @throws SQLException if a database access error occurs
@@ -912,7 +912,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities for the specified entity if they are null.
+     * Loads the join entities for the specified entity if they are {@code null}.
      *
      * @param entity the entity for which to load join entities
      * @param inParallel whether to load the join entities by multiple threads in parallel
@@ -928,7 +928,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities for the specified entity if they are null, using the provided executor to run the loading tasks in parallel.
+     * Loads the join entities for the specified entity if they are {@code null}, using the provided executor to run the loading tasks in parallel.
      *
      * @param entity the entity for which to load join entities
      * @param executor the executor to use for loading the join entities by multiple threads in parallel
@@ -940,7 +940,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities for the specified collection of entities if they are null.
+     * Loads the join entities for the specified collection of entities if they are {@code null}.
      *
      * @param entities the collection of entities for which to load join entities
      * @throws SQLException if a database access error occurs
@@ -954,7 +954,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities for the specified collection of entities if they are null.
+     * Loads the join entities for the specified collection of entities if they are {@code null}.
      *
      * @param entities the collection of entities for which to load join entities
      * @param inParallel whether to load the join entities by multiple threads in parallel
@@ -970,7 +970,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities for the specified collection of entities if they are null, using the provided executor to run the loading tasks in parallel.
+     * Loads the join entities for the specified collection of entities if they are {@code null}, using the provided executor to run the loading tasks in parallel.
      *
      * @param entities the collection of entities for which to load join entities
      * @param executor the executor to use for loading the join entities by multiple threads in parallel

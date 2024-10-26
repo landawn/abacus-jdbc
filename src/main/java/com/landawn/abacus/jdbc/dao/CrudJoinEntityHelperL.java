@@ -50,7 +50,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * Retrieves an entity by its ID, optionally including all join entities.
      *
      * @param id the ID of the entity to retrieve
-     * @param includeAllJoinEntities if true, all join entities will be included
+     * @param includeAllJoinEntities if {@code true}, all join entities will be included
      * @return an Optional containing the retrieved entity with the specified join entities loaded, or an empty Optional if no entity is found
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
@@ -97,7 +97,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      *
      * @param id the ID of the entity to retrieve
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}
-     * @param includeAllJoinEntities if true, all join entities will be included
+     * @param includeAllJoinEntities if {@code true}, all join entities will be included
      * @return an Optional containing the retrieved entity with the specified join entities loaded, or an empty Optional if no entity is found
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
@@ -132,7 +132,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * Retrieves an entity by its ID, optionally including all join entities.
      *
      * @param id the ID of the entity to retrieve
-     * @param includeAllJoinEntities if true, all join entities will be included
+     * @param includeAllJoinEntities if {@code true}, all join entities will be included
      * @return the retrieved entity with the specified join entities loaded
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
@@ -198,7 +198,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      *
      * @param id the ID of the entity to retrieve
      * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}
-     * @param includeAllJoinEntities if true, all join entities will be included
+     * @param includeAllJoinEntities if {@code true}, all join entities will be included
      * @return the retrieved entity with the specified join entities loaded
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs

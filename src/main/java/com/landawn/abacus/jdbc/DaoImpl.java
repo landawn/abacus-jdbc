@@ -506,7 +506,7 @@ final class DaoImpl {
      * Checks if is list query.
      *
      * @param method
-     * @return true, if is list query
+     * @return {@code true}, if is list query
      */
     private static boolean isListQuery(final Method method, final Class<?> returnType, final OP op, final String fullClassMethodName) {
         final String methodName = method.getName();
