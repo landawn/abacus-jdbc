@@ -25,7 +25,7 @@ import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.util.SQLBuilder;
 
 /**
- * TODO
+ * Interface for a Data Access Object (DAO) that does not support update operations.
  *
  * @param <T>
  * @param <ID>

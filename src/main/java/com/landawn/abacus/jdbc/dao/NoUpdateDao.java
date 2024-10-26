@@ -34,11 +34,11 @@ import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.Throwables;
 
 /**
- * TODO
+ * Interface for a Data Access Object (DAO) that does not support update operations.
  *
- * @param <T>
- * @param <SB>
- * @param <TD>
+ * @param <T>  the type of the entity
+ * @param <SB> the type of the SQL builder
+ * @param <TD> the type of the DAO
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
  */

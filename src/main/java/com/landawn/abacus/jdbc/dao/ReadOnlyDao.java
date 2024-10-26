@@ -27,7 +27,7 @@ import com.landawn.abacus.util.ParsedSql;
 import com.landawn.abacus.util.SQLBuilder;
 
 /**
- * TODO
+ * Interface for a read-only Data Access Object (DAO).
  *
  * @param <T>
  * @param <SB>

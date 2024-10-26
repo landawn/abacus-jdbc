@@ -23,6 +23,13 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.u.Optional;
 
+/**
+ * Interface for unchecked CRUD operations with join entity support.
+ *
+ * @param <T> the type of the entity
+ * @param <SB> the type of the SQL builder
+ * @param <TD> the type of the CRUD DAO
+ */
 public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends UncheckedCrudDaoL<T, SB, TD>>
         extends UncheckedCrudJoinEntityHelper<T, Long, SB, TD>, CrudJoinEntityHelperL<T, SB, TD> {
     /**

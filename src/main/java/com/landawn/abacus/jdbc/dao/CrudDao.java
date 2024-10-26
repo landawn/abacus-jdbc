@@ -33,8 +33,8 @@ import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLTransaction;
-import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.s;
+import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -73,9 +73,9 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
 
     /**
+     * Returns the functional interface of {@code Jdbc.BiRowMapper} that extracts the ID from a row. Default is {@code null}.
      *
-     *
-     * @return
+     * @return a BiRowMapper that extracts the ID from a row.
      */
     @NonDBOperation
     default Jdbc.BiRowMapper<ID> idExtractor() {
@@ -83,10 +83,13 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
+     * Generates an ID.
+     * <br> The default implementation is throwing {@code UnsupportedOperationException}.
+     * <br> If the implementation supports this operation, override this method.
      *
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException
+     * @return the generated ID
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the operation is not supported
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -660,10 +663,10 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws SQLException;
 
     /**
-     * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+     * Executes {@code insertion} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
      *
-     * @param entity
-     * @return
+     * @param entity the entity to add or update.
+     * @return the added or updated db record.
      * @throws SQLException
      */
     default T upsert(final T entity) throws SQLException {
@@ -677,11 +680,11 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+     * Execute {@code insertion} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
      *
-     * @param entity
+     * @param entity the entity to add or update.
      * @param cond to verify if the record exists or not.
-     * @return
+     * @return the added or updated db record.
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -845,10 +848,11 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
+     * Refreshes the given entity by reloading its properties from the database.
      *
-     * @param entity
-     * @return {@code true}, if successful
-     * @throws SQLException
+     * @param entity the entity to refresh
+     * @return {@code true} if the entity was successfully refreshed by reloading its properties from the database, {@code false} otherwise if no record found by the id in the specified {@code entity}.
+     * @throws SQLException if a database access error occurs
      */
     default boolean refresh(final T entity) throws SQLException {
         N.checkArgNotNull(entity, s.entity);
@@ -860,11 +864,12 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
+     * Refreshes the given entity by reloading its specified properties from the database.
      *
-     * @param entity
-     * @param propNamesToRefresh
-     * @return {@code false} if no record found by the ids in the specified {@code entity}.
-     * @throws SQLException
+     * @param entity the entity to refresh
+     * @param propNamesToRefresh the properties to refresh
+     * @return {@code true} if the entity was successfully refreshed by reloading its properties from the database, {@code false} otherwise if no record found by the id in the specified {@code entity}.
+     * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
     default boolean refresh(final T entity, final Collection<String> propNamesToRefresh) throws SQLException {
@@ -890,21 +895,23 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
+     * Refreshes entities by reloading their properties from the database by batch.
      *
-     * @param entities
-     * @return the count of refreshed entities.
-     * @throws SQLException
+     * @param entities the collection of entities to refresh
+     * @return the count of refreshed entities
+     * @throws SQLException if a database access error occurs
      */
     default int batchRefresh(final Collection<? extends T> entities) throws SQLException {
         return batchRefresh(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
+     * Refreshes entities by reloading their properties from the database by batch.
      *
-     * @param entities
-     * @param batchSize
-     * @return the count of refreshed entities.
-     * @throws SQLException
+     * @param entities the collection of entities to refresh
+     * @param batchSize the number of entities to refresh in each batch
+     * @return the count of refreshed entities
+     * @throws SQLException if a database access error occurs
      */
     default int batchRefresh(final Collection<? extends T> entities, final int batchSize) throws SQLException {
         if (N.isEmpty(entities)) {
@@ -919,23 +926,25 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
+     * Refreshes entities by reloading their specified properties from the database by batch.
      *
-     * @param entities
-     * @param propNamesToRefresh
-     * @return the count of refreshed entities.
-     * @throws SQLException
+     * @param entities the collection of entities to refresh
+     * @param propNamesToRefresh the properties to refresh
+     * @return the count of refreshed entities
+     * @throws SQLException if a database access error occurs
      */
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh) throws SQLException {
         return batchRefresh(entities, propNamesToRefresh, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
+     * Refreshes entities by reloading their specified properties from the database by batch.
      *
-     * @param entities
-     * @param propNamesToRefresh
-     * @param batchSize
-     * @return the count of refreshed entities.
-     * @throws SQLException
+     * @param entities the collection of entities to refresh
+     * @param propNamesToRefresh the properties to refresh
+     * @param batchSize the number of entities to refresh in each batch
+     * @return the count of refreshed entities
+     * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize) throws SQLException {

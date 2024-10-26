@@ -17,6 +17,13 @@ package com.landawn.abacus.jdbc.dao;
 
 import com.landawn.abacus.util.SQLBuilder;
 
+/**
+ * Interface for read-only operations with join entity support.
+ *
+ * @param <T> the type of the entity
+ * @param <SB> the type of the SQL builder
+ * @param <TD> the type of the CRUD DAO
+ */
 public interface ReadOnlyCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, TD>>
         extends ReadOnlyCrudJoinEntityHelper<T, Long, SB, TD>, CrudJoinEntityHelperL<T, SB, TD> {
 

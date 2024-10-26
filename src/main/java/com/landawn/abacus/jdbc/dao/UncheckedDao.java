@@ -51,7 +51,8 @@ import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 
 /**
- *
+ * Interface for an unchecked Data Access Object (DAO) that extends the base DAO interface.
+ * Its methods throw {@code UncheckedSQLException} instead of {@code SQLException}.
  *
  * @param <T>
  * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}

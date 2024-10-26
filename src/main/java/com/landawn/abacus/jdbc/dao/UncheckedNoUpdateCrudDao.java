@@ -25,7 +25,8 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.util.SQLBuilder;
 
 /**
- * TODO
+ * Interface for an unchecked Data Access Object (DAO) that does not support update operations.
+ * Its methods throw {@code UncheckedSQLException} instead of {@code SQLException}.
  *
  * @param <T>
  * @param <ID>

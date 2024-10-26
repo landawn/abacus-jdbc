@@ -23,7 +23,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.util.SQLBuilder;
 
 /**
- * TODO
+ * Interface for a read-only Data Access Object (DAO).
  *
  * @param <T>
  * @param <ID>

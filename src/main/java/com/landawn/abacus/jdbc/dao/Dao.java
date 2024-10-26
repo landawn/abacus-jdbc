@@ -42,8 +42,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.jdbc.SQLExecutor;
-import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.s;
+import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
@@ -233,8 +233,9 @@ import com.landawn.abacus.util.u.OptionalShort;
 public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
+     * Retrieves the data source.
      *
-     * @return
+     * @return the data source
      */
     @NonDBOperation
     javax.sql.DataSource dataSource();
@@ -242,15 +243,17 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     // SQLExecutor sqlExecutor();
 
     /**
+     * Retrieves the {@code SQLMapper} instance if it's configured. Otherwise, an empty {@code SQLMapper} will be returned.
      *
-     * @return
+     * @return the SQLMapper instance
      */
     @NonDBOperation
     SQLMapper sqlMapper();
 
     /**
+     * Retrieves the class of the target entity.
      *
-     * @return
+     * @return the class of the target entity
      * @deprecated for internal use only.
      */
     @Deprecated
@@ -259,8 +262,9 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     Class<T> targetEntityClass();
 
     /**
+     * Retrieves the name of the target table.
      *
-     * @return
+     * @return the name of the target table
      * @deprecated for internal use only.
      */
     @Deprecated
@@ -269,9 +273,9 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     String targetTableName();
 
     /**
+     * Retrieves the executor for asynchronous operations.
      *
-     *
-     * @return
+     * @return the executor for asynchronous operations
      * @deprecated for internal use only.
      */
     @Deprecated
@@ -280,9 +284,9 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     Executor executor();
 
     /**
+     * Retrieves the asynchronous executor.
      *
-     *
-     * @return
+     * @return the asynchronous executor
      * @deprecated for internal use only.
      */
     @Deprecated
@@ -1887,11 +1891,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Paginates the results based on the given condition and page size.
      *
-     * @param cond must have {@code orderBy}
-     * @param pageSize
-     * @param paramSetter
-     * @return
+     * @param cond the condition to filter the results. It must contain {@code orderBy}
+     * @param pageSize the number of records per page
+     * @param paramSetter the parameter setter for the prepared query
+     * @return a CheckedStream of DataSet and SQLException
      */
     @Beta
     @LazyEvaluation
@@ -1899,13 +1904,14 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             final Jdbc.BiParametersSetter<? super PreparedQuery, DataSet> paramSetter);
 
     /**
+     * Paginates the results based on the given condition and page size.
      *
-     * @param <R>
-     * @param cond must have {@code orderBy}
-     * @param pageSize
-     * @param paramSetter
-     * @param resultExtractor
-     * @return
+     * @param <R> the type of the result
+     * @param cond the condition to filter the results. It must contain {@code orderBy}
+     * @param pageSize the number of records per page
+     * @param paramSetter the parameter setter for the prepared query
+     * @param resultExtractor the result extractor to process the query results
+     * @return a CheckedStream of the result type and SQLException
      */
     @Beta
     @LazyEvaluation
@@ -1913,13 +1919,14 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             final Jdbc.ResultExtractor<? extends R> resultExtractor);
 
     /**
+     * Paginates the results based on the given condition and page size.
      *
-     * @param <R>
-     * @param cond must have {@code orderBy}
-     * @param pageSize
-     * @param paramSetter
-     * @param resultExtractor
-     * @return
+     * @param <R> the type of the result
+     * @param cond the condition to filter the results. It must contain {@code orderBy}
+     * @param pageSize the number of records per page
+     * @param paramSetter the parameter setter for the prepared query
+     * @param resultExtractor the result extractor to process the query results
+     * @return a CheckedStream of the result type and SQLException
      */
     @Beta
     @LazyEvaluation
@@ -1927,12 +1934,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             final Jdbc.BiResultExtractor<? extends R> resultExtractor);
 
     /**
+     * Paginates the results based on the given condition, selected properties, and page size.
      *
-     * @param selectPropNames
-     * @param cond must have {@code orderBy}
-     * @param pageSize
-     * @param paramSetter
-     * @return
+     * @param selectPropNames the properties to select in the query
+     * @param cond the condition to filter the results. It must contain {@code orderBy}
+     * @param pageSize the number of records per page
+     * @param paramSetter the parameter setter for the prepared query
+     * @return a CheckedStream of DataSet and SQLException
      */
     @Beta
     @LazyEvaluation
@@ -1940,14 +1948,15 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             final Jdbc.BiParametersSetter<? super PreparedQuery, DataSet> paramSetter);
 
     /**
+     * Paginates the results based on the given condition, selected properties, and page size.
      *
-     * @param <R>
-     * @param selectPropNames
-     * @param cond must have {@code orderBy}
-     * @param pageSize
-     * @param paramSetter
-     * @param resultExtractor
-     * @return
+     * @param <R> the type of the result
+     * @param selectPropNames the properties to select in the query
+     * @param cond the condition to filter the results. It must contain {@code orderBy}
+     * @param pageSize the number of records per page
+     * @param paramSetter the parameter setter for the prepared query
+     * @param resultExtractor the result extractor to process the query results
+     * @return a CheckedStream of the result type and SQLException
      */
     @Beta
     @LazyEvaluation
@@ -1955,14 +1964,15 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter, final Jdbc.ResultExtractor<? extends R> resultExtractor);
 
     /**
+     * Paginates the results based on the given condition, selected properties, and page size.
      *
-     * @param <R>
-     * @param selectPropNames
-     * @param cond must have {@code orderBy}
-     * @param pageSize
-     * @param paramSetter
-     * @param resultExtractor
-     * @return
+     * @param <R> the type of the result
+     * @param selectPropNames the properties to select in the query
+     * @param cond the condition to filter the results. It must contain {@code orderBy}
+     * @param pageSize the number of records per page
+     * @param paramSetter the parameter setter for the prepared query
+     * @param resultExtractor the result extractor to process the query results
+     * @return a CheckedStream of the result type and SQLException
      */
     @Beta
     @LazyEvaluation
@@ -2155,11 +2165,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws SQLException;
 
     /**
+     * Executes {@code insertion} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
      *
-     * @param entity
-     * @param uniquePropNamesForQuery
-     * @return
-     * @throws SQLException
+     * @param entity the entity to add or update.
+     * @param uniquePropNamesForQuery the list of unique property names to use to verify if the record exists or not.
+     * @return the added or updated db record.
+     * @throws SQLException if a database access error occurs
      */
     default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws SQLException {
         N.checkArgNotNull(entity, s.entity);
@@ -2171,11 +2182,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+     * Executes {@code insertion} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
      *
-     * @param entity
+     * @param entity the entity to add or update.
      * @param cond to verify if the record exists or not.
-     * @return
+     * @return the added or updated db record.
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF

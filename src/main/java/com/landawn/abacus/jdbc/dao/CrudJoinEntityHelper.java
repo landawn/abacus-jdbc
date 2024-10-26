@@ -27,14 +27,24 @@ import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
+/**
+ * Interface for CRUD operations with join entity support.
+ *
+ * @param <T> the type of the entity
+ * @param <ID> the type of the entity ID
+ * @param <SB> the type of the SQL builder
+ * @param <TD> the type of the CRUD DAO
+ */
 public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
+
     /**
+     * Retrieves an entity by its ID and loads the specified join entities.
      *
-     * @param id
-     * @param joinEntitiesToLoad
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
+     * @param id the ID of the entity to retrieve
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return an Optional containing the retrieved entity with the specified join entities loaded, or an empty Optional if no entity is found
+     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
@@ -42,12 +52,13 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves an entity by its ID and optionally loads all join entities.
      *
-     * @param id
-     * @param includeAllJoinEntities
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
+     * @param id the ID of the entity to retrieve
+     * @param includeAllJoinEntities whether to include all join entities in the retrieval
+     * @return an Optional containing the retrieved entity with the specified join entities loaded, or an empty Optional if no entity is found
+     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException {
@@ -55,13 +66,14 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves an entity by its ID, selecting specified properties and loading the specified join entities.
      *
-     * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param joinEntitiesToLoad
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
+     * @param id the ID of the entity to retrieve
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return an Optional containing the retrieved entity with the specified join entities loaded, or an empty Optional if no entity is found
+     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
@@ -70,13 +82,14 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves an entity by its ID, selecting specified properties and loading the specified join entities.
      *
-     * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param joinEntitiesToLoad
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
+     * @param id the ID of the entity to retrieve
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}
+     * @param joinEntitiesToLoad the classes of the join entities to load
+     * @return an Optional containing the retrieved entity with the specified join entities loaded, or an empty Optional if no entity is found
+     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
@@ -85,13 +98,14 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves an entity by its ID, selecting specified properties and optionally loading all join entities.
      *
-     * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param includeAllJoinEntities
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
+     * @param id the ID of the entity to retrieve
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}
+     * @param includeAllJoinEntities whether to include all join entities in the retrieval
+     * @return an Optional containing the retrieved entity with the specified join entities loaded, or an empty Optional if no entity is found
+     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
@@ -100,12 +114,13 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves an entity by its ID and loads the specified join entities.
      *
-     * @param id
-     * @param joinEntitiesToLoad
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
+     * @param id the ID of the entity to retrieve
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return the retrieved entity with the specified join entities loaded
+     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
@@ -119,12 +134,13 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves an entity by its ID and optionally loads all join entities.
      *
-     * @param id
-     * @param includeAllJoinEntities
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
+     * @param id the ID of the entity to retrieve
+     * @param includeAllJoinEntities whether to include all join entities in the retrieval
+     * @return the retrieved entity with the specified join entities loaded
+     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException {
@@ -138,13 +154,14 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves an entity by its ID, selecting specified properties and loading the specified join entities.
      *
-     * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param joinEntitiesToLoad
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
+     * @param id the ID of the entity to retrieve
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return the retrieved entity with the specified join entities loaded
+     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
@@ -158,13 +175,14 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves an entity by its ID, selecting specified properties and loading the specified join entities.
      *
-     * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param joinEntitiesToLoad
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
+     * @param id the ID of the entity to retrieve
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}
+     * @param joinEntitiesToLoad the classes of the join entities to load
+     * @return the retrieved entity with the specified join entities loaded
+     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
@@ -181,13 +199,14 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves an entity by its ID, selecting specified properties and optionally loading all join entities.
      *
-     * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
-     * @param includeAllJoinEntities
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
+     * @param id the ID of the entity to retrieve
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}
+     * @param includeAllJoinEntities whether to include all join entities in the retrieval
+     * @return the retrieved entity with the specified join entities loaded
+     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException {
@@ -201,13 +220,13 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves a list of entities by their IDs and loads the specified join entities.
      *
-     *
-     * @param ids
-     * @param joinEntitiesToLoad
-     * @return
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
-     * @throws SQLException
+     * @param ids the collection of IDs of the entities to retrieve
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return a list of retrieved entities with the specified join entities loaded
+     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
@@ -215,13 +234,13 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves a list of entities by their IDs and optionally loads all join entities.
      *
-     *
-     * @param ids
-     * @param includeAllJoinEntities
-     * @return
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
-     * @throws SQLException
+     * @param ids the collection of IDs of the entities to retrieve
+     * @param includeAllJoinEntities whether to include all join entities in the retrieval
+     * @return a list of retrieved entities with the specified join entities loaded
+     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException {
@@ -229,14 +248,14 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves a list of entities by their IDs, selecting specified properties and loading the specified join entities.
      *
-     *
-     * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
-     * @param joinEntitiesToLoad
-     * @return
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
-     * @throws SQLException
+     * @param ids the collection of IDs of the entities to retrieve
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return a list of retrieved entities with the specified join entities loaded
+     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
@@ -245,14 +264,14 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves a list of entities by their IDs, selecting specified properties and loading the specified join entities.
      *
-     *
-     * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
-     * @param joinEntitiesToLoad
-     * @return
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
-     * @throws SQLException
+     * @param ids the collection of IDs of the entities to retrieve
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return a list of retrieved entities with the specified join entities loaded
+     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
@@ -261,14 +280,14 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves a list of entities by their IDs, selecting specified properties and optionally loading all join entities.
      *
-     *
-     * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
-     * @param includeAllJoinEntities
-     * @return
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
-     * @throws SQLException
+     * @param ids the collection of IDs of the entities to retrieve
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}
+     * @param includeAllJoinEntities whether to include all join entities in the retrieval
+     * @return a list of retrieved entities with the specified join entities loaded
+     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
@@ -277,15 +296,15 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves a list of entities by their IDs, selecting specified properties and loading the specified join entities.
      *
-     *
-     * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
-     * @param batchSize
-     * @param joinEntitiesToLoad
-     * @return
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
-     * @throws SQLException
+     * @param ids the collection of IDs of the entities to retrieve
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}
+     * @param batchSize the number of entities to retrieve in each batch
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return a list of retrieved entities with the specified join entities loaded
+     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
@@ -304,15 +323,15 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves a list of entities by their IDs, selecting specified properties and loading the specified join entities.
      *
-     *
-     * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
-     * @param batchSize
-     * @param joinEntitiesToLoad
-     * @return
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
-     * @throws SQLException
+     * @param ids the collection of IDs of the entities to retrieve
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}
+     * @param batchSize the number of entities to retrieve in each batch
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return a list of retrieved entities with the specified join entities loaded
+     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
@@ -337,15 +356,15 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
+     * Retrieves a list of entities by their IDs, selecting specified properties and loading the specified join entities.
      *
-     *
-     * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
-     * @param batchSize
-     * @param includeAllJoinEntities
-     * @return
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
-     * @throws SQLException
+     * @param ids the collection of IDs of the entities to retrieve
+     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}
+     * @param batchSize the number of entities to retrieve in each batch
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return a list of retrieved entities with the specified join entities loaded
+     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
