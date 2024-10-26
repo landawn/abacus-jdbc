@@ -34,7 +34,6 @@ import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.u.Optional;
-import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
  *
@@ -49,7 +48,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
 
     /**
      *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @param cond
      * @return
@@ -69,7 +68,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
 
     /**
      *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @param cond
      * @return
@@ -91,7 +90,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
 
     /**
      *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param includeAllJoinEntities
      * @param cond
      * @return
@@ -111,7 +110,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
 
     /**
      *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @param cond
      * @return
@@ -132,7 +131,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
 
     /**
      *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @param cond
      * @return
@@ -155,7 +154,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
 
     /**
      *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param includeAllJoinEntities
      * @param cond
      * @return
@@ -176,7 +175,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
 
     /**
      *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @param cond
      * @return
@@ -188,10 +187,10 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         final List<T> result = DaoUtil.getDao(this).list(selectPropNames, cond);
 
         if (N.notEmpty(result)) {
-            if (result.size() > JdbcUtil.DEFAULT_BATCH_SIZE) {
-                StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(it -> loadJoinEntities(it, joinEntitiesToLoad));
-            } else {
+            if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
                 loadJoinEntities(result, joinEntitiesToLoad);
+            } else {
+                N.runByBatch(result, JdbcUtil.DEFAULT_BATCH_SIZE, batchEntities -> loadJoinEntities(batchEntities, joinEntitiesToLoad));
             }
         }
 
@@ -200,7 +199,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
 
     /**
      *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @param cond
      * @return
@@ -213,16 +212,16 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         final List<T> result = DaoUtil.getDao(this).list(selectPropNames, cond);
 
         if (N.notEmpty(result) && N.notEmpty(joinEntitiesToLoad)) {
-            if (result.size() > JdbcUtil.DEFAULT_BATCH_SIZE) {
-                StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(it -> {
-                    for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
-                        loadJoinEntities(it, joinEntityClass);
-                    }
-                });
-            } else {
+            if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
                 for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                     loadJoinEntities(result, joinEntityClass);
                 }
+            } else {
+                N.runByBatch(result, JdbcUtil.DEFAULT_BATCH_SIZE, batchEntities -> {
+                    for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
+                        loadJoinEntities(batchEntities, joinEntityClass);
+                    }
+                });
             }
         }
 
@@ -231,7 +230,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
 
     /**
      *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param includeAllJoinEntities
      * @param cond
      * @return
@@ -243,10 +242,10 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         final List<T> result = DaoUtil.getDao(this).list(selectPropNames, cond);
 
         if (N.notEmpty(result)) {
-            if (result.size() > JdbcUtil.DEFAULT_BATCH_SIZE) {
-                StreamEx.of(result).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(this::loadAllJoinEntities);
-            } else {
+            if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
                 loadAllJoinEntities(result);
+            } else {
+                N.runByBatch(result, JdbcUtil.DEFAULT_BATCH_SIZE, this::loadAllJoinEntities);
             }
         }
 
@@ -268,7 +267,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *
      * @param entity
      * @param joinEntityClass
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @SuppressWarnings("deprecation")
@@ -299,7 +298,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *
      * @param entities
      * @param joinEntityClass
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @SuppressWarnings("deprecation")
@@ -335,7 +334,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *
      * @param entity
      * @param joinEntityPropName
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -356,7 +355,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *
      * @param entities
      * @param joinEntityPropName
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -584,7 +583,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *
      * @param entity
      * @param joinEntityClass
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @SuppressWarnings("deprecation")
@@ -615,7 +614,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *
      * @param entities
      * @param joinEntityClass
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @SuppressWarnings("deprecation")
@@ -656,7 +655,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param entity
      * ?
      * @param joinEntityPropName
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override
@@ -685,7 +684,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *
      * @param entities
      * @param joinEntityPropName
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @throws UncheckedSQLException the unchecked SQL exception
      */
     @Override

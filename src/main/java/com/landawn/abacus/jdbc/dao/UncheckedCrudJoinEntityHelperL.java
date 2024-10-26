@@ -63,7 +63,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
     /**
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
@@ -79,7 +79,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
     /**
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
@@ -95,7 +95,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
     /**
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param includeAllJoinEntities
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
@@ -151,7 +151,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
     /**
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
@@ -173,7 +173,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
     /**
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
@@ -197,7 +197,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
     /**
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param includeAllJoinEntities
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).

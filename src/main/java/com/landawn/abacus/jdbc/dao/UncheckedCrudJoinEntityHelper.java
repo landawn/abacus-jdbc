@@ -25,7 +25,6 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.u.Optional;
-import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
         extends UncheckedJoinEntityHelper<T, SB, TD>, CrudJoinEntityHelper<T, ID, SB, TD> {
@@ -60,7 +59,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
     /**
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
@@ -76,7 +75,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
     /**
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
@@ -92,7 +91,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
     /**
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param includeAllJoinEntities
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
@@ -148,7 +147,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
     /**
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
@@ -170,7 +169,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
     /**
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
@@ -194,7 +193,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
     /**
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param includeAllJoinEntities
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
@@ -246,7 +245,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      *
      * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @return
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
@@ -263,7 +262,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      *
      * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @return
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
@@ -280,7 +279,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      *
      * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
      * @param includeAllJoinEntities
      * @return
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
@@ -297,7 +296,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      *
      * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
      * @param batchSize
      * @param joinEntitiesToLoad
      * @return
@@ -311,10 +310,10 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
         if (N.notEmpty(result)) {
-            if (result.size() > batchSize) {
-                StreamEx.of(result).splitToList(batchSize).forEach(it -> loadJoinEntities(it, joinEntitiesToLoad));
-            } else {
+            if (result.size() <= batchSize) {
                 loadJoinEntities(result, joinEntitiesToLoad);
+            } else {
+                N.runByBatch(result, batchSize, batchEntities -> loadJoinEntities(batchEntities, joinEntitiesToLoad));
             }
         }
 
@@ -325,7 +324,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      *
      * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
      * @param batchSize
      * @param joinEntitiesToLoad
      * @return
@@ -339,16 +338,16 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
         if (N.notEmpty(result) && N.notEmpty(joinEntitiesToLoad)) {
-            if (result.size() > batchSize) {
-                StreamEx.of(result).splitToList(batchSize).forEach(it -> {
-                    for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
-                        loadJoinEntities(it, joinEntityClass);
-                    }
-                });
-            } else {
+            if (result.size() <= batchSize) {
                 for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                     loadJoinEntities(result, joinEntityClass);
                 }
+            } else {
+                N.runByBatch(result, batchSize, batchEntities -> {
+                    for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
+                        loadJoinEntities(batchEntities, joinEntityClass);
+                    }
+                });
             }
         }
 
@@ -358,7 +357,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
     /**
      *
      * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
      * @param batchSize
      * @param includeAllJoinEntities
      * @return
@@ -372,10 +371,10 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
         if (includeAllJoinEntities && N.notEmpty(result)) {
-            if (result.size() > batchSize) {
-                StreamEx.of(result).splitToList(batchSize).forEach(this::loadAllJoinEntities);
-            } else {
+            if (result.size() <= batchSize) {
                 loadAllJoinEntities(result);
+            } else {
+                N.runByBatch(result, batchSize, this::loadAllJoinEntities);
             }
         }
 

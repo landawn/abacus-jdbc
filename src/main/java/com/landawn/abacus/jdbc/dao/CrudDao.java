@@ -471,7 +471,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Returns the record found by the specified {@code id} or an empty {@code Optional} if no record is found.
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
@@ -494,7 +494,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Returns the record found by the specified {@code id} or {@code null} if no record is found.
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      *
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
@@ -530,7 +530,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      *
      * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
      * @return
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
      * @throws SQLException
@@ -542,7 +542,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      *
      * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
      * @param batchSize
      * @return
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.

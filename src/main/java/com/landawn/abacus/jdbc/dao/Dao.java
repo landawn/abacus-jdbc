@@ -1032,7 +1032,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @return
      * @throws SQLException
@@ -1045,7 +1045,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      *
      * @param <R>
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @param rowMapper
      * @return
@@ -1061,7 +1061,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      *
      * @param <R>
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @param rowMapper
      * @return
@@ -1118,7 +1118,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
@@ -1132,7 +1132,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      *
      * @param <R>
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @param rowMapper
      * @return
@@ -1147,7 +1147,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      *
      * @param <R>
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @param rowMapper
      * @return
@@ -1443,7 +1443,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @return
      * @throws SQLException
@@ -1469,7 +1469,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      *
      * @param <R>
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return
@@ -1494,7 +1494,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      *
      * @param <R>
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
      * @return
@@ -1570,7 +1570,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @return
      * @throws SQLException
@@ -1583,7 +1583,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      *
      * @param <R>
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @param rowMapper
      * @return
@@ -1597,7 +1597,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      *
      * @param <R>
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @param rowMapper
      * @return
@@ -1611,7 +1611,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      *
      * @param <R>
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @param rowFilter
      * @param rowMapper
@@ -1627,7 +1627,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      *
      * @param <R>
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @param rowFilter
      * @param rowMapper
@@ -1762,7 +1762,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @return
      * @see ConditionFactory
@@ -1776,7 +1776,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <R>
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @param rowMapper
      * @return
@@ -1791,7 +1791,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <R>
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @param rowMapper
      * @return
@@ -1806,7 +1806,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <R>
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @param rowFilter
      * @param rowMapper
@@ -1823,7 +1823,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <R>
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
      * @param rowFilter
      * @param rowMapper

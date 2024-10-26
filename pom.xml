@@ -27,14 +27,7 @@
 			<artifactId>lombok</artifactId>
 			<version>1.18.34</version>
 			<scope>provided</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>com.landawn</groupId>
-			<artifactId>abacus-common</artifactId>
-			<version>5.3.22</version>
-			<scope>provided</scope>
-		</dependency>
+		</dependency> 
 
 		<dependency>
 			<groupId>com.landawn</groupId>

@@ -491,7 +491,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -514,7 +514,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      *
      * @param id
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      *
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
@@ -553,7 +553,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      *
      * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @return
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
      * @throws UncheckedSQLException the unchecked SQL exception
@@ -567,7 +567,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      *
      * @param ids
-     * @param selectPropNames all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param batchSize
      * @return
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
