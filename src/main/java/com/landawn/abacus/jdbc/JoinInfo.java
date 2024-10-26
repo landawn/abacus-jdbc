@@ -188,6 +188,17 @@ public final class JoinInfo {
             }
 
             final Class<?> middleEntityClass = tmpMiddleEntityClass;
+            final ParserUtil.BeanInfo middleEntityInfo = ParserUtil.getBeanInfo(middleEntityClass);
+
+            if (!ClassUtil.wrap(srcPropInfos[0].clazz).equals(ClassUtil.wrap(middleEntityInfo.getPropInfo(left[1]).clazz))
+                    || !ClassUtil.wrap(referencedPropInfos[0].clazz).equals(ClassUtil.wrap(middleEntityInfo.getPropInfo(right[0]).clazz))) {
+                throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
+                        + "' in the class: " + entityClass + ". The types of source property and referenced are not same: " + Stream
+                                .of(srcPropInfos[0].clazz, middleEntityInfo.getPropInfo(left[1]).clazz, referencedPropInfos[0].clazz,
+                                        middleEntityInfo.getPropInfo(right[0]).clazz)
+                                .map(ClassUtil::getSimpleClassName)
+                                .toList());
+            }
 
             final List<Integer> dummyList = N.asList(1, 2, 3);
             final Condition cond = CF.in(right[1], dummyList); //
@@ -352,14 +363,20 @@ public final class JoinInfo {
                 }
 
                 if ((srcPropInfos[i] = entityInfo.getPropInfo(tmp[0])) == null) {
-                    throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
+                    throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
                             + "' in class: " + entityClass + ". No property found with name: '" + tmp[0] + "' in the class: " + entityClass);
                 }
 
                 if ((referencedPropInfos[i] = referencedBeanInfo.getPropInfo(tmp.length == 1 ? tmp[0] : tmp[1])) == null) {
-                    throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
+                    throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
                             + "' in class: " + entityClass + ". No referenced property found with name: '" + (tmp.length == 1 ? tmp[0] : tmp[1])
                             + "' in the class: " + referencedEntityClass);
+                }
+
+                if (!ClassUtil.wrap(srcPropInfos[i].clazz).equals(ClassUtil.wrap(referencedPropInfos[i].clazz))) {
+                    throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
+                            + "' in the class: " + entityClass + ". The types of source property and referenced are not same: "
+                            + Stream.of(srcPropInfos[i].clazz, referencedPropInfos[i].clazz).map(ClassUtil::getSimpleClassName).toList());
                 }
 
                 conds.add(CF.eq(referencedPropInfos[i].name));

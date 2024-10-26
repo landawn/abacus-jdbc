@@ -13,6 +13,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Id({ "employeeId", "projectId" })
 public class EmployeeProject {
-    private long employeeId;
-    private long projectId;
+    private int employeeId;
+    private int projectId;
 }

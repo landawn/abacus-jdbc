@@ -86,6 +86,7 @@ import com.landawn.abacus.jdbc.annotation.Transactional;
 import com.landawn.abacus.jdbc.annotation.Update;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.CrudDaoL;
+import com.landawn.abacus.jdbc.dao.CrudJoinEntityHelper;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.jdbc.dao.JoinEntityHelper;
 import com.landawn.abacus.jdbc.dao.NoUpdateDao;
@@ -1866,13 +1867,6 @@ final class DaoImpl {
         return entities;
     }
 
-    private static boolean isEntityProp(final PropInfo propInfo) {
-        // final ImmutableSet<String> nonSubEntityPropNames = nonSubEntityPropNamesPool.get(entityClass);
-
-        return propInfo != null
-                && (!propInfo.isMarkedToColumn && (propInfo.type.isBean() || (propInfo.type.isCollection() && propInfo.type.getElementType().isBean())));
-    }
-
     @SuppressWarnings({ "rawtypes", "null", "resource" })
     static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
             final Cache<String, Object> daoCache, final Executor executor) {
@@ -1995,7 +1989,7 @@ final class DaoImpl {
             }
 
             if (JoinEntityHelper.class.isAssignableFrom(daoInterface) && (typeArguments.length >= 1 && typeArguments[0] instanceof Class)
-                    && ParserUtil.getBeanInfo((Class) typeArguments[0]).propInfoList.stream().noneMatch(DaoImpl::isEntityProp)) {
+                    && ParserUtil.getBeanInfo((Class) typeArguments[0]).propInfoList.stream().noneMatch(it -> it.isSubEntity)) {
                 throw new IllegalArgumentException("Dao interface: " + ClassUtil.getCanonicalClassName(daoInterface)
                         + " extends JoinEntityHelper, but the entity class: " + typeArguments[0] + " has no sub-entity properties.");
             }
@@ -2315,8 +2309,21 @@ final class DaoImpl {
         //    final Map<String, String> sqlCache = new ConcurrentHashMap<>(0);
         //    final Map<String, ImmutableList<String>> sqlsCache = new ConcurrentHashMap<>(0);
 
-        final Map<String, JoinInfo> joinBeanInfo = (JoinEntityHelper.class.isAssignableFrom(daoInterface)
-                || UncheckedJoinEntityHelper.class.isAssignableFrom(daoInterface)) ? JoinInfo.getEntityJoinInfo(daoInterface, entityClass, tableName) : null;
+        final Map<String, JoinInfo> joinBeanInfo = JoinEntityHelper.class.isAssignableFrom(daoInterface)
+                ? JoinInfo.getEntityJoinInfo(daoInterface, entityClass, tableName)
+                : null;
+
+        if (JoinEntityHelper.class.isAssignableFrom(daoInterface) && N.isEmpty(joinBeanInfo)) {
+            throw new IllegalArgumentException(
+                    "Entity class: " + ClassUtil.getCanonicalClassName(entityClass) + " must have at least one join entity property for its Dao interface: "
+                            + ClassUtil.getCanonicalClassName(daoInterface) + " which extends JoinEntityHelper interface");
+        }
+
+        if ((JoinEntityHelper.class.isAssignableFrom(daoInterface) && !Dao.class.isAssignableFrom(daoInterface))
+                || (CrudJoinEntityHelper.class.isAssignableFrom(daoInterface) && !CrudDao.class.isAssignableFrom(daoInterface))) {
+            throw new IllegalArgumentException("Dao interface: " + ClassUtil.getCanonicalClassName(entityClass)
+                    + " extending JoinEntityHelper/CrudJoinEntityHelper must extend the corresponding Dao interface:Dao/CrudDao");
+        }
 
         final Throwables.Predicate<Object, SQLException> isNotEmptyResult = ret -> {
             if (ret == null) {
@@ -4866,6 +4873,10 @@ final class DaoImpl {
                             N.checkArgNotEmpty(joinEntityPropName, "joinEntityPropName");
 
                             final JoinInfo propJoinInfo = joinBeanInfo.get(joinEntityPropName);
+
+                            N.checkArgument(propJoinInfo != null, "No join entity property found by name: \"{}\" in class: {}", joinEntityPropName,
+                                    entityClass);
+
                             final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getSelectSQLBuilderAndParamSetter(sbc);
 
