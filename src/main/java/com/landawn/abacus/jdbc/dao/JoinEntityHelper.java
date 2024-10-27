@@ -236,9 +236,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
                 loadJoinEntities(result, joinEntitiesToLoad);
             } else {
-                N.runByBatch(result, JdbcUtil.DEFAULT_BATCH_SIZE, batchEntities -> {
-                    loadJoinEntities(batchEntities, joinEntitiesToLoad);
-                });
+                N.runByBatch(result, JdbcUtil.DEFAULT_BATCH_SIZE, batchEntities -> loadJoinEntities(batchEntities, joinEntitiesToLoad));
             }
         }
 

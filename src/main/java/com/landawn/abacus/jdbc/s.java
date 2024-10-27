@@ -16,7 +16,7 @@
 
 package com.landawn.abacus.jdbc;
 
-public final class s {
+public final class s { // NOSONAR
     private s() {
         // singleton
     }
@@ -71,7 +71,7 @@ public final class s {
     public static final String resultExtractor1 = "resultExtractor1";
     public static final String resultExtractor2 = "resultExtractor2";
     public static final String resultExtractor3 = "resultExtractor3";
-    public static final String resultSet = "resultSet";
+    public static final String resultSet = "resultSet"; // NOSONAR
     public static final String returnColumnIndexes = "returnColumnIndexes";
     public static final String returnColumnNames = "returnColumnNames";
     public static final String rowConsumer = "rowConsumer";

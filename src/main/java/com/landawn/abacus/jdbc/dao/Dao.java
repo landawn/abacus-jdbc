@@ -2079,14 +2079,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             throws SQLException;
 
     /**
+     * Iterates over the results of a query and applies the specified consumer to each row.
      *
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowConsumer
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities.
+     *                        All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
+     * @param cond the condition to filter the results.
+     * @param rowConsumer the consumer to process each row. The consumer should NOT update or cache input {@code row} parameter
+     * @throws SQLException if a database access error occurs.
      */
     @Beta
     default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
@@ -2094,11 +2093,10 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Iterates over the results of a query and applies the specified consumer to each row.
      *
-     *
-     * @param cond
-     * @param rowConsumer
-     * @throws SQLException
+     * @param cond the condition to filter the results.
+     * @param rowConsumer the consumer to process each row. The consumer should NOT update or cache input {@code row} parameter
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
@@ -2219,11 +2217,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     int delete(final Condition cond) throws SQLException;
 
     /**
+     * Asynchronously executes the given SQL action using the default executor.
+     * <br />
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     * @param <R>
-     * @param sqlAction
-     * @return
+     * @param <R> the type of the result
+     * @param sqlAction the SQL action to be executed asynchronously
+     * @return a ContinuableFuture representing the result of the asynchronous computation
      */
     @Beta
     @NonDBOperation
@@ -2232,13 +2232,14 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Asynchronously executes the given SQL action using the specified executor.
+     * <br />
      * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
      *
-     *
-     * @param <R>
-     * @param sqlAction
-     * @param executor
-     * @return
+     * @param <R> the type of the result
+     * @param sqlAction the SQL action to be executed asynchronously
+     * @param executor the executor to use for asynchronous execution
+     * @return a ContinuableFuture representing the result of the asynchronous computation
      */
     @Beta
     @NonDBOperation
@@ -2252,11 +2253,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Asynchronously executes the given SQL action using the default executor.
+     * <br />
+     * Any transaction started in the current thread won't be automatically applied to the specified {@code sqlAction} which will be executed in another thread.
      *
-     *
-     * @param sqlAction
-     * @return
+     * @param sqlAction the SQL action to be executed asynchronously
+     * @return a ContinuableFuture representing the result of the asynchronous computation
      */
     @Beta
     @NonDBOperation
@@ -2265,12 +2267,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Asynchronously executes the given SQL action using the specified executor.
+     * <br />
+     * Any transaction started in the current thread won't be automatically applied to the specified {@code sqlAction} which will be executed in another thread.
      *
-     *
-     * @param sqlAction
-     * @param executor
-     * @return
+     * @param sqlAction the SQL action to be executed asynchronously
+     * @param executor the executor to use for asynchronous execution
+     * @return a ContinuableFuture representing the result of the asynchronous computation
      */
     @Beta
     @NonDBOperation
