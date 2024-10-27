@@ -1154,7 +1154,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param executor the executor to use for deleting the join entities by multiple threads in parallel
      * @return the total count of updated/deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
+     * @deprecated the operation can't be finished in one transaction when it's executed in multiple threads.
      */
     @Deprecated
     @Beta
@@ -1232,7 +1232,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param executor the executor to use for deleting the join entities by multiple threads in parallel
      * @return the total count of updated/deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
+     * @deprecated the operation can't be finished in one transaction when it's executed in multiple threads.
      */
     @Deprecated
     @Beta
@@ -1285,7 +1285,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param executor the executor to use for deleting the join entities by multiple threads in parallel
      * @return the total count of updated/deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
+     * @deprecated the operation can't be finished in one transaction when it's executed in multiple threads.
      */
     @Deprecated
     @Beta
@@ -1334,7 +1334,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param executor the executor to use for deleting the join entities by multiple threads in parallel
      * @return the total count of updated/deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
+     * @deprecated the operation can't be finished in one transaction when it's executed in multiple threads.
      */
     @Deprecated
     @Beta

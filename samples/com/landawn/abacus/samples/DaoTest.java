@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
@@ -1229,8 +1230,11 @@ public class DaoTest {
         userDao.loadAllJoinEntities(userFromDB, true);
         System.out.println(userFromDB);
 
-        userDao.deleteJoinEntities(userFromDB, Address.class);
-        userDao.deleteJoinEntities(N.asList(userFromDB, userFromDB, userFromDB), Device.class);
+        assertEquals(1, userDao.deleteJoinEntities(userFromDB, Address.class));
+        assertEquals(1, userDao.deleteJoinEntities(N.asList(userFromDB, userFromDB, userFromDB), Device.class));
+
+        assertEquals(0, addressDao.delete(userFromDB.getAddress()));
+        assertEquals(0, deviceDao.batchDelete(userFromDB.getDevices()));
 
         userDao.deleteById(100L);
     }
@@ -1316,7 +1320,7 @@ public class DaoTest {
         employeeDao.loadAllJoinEntities(employeeFromDB);
         System.out.println(employeeFromDB);
 
-        Project project = Project.builder().projectId(1000).title("Project X").build();
+        Project project = Project.builder().projectId(1000).title("Project X").startDate(DateUtil.currentJUDateRolled(3, TimeUnit.DAYS)).build();
         projectDao.insert(project);
 
         final Project projectFromDB = projectDao.gett(project.getProjectId());
@@ -1382,9 +1386,11 @@ public class DaoTest {
         assertTrue(employeeProjectDao2.exists(entityId2));
         assertNotNull(employeeProjectDao2.gett(entityId2));
 
-        employeeDao.deleteAllJoinEntities(employees);
+        assertEquals(employees.size(), employeeDao.deleteAllJoinEntities(employees));
+        assertEquals(0, employeeDao.deleteAllJoinEntities(employees));
 
-        projectDao.deleteAllJoinEntities(projects);
+        assertEquals(2, projectDao.deleteAllJoinEntities(projects));
+        assertEquals(0, projectDao.deleteAllJoinEntities(projects));
 
         employeeDao.deleteAllJoinEntities(employees.get(0));
 

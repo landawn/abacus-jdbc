@@ -753,6 +753,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         }
 
         final List<ContinuableFuture<Void>> futures = CheckedStream.of(joinEntityPropNames, UncheckedSQLException.class)
+                .filter(joinEntityPropName -> N.getPropValue(entity, joinEntityPropName) == null)
                 .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entity, joinEntityPropName), executor))
                 .toList();
 
@@ -1066,7 +1067,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param executor
      * @return the total count of updated/deleted records.
      * @throws UncheckedSQLException the unchecked SQL exception
-     * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
+     * @deprecated the operation can't be finished in one transaction when it's executed in multiple threads.
      */
     @Beta
     @Deprecated
@@ -1147,7 +1148,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param executor
      * @return the total count of updated/deleted records.
      * @throws UncheckedSQLException the unchecked SQL exception
-     * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
+     * @deprecated the operation can't be finished in one transaction when it's executed in multiple threads.
      */
     @Beta
     @Deprecated
@@ -1202,7 +1203,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param executor
      * @return the total count of updated/deleted records.
      * @throws UncheckedSQLException the unchecked SQL exception
-     * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
+     * @deprecated the operation can't be finished in one transaction when it's executed in multiple threads.
      */
     @Beta
     @Deprecated
@@ -1252,7 +1253,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param executor
      * @return the total count of updated/deleted records.
      * @throws UncheckedSQLException the unchecked SQL exception
-     * @deprecated the operation can't be finished in one transaction if it's executed in multiple threads.
+     * @deprecated the operation can't be finished in one transaction when it's executed in multiple threads.
      */
     @Beta
     @Deprecated
