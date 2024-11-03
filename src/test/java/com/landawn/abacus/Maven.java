@@ -28,7 +28,7 @@ public class Maven {
         N.println(new File(".").getAbsolutePath());
 
         final String sourceVersion = "0.0.1-SNAPSHOT";
-        final String targetVersion = StreamEx.lines(new File("./pom.xml"))
+        final String targetVersion = StreamEx.ofLines(new File("./pom.xml"))
                 .filter(line -> line.indexOf("<version>") > 0 && line.indexOf("</version>") > 0)
                 .first()
                 .map(line -> Strings.substringsBetween(line, "<version>", "</version>").get(0))

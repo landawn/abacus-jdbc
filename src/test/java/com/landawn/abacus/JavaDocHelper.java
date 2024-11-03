@@ -249,7 +249,7 @@ public class JavaDocHelper {
                 .filter(f -> f.getName().endsWith(".java"))
                 .peek(Fn.println())
                 .forEach(f -> {
-                    final List<String> lines = Stream.lines(f) //
+                    final List<String> lines = Stream.ofLines(f) //
                             //  .map(returnMapper) //
                             .map(paramMapper)
                             .toList();
@@ -264,7 +264,7 @@ public class JavaDocHelper {
                 .filter(file -> N.noneMatch(filesToSkipSet, it -> file.getName().startsWith(it)))
                 // .peek(Fn.println())
                 .forEach(f -> {
-                    final List<String> lines = Stream.lines(f) //
+                    final List<String> lines = Stream.ofLines(f) //
                             .collapse((p, n) -> !n.trim().startsWith("/**"), Suppliers.ofList())
                             .map(list -> {
                                 if (list.size() >= 3 && list.get(0).trim().equals("/**") && list.get(2).trim().equals("*")) {
