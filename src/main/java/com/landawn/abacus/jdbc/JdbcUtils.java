@@ -16,6 +16,7 @@
 
 package com.landawn.abacus.jdbc;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
@@ -44,7 +45,6 @@ import com.landawn.abacus.parser.JSONSerializationConfig;
 import com.landawn.abacus.parser.JSONSerializationConfig.JSC;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.BufferedJSONWriter;
-import com.landawn.abacus.util.BufferedReader;
 import com.landawn.abacus.util.CSVUtil;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.DateTimeFormat;
@@ -2255,7 +2255,8 @@ public final class JdbcUtils {
 
         long result = 0;
         final Type<Object> strType = N.typeOf(String.class);
-        final BufferedJSONWriter bw = out instanceof BufferedJSONWriter ? (BufferedJSONWriter) out : Objectory.createBufferedJSONWriter(out);
+        final boolean isBufferedJSONWriter = out instanceof BufferedJSONWriter;
+        final BufferedJSONWriter bw = isBufferedJSONWriter ? (BufferedJSONWriter) out : Objectory.createBufferedJSONWriter(out);
 
         try {
             final boolean checkDateType = JdbcUtil.checkDateType(rs);
@@ -2347,7 +2348,7 @@ public final class JdbcUtils {
 
             bw.flush();
         } finally {
-            if (bw != out) {
+            if (!isBufferedJSONWriter) {
                 Objectory.recycle(bw);
             }
         }
