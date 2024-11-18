@@ -884,7 +884,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the N clob.
+     * Sets the NClob.
      *
      * @param parameterName
      * @param x
@@ -898,7 +898,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the N clob.
+     * Sets the NClob.
      *
      * @param parameterName
      * @param reader
@@ -912,7 +912,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the N clob.
+     * Sets the NClob.
      *
      * @param parameterName
      * @param reader

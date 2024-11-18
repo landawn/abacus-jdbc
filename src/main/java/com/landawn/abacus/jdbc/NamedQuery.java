@@ -2248,7 +2248,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the N clob.
+     * Sets the NClob.
      *
      * @param parameterName
      * @param x
@@ -2303,7 +2303,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the N clob.
+     * Sets the NClob.
      *
      * @param parameterName
      * @param x
@@ -2358,7 +2358,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the N clob.
+     * Sets the NClob.
      *
      * @param parameterName
      * @param x

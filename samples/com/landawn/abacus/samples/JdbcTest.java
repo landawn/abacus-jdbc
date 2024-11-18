@@ -416,7 +416,7 @@ public class JdbcTest {
         System.out.println(userFromDB);
 
         // There are so much more can be done by findFirst/list/stream/
-        // userDao.stream(CF.eq("firstName", "Forrest")).filter(u -> u.getId() > 10).map(e -> e).groupBy(keyMapper);
+        // userDao.stream(CF.eq("firstName", "Forrest")).filter(u -> u.getId() > 10).map(e -> e).groupBy(keyExtractor);
 
         userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
@@ -447,7 +447,7 @@ public class JdbcTest {
         System.out.println(userFromDB);
 
         // There are so much more can be done by findFirst/list/stream/
-        // userDao.stream(CF.eq("firstName", "Forrest")).filter(u -> u.getId() > 10).map(e -> e).groupBy(keyMapper);
+        // userDao.stream(CF.eq("firstName", "Forrest")).filter(u -> u.getId() > 10).map(e -> e).groupBy(keyExtractor);
 
         userDao12.updateFirstAndLastName("Tom", "Hanks", 100);
 

@@ -1391,7 +1391,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the N clob.
+     * Sets the NClob.
      *
      * @param parameterIndex
      * @param x
@@ -1405,7 +1405,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the N clob.
+     * Sets the NClob.
      *
      * @param parameterIndex
      * @param reader
@@ -1419,7 +1419,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the N clob.
+     * Sets the NClob.
      *
      * @param parameterIndex
      * @param reader

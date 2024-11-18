@@ -391,7 +391,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
      */
     @Select(sql = "select * FROM user1 where id > ?")
     @MappedByKey("id")
-    Map<Long, User> mappedById(int id) throws SQLException;
+    Map<Long, User> selectIdBiggerThan(int id) throws SQLException;
 
     /**
      *

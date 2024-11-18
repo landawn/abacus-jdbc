@@ -1159,14 +1159,14 @@ final class DaoImpl {
             final Class<?> targetEntityClass = secondReturnEleType == null || !ClassUtil.isBeanClass(secondReturnEleType) ? entityClass : secondReturnEleType;
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(targetEntityClass);
             final PropInfo propInfo = entityInfo.getPropInfo(mappedByKey);
-            final Function<Object, Object> keyMapper = propInfo::getPropValue;
+            final Function<Object, Object> keyExtractor = propInfo::getPropValue;
             final List<String> mergedByKey = N.isEmpty(mergedByIds) ? N.asList(mappedByKey) : mergedByIds;
 
             return (preparedQuery, args) -> {
                 final DataSet dataSet = (DataSet) preparedQuery.query(Jdbc.ResultExtractor.toDataSet(targetEntityClass, prefixFieldMap));
                 final List<Object> entities = dataSet.toMergedEntities(mergedByKey, dataSet.columnNameList(), prefixFieldMap, targetEntityClass);
 
-                return (R) Stream.of(entities).toMap(keyMapper, Fn.identity(), Suppliers.ofMap(targetMapClass));
+                return (R) Stream.of(entities).toMap(keyExtractor, Fn.identity(), Suppliers.ofMap(targetMapClass));
             };
         } else if (N.notEmpty(mergedByIds)) {
             if (returnType.isAssignableFrom(Collection.class) || returnType.isAssignableFrom(u.Optional.class)

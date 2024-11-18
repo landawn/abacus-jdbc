@@ -1008,7 +1008,7 @@ public class DaoTest {
             userDao.stream("firstName", CF.alwaysTrue()).forEach(Fn.println());
         }
 
-        final Map<?, ?> map = userDao.mappedById(0);
+        final Map<?, ?> map = userDao.selectIdBiggerThan(0);
         N.println(map);
         assertEquals(1, map.size());
 
