@@ -62,6 +62,5 @@
 			<attribute name="m2e-apt" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry combineaccessrules="false" kind="src" path="/abacus-core"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
