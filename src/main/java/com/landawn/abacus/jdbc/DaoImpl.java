@@ -107,7 +107,6 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.AsyncExecutor;
-import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.DateUtil.Dates;
@@ -136,6 +135,7 @@ import com.landawn.abacus.util.SQLBuilder.PLC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
 import com.landawn.abacus.util.SQLBuilder.SP;
 import com.landawn.abacus.util.SQLMapper;
+import com.landawn.abacus.util.Seq;
 import com.landawn.abacus.util.Splitter;
 import com.landawn.abacus.util.Splitter.MapSplitter;
 import com.landawn.abacus.util.Strings;
@@ -464,7 +464,7 @@ final class DaoImpl {
     }
 
     private static Set<Class<?>> notCacheableTypes = N.asSet(void.class, Void.class, Iterator.class, java.util.stream.BaseStream.class, BaseStream.class,
-            EntryStream.class, CheckedStream.class);
+            EntryStream.class, Stream.class);
 
     @SuppressWarnings("rawtypes")
     private static Jdbc.BiParametersSetter<AbstractQuery, Collection> collParamsSetter = AbstractQuery::setParameters;
@@ -637,7 +637,7 @@ final class DaoImpl {
     }
 
     @SuppressWarnings("rawtypes")
-    private static <R> Throwables.BiFunction<AbstractQuery, Object[], R, Exception> createSingleQueryFunction(final Class<?> returnType) {
+    private static <R> Throwables.BiFunction<AbstractQuery, Object[], R, SQLException> createSingleQueryFunction(final Class<?> returnType) {
         if (u.OptionalBoolean.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForBoolean();
         } else if (u.OptionalChar.class.isAssignableFrom(returnType)) {
@@ -664,9 +664,10 @@ final class DaoImpl {
     }
 
     @SuppressWarnings("rawtypes")
-    private static <R> Throwables.BiFunction<AbstractQuery, Object[], R, Exception> createQueryFunctionByMethod(final Class<?> entityClass, final Method method,
-            final String mappedByKey, final List<String> mergedByIds, final Map<String, String> prefixFieldMap, final boolean fetchColumnByEntityClass,
-            final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final OP op, final boolean isCall, final String fullClassMethodName) {
+    private static <R> Throwables.BiFunction<AbstractQuery, Object[], R, SQLException> createQueryFunctionByMethod(final Class<?> entityClass,
+            final Method method, final String mappedByKey, final List<String> mergedByIds, final Map<String, String> prefixFieldMap,
+            final boolean fetchColumnByEntityClass, final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final OP op, final boolean isCall,
+            final String fullClassMethodName) {
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
         final Class<?> firstReturnEleType = getFirstReturnEleType(method);
@@ -678,7 +679,7 @@ final class DaoImpl {
         final boolean isListQuery = isListQuery(method, returnType, op, fullClassMethodName);
         final boolean isExists = isExistsQuery(method, op, fullClassMethodName);
 
-        if ((op == OP.stream && !(Stream.class.isAssignableFrom(returnType) || CheckedStream.class.isAssignableFrom(returnType)))
+        if ((op == OP.stream && !Stream.class.isAssignableFrom(returnType))
                 || (op == OP.query && !(DataSet.class.isAssignableFrom(returnType) || lastParamType == null
                         || Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType) || Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType)))) {
             throw new UnsupportedOperationException(
@@ -690,18 +691,8 @@ final class DaoImpl {
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         }
 
-        if (op == OP.executeAndGetOutParameters && !returnType.isAssignableFrom(Jdbc.OutParamResult.class)) {
-            throw new UnsupportedOperationException(
-                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
-        }
-
-        //    if ((op == OP.queryForSingle || op == OP.queryForUnique)
-        //            && !(u.Optional.class.isAssignableFrom(returnType) || Nullable.class.isAssignableFrom(returnType))) {
-        //        throw new UnsupportedOperationException(
-        //                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
-        //    }
-
-        if ((Stream.class.isAssignableFrom(returnType) || CheckedStream.class.isAssignableFrom(returnType)) && !(op == OP.stream || op == OP.DEFAULT)) {
+        if ((op == OP.executeAndGetOutParameters && !returnType.isAssignableFrom(Jdbc.OutParamResult.class))
+                || (Stream.class.isAssignableFrom(returnType) && !(op == OP.stream || op == OP.DEFAULT))) {
             throw new UnsupportedOperationException(
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         }
@@ -847,51 +838,25 @@ final class DaoImpl {
                     }
                 }
             } else if (op == OP.streamAll) {
-                if (!(CheckedStream.class.isAssignableFrom(returnType) || Stream.class.isAssignableFrom(returnType))) {
+                if (!Stream.class.isAssignableFrom(returnType)) {
                     throw new UnsupportedOperationException(
                             "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
                 }
 
-                final boolean unchecked = Stream.class.isAssignableFrom(returnType);
-
                 if (hasRowMapperOrExtractor) {
                     if (Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
                         if (hasRowFilter) {
-                            if (unchecked) {
-                                return (preparedQuery,
-                                        args) -> (R) ((CallableQuery) preparedQuery)
-                                                .streamAllResultsets((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1])
-                                                .unchecked();
-                            } else {
-                                return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.RowFilter) args[paramLen - 2],
-                                        (Jdbc.RowMapper) args[paramLen - 1]);
-                            }
+                            return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.RowFilter) args[paramLen - 2],
+                                    (Jdbc.RowMapper) args[paramLen - 1]);
                         } else {
-                            if (unchecked) {
-                                return (preparedQuery,
-                                        args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.RowMapper) args[paramLen - 1]).unchecked();
-                            } else {
-                                return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.RowMapper) args[paramLen - 1]);
-                            }
+                            return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.RowMapper) args[paramLen - 1]);
                         }
                     } else if (Jdbc.BiRowMapper.class.isAssignableFrom(lastParamType)) {
                         if (hasRowFilter) {
-                            if (unchecked) {
-                                return (preparedQuery,
-                                        args) -> (R) ((CallableQuery) preparedQuery)
-                                                .streamAllResultsets((Jdbc.BiRowFilter) args[paramLen - 2], (Jdbc.BiRowMapper) args[paramLen - 1])
-                                                .unchecked();
-                            } else {
-                                return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.BiRowFilter) args[paramLen - 2],
-                                        (Jdbc.BiRowMapper) args[paramLen - 1]);
-                            }
+                            return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.BiRowFilter) args[paramLen - 2],
+                                    (Jdbc.BiRowMapper) args[paramLen - 1]);
                         } else {
-                            if (unchecked) {
-                                return (preparedQuery,
-                                        args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.BiRowMapper) args[paramLen - 1]).unchecked();
-                            } else {
-                                return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.BiRowMapper) args[paramLen - 1]);
-                            }
+                            return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.BiRowMapper) args[paramLen - 1]);
                         }
                     } else {
                         throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
@@ -903,11 +868,7 @@ final class DaoImpl {
                                 "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
                     }
 
-                    if (unchecked) {
-                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets(firstReturnEleType).unchecked();
-                    } else {
-                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets(firstReturnEleType);
-                    }
+                    return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets(firstReturnEleType);
                 }
             }
 
@@ -1014,18 +975,11 @@ final class DaoImpl {
                             return (preparedQuery, args) -> (R) preparedQuery.findFirst((Jdbc.RowMapper) args[paramLen - 1]);
                         }
                     }
-                } else if (CheckedStream.class.isAssignableFrom(returnType)) {
+                } else if (Stream.class.isAssignableFrom(returnType)) {
                     if (hasRowFilter) {
                         return (preparedQuery, args) -> (R) preparedQuery.stream((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1]);
                     } else {
                         return (preparedQuery, args) -> (R) preparedQuery.stream((Jdbc.RowMapper) args[paramLen - 1]);
-                    }
-                } else if (Stream.class.isAssignableFrom(returnType)) {
-                    if (hasRowFilter) {
-                        return (preparedQuery,
-                                args) -> (R) preparedQuery.stream((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1]).unchecked();
-                    } else {
-                        return (preparedQuery, args) -> (R) preparedQuery.stream((Jdbc.RowMapper) args[paramLen - 1]).unchecked();
                     }
                 } else {
                     if (Nullable.class.isAssignableFrom(returnType)) {
@@ -1035,20 +989,16 @@ final class DaoImpl {
 
                     if (isFindOnlyOne(method, op)) {
                         if (hasRowFilter) {
-                            return (preparedQuery,
-                                    args) -> (R) preparedQuery.stream((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1])
-                                            .onlyOne()
-                                            .orElse(N.defaultValueOf(returnType));
+                            return (preparedQuery, args) -> (R) ((Stream<Object>) preparedQuery.stream((Jdbc.RowFilter) args[paramLen - 2],
+                                    (Jdbc.RowMapper) args[paramLen - 1])).onlyOne().orElse(N.defaultValueOf(returnType));
                         } else {
                             return (preparedQuery,
                                     args) -> (R) preparedQuery.findOnlyOne((Jdbc.RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
                         }
                     } else {
                         if (hasRowFilter) {
-                            return (preparedQuery,
-                                    args) -> (R) preparedQuery.stream((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1])
-                                            .first()
-                                            .orElse(N.defaultValueOf(returnType));
+                            return (preparedQuery, args) -> (R) ((Stream<Object>) preparedQuery.stream((Jdbc.RowFilter) args[paramLen - 2],
+                                    (Jdbc.RowMapper) args[paramLen - 1])).first().orElse(N.defaultValueOf(returnType));
                         } else {
                             return (preparedQuery,
                                     args) -> (R) preparedQuery.findFirst((Jdbc.RowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
@@ -1090,18 +1040,11 @@ final class DaoImpl {
                             return (preparedQuery, args) -> (R) preparedQuery.findFirst((Jdbc.BiRowMapper) args[paramLen - 1]);
                         }
                     }
-                } else if (CheckedStream.class.isAssignableFrom(returnType)) {
+                } else if (Stream.class.isAssignableFrom(returnType)) {
                     if (hasRowFilter) {
                         return (preparedQuery, args) -> (R) preparedQuery.stream((Jdbc.BiRowFilter) args[paramLen - 2], (Jdbc.BiRowMapper) args[paramLen - 1]);
                     } else {
                         return (preparedQuery, args) -> (R) preparedQuery.stream((Jdbc.BiRowMapper) args[paramLen - 1]);
-                    }
-                } else if (Stream.class.isAssignableFrom(returnType)) {
-                    if (hasRowFilter) {
-                        return (preparedQuery,
-                                args) -> (R) preparedQuery.stream((Jdbc.BiRowFilter) args[paramLen - 2], (Jdbc.BiRowMapper) args[paramLen - 1]).unchecked();
-                    } else {
-                        return (preparedQuery, args) -> (R) preparedQuery.stream((Jdbc.BiRowMapper) args[paramLen - 1]).unchecked();
                     }
                 } else {
                     if (Nullable.class.isAssignableFrom(returnType)) {
@@ -1111,20 +1054,16 @@ final class DaoImpl {
 
                     if (isFindOnlyOne(method, op)) {
                         if (hasRowFilter) {
-                            return (preparedQuery,
-                                    args) -> (R) preparedQuery.stream((Jdbc.BiRowFilter) args[paramLen - 2], (Jdbc.BiRowMapper) args[paramLen - 1])
-                                            .onlyOne()
-                                            .orElse(N.defaultValueOf(returnType));
+                            return (preparedQuery, args) -> (R) ((Stream<Object>) preparedQuery.stream((Jdbc.BiRowFilter) args[paramLen - 2],
+                                    (Jdbc.BiRowMapper) args[paramLen - 1])).onlyOne().orElse(N.defaultValueOf(returnType));
                         } else {
                             return (preparedQuery,
                                     args) -> (R) preparedQuery.findOnlyOne((Jdbc.BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
                         }
                     } else {
                         if (hasRowFilter) {
-                            return (preparedQuery,
-                                    args) -> (R) preparedQuery.stream((Jdbc.BiRowFilter) args[paramLen - 2], (Jdbc.BiRowMapper) args[paramLen - 1])
-                                            .first()
-                                            .orElse(N.defaultValueOf(returnType));
+                            return (preparedQuery, args) -> (R) ((Stream<Object>) preparedQuery.stream((Jdbc.BiRowFilter) args[paramLen - 2],
+                                    (Jdbc.BiRowMapper) args[paramLen - 1])).first().orElse(N.defaultValueOf(returnType));
                         } else {
                             return (preparedQuery,
                                     args) -> (R) preparedQuery.findFirst((Jdbc.BiRowMapper) args[paramLen - 1]).orElse(N.defaultValueOf(returnType));
@@ -1224,12 +1163,8 @@ final class DaoImpl {
             } else {
                 return (preparedQuery, args) -> (R) preparedQuery.query();
             }
-        } else if (CheckedStream.class.isAssignableFrom(returnType) || Stream.class.isAssignableFrom(returnType)) {
-            if (CheckedStream.class.isAssignableFrom(returnType)) {
-                return (preparedQuery, args) -> (R) preparedQuery.stream(BiRowMapper.to(firstReturnEleType, prefixFieldMap));
-            } else {
-                return (preparedQuery, args) -> (R) preparedQuery.stream(BiRowMapper.to(firstReturnEleType, prefixFieldMap)).unchecked();
-            }
+        } else if (Stream.class.isAssignableFrom(returnType)) {
+            return (preparedQuery, args) -> (R) preparedQuery.stream(BiRowMapper.to(firstReturnEleType, prefixFieldMap));
         } else if (u.Optional.class.isAssignableFrom(returnType) || java.util.Optional.class.isAssignableFrom(returnType)
                 || Nullable.class.isAssignableFrom(returnType)) {
             if (Nullable.class.isAssignableFrom(returnType)) {
@@ -1623,8 +1558,7 @@ final class DaoImpl {
                 } else if (op == OP.findFirst || op == OP.queryForSingle || op == OP.exists || isExistsQuery(method, op, fullClassMethodName)
                         || isSingleReturnType(returnType)) {
                     preparedQuery.setFetchSize(1);
-                } else if (op == OP.stream || op == OP.streamAll
-                        || (Stream.class.isAssignableFrom(returnType) || CheckedStream.class.isAssignableFrom(returnType))) {
+                } else if (op == OP.stream || op == OP.streamAll || Stream.class.isAssignableFrom(returnType)) {
                     preparedQuery.configStmt(JdbcUtil.stmtSetterForStream);
                 } else if (op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll
                         || isListQuery(method, returnType, op, fullClassMethodName)) {
@@ -2325,7 +2259,7 @@ final class DaoImpl {
                     + " extending JoinEntityHelper/CrudJoinEntityHelper must extend the corresponding Dao interface:Dao/CrudDao");
         }
 
-        final Throwables.Predicate<Object, SQLException> isNotEmptyResult = ret -> {
+        final Predicate<Object> isNotEmptyResult = ret -> {
             if (ret == null) {
                 return false;
             }
@@ -2426,7 +2360,6 @@ final class DaoImpl {
 
                     return methodHandle.bindTo(proxy).invokeWithArguments(args);
                 };
-
             } else if (methodName.equals("executor") && Executor.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> asyncExecutor.getExecutor();
             } else if (methodName.equals("asyncExecutor") && AsyncExecutor.class.isAssignableFrom(returnType) && paramLen == 0) {
@@ -2460,7 +2393,7 @@ final class DaoImpl {
                 //            && paramTypes[0].equals(String.class)) {
                 //        call = (proxy, args) -> sqlsCache.get(args[0]);
             } else {
-                final boolean isStreamReturn = Stream.class.isAssignableFrom(returnType) || CheckedStream.class.isAssignableFrom(returnType);
+                final boolean isStreamReturn = Stream.class.isAssignableFrom(returnType);
                 final boolean throwsSQLException = StreamEx.of(method.getExceptionTypes()).anyMatch(e -> e.isAssignableFrom(SQLException.class));
                 final Annotation sqlAnno = StreamEx.of(method.getAnnotations())
                         .filter(anno -> sqlAnnoMap.containsKey(anno.annotationType()))
@@ -2528,8 +2461,7 @@ final class DaoImpl {
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
                                         Stream.of(entities)
-                                                .splitToList(batchSize) //
-                                                .checked()
+                                                .split(batchSize) //
                                                 .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
                                     }
 
@@ -2566,8 +2498,7 @@ final class DaoImpl {
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
                                         Stream.of(entities)
-                                                .splitToList(batchSize) //
-                                                .checked()
+                                                .split(batchSize) //
                                                 .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
                                     }
 
@@ -2600,8 +2531,7 @@ final class DaoImpl {
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
                                         Stream.of(entities)
-                                                .splitToList(batchSize) //
-                                                .checked()
+                                                .split(batchSize) //
                                                 .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
                                     }
 
@@ -3128,19 +3058,23 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
-                            return CheckedStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null)) //
+                            return Stream.<Holder<DataSet>> just(Holder.of((DataSet) null)) //
                                     .cycled()
                                     .map(it -> {
-                                        final DataSet ret = proxy.prepareQuery(sp.sql)
-                                                .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
-                                                .setFetchSize(pageSize)
-                                                .settParameters(sp.parameters, collParamsSetter)
-                                                .settParameters(it.value(), paramSetter)
-                                                .query(resultExtractor);
+                                        try {
+                                            final DataSet ret = proxy.prepareQuery(sp.sql)
+                                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
+                                                    .setFetchSize(pageSize)
+                                                    .settParameters(sp.parameters, collParamsSetter)
+                                                    .settParameters(it.value(), paramSetter)
+                                                    .query(resultExtractor);
 
-                                        it.setValue(ret);
+                                            it.setValue(ret);
 
-                                        return ret;
+                                            return ret;
+                                        } catch (final SQLException e) {
+                                            throw new UncheckedSQLException(e);
+                                        }
                                     })
                                     .takeWhile(N::notEmpty);
                         };
@@ -3159,19 +3093,23 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
-                            return CheckedStream.<Holder<Object>, SQLException> just(Holder.of((Object) null)) //
+                            return Stream.<Holder<Object>> just(Holder.of((Object) null)) //
                                     .cycled()
                                     .map(it -> {
-                                        final Object ret = proxy.prepareQuery(sp.sql)
-                                                .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
-                                                .setFetchSize(pageSize)
-                                                .settParameters(sp.parameters, collParamsSetter)
-                                                .settParameters(it.value(), paramSetter)
-                                                .query(resultExtractor);
+                                        try {
+                                            final Object ret = proxy.prepareQuery(sp.sql)
+                                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
+                                                    .setFetchSize(pageSize)
+                                                    .settParameters(sp.parameters, collParamsSetter)
+                                                    .settParameters(it.value(), paramSetter)
+                                                    .query(resultExtractor);
 
-                                        it.setValue(ret);
+                                            it.setValue(ret);
 
-                                        return ret;
+                                            return ret;
+                                        } catch (final SQLException e) {
+                                            throw new UncheckedSQLException(e);
+                                        }
                                     })
                                     .takeWhile(isNotEmptyResult);
                         };
@@ -3190,19 +3128,23 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
-                            return CheckedStream.<Holder<Object>, SQLException> just(Holder.of((Object) null)) //
+                            return Stream.<Holder<Object>> just(Holder.of((Object) null)) //
                                     .cycled()
                                     .map(it -> {
-                                        final Object ret = proxy.prepareQuery(sp.sql)
-                                                .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
-                                                .setFetchSize(pageSize)
-                                                .settParameters(sp.parameters, collParamsSetter)
-                                                .settParameters(it.value(), paramSetter)
-                                                .query(resultExtractor);
+                                        try {
+                                            final Object ret = proxy.prepareQuery(sp.sql)
+                                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
+                                                    .setFetchSize(pageSize)
+                                                    .settParameters(sp.parameters, collParamsSetter)
+                                                    .settParameters(it.value(), paramSetter)
+                                                    .query(resultExtractor);
 
-                                        it.setValue(ret);
+                                            it.setValue(ret);
 
-                                        return ret;
+                                            return ret;
+                                        } catch (final SQLException e) {
+                                            throw new UncheckedSQLException(e);
+                                        }
                                     })
                                     .takeWhile(isNotEmptyResult);
                         };
@@ -3223,19 +3165,23 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
-                            return CheckedStream.<Holder<DataSet>, SQLException> just(Holder.of((DataSet) null)) //
+                            return Stream.<Holder<DataSet>> just(Holder.of((DataSet) null)) //
                                     .cycled()
                                     .map(it -> {
-                                        final DataSet ret = proxy.prepareQuery(sp.sql)
-                                                .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
-                                                .setFetchSize(pageSize)
-                                                .settParameters(sp.parameters, collParamsSetter)
-                                                .settParameters(it.value(), paramSetter)
-                                                .query(resultExtractor);
+                                        try {
+                                            final DataSet ret = proxy.prepareQuery(sp.sql)
+                                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
+                                                    .setFetchSize(pageSize)
+                                                    .settParameters(sp.parameters, collParamsSetter)
+                                                    .settParameters(it.value(), paramSetter)
+                                                    .query(resultExtractor);
 
-                                        it.setValue(ret);
+                                            it.setValue(ret);
 
-                                        return ret;
+                                            return ret;
+                                        } catch (final SQLException e) {
+                                            throw new UncheckedSQLException(e);
+                                        }
                                     })
                                     .takeWhile(N::notEmpty);
                         };
@@ -3256,19 +3202,23 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
-                            return CheckedStream.<Holder<Object>, SQLException> just(Holder.of((Object) null)) //
+                            return Stream.<Holder<Object>> just(Holder.of((Object) null)) //
                                     .cycled()
                                     .map(it -> {
-                                        final Object ret = proxy.prepareQuery(sp.sql)
-                                                .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
-                                                .setFetchSize(pageSize)
-                                                .settParameters(sp.parameters, collParamsSetter)
-                                                .settParameters(it.value(), paramSetter)
-                                                .query(resultExtractor);
+                                        try {
+                                            final Object ret = proxy.prepareQuery(sp.sql)
+                                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
+                                                    .setFetchSize(pageSize)
+                                                    .settParameters(sp.parameters, collParamsSetter)
+                                                    .settParameters(it.value(), paramSetter)
+                                                    .query(resultExtractor);
 
-                                        it.setValue(ret);
+                                            it.setValue(ret);
 
-                                        return ret;
+                                            return ret;
+                                        } catch (final SQLException e) {
+                                            throw new UncheckedSQLException(e);
+                                        }
                                     })
                                     .takeWhile(isNotEmptyResult);
                         };
@@ -3289,19 +3239,23 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
-                            return CheckedStream.<Holder<Object>, SQLException> just(Holder.of((Object) null)) //
+                            return Stream.<Holder<Object>> just(Holder.of((Object) null)) //
                                     .cycled()
                                     .map(it -> {
-                                        final Object ret = proxy.prepareQuery(sp.sql)
-                                                .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
-                                                .setFetchSize(pageSize)
-                                                .settParameters(sp.parameters, collParamsSetter)
-                                                .settParameters(it.value(), paramSetter)
-                                                .query(resultExtractor);
+                                        try {
+                                            final Object ret = proxy.prepareQuery(sp.sql)
+                                                    .configStmt(JdbcUtil.stmtSetterForBigQueryResult)
+                                                    .setFetchSize(pageSize)
+                                                    .settParameters(sp.parameters, collParamsSetter)
+                                                    .settParameters(it.value(), paramSetter)
+                                                    .query(resultExtractor);
 
-                                        it.setValue(ret);
+                                            it.setValue(ret);
 
-                                        return ret;
+                                            return ret;
+                                        } catch (final SQLException e) {
+                                            throw new UncheckedSQLException(e);
+                                        }
                                     })
                                     .takeWhile(isNotEmptyResult);
                         };
@@ -3470,12 +3424,18 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
-                            final Throwables.Supplier<CheckedStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .configStmt(JdbcUtil.stmtSetterForStream)
-                                    .settParameters(sp.parameters, collParamsSetter)
-                                    .stream(entityClass);
+                            final Supplier<Stream> supplier = () -> {
+                                try {
+                                    return proxy.prepareQuery(sp.sql)
+                                            .configStmt(JdbcUtil.stmtSetterForStream)
+                                            .settParameters(sp.parameters, collParamsSetter)
+                                            .stream(entityClass);
+                                } catch (final SQLException e) {
+                                    throw new UncheckedSQLException(e);
+                                }
+                            };
 
-                            return CheckedStream.of(supplier).flatMap(Throwables.Supplier::get);
+                            return Stream.of(supplier).flatMap(Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.RowMapper.class)) {
@@ -3488,12 +3448,18 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
-                            final Throwables.Supplier<CheckedStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .configStmt(JdbcUtil.stmtSetterForStream)
-                                    .settParameters(sp.parameters, collParamsSetter)
-                                    .stream(rowMapper);
+                            final Supplier<Stream> supplier = () -> {
+                                try {
+                                    return proxy.prepareQuery(sp.sql)
+                                            .configStmt(JdbcUtil.stmtSetterForStream)
+                                            .settParameters(sp.parameters, collParamsSetter)
+                                            .stream(rowMapper);
+                                } catch (final SQLException e) {
+                                    throw new UncheckedSQLException(e);
+                                }
+                            };
 
-                            return CheckedStream.of(supplier).flatMap(Throwables.Supplier::get);
+                            return Stream.of(supplier).flatMap(Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.BiRowMapper.class)) {
@@ -3506,12 +3472,18 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
-                            final Throwables.Supplier<CheckedStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .configStmt(JdbcUtil.stmtSetterForStream)
-                                    .settParameters(sp.parameters, collParamsSetter)
-                                    .stream(rowMapper);
+                            final Supplier<Stream> supplier = () -> {
+                                try {
+                                    return proxy.prepareQuery(sp.sql)
+                                            .configStmt(JdbcUtil.stmtSetterForStream)
+                                            .settParameters(sp.parameters, collParamsSetter)
+                                            .stream(rowMapper);
+                                } catch (final SQLException e) {
+                                    throw new UncheckedSQLException(e);
+                                }
+                            };
 
-                            return CheckedStream.of(supplier).flatMap(Throwables.Supplier::get);
+                            return Stream.of(supplier).flatMap(Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.RowFilter.class) && paramTypes[2].equals(Jdbc.RowMapper.class)) {
@@ -3526,12 +3498,18 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
-                            final Throwables.Supplier<CheckedStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .configStmt(JdbcUtil.stmtSetterForStream)
-                                    .settParameters(sp.parameters, collParamsSetter)
-                                    .stream(rowFilter, rowMapper);
+                            final Supplier<Stream> supplier = () -> {
+                                try {
+                                    return proxy.prepareQuery(sp.sql)
+                                            .configStmt(JdbcUtil.stmtSetterForStream)
+                                            .settParameters(sp.parameters, collParamsSetter)
+                                            .stream(rowFilter, rowMapper);
+                                } catch (final SQLException e) {
+                                    throw new UncheckedSQLException(e);
+                                }
+                            };
 
-                            return CheckedStream.of(supplier).flatMap(Throwables.Supplier::get);
+                            return Stream.of(supplier).flatMap(Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.BiRowFilter.class) && paramTypes[2].equals(Jdbc.BiRowMapper.class)) {
@@ -3546,12 +3524,18 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
-                            final Throwables.Supplier<CheckedStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .configStmt(JdbcUtil.stmtSetterForStream)
-                                    .settParameters(sp.parameters, collParamsSetter)
-                                    .stream(rowFilter, rowMapper);
+                            final Supplier<Stream> supplier = () -> {
+                                try {
+                                    return proxy.prepareQuery(sp.sql)
+                                            .configStmt(JdbcUtil.stmtSetterForStream)
+                                            .settParameters(sp.parameters, collParamsSetter)
+                                            .stream(rowFilter, rowMapper);
+                                } catch (final SQLException e) {
+                                    throw new UncheckedSQLException(e);
+                                }
+                            };
 
-                            return CheckedStream.of(supplier).flatMap(Throwables.Supplier::get);
+                            return Stream.of(supplier).flatMap(Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 2 && paramTypes[0].equals(Collection.class)
                             && paramTypes[1].equals(Condition.class)) {
@@ -3563,12 +3547,18 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
-                            final Throwables.Supplier<CheckedStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .configStmt(JdbcUtil.stmtSetterForStream)
-                                    .settParameters(sp.parameters, collParamsSetter)
-                                    .stream(entityClass);
+                            final Supplier<Stream> supplier = () -> {
+                                try {
+                                    return proxy.prepareQuery(sp.sql)
+                                            .configStmt(JdbcUtil.stmtSetterForStream)
+                                            .settParameters(sp.parameters, collParamsSetter)
+                                            .stream(entityClass);
+                                } catch (final SQLException e) {
+                                    throw new UncheckedSQLException(e);
+                                }
+                            };
 
-                            return CheckedStream.of(supplier).flatMap(Throwables.Supplier::get);
+                            return Stream.of(supplier).flatMap(Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(Jdbc.RowMapper.class)) {
@@ -3582,12 +3572,18 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
-                            final Throwables.Supplier<CheckedStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .configStmt(JdbcUtil.stmtSetterForStream)
-                                    .settParameters(sp.parameters, collParamsSetter)
-                                    .stream(rowMapper);
+                            final Supplier<Stream> supplier = () -> {
+                                try {
+                                    return proxy.prepareQuery(sp.sql)
+                                            .configStmt(JdbcUtil.stmtSetterForStream)
+                                            .settParameters(sp.parameters, collParamsSetter)
+                                            .stream(rowMapper);
+                                } catch (final SQLException e) {
+                                    throw new UncheckedSQLException(e);
+                                }
+                            };
 
-                            return CheckedStream.of(supplier).flatMap(Throwables.Supplier::get);
+                            return Stream.of(supplier).flatMap(Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(Jdbc.BiRowMapper.class)) {
@@ -3601,12 +3597,18 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
-                            final Throwables.Supplier<CheckedStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .configStmt(JdbcUtil.stmtSetterForStream)
-                                    .settParameters(sp.parameters, collParamsSetter)
-                                    .stream(rowMapper);
+                            final Supplier<Stream> supplier = () -> {
+                                try {
+                                    return proxy.prepareQuery(sp.sql)
+                                            .configStmt(JdbcUtil.stmtSetterForStream)
+                                            .settParameters(sp.parameters, collParamsSetter)
+                                            .stream(rowMapper);
+                                } catch (final SQLException e) {
+                                    throw new UncheckedSQLException(e);
+                                }
+                            };
 
-                            return CheckedStream.of(supplier).flatMap(Throwables.Supplier::get);
+                            return Stream.of(supplier).flatMap(Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(Jdbc.RowFilter.class) && paramTypes[3].equals(Jdbc.RowMapper.class)) {
@@ -3622,12 +3624,18 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
-                            final Throwables.Supplier<CheckedStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .configStmt(JdbcUtil.stmtSetterForStream)
-                                    .settParameters(sp.parameters, collParamsSetter)
-                                    .stream(rowFilter, rowMapper);
+                            final Supplier<Stream> supplier = () -> {
+                                try {
+                                    return proxy.prepareQuery(sp.sql)
+                                            .configStmt(JdbcUtil.stmtSetterForStream)
+                                            .settParameters(sp.parameters, collParamsSetter)
+                                            .stream(rowFilter, rowMapper);
+                                } catch (final SQLException e) {
+                                    throw new UncheckedSQLException(e);
+                                }
+                            };
 
-                            return CheckedStream.of(supplier).flatMap(Throwables.Supplier::get);
+                            return Stream.of(supplier).flatMap(Supplier::get);
                         };
                     } else if (methodName.equals("stream") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
                             && paramTypes[2].equals(Jdbc.BiRowFilter.class) && paramTypes[3].equals(Jdbc.BiRowMapper.class)) {
@@ -3643,12 +3651,18 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).pair();
 
-                            final Throwables.Supplier<CheckedStream, SQLException> supplier = () -> proxy.prepareQuery(sp.sql)
-                                    .configStmt(JdbcUtil.stmtSetterForStream)
-                                    .settParameters(sp.parameters, collParamsSetter)
-                                    .stream(rowFilter, rowMapper);
+                            final Supplier<Stream> supplier = () -> {
+                                try {
+                                    return proxy.prepareQuery(sp.sql)
+                                            .configStmt(JdbcUtil.stmtSetterForStream)
+                                            .settParameters(sp.parameters, collParamsSetter)
+                                            .stream(rowFilter, rowMapper);
+                                } catch (final SQLException e) {
+                                    throw new UncheckedSQLException(e);
+                                }
+                            };
 
-                            return CheckedStream.of(supplier).flatMap(Throwables.Supplier::get);
+                            return Stream.of(supplier).flatMap(Supplier::get);
                         };
                     } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.RowConsumer.class)) {
@@ -3951,9 +3965,8 @@ final class DaoImpl {
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
-                                        ids = Stream.of(entities)
-                                                .splitToList(batchSize)
-                                                .checked()
+                                        ids = Seq.of(entities)
+                                                .split(batchSize)
                                                 .flatmap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor, isDefaultIdTester))
                                                 .toList();
                                     }
@@ -4025,9 +4038,8 @@ final class DaoImpl {
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
-                                        ids = Stream.of(entities)
-                                                .splitToList(batchSize)
-                                                .checked()
+                                        ids = Seq.of(entities)
+                                                .split(batchSize)
                                                 .flatmap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor, isDefaultIdTester))
                                                 .toList();
                                     }
@@ -4097,9 +4109,8 @@ final class DaoImpl {
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
-                                        ids = Stream.of(entities)
-                                                .splitToList(batchSize)
-                                                .checked()
+                                        ids = Seq.of(entities)
+                                                .split(batchSize)
                                                 .flatmap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor, isDefaultIdTester))
                                                 .toList();
                                     }
@@ -4659,10 +4670,7 @@ final class DaoImpl {
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedUpdateByIdSQL).closeAfterExecution(false)) {
-                                        result = Stream.of(entities)
-                                                .splitToList(batchSize)
-                                                .checked()
-                                                .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp).batchUpdate()));
+                                        result = Seq.of(entities).split(batchSize).sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp).batchUpdate()));
                                     }
 
                                     tran.commit();
@@ -4696,10 +4704,7 @@ final class DaoImpl {
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(query).closeAfterExecution(false)) {
-                                        result = Stream.of(entities)
-                                                .splitToList(batchSize)
-                                                .checked()
-                                                .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp).batchUpdate()));
+                                        result = Seq.of(entities).split(batchSize).sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp).batchUpdate()));
                                     }
 
                                     tran.commit();
@@ -4787,9 +4792,8 @@ final class DaoImpl {
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedDeleteByIdSQL).closeAfterExecution(false)) {
-                                        result = Stream.of(idsOrEntities)
-                                                .splitToList(batchSize)
-                                                .checked()
+                                        result = Seq.of(idsOrEntities)
+                                                .split(batchSize)
                                                 .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp, paramSetter).batchUpdate()));
                                     }
 
@@ -4942,7 +4946,7 @@ final class DaoImpl {
                                 final Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
                                         .getBatchSelectSQLBuilderAndParamSetter(sbc);
 
-                                Stream.of(entities).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(bp -> {
+                                Stream.of(entities).split(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(bp -> {
                                     if (propJoinInfo.isManyToManyJoin()) {
                                         final Jdbc.BiRowMapper<Pair<Object, Object>> pairBiRowMapper = new Jdbc.BiRowMapper<>() {
                                             private Jdbc.BiRowMapper<Object> biRowMapper = null;
@@ -5057,7 +5061,7 @@ final class DaoImpl {
                                     final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
                                             .getBatchDeleteSQLBuilderAndParamSetter(sbc);
 
-                                    result = Stream.of(entities).splitToList(JdbcUtil.DEFAULT_BATCH_SIZE).checked().sumInt(bp -> {
+                                    result = Seq.of(entities).split(JdbcUtil.DEFAULT_BATCH_SIZE).sumInt(bp -> {
                                         if (tp._2 == null) {
                                             return joinEntityDao.prepareQuery(tp._1.apply(bp.size())).setParameters(bp, tp._3).update();
                                         } else {
@@ -5093,7 +5097,7 @@ final class DaoImpl {
 
                     if (isStreamReturn && throwsSQLException) {
                         throw new UnsupportedOperationException("'throws SQLException' is not allowed in method: " + fullClassMethodName
-                                + " because its return type is Stream/CheckedStream which will be lazy evaluation");
+                                + " because its return type is Stream/Stream which will be lazy evaluation");
                     }
 
                     final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
@@ -5479,7 +5483,7 @@ final class DaoImpl {
                             paramTypes, paramLen, stmtParamLen, stmtParamIndexes, bindListParamFlags, stmtParamLen);
 
                     if (isQuery) {
-                        final Throwables.BiFunction<AbstractQuery, Object[], Object, Exception> queryFunc = createQueryFunctionByMethod(entityClass, method,
+                        final Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> queryFunc = createQueryFunctionByMethod(entityClass, method,
                                 mappedByKey, mergedByIds, prefixFieldMap, fetchColumnByEntityClass, hasRowMapperOrResultExtractor, hasRowFilter, op, isCall,
                                 fullClassMethodName);
 
@@ -5500,8 +5504,7 @@ final class DaoImpl {
                         //        } else if (lastParamType != null && (Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)
                         //                || Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType))) {
                         //            // skip.
-                        //        } else if (Stream.class.isAssignableFrom(returnType) || CheckedStream.class.isAssignableFrom(returnType)
-                        //                || DataSet.class.isAssignableFrom(returnType)) {
+                        //        } else if (Stream.class.isAssignableFrom(returnType) || DataSet.class.isAssignableFrom(returnType)) {
                         //            // skip.
                         //        } else if (isCall) {
                         //            // skip.
@@ -5595,16 +5598,14 @@ final class DaoImpl {
                                                 outParameterList, parametersSetter).closeAfterExecution(false)) {
 
                                             if (isSingleParameter) {
-                                                ids = Stream.of(batchParameters)
-                                                        .splitToList(batchSize)
-                                                        .checked() //
+                                                ids = Seq.of(batchParameters)
+                                                        .split(batchSize)
                                                         .flatmap(bp -> preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT)
                                                                 .batchInsert(keyExtractor, isDefaultIdTester))
                                                         .toList();
                                             } else {
-                                                ids = Stream.of((Collection<List<?>>) (Collection) batchParameters)
-                                                        .splitToList(batchSize) //
-                                                        .checked() //
+                                                ids = Seq.of((Collection<List<?>>) (Collection) batchParameters)
+                                                        .split(batchSize) //
                                                         .flatmap(bp -> preparedQuery.addBatchParameters(bp).batchInsert(keyExtractor, isDefaultIdTester))
                                                         .toList();
                                             }
@@ -5717,16 +5718,14 @@ final class DaoImpl {
                                                 outParameterList, parametersSetter).closeAfterExecution(false)) {
 
                                             if (isSingleParameter) {
-                                                updatedRecordCount = Stream.of(batchParameters)
-                                                        .splitToList(batchSize) //
-                                                        .checked()
+                                                updatedRecordCount = Seq.of(batchParameters)
+                                                        .split(batchSize) //
                                                         .sumLong(bp -> isLargeUpdate
                                                                 ? N.sum(preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).largeBatchUpdate())
                                                                 : N.sum(preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).batchUpdate()));
                                             } else {
-                                                updatedRecordCount = Stream.of((Collection<List<?>>) (Collection) batchParameters)
-                                                        .splitToList(batchSize) //
-                                                        .checked()
+                                                updatedRecordCount = Seq.of((Collection<List<?>>) (Collection) batchParameters)
+                                                        .split(batchSize) //
                                                         .sumLong(bp -> isLargeUpdate //
                                                                 ? N.sum(preparedQuery.addBatchParameters(bp).largeBatchUpdate())
                                                                 : N.sum(preparedQuery.addBatchParameters(bp).batchUpdate()));
@@ -5748,26 +5747,8 @@ final class DaoImpl {
                     }
                 }
 
-                if (isStreamReturn) {
-                    if (CheckedStream.class.isAssignableFrom(returnType)) {
-                        final Throwables.BiFunction<Dao, Object[], CheckedStream, Exception> tmp = (Throwables.BiFunction) call;
-
-                        call = (proxy, args) -> {
-                            final Throwables.Supplier<CheckedStream, Exception> supplier = () -> tmp.apply(proxy, args);
-
-                            return CheckedStream.of(supplier).flatMap(Throwables.Supplier::get);
-                        };
-                    } else {
-                        final Throwables.BiFunction<Dao, Object[], Stream, Exception> tmp = (Throwables.BiFunction) call;
-
-                        call = (proxy, args) -> {
-                            final Supplier<Stream> supplier = () -> Throwables.call(() -> tmp.apply(proxy, args));
-
-                            return Stream.of(supplier).flatMap(Supplier::get);
-                        };
-                    }
-                } else if (!throwsSQLException) {
-                    final Throwables.BiFunction<Dao, Object[], ?, Throwable> tmp = call;
+                if (!throwsSQLException) {
+                    final Throwables.BiFunction<Dao, Object[], ?, SQLException> tmp = (Throwables.BiFunction) call;
 
                     call = (proxy, args) -> {
                         try {
@@ -5776,8 +5757,6 @@ final class DaoImpl {
                             throw new UncheckedSQLException(e);
                         }
                     };
-
-                    call = tmp;
                 }
             }
 

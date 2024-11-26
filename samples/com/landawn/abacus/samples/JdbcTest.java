@@ -50,13 +50,13 @@ import com.landawn.abacus.samples.dao.UncheckedUserDaoL;
 import com.landawn.abacus.samples.dao.UserDao;
 import com.landawn.abacus.samples.dao.UserDaoL;
 import com.landawn.abacus.samples.entity.User;
-import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Holder;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
+import com.landawn.abacus.util.Seq;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.stream.IntStream;
@@ -500,7 +500,7 @@ public class JdbcTest {
 
     @Test
     public void test_cycled() throws Exception {
-        CheckedStream.of(1).cycled(1000).map(it -> "a").println();
+        Seq.of(1).cycled(1000).map(it -> "a").println();
         Stream.of(1).cycled(10).map(it -> "a").println();
 
     }
@@ -527,7 +527,7 @@ public class JdbcTest {
                         (stmt, ret) -> stmt.setLong(1, ret == null ? 0 : N.lastElement(ret).get().getId()), ResultExtractor.toList(User.class))
                 .toList();
 
-        final List<List<User>> list2 = Stream.of(Holder.of(nextStartId)).cycled().mapE(it -> {
+        final List<List<User>> list2 = Stream.of(Holder.of(nextStartId)).cycled().map(Fn.ff(it -> {
             final List<User> page = JdbcUtil.prepareQuery(dataSource, "select * from user1 where id > ?  order by id limit 10")
                     .setFetchDirectionToForward()
                     .setFetchSize(10)
@@ -535,7 +535,7 @@ public class JdbcTest {
                     .list(User.class);
             page.stream().mapToLong(User::getId).max().ifPresent(it::setValue);
             return page;
-        }).takeWhile(N::notEmpty).toList();
+        })).takeWhile(N::notEmpty).toList();
 
         list2.forEach(N::println);
 

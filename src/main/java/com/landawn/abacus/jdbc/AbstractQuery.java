@@ -47,10 +47,12 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.LazyEvaluation;
 import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.RowConsumer;
@@ -58,7 +60,6 @@ import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
-import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.DataSet;
@@ -79,6 +80,8 @@ import com.landawn.abacus.util.u.OptionalFloat;
 import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
+import com.landawn.abacus.util.stream.ObjIteratorEx;
+import com.landawn.abacus.util.stream.Stream;
 
 /**
  * Performance Tips:
@@ -3844,7 +3847,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor2, s.resultExtractor2);
         assertNotClosed();
 
-        Throwables.Iterator<ResultSet, SQLException> iter = null;
+        ObjIteratorEx<ResultSet> iter = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(stmt);
@@ -3897,7 +3900,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor3, s.resultExtractor3);
         assertNotClosed();
 
-        Throwables.Iterator<ResultSet, SQLException> iter = null;
+        ObjIteratorEx<ResultSet> iter = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(stmt);
@@ -3957,7 +3960,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor, s.resultExtractor);
         assertNotClosed();
 
-        Throwables.Iterator<ResultSet, SQLException> iter = null;
+        ObjIteratorEx<ResultSet> iter = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(stmt);
@@ -3997,7 +4000,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor, s.resultExtractor);
         assertNotClosed();
 
-        Throwables.Iterator<ResultSet, SQLException> iter = null;
+        ObjIteratorEx<ResultSet> iter = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(stmt);
@@ -4774,7 +4777,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         try {
             JdbcUtil.execute(stmt);
 
-            return JdbcUtil.<T> streamAllResultSets(stmt, targetType).map(CheckedStream::toList).toList();
+            return JdbcUtil.<T> streamAllResultSets(stmt, targetType).map(Stream::toList).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4799,7 +4802,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         try {
             JdbcUtil.execute(stmt);
 
-            return JdbcUtil.<T> streamAllResultSets(stmt, rowMapper).map(CheckedStream::toList).toList();
+            return JdbcUtil.<T> streamAllResultSets(stmt, rowMapper).map(Stream::toList).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4826,7 +4829,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         try {
             JdbcUtil.execute(stmt);
 
-            return JdbcUtil.<T> streamAllResultSets(stmt, rowFilter, rowMapper).map(CheckedStream::toList).toList();
+            return JdbcUtil.<T> streamAllResultSets(stmt, rowFilter, rowMapper).map(Stream::toList).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4851,7 +4854,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         try {
             JdbcUtil.execute(stmt);
 
-            return JdbcUtil.<T> streamAllResultSets(stmt, rowMapper).map(CheckedStream::toList).toList();
+            return JdbcUtil.<T> streamAllResultSets(stmt, rowMapper).map(Stream::toList).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4878,7 +4881,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         try {
             JdbcUtil.execute(stmt);
 
-            return JdbcUtil.<T> streamAllResultSets(stmt, rowFilter, rowMapper).map(CheckedStream::toList).toList();
+            return JdbcUtil.<T> streamAllResultSets(stmt, rowFilter, rowMapper).map(Stream::toList).toList();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4998,7 +5001,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <br />
      * Note: The opened {@code Connection} and {@code Statement} will be held till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
-     * @return A {@code CheckedStream} of {@code Map<String, Object>} representing the rows in the first {@code ResultSet}.
+     * @return A {@code Stream} of {@code Map<String, Object>} representing the rows in the first {@code ResultSet}.
      * @throws IllegalStateException If this is closed.
      * @see #query(ResultExtractor)
      * @see #query(BiResultExtractor)
@@ -5006,7 +5009,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Jdbc.BiResultExtractor
      */
     @LazyEvaluation
-    public CheckedStream<Map<String, Object>, SQLException> stream() {
+    public Stream<Map<String, Object>> stream() {
         return stream(Jdbc.BiRowMapper.TO_MAP);
     }
 
@@ -5021,7 +5024,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <T> The type of the elements in the stream.
      * @param rowMapper The {@code RowMapper} to map rows of the {@code ResultSet} to the target type.
-     * @return A {@code CheckedStream} of the specified type representing the rows in the first {@code ResultSet}.
+     * @return A {@code Stream} of the specified type representing the rows in the first {@code ResultSet}.
      * @throws IllegalArgumentException If the provided {@code targetType} is {@code null}.
      * @throws IllegalStateException If this is closed.
      * @see #query(ResultExtractor)
@@ -5030,7 +5033,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Jdbc.BiResultExtractor
      */
     @LazyEvaluation
-    public <T> CheckedStream<T, SQLException> stream(final Class<? extends T> targetType) {
+    public <T> Stream<T> stream(final Class<? extends T> targetType) {
         return stream(Jdbc.BiRowMapper.to(targetType));
     }
 
@@ -5046,7 +5049,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <T> The type of the elements in the stream.
      * @param rowMapper The {@code RowMapper} to map rows of the {@code ResultSet} to the target type.
-     * @return A {@code CheckedStream} of the specified type representing the rows in the first {@code ResultSet}.
+     * @return A {@code Stream} of the specified type representing the rows in the first {@code ResultSet}.
      * @throws IllegalArgumentException If the provided {@code RowMapper} is invalid.
      * @throws IllegalStateException If this is closed.
      * @see #query(ResultExtractor)
@@ -5056,16 +5059,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @SuppressWarnings("resource")
     @LazyEvaluation
-    public <T> CheckedStream<T, SQLException> stream(final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
+    public <T> Stream<T> stream(final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
         checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
-        final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
+        final Supplier<ResultSet> supplier = createQuerySupplier();
 
-        return CheckedStream.just(supplier, SQLException.class)
-                .map(Throwables.Supplier::get)
-                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper))
-                .onClose(this::closeAfterExecutionIfAllowed);
+        return Stream.just(supplier).map(Supplier::get).flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
     }
 
     // Will it cause confusion if it's called in transaction?
@@ -5080,7 +5080,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <T> The type of the elements in the stream.
      * @param rowMapper The {@code BiRowMapper} to map rows of the {@code ResultSet} to the target type.
-     * @return A {@code CheckedStream} of the specified type representing the rows in the first {@code ResultSet}.
+     * @return A {@code Stream} of the specified type representing the rows in the first {@code ResultSet}.
      * @throws IllegalArgumentException If the provided {@code BiRowMapper} is invalid.
      * @throws IllegalStateException If this is closed.
      * @see #query(ResultExtractor)
@@ -5090,16 +5090,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @SuppressWarnings("resource")
     @LazyEvaluation
-    public <T> CheckedStream<T, SQLException> stream(final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
+    public <T> Stream<T> stream(final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
         checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
-        final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
+        final Supplier<ResultSet> supplier = createQuerySupplier();
 
-        return CheckedStream.just(supplier, SQLException.class)
-                .map(Throwables.Supplier::get)
-                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper))
-                .onClose(this::closeAfterExecutionIfAllowed);
+        return Stream.just(supplier).map(Supplier::get).flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
     }
 
     // Will it cause confusion if it's called in transaction?
@@ -5115,7 +5112,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> The type of the elements in the stream.
      * @param rowFilter The {@code RowFilter} to filter rows of the {@code ResultSet}.
      * @param rowMapper The {@code RowMapper} to map rows of the {@code ResultSet} to the target type.
-     * @return A {@code CheckedStream} of the specified type representing the rows in the first {@code ResultSet}.
+     * @return A {@code Stream} of the specified type representing the rows in the first {@code ResultSet}.
      * @throws IllegalArgumentException If the provided {@code RowFilter} or {@code RowMapper} is invalid.
      * @throws IllegalStateException If this is closed.
      * @see #query(ResultExtractor)
@@ -5125,16 +5122,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @SuppressWarnings("resource")
     @LazyEvaluation
-    public <T> CheckedStream<T, SQLException> stream(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
+    public <T> Stream<T> stream(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException {
         checkArgNotNull(rowFilter, s.rowFilter);
         checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
-        final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
+        final Supplier<ResultSet> supplier = createQuerySupplier();
 
-        return CheckedStream.just(supplier, SQLException.class)
-                .map(Throwables.Supplier::get)
+        return Stream.just(supplier)
+                .map(Supplier::get)
                 .flatMap(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper))
                 .onClose(this::closeAfterExecutionIfAllowed);
     }
@@ -5152,7 +5149,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> The type of the elements in the stream.
      * @param rowFilter The {@code BiRowFilter} to filter rows of the {@code ResultSet}.
      * @param rowMapper The {@code BiRowMapper} to map rows of the {@code ResultSet} to the target type.
-     * @return A {@code CheckedStream} of the specified type representing the rows in the first {@code ResultSet}.
+     * @return A {@code Stream} of the specified type representing the rows in the first {@code ResultSet}.
      * @throws IllegalArgumentException If the provided {@code BiRowFilter} or {@code BiRowMapper} is invalid.
      * @throws IllegalStateException If this is closed.
      * @see #query(ResultExtractor)
@@ -5162,16 +5159,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @SuppressWarnings("resource")
     @LazyEvaluation
-    public <T> CheckedStream<T, SQLException> stream(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
+    public <T> Stream<T> stream(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException {
         checkArgNotNull(rowFilter, s.rowFilter);
         checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
-        final Throwables.Supplier<ResultSet, SQLException> supplier = this::executeQuery;
+        final Supplier<ResultSet> supplier = createQuerySupplier();
 
-        return CheckedStream.just(supplier, SQLException.class)
-                .map(Throwables.Supplier::get)
+        return Stream.just(supplier)
+                .map(Supplier::get)
                 .flatMap(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper))
                 .onClose(this::closeAfterExecutionIfAllowed);
     }
@@ -5188,21 +5185,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <T> The type of the elements in the stream.
      * @param targetType The class of the type to be extracted from the {@code ResultSets}.
-     * @return A {@code CheckedStream} of {@code CheckedStream<T, SQLException>} representing the rows in all {@code ResultSets}.
+     * @return A {@code Stream} of {@code Stream<T, SQLException>} representing the rows in all {@code ResultSets}.
      * @throws IllegalArgumentException If the provided {@code targetType} is invalid.
      * @throws IllegalStateException If this is closed.
      */
     @SuppressWarnings("resource")
-    public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultsets(final Class<? extends T> targetType)
-            throws IllegalArgumentException, IllegalStateException {
+    public <T> Stream<Stream<T>> streamAllResultsets(final Class<? extends T> targetType) throws IllegalArgumentException, IllegalStateException {
         checkArgNotNull(targetType, s.targetType);
         assertNotClosed();
 
-        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(stmt);
+        final Supplier<Boolean> supplier = createExecuteSupplier();
 
-        return CheckedStream.just(supplier, SQLException.class)
-                .flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, targetType))
-                .onClose(this::closeAfterExecutionIfAllowed);
+        return Stream.just(supplier).flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, targetType)).onClose(this::closeAfterExecutionIfAllowed);
 
     }
 
@@ -5218,21 +5212,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <T> The type of the elements in the stream.
      * @param rowMapper The {@code RowMapper} to map rows of the {@code ResultSet} to the target type.
-     * @return A {@code CheckedStream} of {@code CheckedStream<T, SQLException>} representing the rows in all {@code ResultSets}.
+     * @return A {@code Stream} of {@code Stream<T, SQLException>} representing the rows in all {@code ResultSets}.
      * @throws IllegalArgumentException If the provided {@code RowMapper} is invalid.
      * @throws IllegalStateException If this is closed.
      */
     @SuppressWarnings("resource")
-    public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultsets(final Jdbc.RowMapper<? extends T> rowMapper)
-            throws IllegalArgumentException, IllegalStateException {
+    public <T> Stream<Stream<T>> streamAllResultsets(final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
         checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
-        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(stmt);
+        final Supplier<Boolean> supplier = createExecuteSupplier();
 
-        return CheckedStream.just(supplier, SQLException.class)
-                .flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, rowMapper))
-                .onClose(this::closeAfterExecutionIfAllowed);
+        return Stream.just(supplier).flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
     }
 
     /**
@@ -5248,22 +5239,20 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> The type of the elements in the stream.
      * @param rowFilter The {@code RowFilter} to filter rows of the {@code ResultSet}.
      * @param rowMapper The {@code RowMapper} to map rows of the {@code ResultSet} to the target type.
-     * @return A {@code CheckedStream} of {@code CheckedStream<T, SQLException>} representing the rows in all {@code ResultSets}.
+     * @return A {@code Stream} of {@code Stream<T, SQLException>} representing the rows in all {@code ResultSets}.
      * @throws IllegalArgumentException If the provided {@code RowFilter} or {@code RowMapper} is invalid.
      * @throws IllegalStateException If this is closed.
      */
     @SuppressWarnings("resource")
-    public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultsets(final Jdbc.RowFilter rowFilter,
-            final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
+    public <T> Stream<Stream<T>> streamAllResultsets(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
+            throws IllegalArgumentException, IllegalStateException {
         checkArgNotNull(rowFilter, s.rowFilter);
         checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
-        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(stmt);
+        final Supplier<Boolean> supplier = createExecuteSupplier();
 
-        return CheckedStream.just(supplier, SQLException.class)
-                .flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, rowFilter, rowMapper))
-                .onClose(this::closeAfterExecutionIfAllowed);
+        return Stream.just(supplier).flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, rowFilter, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
     }
 
     /**
@@ -5278,21 +5267,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <T> The type of the elements in the stream.
      * @param rowMapper The {@code BiRowMapper} to map rows of the {@code ResultSet} to the target type.
-     * @return A {@code CheckedStream} of {@code CheckedStream<T, SQLException>} representing the rows in all {@code ResultSets}.
+     * @return A {@code Stream} of {@code Stream<T, SQLException>} representing the rows in all {@code ResultSets}.
      * @throws IllegalArgumentException If the provided {@code rowMapper} is invalid.
      * @throws IllegalStateException If this is closed.
      */
     @SuppressWarnings("resource")
-    public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultsets(final Jdbc.BiRowMapper<? extends T> rowMapper)
-            throws IllegalArgumentException, IllegalStateException {
+    public <T> Stream<Stream<T>> streamAllResultsets(final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
         checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
-        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(stmt);
+        final Supplier<Boolean> supplier = createExecuteSupplier();
 
-        return CheckedStream.just(supplier, SQLException.class)
-                .flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, rowMapper))
-                .onClose(this::closeAfterExecutionIfAllowed);
+        return Stream.just(supplier).flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
     }
 
     /**
@@ -5308,22 +5294,40 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> The type of the elements in the stream.
      * @param rowFilter The {@code BiRowFilter} to filter rows of the {@code ResultSet}.
      * @param rowMapper The {@code BiRowMapper} to map rows of the {@code ResultSet} to the target type.
-     * @return A {@code CheckedStream} of {@code CheckedStream<T, SQLException>} representing the rows in all {@code ResultSets}.
+     * @return A {@code Stream} of {@code Stream<T, SQLException>} representing the rows in all {@code ResultSets}.
      * @throws IllegalArgumentException If the provided {@code rowFilter} or {@code rowMapper} is invalid.
      * @throws IllegalStateException If this is closed.
      */
     @SuppressWarnings("resource")
-    public <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultsets(final Jdbc.BiRowFilter rowFilter,
-            final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
+    public <T> Stream<Stream<T>> streamAllResultsets(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
+            throws IllegalArgumentException, IllegalStateException {
         checkArgNotNull(rowFilter, s.rowFilter);
         checkArgNotNull(rowMapper, s.rowMapper);
         assertNotClosed();
 
-        final Throwables.Supplier<Boolean, SQLException> supplier = () -> JdbcUtil.execute(stmt);
+        final Supplier<Boolean> supplier = createExecuteSupplier();
 
-        return CheckedStream.just(supplier, SQLException.class)
-                .flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, rowFilter, rowMapper))
-                .onClose(this::closeAfterExecutionIfAllowed);
+        return Stream.just(supplier).flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, rowFilter, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
+    }
+
+    private Supplier<ResultSet> createQuerySupplier() {
+        return () -> {
+            try {
+                return executeQuery();
+            } catch (final SQLException e) {
+                throw new UncheckedSQLException(e);
+            }
+        };
+    }
+
+    private Supplier<Boolean> createExecuteSupplier() {
+        return () -> {
+            try {
+                return JdbcUtil.execute(stmt);
+            } catch (final SQLException e) {
+                throw new UncheckedSQLException(e);
+            }
+        };
     }
 
     /**

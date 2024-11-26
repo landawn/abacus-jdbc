@@ -48,7 +48,6 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.AsyncExecutor;
-import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.N;
@@ -68,6 +67,7 @@ import com.landawn.abacus.util.u.OptionalFloat;
 import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
+import com.landawn.abacus.util.stream.Stream;
 
 /**
  * Performance Tips:
@@ -118,7 +118,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  *          </ul>
  *      </ul>
  *      <ul>
- *          <li>Or else if the return type of the method is {@code CheckedStream/Stream}, {@code PreparedQuery#stream(RowMapper/BiRowMapper)} will be called.</li>
+ *          <li>Or else if the return type of the method is {@code Stream/Stream}, {@code PreparedQuery#stream(RowMapper/BiRowMapper)} will be called.</li>
  *      </ul>
  *      <ul>
  *          <li>Or else if the return type of the method is {@code Optional}, {@code PreparedQuery#findFirst(RowMapper/BiRowMapper)} will be called.</li>
@@ -131,7 +131,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  *          <li>If the return type of the method is {@code DataSet}, {@code PreparedQuery#query()} will be called.</li>
  *      </ul>
  *      <ul>
- *          <li>Or else if the return type of the method is {@code CheckedStream/Stream}, {@code PreparedQuery#stream(Class)} will be called.</li>
+ *          <li>Or else if the return type of the method is {@code Stream/Stream}, {@code PreparedQuery#stream(Class)} will be called.</li>
  *      </ul>
  *      <ul>
  *          <li>Or else if the return type of the method is {@code Map} or {@code Entity} class with {@code getter/setter} methods, {@code PreparedQuery#findFirst(Class).orElseNull()} will be called.</li>
@@ -1702,7 +1702,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    CheckedStream<T, SQLException> stream(final Condition cond);
+    Stream<T> stream(final Condition cond);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1715,7 +1715,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> CheckedStream<R, SQLException> stream(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper);
+    <R> Stream<R> stream(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1729,7 +1729,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> CheckedStream<R, SQLException> stream(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper);
+    <R> Stream<R> stream(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper);
 
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
@@ -1743,7 +1743,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> CheckedStream<R, SQLException> stream(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper);
+    <R> Stream<R> stream(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper);
 
     /**
      * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
@@ -1757,7 +1757,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> CheckedStream<R, SQLException> stream(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper);
+    <R> Stream<R> stream(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1770,22 +1770,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    CheckedStream<T, SQLException> stream(final Collection<String> selectPropNames, final Condition cond);
-
-    // Will it cause confusion if it's called in transaction?
-    /**
-     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
-     *
-     * @param <R>
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     */
-    @LazyEvaluation
-    <R> CheckedStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper);
+    Stream<T> stream(final Collection<String> selectPropNames, final Condition cond);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1800,7 +1785,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> CheckedStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper);
+    <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1809,15 +1794,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param <R>
      * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param cond
-     * @param rowFilter
      * @param rowMapper
      * @return
      * @see ConditionFactory
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> CheckedStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, Jdbc.RowFilter rowFilter,
-            final Jdbc.RowMapper<? extends R> rowMapper);
+    <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
     /**
@@ -1833,7 +1816,23 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    <R> CheckedStream<R, SQLException> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
+    <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper);
+
+    // Will it cause confusion if it's called in transaction?
+    /**
+     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     *
+     * @param <R>
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
+     * @param cond
+     * @param rowFilter
+     * @param rowMapper
+     * @return
+     * @see ConditionFactory
+     * @see ConditionFactory.CF
+     */
+    @LazyEvaluation
+    <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
             final Jdbc.BiRowMapper<? extends R> rowMapper);
 
     // Will it cause confusion if it's called in transaction?
@@ -1848,7 +1847,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    default <R> CheckedStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond) {
+    default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond) {
         final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
         final Jdbc.RowMapper<? extends R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
@@ -1868,7 +1867,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    default <R> CheckedStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) {
+    default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) {
         return stream(N.asList(singleSelectPropName), cond, rowMapper);
     }
 
@@ -1886,7 +1885,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     @LazyEvaluation
-    default <R> CheckedStream<R, SQLException> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
+    default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
             final Jdbc.RowMapper<? extends R> rowMapper) {
         return stream(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
     }
@@ -1897,12 +1896,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the condition to filter the results. It must contain {@code orderBy}
      * @param pageSize the number of records per page
      * @param paramSetter the parameter setter for the prepared query
-     * @return a CheckedStream of DataSet and SQLException
+     * @return a Stream of DataSet and SQLException
      */
     @Beta
     @LazyEvaluation
-    CheckedStream<DataSet, SQLException> paginate(final Condition cond, final int pageSize,
-            final Jdbc.BiParametersSetter<? super PreparedQuery, DataSet> paramSetter);
+    Stream<DataSet> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, DataSet> paramSetter);
 
     /**
      * Paginates the results based on the given condition and page size.
@@ -1912,11 +1910,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param pageSize the number of records per page
      * @param paramSetter the parameter setter for the prepared query
      * @param resultExtractor the result extractor to process the query results
-     * @return a CheckedStream of the result type and SQLException
+     * @return a Stream of the result type and SQLException
      */
     @Beta
     @LazyEvaluation
-    <R> CheckedStream<R, SQLException> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter,
+    <R> Stream<R> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter,
             final Jdbc.ResultExtractor<? extends R> resultExtractor);
 
     /**
@@ -1927,11 +1925,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param pageSize the number of records per page
      * @param paramSetter the parameter setter for the prepared query
      * @param resultExtractor the result extractor to process the query results
-     * @return a CheckedStream of the result type and SQLException
+     * @return a Stream of the result type and SQLException
      */
     @Beta
     @LazyEvaluation
-    <R> CheckedStream<R, SQLException> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter,
+    <R> Stream<R> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter,
             final Jdbc.BiResultExtractor<? extends R> resultExtractor);
 
     /**
@@ -1941,11 +1939,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the condition to filter the results. It must contain {@code orderBy}
      * @param pageSize the number of records per page
      * @param paramSetter the parameter setter for the prepared query
-     * @return a CheckedStream of DataSet and SQLException
+     * @return a Stream of DataSet and SQLException
      */
     @Beta
     @LazyEvaluation
-    CheckedStream<DataSet, SQLException> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
+    Stream<DataSet> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
             final Jdbc.BiParametersSetter<? super PreparedQuery, DataSet> paramSetter);
 
     /**
@@ -1957,11 +1955,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param pageSize the number of records per page
      * @param paramSetter the parameter setter for the prepared query
      * @param resultExtractor the result extractor to process the query results
-     * @return a CheckedStream of the result type and SQLException
+     * @return a Stream of the result type and SQLException
      */
     @Beta
     @LazyEvaluation
-    <R> CheckedStream<R, SQLException> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
+    <R> Stream<R> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
             final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter, final Jdbc.ResultExtractor<? extends R> resultExtractor);
 
     /**
@@ -1973,11 +1971,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param pageSize the number of records per page
      * @param paramSetter the parameter setter for the prepared query
      * @param resultExtractor the result extractor to process the query results
-     * @return a CheckedStream of the result type and SQLException
+     * @return a Stream of the result type and SQLException
      */
     @Beta
     @LazyEvaluation
-    <R> CheckedStream<R, SQLException> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
+    <R> Stream<R> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
             final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter, final Jdbc.BiResultExtractor<? extends R> resultExtractor);
 
     /**

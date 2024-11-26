@@ -268,7 +268,7 @@ public final class JoinInfo {
                 // same column name in reference entity and middle entity
                 final boolean hasSameColumnName = Stream.of(SQLParser.parse(leftSelectSql.substring(0, fromIndex)))
                         .skip(2)
-                        .splitToList(7)
+                        .split(7)
                         .anyMatch(it -> middleSelectWords.get(2).equalsIgnoreCase(it.get(0)));
 
                 final String leftSelectSqlForBatch = hasSameColumnName //
