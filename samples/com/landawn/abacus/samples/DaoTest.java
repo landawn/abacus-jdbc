@@ -80,6 +80,34 @@ import codes.entity.Account.x;
 public class DaoTest {
 
     @Test
+    public void test_stream_lazy_evaluation() throws Exception {
+        // lazy evaluation
+
+        final List<User> users = IntStream.range(0, 3)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                .toList();
+
+        userDao.batchInsertWithId(users);
+
+        N.println("......"); // breakpoint here
+
+        userDao.stream(CF.gt("id", 0)).forEach(N::println);
+
+        N.println("......"); // breakpoint here
+
+        final Stream<User> stream = userDao.stream(CF.gt("id", 0));
+        N.println(stream.hashCode());
+
+        N.println("......"); // breakpoint here
+
+        userDao.stream(CF.gt("id", 0)).forEach(N::println);
+
+        N.println("......"); // breakpoint here
+
+        userDao.delete(CF.ge("id", 0));
+    }
+
+    @Test
     public void test_paginate() throws Exception {
 
         final List<User> users = IntStream.range(0, 20)
