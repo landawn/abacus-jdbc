@@ -735,7 +735,7 @@ public final class JdbcUtils {
                 JdbcUtil.executeBatch(stmt);
 
                 if (batchIntervalInMillis > 0) {
-                    N.sleepUninterruptibly(batchIntervalInMillis);
+                    N.sleep(batchIntervalInMillis);
                 }
             }
         }
@@ -905,7 +905,7 @@ public final class JdbcUtils {
                     JdbcUtil.executeBatch(stmt);
 
                     if (batchIntervalInMillis > 0) {
-                        N.sleepUninterruptibly(batchIntervalInMillis);
+                        N.sleep(batchIntervalInMillis);
                     }
                 }
             }
@@ -994,7 +994,7 @@ public final class JdbcUtils {
                 JdbcUtil.executeBatch(stmt);
 
                 if (batchIntervalInMillis > 0) {
-                    N.sleepUninterruptibly(batchIntervalInMillis);
+                    N.sleep(batchIntervalInMillis);
                 }
             }
         }
@@ -1300,7 +1300,7 @@ public final class JdbcUtils {
     //                    JdbcUtil.executeBatch(stmt);
     //
     //                    if (batchIntervalInMillis > 0) {
-    //                        N.sleepUninterruptibly(batchIntervalInMillis);
+    //                        N.sleep(batchIntervalInMillis);
     //                    }
     //                }
     //
@@ -1624,7 +1624,7 @@ public final class JdbcUtils {
     //                    JdbcUtil.executeBatch(stmt);
     //
     //                    if (batchIntervalInMillis > 0) {
-    //                        N.sleepUninterruptibly(batchIntervalInMillis);
+    //                        N.sleep(batchIntervalInMillis);
     //                    }
     //                }
     //
@@ -1884,7 +1884,7 @@ public final class JdbcUtils {
                     JdbcUtil.executeBatch(stmt);
 
                     if (batchIntervalInMillis > 0) {
-                        N.sleepUninterruptibly(batchIntervalInMillis);
+                        N.sleep(batchIntervalInMillis);
                     }
                 }
 
@@ -2918,7 +2918,7 @@ public final class JdbcUtils {
                     JdbcUtil.executeBatch(insertStmt);
 
                     if (batchIntervalInMillis > 0) {
-                        N.sleepUninterruptibly(batchIntervalInMillis);
+                        N.sleep(batchIntervalInMillis);
                     }
                 }
             }
@@ -3153,7 +3153,7 @@ public final class JdbcUtils {
     //                    JdbcUtil.executeBatch(insertStmt);
     //
     //                    if (batchIntervalInMillis > 0) {
-    //                        N.sleepUninterruptibly(batchIntervalInMillis);
+    //                        N.sleep(batchIntervalInMillis);
     //                    }
     //                }
     //            }

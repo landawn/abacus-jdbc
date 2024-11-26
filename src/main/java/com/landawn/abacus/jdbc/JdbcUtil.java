@@ -74,6 +74,7 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.AsyncExecutor;
 import com.landawn.abacus.util.Charsets;
+import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.DataSet;
@@ -104,7 +105,6 @@ import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.function.TriConsumer;
 import com.landawn.abacus.util.stream.EntryStream;
-import com.landawn.abacus.util.stream.ObjIteratorEx;
 import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
@@ -4487,28 +4487,24 @@ public final class JdbcUtil {
         return new RowDataSet(columnNameList, columnList);
     }
 
-    static <R> R extractAndCloseResultSet(final ResultSet rs, final ResultExtractor<? extends R> resultExtractor) {
+    static <R> R extractAndCloseResultSet(final ResultSet rs, final ResultExtractor<? extends R> resultExtractor) throws SQLException {
         try {
             return checkNotResultSet(resultExtractor.apply(rs));
-        } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
         } finally {
             closeQuietly(rs);
         }
     }
 
-    static <R> R extractAndCloseResultSet(final ResultSet rs, final BiResultExtractor<? extends R> resultExtractor) {
+    static <R> R extractAndCloseResultSet(final ResultSet rs, final BiResultExtractor<? extends R> resultExtractor) throws SQLException {
         try {
             return checkNotResultSet(resultExtractor.apply(rs, getColumnLabelList(rs)));
-        } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
         } finally {
             closeQuietly(rs);
         }
     }
 
     /**
-     * Extracts all ResultSets from the provided Statement and returns them as a Stream of DataSet.
+     * Extracts all ResultSets from the provided Statement and returns them as a CheckedStream of DataSet.
      * <p>
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
      * <br />
@@ -4516,14 +4512,14 @@ public final class JdbcUtil {
      * </p>
      *
      * @param stmt the Statement to extract ResultSets from
-     * @return a Stream of DataSet containing the extracted ResultSets
+     * @return a CheckedStream of DataSet containing the extracted ResultSets
      */
-    public static Stream<DataSet> extractAllResultSets(final Statement stmt) {
+    public static CheckedStream<DataSet, SQLException> extractAllResultSets(final Statement stmt) {
         return extractAllResultSets(stmt, ResultExtractor.TO_DATA_SET);
     }
 
     /**
-     * Extracts all ResultSets from the provided Statement and returns them as a Stream.
+     * Extracts all ResultSets from the provided Statement and returns them as a CheckedStream.
      * <p>
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
      * <br />
@@ -4533,24 +4529,25 @@ public final class JdbcUtil {
      * @param <R> the type of the result extracted from the ResultSet
      * @param stmt the Statement to extract ResultSets from
      * @param resultExtractor the ResultExtractor to apply while extracting data
-     * @return a Stream of the extracted results
+     * @return a CheckedStream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     @SuppressWarnings("resource")
-    public static <R> Stream<R> extractAllResultSets(final Statement stmt, final ResultExtractor<R> resultExtractor) throws IllegalArgumentException {
+    public static <R> CheckedStream<R, SQLException> extractAllResultSets(final Statement stmt, final ResultExtractor<R> resultExtractor)
+            throws IllegalArgumentException {
         N.checkArgNotNull(stmt, s.stmt);
         N.checkArgNotNull(resultExtractor, s.resultExtractor);
 
-        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
+        final Supplier<Throwables.Iterator<ResultSet, SQLException>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
-        return Stream.just(supplier)
+        return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
-                .flatMap(it -> Stream.of(it.get()))
+                .flatMap(it -> CheckedStream.of(it.get()))
                 .map(rs -> extractAndCloseResultSet(rs, resultExtractor));
     }
 
     /**
-     * Extracts all ResultSets from the provided Statement and returns them as a Stream.
+     * Extracts all ResultSets from the provided Statement and returns them as a CheckedStream.
      * <p>
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
      * <br />
@@ -4560,19 +4557,20 @@ public final class JdbcUtil {
      * @param <R> the type of the result extracted from the ResultSet
      * @param stmt the Statement to extract ResultSets from
      * @param resultExtractor the BiResultExtractor to apply while extracting data
-     * @return a Stream of the extracted results
+     * @return a CheckedStream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     @SuppressWarnings("resource")
-    public static <R> Stream<R> extractAllResultSets(final Statement stmt, final BiResultExtractor<R> resultExtractor) throws IllegalArgumentException {
+    public static <R> CheckedStream<R, SQLException> extractAllResultSets(final Statement stmt, final BiResultExtractor<R> resultExtractor)
+            throws IllegalArgumentException {
         N.checkArgNotNull(stmt, s.stmt);
         N.checkArgNotNull(resultExtractor, s.resultExtractor);
 
-        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
+        final Supplier<Throwables.Iterator<ResultSet, SQLException>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
-        return Stream.just(supplier)
+        return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
-                .flatMap(it -> Stream.of(it.get()))
+                .flatMap(it -> CheckedStream.of(it.get()))
                 .map(rs -> extractAndCloseResultSet(rs, resultExtractor));
     }
 
@@ -4585,10 +4583,10 @@ public final class JdbcUtil {
      * </p>
      *
      * @param resultSet the ResultSet to create a stream from
-     * @return a Stream of Object arrays containing the data from the ResultSet
+     * @return a CheckedStream of Object arrays containing the data from the ResultSet
      * @throws IllegalArgumentException if the provided ResultSet is null
      */
-    public static Stream<Object[]> stream(final ResultSet resultSet) {
+    public static CheckedStream<Object[], SQLException> stream(final ResultSet resultSet) {
         return stream(resultSet, Object[].class);
     }
 
@@ -4603,10 +4601,10 @@ public final class JdbcUtil {
      * @param <T> the type of the result extracted from the ResultSet
      * @param resultSet the ResultSet to create a stream from
      * @param targetClass the class of the result type
-     * @return a Stream of the extracted results
+     * @return a CheckedStream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet resultSet, final Class<? extends T> targetClass) throws IllegalArgumentException {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final Class<? extends T> targetClass) throws IllegalArgumentException {
         N.checkArgNotNull(targetClass, s.targetClass);
         N.checkArgNotNull(resultSet, s.resultSet);
 
@@ -4624,89 +4622,65 @@ public final class JdbcUtil {
      * @param <T> the type of the result extracted from the ResultSet
      * @param resultSet the ResultSet to create a stream from
      * @param rowMapper the RowMapper to apply while extracting data
-     * @return a Stream of the extracted results
+     * @return a CheckedStream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet resultSet, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
         N.checkArgNotNull(resultSet, s.resultSet);
         N.checkArgNotNull(rowMapper, s.rowMapper);
 
-        return Stream.of(iterate(resultSet, rowMapper, null));
+        return CheckedStream.of(iterate(resultSet, rowMapper, null));
     }
 
-    static <T> ObjIteratorEx<T> iterate(final ResultSet resultSet, final RowMapper<? extends T> rowMapper, final Runnable onClose) {
-        return new ObjIteratorEx<>() {
+    static <T> Throwables.Iterator<T, SQLException> iterate(final ResultSet resultSet, final RowMapper<? extends T> rowMapper, final Runnable onClose) {
+        return new Throwables.Iterator<>() {
             private boolean hasNext;
 
             @Override
-            public boolean hasNext() {
+            public boolean hasNext() throws SQLException {
                 if (!hasNext) {
-                    try {
-                        hasNext = resultSet.next();
-                    } catch (final SQLException e) {
-                        throw new UncheckedSQLException(e);
-                    }
+                    hasNext = resultSet.next();
                 }
 
                 return hasNext;
             }
 
             @Override
-            public T next() {
+            public T next() throws SQLException {
                 if (!hasNext()) {
                     throw new NoSuchElementException(InternalUtil.ERROR_MSG_FOR_NO_SUCH_EX);
                 }
 
                 hasNext = false;
 
-                try {
-                    return rowMapper.apply(resultSet);
-                } catch (final SQLException e) {
-                    throw new UncheckedSQLException(e);
-                }
+                return rowMapper.apply(resultSet);
             }
 
             @Override
-            public void advance(final long n) throws IllegalArgumentException {
+            public void advance(final long n) throws IllegalArgumentException, SQLException {
                 N.checkArgNotNegative(n, s.n);
 
                 final long m = hasNext ? n - 1 : n;
 
-                try {
-                    JdbcUtil.skip(resultSet, m);
-                } catch (final SQLException e) {
-                    throw new UncheckedSQLException(e);
-                }
+                JdbcUtil.skip(resultSet, m);
 
                 hasNext = false;
             }
 
             @Override
-            public long count() {
+            public long count() throws SQLException {
                 long cnt = hasNext ? 1 : 0;
                 hasNext = false;
 
-                try {
-                    while (resultSet.next()) {
-                        cnt++;
-                    }
-                } catch (final SQLException e) {
-                    throw new UncheckedSQLException(e);
+                while (resultSet.next()) {
+                    cnt++;
                 }
 
                 return cnt;
             }
 
-            private boolean isClosed = false;
-
             @Override
-            public final void close() {
-                if (isClosed) {
-                    return;
-                }
-
-                isClosed = true;
-
+            protected void closeResource() {
                 if (onClose != null) {
                     onClose.run();
                 }
@@ -4726,38 +4700,35 @@ public final class JdbcUtil {
      * @param resultSet the ResultSet to create a stream from
      * @param rowFilter the RowFilter to apply while filtering rows
      * @param rowMapper the RowMapper to apply while extracting data
-     * @return a Stream of the extracted results
+     * @return a CheckedStream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper)
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper)
             throws IllegalArgumentException {
         N.checkArgNotNull(resultSet, s.resultSet);
         N.checkArgNotNull(rowFilter, s.rowFilter);
         N.checkArgNotNull(rowMapper, s.rowMapper);
 
-        return Stream.of(iterate(resultSet, rowFilter, rowMapper, null));
+        return CheckedStream.of(iterate(resultSet, rowFilter, rowMapper, null));
     }
 
-    static <T> ObjIteratorEx<T> iterate(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper, final Runnable onClose) {
+    static <T> Throwables.Iterator<T, SQLException> iterate(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper,
+            final Runnable onClose) {
         N.checkArgNotNull(resultSet, s.resultSet);
         N.checkArgNotNull(rowFilter, s.rowFilter);
         N.checkArgNotNull(rowMapper, s.rowMapper);
 
-        return new ObjIteratorEx<>() {
+        return new Throwables.Iterator<>() {
             private boolean hasNext;
 
             @Override
-            public boolean hasNext() {
+            public boolean hasNext() throws SQLException {
                 if (!hasNext) {
-                    try {
-                        while (resultSet.next()) {
-                            if (rowFilter.test(resultSet)) {
-                                hasNext = true;
-                                break;
-                            }
+                    while (resultSet.next()) {
+                        if (rowFilter.test(resultSet)) {
+                            hasNext = true;
+                            break;
                         }
-                    } catch (final SQLException e) {
-                        throw new UncheckedSQLException(e);
                     }
                 }
 
@@ -4765,30 +4736,18 @@ public final class JdbcUtil {
             }
 
             @Override
-            public T next() {
+            public T next() throws SQLException {
                 if (!hasNext()) {
                     throw new NoSuchElementException(InternalUtil.ERROR_MSG_FOR_NO_SUCH_EX);
                 }
 
                 hasNext = false;
 
-                try {
-                    return rowMapper.apply(resultSet);
-                } catch (final SQLException e) {
-                    throw new UncheckedSQLException(e);
-                }
+                return rowMapper.apply(resultSet);
             }
 
-            private boolean isClosed = false;
-
             @Override
-            public final void close() {
-                if (isClosed) {
-                    return;
-                }
-
-                isClosed = true;
-
+            protected void closeResource() {
                 if (onClose != null) {
                     onClose.run();
                 }
@@ -4807,36 +4766,33 @@ public final class JdbcUtil {
      * @param <T> the type of the result extracted from the ResultSet
      * @param resultSet the ResultSet to create a stream from
      * @param rowMapper the BiRowMapper to apply while extracting data
-     * @return a Stream of the extracted results
+     * @return a CheckedStream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet resultSet, final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final BiRowMapper<? extends T> rowMapper)
+            throws IllegalArgumentException {
         N.checkArgNotNull(resultSet, s.resultSet);
         N.checkArgNotNull(rowMapper, s.rowMapper);
 
-        return Stream.of(iterate(resultSet, rowMapper, null));
+        return CheckedStream.of(iterate(resultSet, rowMapper, null));
     }
 
-    static <T> ObjIteratorEx<T> iterate(final ResultSet resultSet, final BiRowMapper<? extends T> rowMapper, final Runnable onClose) {
-        return new ObjIteratorEx<>() {
+    static <T> Throwables.Iterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowMapper<? extends T> rowMapper, final Runnable onClose) {
+        return new Throwables.Iterator<>() {
             private List<String> columnLabels = null;
             private boolean hasNext;
 
             @Override
-            public boolean hasNext() {
+            public boolean hasNext() throws SQLException {
                 if (!hasNext) {
-                    try {
-                        hasNext = resultSet.next();
-                    } catch (final SQLException e) {
-                        throw new UncheckedSQLException(e);
-                    }
+                    hasNext = resultSet.next();
                 }
 
                 return hasNext;
             }
 
             @Override
-            public T next() {
+            public T next() throws SQLException {
                 if (!hasNext()) {
                     throw new NoSuchElementException(InternalUtil.ERROR_MSG_FOR_NO_SUCH_EX);
                 }
@@ -4844,61 +4800,37 @@ public final class JdbcUtil {
                 hasNext = false;
 
                 if (columnLabels == null) {
-                    try {
-                        columnLabels = getColumnLabelList(resultSet);
-                    } catch (final SQLException e) {
-                        throw new UncheckedSQLException(e);
-                    }
+                    columnLabels = getColumnLabelList(resultSet);
                 }
 
-                try {
-                    return rowMapper.apply(resultSet, columnLabels);
-                } catch (final SQLException e) {
-                    throw new UncheckedSQLException(e);
-                }
+                return rowMapper.apply(resultSet, columnLabels);
             }
 
             @Override
-            public void advance(final long n) {
+            public void advance(final long n) throws IllegalArgumentException, SQLException {
                 N.checkArgNotNegative(n, s.n);
 
                 final long m = hasNext ? n - 1 : n;
 
-                try {
-                    JdbcUtil.skip(resultSet, m);
-                } catch (final SQLException e) {
-                    throw new UncheckedSQLException(e);
-                }
+                JdbcUtil.skip(resultSet, m);
 
                 hasNext = false;
             }
 
             @Override
-            public long count() {
+            public long count() throws SQLException {
                 long cnt = hasNext ? 1 : 0;
                 hasNext = false;
 
-                try {
-                    while (resultSet.next()) {
-                        cnt++;
-                    }
-                } catch (final SQLException e) {
-                    throw new UncheckedSQLException(e);
+                while (resultSet.next()) {
+                    cnt++;
                 }
 
                 return cnt;
             }
 
-            private boolean isClosed = false;
-
             @Override
-            public final void close() {
-                if (isClosed) {
-                    return;
-                }
-
-                isClosed = true;
-
+            protected void closeResource() {
                 if (onClose != null) {
                     onClose.run();
                 }
@@ -4918,43 +4850,35 @@ public final class JdbcUtil {
      * @param resultSet the ResultSet to create a stream from
      * @param rowFilter the BiRowFilter to apply while filtering rows
      * @param rowMapper the BiRowMapper to apply while extracting data
-     * @return a Stream of the extracted results
+     * @return a CheckedStream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper)
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper)
             throws IllegalArgumentException {
         N.checkArgNotNull(resultSet, s.resultSet);
         N.checkArgNotNull(rowFilter, s.rowFilter);
         N.checkArgNotNull(rowMapper, s.rowMapper);
 
-        return Stream.of(iterate(resultSet, rowFilter, rowMapper));
+        return CheckedStream.of(iterate(resultSet, rowFilter, rowMapper));
     }
 
-    static <T> ObjIteratorEx<T> iterate(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper) {
-        return new ObjIteratorEx<>() {
+    static <T> Throwables.Iterator<T, SQLException> iterate(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper) {
+        return new Throwables.Iterator<>() {
             private List<String> columnLabels = null;
             private boolean hasNext;
 
             @Override
-            public boolean hasNext() {
+            public boolean hasNext() throws SQLException {
                 if (columnLabels == null) {
-                    try {
-                        columnLabels = JdbcUtil.getColumnLabelList(resultSet);
-                    } catch (final SQLException e) {
-                        throw new UncheckedSQLException(e);
-                    }
+                    columnLabels = JdbcUtil.getColumnLabelList(resultSet);
                 }
 
                 if (!hasNext) {
-                    try {
-                        while (resultSet.next()) {
-                            if (rowFilter.test(resultSet, columnLabels)) {
-                                hasNext = true;
-                                break;
-                            }
+                    while (resultSet.next()) {
+                        if (rowFilter.test(resultSet, columnLabels)) {
+                            hasNext = true;
+                            break;
                         }
-                    } catch (final SQLException e) {
-                        throw new UncheckedSQLException(e);
                     }
                 }
 
@@ -4962,18 +4886,14 @@ public final class JdbcUtil {
             }
 
             @Override
-            public T next() {
+            public T next() throws SQLException {
                 if (!hasNext()) {
                     throw new NoSuchElementException(InternalUtil.ERROR_MSG_FOR_NO_SUCH_EX);
                 }
 
                 hasNext = false;
 
-                try {
-                    return rowMapper.apply(resultSet, columnLabels);
-                } catch (final SQLException e) {
-                    throw new UncheckedSQLException(e);
-                }
+                return rowMapper.apply(resultSet, columnLabels);
             }
         };
     }
@@ -4989,10 +4909,10 @@ public final class JdbcUtil {
      * @param <T> the type of the result extracted from the ResultSet
      * @param resultSet the ResultSet to create a stream from
      * @param columnIndex the index of the column to extract data from, starting from 1
-     * @return a Stream of the extracted results
+     * @return a CheckedStream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet resultSet, final int columnIndex) throws IllegalArgumentException {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final int columnIndex) throws IllegalArgumentException {
         N.checkArgNotNull(resultSet, s.resultSet);
         N.checkArgPositive(columnIndex, s.columnIndex);
 
@@ -5013,10 +4933,10 @@ public final class JdbcUtil {
      * @param <T> the type of the result extracted from the ResultSet
      * @param resultSet the ResultSet to create a stream from
      * @param columnName the name of the column to extract data from
-     * @return a Stream of the extracted results
+     * @return a CheckedStream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet resultSet, final String columnName) throws IllegalArgumentException {
+    public static <T> CheckedStream<T, SQLException> stream(final ResultSet resultSet, final String columnName) throws IllegalArgumentException {
         N.checkArgNotNull(resultSet, s.resultSet);
         N.checkArgNotEmpty(columnName, s.columnName);
 
@@ -5049,21 +4969,22 @@ public final class JdbcUtil {
      * @param <T> the type of the result extracted from each ResultSet
      * @param stmt the Statement to create streams from
      * @param targetClass the class of the result type
-     * @return a Stream of Streams of the extracted results
+     * @return a CheckedStream of CheckedStreams of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     @SuppressWarnings("resource")
-    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final Class<? extends T> targetClass) throws IllegalArgumentException {
+    public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt,
+            final Class<? extends T> targetClass) throws IllegalArgumentException {
         N.checkArgNotNull(stmt, s.stmt);
         N.checkArgNotNull(targetClass, s.targetClass);
 
         JdbcUtil.checkDateType(stmt);
 
-        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
+        final Supplier<Throwables.Iterator<ResultSet, SQLException>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
-        return Stream.just(supplier) //
+        return CheckedStream.just(supplier, SQLException.class) //
                 .onClose(() -> supplier.get().close())
-                .flatMap(it -> Stream.of(it.get()))
+                .flatMap(it -> CheckedStream.of(it.get()))
                 .map(rs -> {
                     final BiRowMapper<T> rowMapper = BiRowMapper.to(targetClass);
 
@@ -5082,21 +5003,22 @@ public final class JdbcUtil {
      * @param <T> the type of the result extracted from each ResultSet
      * @param stmt the Statement to create streams from
      * @param rowMapper the RowMapper to map each row of the ResultSet to the desired type
-     * @return a Stream of Streams of the extracted results
+     * @return a CheckedStream of CheckedStreams of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     @SuppressWarnings("resource")
-    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
+    public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt,
+            final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
         N.checkArgNotNull(stmt, s.stmt);
         N.checkArgNotNull(rowMapper, s.rowMapper);
 
         JdbcUtil.checkDateType(stmt);
 
-        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
+        final Supplier<Throwables.Iterator<ResultSet, SQLException>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
-        return Stream.just(supplier)
+        return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
-                .flatMap(it -> Stream.of(it.get()))
+                .flatMap(it -> CheckedStream.of(it.get()))
                 .map(rs -> JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
     }
 
@@ -5112,23 +5034,23 @@ public final class JdbcUtil {
      * @param stmt the Statement to create streams from
      * @param rowFilter the RowFilter to filter rows of the ResultSet
      * @param rowMapper the RowMapper to map each row of the ResultSet to the desired type
-     * @return a Stream of Streams of the extracted results
+     * @return a CheckedStream of CheckedStreams of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     @SuppressWarnings("resource")
-    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper)
-            throws IllegalArgumentException {
+    public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt, final RowFilter rowFilter,
+            final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
         N.checkArgNotNull(stmt, s.stmt);
         N.checkArgNotNull(rowFilter, s.rowFilter);
         N.checkArgNotNull(rowMapper, s.rowMapper);
 
         JdbcUtil.checkDateType(stmt);
 
-        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
+        final Supplier<Throwables.Iterator<ResultSet, SQLException>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
-        return Stream.just(supplier)
+        return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
-                .flatMap(it -> Stream.of(it.get()))
+                .flatMap(it -> CheckedStream.of(it.get()))
                 .map(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
     }
 
@@ -5142,21 +5064,22 @@ public final class JdbcUtil {
      *
      * @param <T> the type of the result extracted from each ResultSet
      * @param stmt the Statement to create streams from
-     * @return a Stream of Streams of the extracted results
+     * @return a CheckedStream of CheckedStreams of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     @SuppressWarnings("resource")
-    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException {
+    public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt,
+            final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException {
         N.checkArgNotNull(stmt, s.stmt);
         N.checkArgNotNull(rowMapper, s.rowMapper);
 
         JdbcUtil.checkDateType(stmt);
 
-        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
+        final Supplier<Throwables.Iterator<ResultSet, SQLException>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
-        return Stream.just(supplier)
+        return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
-                .flatMap(it -> Stream.of(it.get()))
+                .flatMap(it -> CheckedStream.of(it.get()))
                 .map(rs -> JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
     }
 
@@ -5172,51 +5095,47 @@ public final class JdbcUtil {
      * @param stmt the Statement to create streams from
      * @param rowFilter the BiRowFilter to filter rows of the ResultSet
      * @param rowMapper the BiRowMapper to map each row of the ResultSet to the desired type
-     * @return a Stream of Streams of the extracted results
+     * @return a CheckedStream of CheckedStreams of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     @SuppressWarnings("resource")
-    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper)
-            throws IllegalArgumentException {
+    public static <T> CheckedStream<CheckedStream<T, SQLException>, SQLException> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter,
+            final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException {
         N.checkArgNotNull(stmt, s.stmt);
         N.checkArgNotNull(rowFilter, s.rowFilter);
         N.checkArgNotNull(rowMapper, s.rowMapper);
 
         JdbcUtil.checkDateType(stmt);
 
-        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
+        final Supplier<Throwables.Iterator<ResultSet, SQLException>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
-        return Stream.just(supplier)
+        return CheckedStream.just(supplier, SQLException.class)
                 .onClose(() -> supplier.get().close())
-                .flatMap(it -> Stream.of(it.get()))
+                .flatMap(it -> CheckedStream.of(it.get()))
                 .map(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
     }
 
-    static ObjIteratorEx<ResultSet> iterateAllResultSets(final Statement stmt, final boolean isFirstResultSet) { //NOSONAR
-        return new ObjIteratorEx<>() {
+    static Throwables.Iterator<ResultSet, SQLException> iterateAllResultSets(final Statement stmt, final boolean isFirstResultSet) { //NOSONAR
+        return new Throwables.Iterator<>() {
             private final Holder<ResultSet> resultSetHolder = new Holder<>();
             private boolean isNextResultSet = isFirstResultSet;
             private boolean noMoreResult = false;
 
             @Override
-            public boolean hasNext() {
+            public boolean hasNext() throws SQLException {
                 if (resultSetHolder.isNull() && noMoreResult == false) {
-                    try {
-                        while (true) {
-                            if (isNextResultSet) {
-                                resultSetHolder.setValue(stmt.getResultSet());
-                                isNextResultSet = false;
-                                break;
-                            } else if (stmt.getUpdateCount() != -1) {
-                                isNextResultSet = stmt.getMoreResults();
-                            } else {
-                                noMoreResult = true;
+                    while (true) {
+                        if (isNextResultSet) {
+                            resultSetHolder.setValue(stmt.getResultSet());
+                            isNextResultSet = false;
+                            break;
+                        } else if (stmt.getUpdateCount() != -1) {
+                            isNextResultSet = stmt.getMoreResults();
+                        } else {
+                            noMoreResult = true;
 
-                                break;
-                            }
+                            break;
                         }
-                    } catch (final SQLException e) {
-                        throw new UncheckedSQLException(e);
                     }
                 }
 
@@ -5224,7 +5143,7 @@ public final class JdbcUtil {
             }
 
             @Override
-            public ResultSet next() {
+            public ResultSet next() throws SQLException {
                 if (!hasNext()) {
                     throw new NoSuchElementException(InternalUtil.ERROR_MSG_FOR_NO_SUCH_EX);
                 }
@@ -5232,16 +5151,8 @@ public final class JdbcUtil {
                 return resultSetHolder.getAndSet(null);
             }
 
-            private boolean isClosed = false;
-
             @Override
-            public final void close() {
-                if (isClosed) {
-                    return;
-                }
-
-                isClosed = true;
-
+            protected void closeResource() {
                 if (resultSetHolder.isNotNull()) {
                     JdbcUtil.closeQuietly(resultSetHolder.getAndSet(null));
                 }
@@ -5259,11 +5170,11 @@ public final class JdbcUtil {
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
      * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page, and it's {@code null} for the first page
-     * @return a Stream of DataSet, each representing a page of results
+     * @return a CheckedStream of DataSet, each representing a page of results
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
-    public static Stream<DataSet> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
+    public static CheckedStream<DataSet, SQLException> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, DataSet> paramSetter) {
         return queryByPage(ds, query, pageSize, paramSetter, Jdbc.ResultExtractor.TO_DATA_SET);
     }
@@ -5280,31 +5191,27 @@ public final class JdbcUtil {
      * @param pageSize the number of rows to fetch per page
      * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page, and it's {@code null} for the first page
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
-     * @return a Stream of the extracted results
+     * @return a CheckedStream of the extracted results
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
-    public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
+    public static <R> CheckedStream<R, SQLException> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.ResultExtractor<R> resultExtractor) {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return Stream.<Holder<R>> of(Holder.of((R) null)) //
+        return CheckedStream.<Holder<R>, SQLException> of(Holder.of((R) null)) //
                 .cycled()
                 .map(it -> {
-                    try {
-                        final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
-                                .setFetchDirectionToForward()
-                                .setFetchSize(pageSize)
-                                .settParameters(it.value(), paramSetter)
-                                .query(resultExtractor);
+                    final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
+                            .setFetchDirectionToForward()
+                            .setFetchSize(pageSize)
+                            .settParameters(it.value(), paramSetter)
+                            .query(resultExtractor);
 
-                        it.setValue(ret);
+                    it.setValue(ret);
 
-                        return ret;
-                    } catch (final SQLException e) {
-                        throw new UncheckedSQLException(e);
-                    }
+                    return ret;
                 })
                 .takeWhile(JdbcUtil::isNotEmptyResult);
     }
@@ -5321,31 +5228,27 @@ public final class JdbcUtil {
      * @param pageSize the number of rows to fetch per page
      * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page, and it's {@code null} for the first page
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
-     * @return a Stream of the extracted results
+     * @return a CheckedStream of the extracted results
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
-    public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
+    public static <R> CheckedStream<R, SQLException> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.BiResultExtractor<R> resultExtractor) {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return Stream.<Holder<R>> of(Holder.of((R) null)) //
+        return CheckedStream.<Holder<R>, SQLException> of(Holder.of((R) null)) //
                 .cycled()
                 .map(it -> {
-                    try {
-                        final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
-                                .setFetchDirectionToForward()
-                                .setFetchSize(pageSize)
-                                .settParameters(it.value(), paramSetter)
-                                .query(resultExtractor);
+                    final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
+                            .setFetchDirectionToForward()
+                            .setFetchSize(pageSize)
+                            .settParameters(it.value(), paramSetter)
+                            .query(resultExtractor);
 
-                        it.setValue(ret);
+                    it.setValue(ret);
 
-                        return ret;
-                    } catch (final SQLException e) {
-                        throw new UncheckedSQLException(e);
-                    }
+                    return ret;
                 })
                 .takeWhile(JdbcUtil::isNotEmptyResult);
     }
@@ -5360,11 +5263,11 @@ public final class JdbcUtil {
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
      * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page, and it's {@code null} for the first page
-     * @return a Stream of DataSet, each representing a page of results
+     * @return a CheckedStream of DataSet, each representing a page of results
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
-    public static Stream<DataSet> queryByPage(final Connection conn, final String query, final int pageSize,
+    public static CheckedStream<DataSet, SQLException> queryByPage(final Connection conn, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, DataSet> paramSetter) {
         return queryByPage(conn, query, pageSize, paramSetter, Jdbc.ResultExtractor.TO_DATA_SET);
     }
@@ -5381,31 +5284,27 @@ public final class JdbcUtil {
      * @param pageSize the number of rows to fetch per page
      * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page, and it's {@code null} for the first page
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
-     * @return a Stream of the extracted results
+     * @return a CheckedStream of the extracted results
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
-    public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize,
+    public static <R> CheckedStream<R, SQLException> queryByPage(final Connection conn, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.ResultExtractor<R> resultExtractor) {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return Stream.<Holder<R>> of(Holder.of((R) null)) //
+        return CheckedStream.<Holder<R>, SQLException> of(Holder.of((R) null)) //
                 .cycled()
                 .map(it -> {
-                    try {
-                        final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
-                                .setFetchDirectionToForward()
-                                .setFetchSize(pageSize)
-                                .settParameters(it.value(), paramSetter)
-                                .query(resultExtractor);
+                    final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
+                            .setFetchDirectionToForward()
+                            .setFetchSize(pageSize)
+                            .settParameters(it.value(), paramSetter)
+                            .query(resultExtractor);
 
-                        it.setValue(ret);
+                    it.setValue(ret);
 
-                        return ret;
-                    } catch (final SQLException e) {
-                        throw new UncheckedSQLException(e);
-                    }
+                    return ret;
                 })
                 .takeWhile(JdbcUtil::isNotEmptyResult);
     }
@@ -5422,31 +5321,27 @@ public final class JdbcUtil {
      * @param pageSize the number of rows to fetch per page
      * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page, and it's {@code null} for the first page
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
-     * @return a Stream of the extracted results
+     * @return a CheckedStream of the extracted results
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
-    public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize,
+    public static <R> CheckedStream<R, SQLException> queryByPage(final Connection conn, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.BiResultExtractor<R> resultExtractor) {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return Stream.<Holder<R>> of(Holder.of((R) null)) //
+        return CheckedStream.<Holder<R>, SQLException> of(Holder.of((R) null)) //
                 .cycled()
                 .map(it -> {
-                    try {
-                        final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
-                                .setFetchDirectionToForward()
-                                .setFetchSize(pageSize)
-                                .settParameters(it.value(), paramSetter)
-                                .query(resultExtractor);
+                    final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
+                            .setFetchDirectionToForward()
+                            .setFetchSize(pageSize)
+                            .settParameters(it.value(), paramSetter)
+                            .query(resultExtractor);
 
-                        it.setValue(ret);
+                    it.setValue(ret);
 
-                        return ret;
-                    } catch (final SQLException e) {
-                        throw new UncheckedSQLException(e);
-                    }
+                    return ret;
                 })
                 .takeWhile(JdbcUtil::isNotEmptyResult);
     }

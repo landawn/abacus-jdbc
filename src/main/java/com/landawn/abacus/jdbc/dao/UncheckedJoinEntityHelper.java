@@ -29,11 +29,11 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.u.Optional;
-import com.landawn.abacus.util.stream.Stream;
 
 /**
  *
@@ -410,7 +410,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
+        final List<ContinuableFuture<Void>> futures = CheckedStream.of(joinEntityPropNames, UncheckedSQLException.class)
                 .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor))
                 .toList();
 
@@ -471,7 +471,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
+        final List<ContinuableFuture<Void>> futures = CheckedStream.of(joinEntityPropNames, UncheckedSQLException.class)
                 .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entities, joinEntityPropName), executor))
                 .toList();
 
@@ -752,7 +752,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
+        final List<ContinuableFuture<Void>> futures = CheckedStream.of(joinEntityPropNames, UncheckedSQLException.class)
                 .filter(joinEntityPropName -> N.getPropValue(entity, joinEntityPropName) == null)
                 .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entity, joinEntityPropName), executor))
                 .toList();
@@ -814,7 +814,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
+        final List<ContinuableFuture<Void>> futures = CheckedStream.of(joinEntityPropNames, UncheckedSQLException.class)
                 .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entities, joinEntityPropName), executor))
                 .toList();
 
@@ -1077,7 +1077,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
             return 0;
         }
 
-        final List<ContinuableFuture<Integer>> futures = Stream.of(joinEntityPropNames)
+        final List<ContinuableFuture<Integer>> futures = CheckedStream.of(joinEntityPropNames, UncheckedSQLException.class)
                 .map(joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entity, joinEntityPropName), executor))
                 .toList();
 
@@ -1159,7 +1159,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
             return 0;
         }
 
-        final List<ContinuableFuture<Integer>> futures = Stream.of(joinEntityPropNames)
+        final List<ContinuableFuture<Integer>> futures = CheckedStream.of(joinEntityPropNames, UncheckedSQLException.class)
                 .map(joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entities, joinEntityPropName), executor))
                 .toList();
 

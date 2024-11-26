@@ -47,6 +47,7 @@ import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.N;
@@ -55,8 +56,6 @@ import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.Tuple.Tuple4;
-import com.landawn.abacus.util.stream.ObjIteratorEx;
-import com.landawn.abacus.util.stream.Stream;
 
 /**
  * The backed {@code PreparedStatement/CallableStatement} will be closed by default
@@ -1604,7 +1603,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor, s.resultExtractor);
         assertNotClosed();
 
-        ObjIteratorEx<ResultSet> iter = null;
+        Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(cstmt);
@@ -1646,7 +1645,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor, s.resultExtractor);
         assertNotClosed();
 
-        ObjIteratorEx<ResultSet> iter = null;
+        Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(cstmt);
@@ -1693,7 +1692,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor2, s.resultExtractor2);
         assertNotClosed();
 
-        ObjIteratorEx<ResultSet> iter = null;
+        Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(cstmt);
@@ -1750,7 +1749,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor3, s.resultExtractor3);
         assertNotClosed();
 
-        ObjIteratorEx<ResultSet> iter = null;
+        Throwables.Iterator<ResultSet, SQLException> iter = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(cstmt);
@@ -1966,7 +1965,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             JdbcUtil.execute(cstmt);
 
-            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, targetType).map(Stream::toList).toList();
+            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, targetType).map(CheckedStream::toList).toList();
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
@@ -1994,7 +1993,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             JdbcUtil.execute(cstmt);
 
-            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, rowMapper).map(Stream::toList).toList();
+            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, rowMapper).map(CheckedStream::toList).toList();
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
@@ -2024,7 +2023,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             JdbcUtil.execute(cstmt);
 
-            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, rowFilter, rowMapper).map(Stream::toList).toList();
+            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, rowFilter, rowMapper).map(CheckedStream::toList).toList();
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
@@ -2052,7 +2051,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             JdbcUtil.execute(cstmt);
 
-            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, rowMapper).map(Stream::toList).toList();
+            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, rowMapper).map(CheckedStream::toList).toList();
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
@@ -2082,7 +2081,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             JdbcUtil.execute(cstmt);
 
-            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, rowFilter, rowMapper).map(Stream::toList).toList();
+            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, rowFilter, rowMapper).map(CheckedStream::toList).toList();
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {

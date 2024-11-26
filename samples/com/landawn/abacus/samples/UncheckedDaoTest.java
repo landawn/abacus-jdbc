@@ -496,7 +496,7 @@ public class UncheckedDaoTest {
 
             uncheckedUserDao.list("firstName", CF.eq("firstName", "Forrest")).forEach(Fn.println());
 
-            uncheckedUserDao.stream("firstName", CF.alwaysTrue()).forEach(Fn.println());
+            uncheckedUserDao.stream("firstName", CF.alwaysTrue()).unchecked().forEach(Fn.println());
         }
 
         uncheckedUserDao.listUserByAnnoSql(0).forEach(Fn.println());
