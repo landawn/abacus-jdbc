@@ -58,6 +58,9 @@ public interface s { // NOSONAR
     /** Property(field) name {@code "projects"} for classes: {@code [Employee]} */
     String projects = "projects";
 
+    /** Property(field) name {@code "startDate"} for classes: {@code [Project]} */
+    String startDate = "startDate";
+
     /** Property(field) name {@code "street"} for classes: {@code [Address]} */
     String street = "street";
 
@@ -68,7 +71,7 @@ public interface s { // NOSONAR
     String userId = "userId";
 
     /** Unmodifiable property(field) name list for class: {@code "Project"}. */
-    List<String> projectPropNameList = List.of(employees, projectId, title);
+    List<String> projectPropNameList = List.of(employees, projectId, startDate, title);
 
     /** Unmodifiable property(field) name list for class: {@code "Employee"}. */
     List<String> employeePropNameList = List.of(employeeId, firstName, lastName, projects);
@@ -144,6 +147,9 @@ public interface s { // NOSONAR
         /** Property(field) name in upper case concatenated with underscore: {@code "PROJECTS"} for classes: {@code [Employee]} */
         String projects = "PROJECTS";
 
+        /** Property(field) name in upper case concatenated with underscore: {@code "START_DATE"} for classes: {@code [Project]} */
+        String startDate = "START_DATE";
+
         /** Property(field) name in upper case concatenated with underscore: {@code "STREET"} for classes: {@code [Address]} */
         String street = "STREET";
 
@@ -154,7 +160,7 @@ public interface s { // NOSONAR
         String userId = "USER_ID";
 
         /** Unmodifiable property(field) name list for class: {@code "Project"}. */
-        List<String> projectPropNameList = List.of(employees, projectId, title);
+        List<String> projectPropNameList = List.of(employees, projectId, startDate, title);
 
         /** Unmodifiable property(field) name list for class: {@code "Employee"}. */
         List<String> employeePropNameList = List.of(employeeId, firstName, lastName, projects);
@@ -205,6 +211,9 @@ public interface s { // NOSONAR
         /** Function property(field) name {@code "min(nickName)"} for classes: {@code [ImmutableUser, User]} */
         String min_nickName = "min(nickName)";
 
+        /** Function property(field) name {@code "min(startDate)"} for classes: {@code [Project]} */
+        String min_startDate = "min(startDate)";
+
         /** Function property(field) name {@code "min(street)"} for classes: {@code [Address]} */
         String min_street = "min(street)";
 
@@ -234,6 +243,9 @@ public interface s { // NOSONAR
 
         /** Function property(field) name {@code "max(nickName)"} for classes: {@code [ImmutableUser, User]} */
         String max_nickName = "max(nickName)";
+
+        /** Function property(field) name {@code "max(startDate)"} for classes: {@code [Project]} */
+        String max_startDate = "max(startDate)";
 
         /** Function property(field) name {@code "max(street)"} for classes: {@code [Address]} */
         String max_street = "max(street)";
