@@ -34,12 +34,11 @@ import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLExecutor;
 import com.landawn.abacus.jdbc.SQLTransaction;
-import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.s;
+import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
@@ -56,6 +55,7 @@ import com.landawn.abacus.util.u.OptionalFloat;
 import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
+import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
@@ -851,14 +851,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
                 : entityIdExtractor;
 
         final List<T> dbEntities = propNameListForQuery.size() == 1
-                ? CheckedStream.of(entities, UncheckedSQLException.class)
-                        .splitToList(batchSize)
-                        .flatmap(it -> list(CF.in(propNameListForQuery.get(0), N.map(it, singleKeyExtractor))))
-                        .toList()
-                : CheckedStream.of(entities, UncheckedSQLException.class)
-                        .splitToList(batchSize)
-                        .flatmap(it -> list(CF.id2Cond(N.map(it, entityIdExtractor))))
-                        .toList();
+                ? Stream.of(entities).split(batchSize).flatmap(it -> list(CF.in(propNameListForQuery.get(0), N.map(it, singleKeyExtractor)))).toList()
+                : Stream.of(entities).split(batchSize).flatmap(it -> list(CF.id2Cond(N.map(it, entityIdExtractor)))).toList();
 
         final Map<Object, T> dbIdEntityMap = StreamEx.of(dbEntities).toMap(keysExtractor, Fn.identity(), Fn.ignoringMerger());
         final Map<Boolean, List<T>> map = StreamEx.of(entities).groupTo(it -> dbIdEntityMap.containsKey(keysExtractor.apply(it)), Fn.identity());

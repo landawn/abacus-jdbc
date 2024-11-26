@@ -26,17 +26,18 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.util.CheckedStream;
 import com.landawn.abacus.util.ContinuableFuture;
-import com.landawn.abacus.util.Fn.Fnn;
+import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.u.Optional;
+import com.landawn.abacus.util.stream.Stream;
 
 /**
  * Interface for handling join entities for specified entities
@@ -306,12 +307,14 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @return a {@code CheckedStream} of entities that match the specified condition
      */
     @Beta
-    default CheckedStream<T, SQLException> stream(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) {
-        return DaoUtil.getDao(this)
-                .stream(selectPropNames, cond)
-                .splitToList(JdbcUtil.DEFAULT_BATCH_SIZE)
-                .onEach(batchEntities -> loadJoinEntities(batchEntities, joinEntitiesToLoad))
-                .flatmap(Fnn.identity());
+    default Stream<T> stream(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) {
+        return DaoUtil.getDao(this).stream(selectPropNames, cond).split(JdbcUtil.DEFAULT_BATCH_SIZE).onEach(batchEntities -> {
+            try {
+                loadJoinEntities(batchEntities, joinEntitiesToLoad);
+            } catch (final SQLException e) {
+                throw new UncheckedSQLException(e);
+            }
+        }).flatmap(Fn.identity());
     }
 
     /**
@@ -323,17 +326,20 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @return a {@code CheckedStream} of entities that match the specified condition
      */
     @Beta
-    default CheckedStream<T, SQLException> stream(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad,
-            final Condition cond) {
+    default Stream<T> stream(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond) {
         return DaoUtil.getDao(this)
                 .stream(selectPropNames, cond)
-                .splitToList(JdbcUtil.DEFAULT_BATCH_SIZE) //
+                .split(JdbcUtil.DEFAULT_BATCH_SIZE) //
                 .onEach(batchEntities -> {
-                    for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
-                        loadJoinEntities(batchEntities, joinEntityClass);
+                    try {
+                        for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
+                            loadJoinEntities(batchEntities, joinEntityClass);
+                        }
+                    } catch (final SQLException e) {
+                        throw new UncheckedSQLException(e);
                     }
                 })
-                .flatmap(Fnn.identity());
+                .flatmap(Fn.identity());
     }
 
     /**
@@ -345,13 +351,19 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @return a {@code CheckedStream} of entities that match the specified condition
      */
     @Beta
-    default CheckedStream<T, SQLException> stream(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) {
+    default Stream<T> stream(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) {
         if (includeAllJoinEntities) {
             return DaoUtil.getDao(this)
                     .stream(selectPropNames, cond)
-                    .splitToList(JdbcUtil.DEFAULT_BATCH_SIZE) //
-                    .onEach(this::loadAllJoinEntities)
-                    .flatmap(Fnn.identity());
+                    .split(JdbcUtil.DEFAULT_BATCH_SIZE) //
+                    .onEach(t -> {
+                        try {
+                            loadAllJoinEntities(t);
+                        } catch (final SQLException e) {
+                            throw new UncheckedSQLException(e);
+                        }
+                    })
+                    .flatmap(Fn.identity());
 
         } else {
             return DaoUtil.getDao(this).stream(selectPropNames, cond);
@@ -512,7 +524,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = CheckedStream.of(joinEntityPropNames, SQLException.class)
+        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
                 .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor))
                 .toList();
 
@@ -567,7 +579,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = CheckedStream.of(joinEntityPropNames, SQLException.class)
+        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
                 .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entities, joinEntityPropName), executor))
                 .toList();
 
@@ -838,7 +850,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = CheckedStream.of(joinEntityPropNames, SQLException.class)
+        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
                 .filter(joinEntityPropName -> N.getPropValue(entity, joinEntityPropName) == null)
                 .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor))
                 .toList();
@@ -896,7 +908,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = CheckedStream.of(joinEntityPropNames, SQLException.class)
+        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
                 .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entities, joinEntityPropName), executor))
                 .toList();
 
@@ -1161,7 +1173,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             return 0;
         }
 
-        final List<ContinuableFuture<Integer>> futures = CheckedStream.of(joinEntityPropNames, SQLException.class)
+        final List<ContinuableFuture<Integer>> futures = Stream.of(joinEntityPropNames)
                 .map(joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entity, joinEntityPropName), executor))
                 .toList();
 
@@ -1239,7 +1251,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             return 0;
         }
 
-        final List<ContinuableFuture<Integer>> futures = CheckedStream.of(joinEntityPropNames, SQLException.class)
+        final List<ContinuableFuture<Integer>> futures = Stream.of(joinEntityPropNames)
                 .map(joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entities, joinEntityPropName), executor))
                 .toList();
 
