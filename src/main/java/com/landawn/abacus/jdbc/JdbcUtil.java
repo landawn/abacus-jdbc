@@ -4487,21 +4487,17 @@ public final class JdbcUtil {
         return new RowDataSet(columnNameList, columnList);
     }
 
-    static <R> R extractAndCloseResultSet(final ResultSet rs, final ResultExtractor<? extends R> resultExtractor) {
+    static <R> R extractAndCloseResultSet(final ResultSet rs, final ResultExtractor<? extends R> resultExtractor) throws SQLException {
         try {
             return checkNotResultSet(resultExtractor.apply(rs));
-        } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
         } finally {
             closeQuietly(rs);
         }
     }
 
-    static <R> R extractAndCloseResultSet(final ResultSet rs, final BiResultExtractor<? extends R> resultExtractor) {
+    static <R> R extractAndCloseResultSet(final ResultSet rs, final BiResultExtractor<? extends R> resultExtractor) throws SQLException {
         try {
             return checkNotResultSet(resultExtractor.apply(rs, getColumnLabelList(rs)));
-        } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
         } finally {
             closeQuietly(rs);
         }
@@ -4546,7 +4542,7 @@ public final class JdbcUtil {
         return Stream.just(supplier)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> Stream.of(it.get()))
-                .map(rs -> extractAndCloseResultSet(rs, resultExtractor));
+                .map(Fn.ff(rs -> extractAndCloseResultSet(rs, resultExtractor)));
     }
 
     /**
@@ -4573,7 +4569,7 @@ public final class JdbcUtil {
         return Stream.just(supplier)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> Stream.of(it.get()))
-                .map(rs -> extractAndCloseResultSet(rs, resultExtractor));
+                .map(Fn.ff(rs -> extractAndCloseResultSet(rs, resultExtractor)));
     }
 
     /**

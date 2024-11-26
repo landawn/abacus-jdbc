@@ -464,7 +464,7 @@ final class DaoImpl {
     }
 
     private static Set<Class<?>> notCacheableTypes = N.asSet(void.class, Void.class, Iterator.class, java.util.stream.BaseStream.class, BaseStream.class,
-            EntryStream.class, Stream.class);
+            EntryStream.class, Stream.class, Seq.class);
 
     @SuppressWarnings("rawtypes")
     private static Jdbc.BiParametersSetter<AbstractQuery, Collection> collParamsSetter = AbstractQuery::setParameters;
@@ -5097,7 +5097,7 @@ final class DaoImpl {
 
                     if (isStreamReturn && throwsSQLException) {
                         throw new UnsupportedOperationException("'throws SQLException' is not allowed in method: " + fullClassMethodName
-                                + " because its return type is Stream/Stream which will be lazy evaluation");
+                                + " because its return type is Stream which will be lazy evaluation");
                     }
 
                     final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];

@@ -28,7 +28,6 @@ import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.DuplicatedResultException;
-import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
@@ -45,6 +44,7 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.QueryUtil;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.Seid;
+import com.landawn.abacus.util.Seq;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -55,7 +55,6 @@ import com.landawn.abacus.util.u.OptionalFloat;
 import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
-import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
@@ -794,22 +793,14 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
         final com.landawn.abacus.util.function.Function<T, ? extends Object> keysExtractor = propNameListForQuery.size() == 1 ? singleKeyExtractor
                 : entityIdExtractor;
 
-        final List<T> dbEntities = propNameListForQuery.size() == 1 ? Stream.of(entities).split(batchSize).flatmap(it -> {
-            try {
-                return list(CF.in(propNameListForQuery.get(0), N.map(it, singleKeyExtractor)));
-            } catch (final SQLException e) {
-                throw new UncheckedSQLException(e);
-            }
-        }).toList()
-                : Stream.of(entities) //
+        final List<T> dbEntities = propNameListForQuery.size() == 1
+                ? Seq.of(entities, SQLException.class)
                         .split(batchSize)
-                        .flatmap(it -> {
-                            try {
-                                return list(CF.id2Cond(N.map(it, entityIdExtractor)));
-                            } catch (final SQLException e) {
-                                throw new UncheckedSQLException(e);
-                            }
-                        })
+                        .flatmap(it -> list(CF.in(propNameListForQuery.get(0), N.map(it, singleKeyExtractor))))
+                        .toList()
+                : Seq.of(entities, SQLException.class) //
+                        .split(batchSize)
+                        .flatmap(it -> list(CF.id2Cond(N.map(it, entityIdExtractor))))
                         .toList();
 
         final Map<Object, T> dbIdEntityMap = StreamEx.of(dbEntities).toMap(keysExtractor, Fn.identity(), Fn.ignoringMerger());
