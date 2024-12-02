@@ -444,21 +444,21 @@ final class DaoImpl {
     static {
         final Map<Class<?>, Predicate<?>> tmp = N.newHashMap(20);
 
-        tmp.put(u.Nullable.class, (final u.Nullable<?> t) -> t.isPresent());
-        tmp.put(u.Optional.class, (final u.Optional<?> t) -> t.isPresent());
-        tmp.put(u.OptionalBoolean.class, (final u.OptionalBoolean t) -> t.isPresent());
-        tmp.put(u.OptionalChar.class, (final u.OptionalChar t) -> t.isPresent());
-        tmp.put(u.OptionalByte.class, (final u.OptionalByte t) -> t.isPresent());
-        tmp.put(u.OptionalShort.class, (final u.OptionalShort t) -> t.isPresent());
-        tmp.put(u.OptionalInt.class, (final u.OptionalInt t) -> t.isPresent());
-        tmp.put(u.OptionalLong.class, (final u.OptionalLong t) -> t.isPresent());
-        tmp.put(u.OptionalFloat.class, (final u.OptionalFloat t) -> t.isPresent());
-        tmp.put(u.OptionalDouble.class, (final u.OptionalDouble t) -> t.isPresent());
+        tmp.put(u.Nullable.class, (final u.Nullable<?> t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.Optional.class, (final u.Optional<?> t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalBoolean.class, (final u.OptionalBoolean t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalChar.class, (final u.OptionalChar t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalByte.class, (final u.OptionalByte t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalShort.class, (final u.OptionalShort t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalInt.class, (final u.OptionalInt t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalLong.class, (final u.OptionalLong t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalFloat.class, (final u.OptionalFloat t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalDouble.class, (final u.OptionalDouble t) -> t.isPresent()); // NOSONAR
 
-        tmp.put(java.util.Optional.class, (final java.util.Optional<?> t) -> t.isPresent());
-        tmp.put(java.util.OptionalInt.class, (final java.util.OptionalInt t) -> t.isPresent());
-        tmp.put(java.util.OptionalLong.class, (final java.util.OptionalLong t) -> t.isPresent());
-        tmp.put(java.util.OptionalDouble.class, (final java.util.OptionalDouble t) -> t.isPresent());
+        tmp.put(java.util.Optional.class, (final java.util.Optional<?> t) -> t.isPresent()); // NOSONAR
+        tmp.put(java.util.OptionalInt.class, (final java.util.OptionalInt t) -> t.isPresent()); // NOSONAR
+        tmp.put(java.util.OptionalLong.class, (final java.util.OptionalLong t) -> t.isPresent()); // NOSONAR
+        tmp.put(java.util.OptionalDouble.class, (final java.util.OptionalDouble t) -> t.isPresent()); // NOSONAR
 
         isValuePresentMap.putAll(tmp);
     }
@@ -469,7 +469,7 @@ final class DaoImpl {
     @SuppressWarnings("rawtypes")
     private static Jdbc.BiParametersSetter<AbstractQuery, Collection> collParamsSetter = AbstractQuery::setParameters;
 
-    private static Jdbc.BiParametersSetter<NamedQuery, Object> objParamsSetter = (final NamedQuery q, final Object p) -> q.setParameters(p);
+    private static Jdbc.BiParametersSetter<NamedQuery, Object> objParamsSetter = (final NamedQuery q, final Object p) -> q.setParameters(p); // NOSONAR
 
     /**
      * Creates the method handle.

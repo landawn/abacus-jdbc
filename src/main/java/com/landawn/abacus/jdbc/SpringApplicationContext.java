@@ -21,7 +21,7 @@ import org.springframework.context.ApplicationContext;
 
 final class SpringApplicationContext {
 
-    @Autowired
+    @Autowired // NOSONAR
     private ApplicationContext appContext;
 
     SpringApplicationContext() {

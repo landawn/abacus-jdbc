@@ -406,7 +406,7 @@ public final class JdbcCodeGenerationUtil {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
             } else if (isJavaPersistenceId) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
-                headPart = headPart.replace("javax.persistence.Column", idAnnotationClassName);
+                headPart = headPart.replace("javax.persistence.Id", idAnnotationClassName);
             } else {
                 headPart = headPart.replace("import javax.persistence.Id;\n", "");
             }
@@ -619,7 +619,7 @@ public final class JdbcCodeGenerationUtil {
     }
 
     private static String createQueryByTableName(final String tableName) {
-        return "select * from " + tableName + " where 1 > 2";
+        return "select * from " + tableName + " where 1 > 2"; // NOSONAR
     }
 
     private static String getColumnClassName(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
