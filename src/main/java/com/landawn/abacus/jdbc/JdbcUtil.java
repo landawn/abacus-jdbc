@@ -4504,75 +4504,6 @@ public final class JdbcUtil {
     }
 
     /**
-     * Extracts all ResultSets from the provided Statement and returns them as a Stream of DataSet.
-     * <p>
-     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
-     * <br />
-     * {@code JdbcUtil.extractAllResultSets(stmt).onClose(Fn.closeQuietly(stmt))...}
-     * </p>
-     *
-     * @param stmt the Statement to extract ResultSets from
-     * @return a Stream of DataSet containing the extracted ResultSets
-     */
-    public static Stream<DataSet> extractAllResultSets(final Statement stmt) {
-        return extractAllResultSets(stmt, ResultExtractor.TO_DATA_SET);
-    }
-
-    /**
-     * Extracts all ResultSets from the provided Statement and returns them as a Stream.
-     * <p>
-     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
-     * <br />
-     * {@code JdbcUtil.extractAllResultSets(stmt, resultExtractor).onClose(Fn.closeQuietly(stmt))...}
-     * </p>
-     *
-     * @param <R> the type of the result extracted from the ResultSet
-     * @param stmt the Statement to extract ResultSets from
-     * @param resultExtractor the ResultExtractor to apply while extracting data
-     * @return a Stream of the extracted results
-     * @throws IllegalArgumentException if the provided arguments are invalid
-     */
-    @SuppressWarnings("resource")
-    public static <R> Stream<R> extractAllResultSets(final Statement stmt, final ResultExtractor<R> resultExtractor) throws IllegalArgumentException {
-        N.checkArgNotNull(stmt, s.stmt);
-        N.checkArgNotNull(resultExtractor, s.resultExtractor);
-
-        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
-
-        return Stream.just(supplier)
-                .onClose(() -> supplier.get().close())
-                .flatMap(it -> Stream.of(it.get()))
-                .map(Fn.ff(rs -> extractAndCloseResultSet(rs, resultExtractor)));
-    }
-
-    /**
-     * Extracts all ResultSets from the provided Statement and returns them as a Stream.
-     * <p>
-     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
-     * <br />
-     * {@code JdbcUtil.extractAllResultSets(stmt, resultExtractor).onClose(Fn.closeQuietly(stmt))...}
-     * </p>
-     *
-     * @param <R> the type of the result extracted from the ResultSet
-     * @param stmt the Statement to extract ResultSets from
-     * @param resultExtractor the BiResultExtractor to apply while extracting data
-     * @return a Stream of the extracted results
-     * @throws IllegalArgumentException if the provided arguments are invalid
-     */
-    @SuppressWarnings("resource")
-    public static <R> Stream<R> extractAllResultSets(final Statement stmt, final BiResultExtractor<R> resultExtractor) throws IllegalArgumentException {
-        N.checkArgNotNull(stmt, s.stmt);
-        N.checkArgNotNull(resultExtractor, s.resultExtractor);
-
-        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
-
-        return Stream.just(supplier)
-                .onClose(() -> supplier.get().close())
-                .flatMap(it -> Stream.of(it.get()))
-                .map(Fn.ff(rs -> extractAndCloseResultSet(rs, resultExtractor)));
-    }
-
-    /**
      * Creates a stream from the provided ResultSet.
      * <p>
      * It's the user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
@@ -5034,158 +4965,227 @@ public final class JdbcUtil {
         return stream(resultSet, rowMapper);
     }
 
+    //    /**
+    //     * Creates a stream of all result sets from the provided Statement.
+    //     * <p>
+    //     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
+    //     * <br />
+    //     * {@code JdbcUtil.streamAllResultSets(stmt, targetClass).onClose(Fn.closeQuietly(stmt))...}
+    //     * </p>
+    //     *
+    //     * @param <T> the type of the result extracted from each ResultSet
+    //     * @param stmt the Statement to create streams from
+    //     * @param targetClass the class of the result type
+    //     * @return a Stream of Streams of the extracted results
+    //     * @throws IllegalArgumentException if the provided arguments are invalid
+    //     */
+    //    @SuppressWarnings("resource")
+    //    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final Class<? extends T> targetClass) throws IllegalArgumentException {
+    //        N.checkArgNotNull(stmt, s.stmt);
+    //        N.checkArgNotNull(targetClass, s.targetClass);
+    //
+    //        JdbcUtil.checkDateType(stmt);
+    //
+    //        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
+    //
+    //        return Stream.just(supplier) //
+    //                .onClose(() -> supplier.get().close())
+    //                .flatMap(it -> Stream.of(it.get()))
+    //                .map(rs -> {
+    //                    final BiRowMapper<T> rowMapper = BiRowMapper.to(targetClass);
+    //
+    //                    return JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs));
+    //                });
+    //    }
+    //
+    //    /**
+    //     * Creates a stream of all result sets from the provided Statement.
+    //     * <p>
+    //     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
+    //     * <br />
+    //     * {@code JdbcUtil.streamAllResultSets(stmt, rowMapper).onClose(Fn.closeQuietly(stmt))...}
+    //     * </p>
+    //     *
+    //     * @param <T> the type of the result extracted from each ResultSet
+    //     * @param stmt the Statement to create streams from
+    //     * @param rowMapper the RowMapper to map each row of the ResultSet to the desired type
+    //     * @return a Stream of Streams of the extracted results
+    //     * @throws IllegalArgumentException if the provided arguments are invalid
+    //     */
+    //    @SuppressWarnings("resource")
+    //    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
+    //        N.checkArgNotNull(stmt, s.stmt);
+    //        N.checkArgNotNull(rowMapper, s.rowMapper);
+    //
+    //        JdbcUtil.checkDateType(stmt);
+    //
+    //        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
+    //
+    //        return Stream.just(supplier)
+    //                .onClose(() -> supplier.get().close())
+    //                .flatMap(it -> Stream.of(it.get()))
+    //                .map(rs -> JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
+    //    }
+    //
+    //    /**
+    //     * Creates a stream of all result sets from the provided Statement.
+    //     * <p>
+    //     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
+    //     * <br />
+    //     * {@code JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).onClose(Fn.closeQuietly(stmt))...}
+    //     * </p>
+    //     *
+    //     * @param <T> the type of the result extracted from each ResultSet
+    //     * @param stmt the Statement to create streams from
+    //     * @param rowFilter the RowFilter to filter rows of the ResultSet
+    //     * @param rowMapper the RowMapper to map each row of the ResultSet to the desired type
+    //     * @return a Stream of Streams of the extracted results
+    //     * @throws IllegalArgumentException if the provided arguments are invalid
+    //     */
+    //    @SuppressWarnings("resource")
+    //    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper)
+    //            throws IllegalArgumentException {
+    //        N.checkArgNotNull(stmt, s.stmt);
+    //        N.checkArgNotNull(rowFilter, s.rowFilter);
+    //        N.checkArgNotNull(rowMapper, s.rowMapper);
+    //
+    //        JdbcUtil.checkDateType(stmt);
+    //
+    //        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
+    //
+    //        return Stream.just(supplier)
+    //                .onClose(() -> supplier.get().close())
+    //                .flatMap(it -> Stream.of(it.get()))
+    //                .map(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
+    //    }
+    //
+    //    /**
+    //     * Creates a stream of all result sets from the provided Statement.
+    //     * <p>
+    //     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
+    //     * <br />
+    //     * {@code JdbcUtil.streamAllResultSets(stmt, rowMapper).onClose(Fn.closeQuietly(stmt))...}
+    //     * </p>
+    //     *
+    //     * @param <T> the type of the result extracted from each ResultSet
+    //     * @param stmt the Statement to create streams from
+    //     * @return a Stream of Streams of the extracted results
+    //     * @throws IllegalArgumentException if the provided arguments are invalid
+    //     */
+    //    @SuppressWarnings("resource")
+    //    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException {
+    //        N.checkArgNotNull(stmt, s.stmt);
+    //        N.checkArgNotNull(rowMapper, s.rowMapper);
+    //
+    //        JdbcUtil.checkDateType(stmt);
+    //
+    //        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
+    //
+    //        return Stream.just(supplier)
+    //                .onClose(() -> supplier.get().close())
+    //                .flatMap(it -> Stream.of(it.get()))
+    //                .map(rs -> JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
+    //    }
+    //
+    //    /**
+    //     * Creates a stream of all result sets from the provided Statement.
+    //     * <p>
+    //     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
+    //     * <br />
+    //     * {@code JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).onClose(Fn.closeQuietly(stmt))...}
+    //     * </p>
+    //     *
+    //     * @param <T> the type of the result extracted from each ResultSet
+    //     * @param stmt the Statement to create streams from
+    //     * @param rowFilter the BiRowFilter to filter rows of the ResultSet
+    //     * @param rowMapper the BiRowMapper to map each row of the ResultSet to the desired type
+    //     * @return a Stream of Streams of the extracted results
+    //     * @throws IllegalArgumentException if the provided arguments are invalid
+    //     */
+    //    @SuppressWarnings("resource")
+    //    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper)
+    //            throws IllegalArgumentException {
+    //        N.checkArgNotNull(stmt, s.stmt);
+    //        N.checkArgNotNull(rowFilter, s.rowFilter);
+    //        N.checkArgNotNull(rowMapper, s.rowMapper);
+    //
+    //        JdbcUtil.checkDateType(stmt);
+    //
+    //        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
+    //
+    //        return Stream.just(supplier)
+    //                .onClose(() -> supplier.get().close())
+    //                .flatMap(it -> Stream.of(it.get()))
+    //                .map(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
+    //    }
+
     /**
-     * Creates a stream of all result sets from the provided Statement.
+     * Extracts all ResultSets from the provided Statement and returns them as a Stream of DataSet.
      * <p>
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
      * <br />
-     * {@code JdbcUtil.streamAllResultSets(stmt, targetClass).onClose(Fn.closeQuietly(stmt))...}
+     * {@code JdbcUtil.extractAllResultSets(stmt).onClose(Fn.closeQuietly(stmt))...}
      * </p>
      *
-     * @param <T> the type of the result extracted from each ResultSet
-     * @param stmt the Statement to create streams from
-     * @param targetClass the class of the result type
-     * @return a Stream of Streams of the extracted results
-     * @throws IllegalArgumentException if the provided arguments are invalid
+     * @param stmt the Statement to extract ResultSets from
+     * @return a Stream of DataSet containing the extracted ResultSets
      */
-    @SuppressWarnings("resource")
-    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final Class<? extends T> targetClass) throws IllegalArgumentException {
-        N.checkArgNotNull(stmt, s.stmt);
-        N.checkArgNotNull(targetClass, s.targetClass);
-
-        JdbcUtil.checkDateType(stmt);
-
-        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
-
-        return Stream.just(supplier) //
-                .onClose(() -> supplier.get().close())
-                .flatMap(it -> Stream.of(it.get()))
-                .map(rs -> {
-                    final BiRowMapper<T> rowMapper = BiRowMapper.to(targetClass);
-
-                    return JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs));
-                });
+    public static Stream<DataSet> streamAllResultSets(final Statement stmt) {
+        return streamAllResultSets(stmt, ResultExtractor.TO_DATA_SET);
     }
 
     /**
-     * Creates a stream of all result sets from the provided Statement.
+     * Extracts all ResultSets from the provided Statement and returns them as a Stream.
      * <p>
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
      * <br />
-     * {@code JdbcUtil.streamAllResultSets(stmt, rowMapper).onClose(Fn.closeQuietly(stmt))...}
+     * {@code JdbcUtil.extractAllResultSets(stmt, resultExtractor).onClose(Fn.closeQuietly(stmt))...}
      * </p>
      *
-     * @param <T> the type of the result extracted from each ResultSet
-     * @param stmt the Statement to create streams from
-     * @param rowMapper the RowMapper to map each row of the ResultSet to the desired type
-     * @return a Stream of Streams of the extracted results
+     * @param <R> the type of the result extracted from the ResultSet
+     * @param stmt the Statement to extract ResultSets from
+     * @param resultExtractor the ResultExtractor to apply while extracting data
+     * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     @SuppressWarnings("resource")
-    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
+    public static <R> Stream<R> streamAllResultSets(final Statement stmt, final ResultExtractor<R> resultExtractor) throws IllegalArgumentException {
         N.checkArgNotNull(stmt, s.stmt);
-        N.checkArgNotNull(rowMapper, s.rowMapper);
-
-        JdbcUtil.checkDateType(stmt);
+        N.checkArgNotNull(resultExtractor, s.resultExtractor);
 
         final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
         return Stream.just(supplier)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> Stream.of(it.get()))
-                .map(rs -> JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
+                .map(Fn.ff(rs -> extractAndCloseResultSet(rs, resultExtractor)));
     }
 
     /**
-     * Creates a stream of all result sets from the provided Statement.
+     * Extracts all ResultSets from the provided Statement and returns them as a Stream.
      * <p>
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
      * <br />
-     * {@code JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).onClose(Fn.closeQuietly(stmt))...}
+     * {@code JdbcUtil.extractAllResultSets(stmt, resultExtractor).onClose(Fn.closeQuietly(stmt))...}
      * </p>
      *
-     * @param <T> the type of the result extracted from each ResultSet
-     * @param stmt the Statement to create streams from
-     * @param rowFilter the RowFilter to filter rows of the ResultSet
-     * @param rowMapper the RowMapper to map each row of the ResultSet to the desired type
-     * @return a Stream of Streams of the extracted results
+     * @param <R> the type of the result extracted from the ResultSet
+     * @param stmt the Statement to extract ResultSets from
+     * @param resultExtractor the BiResultExtractor to apply while extracting data
+     * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     @SuppressWarnings("resource")
-    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper)
-            throws IllegalArgumentException {
+    public static <R> Stream<R> streamAllResultSets(final Statement stmt, final BiResultExtractor<R> resultExtractor) throws IllegalArgumentException {
         N.checkArgNotNull(stmt, s.stmt);
-        N.checkArgNotNull(rowFilter, s.rowFilter);
-        N.checkArgNotNull(rowMapper, s.rowMapper);
-
-        JdbcUtil.checkDateType(stmt);
+        N.checkArgNotNull(resultExtractor, s.resultExtractor);
 
         final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
         return Stream.just(supplier)
                 .onClose(() -> supplier.get().close())
                 .flatMap(it -> Stream.of(it.get()))
-                .map(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
-    }
-
-    /**
-     * Creates a stream of all result sets from the provided Statement.
-     * <p>
-     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
-     * <br />
-     * {@code JdbcUtil.streamAllResultSets(stmt, rowMapper).onClose(Fn.closeQuietly(stmt))...}
-     * </p>
-     *
-     * @param <T> the type of the result extracted from each ResultSet
-     * @param stmt the Statement to create streams from
-     * @return a Stream of Streams of the extracted results
-     * @throws IllegalArgumentException if the provided arguments are invalid
-     */
-    @SuppressWarnings("resource")
-    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException {
-        N.checkArgNotNull(stmt, s.stmt);
-        N.checkArgNotNull(rowMapper, s.rowMapper);
-
-        JdbcUtil.checkDateType(stmt);
-
-        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
-
-        return Stream.just(supplier)
-                .onClose(() -> supplier.get().close())
-                .flatMap(it -> Stream.of(it.get()))
-                .map(rs -> JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
-    }
-
-    /**
-     * Creates a stream of all result sets from the provided Statement.
-     * <p>
-     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
-     * <br />
-     * {@code JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).onClose(Fn.closeQuietly(stmt))...}
-     * </p>
-     *
-     * @param <T> the type of the result extracted from each ResultSet
-     * @param stmt the Statement to create streams from
-     * @param rowFilter the BiRowFilter to filter rows of the ResultSet
-     * @param rowMapper the BiRowMapper to map each row of the ResultSet to the desired type
-     * @return a Stream of Streams of the extracted results
-     * @throws IllegalArgumentException if the provided arguments are invalid
-     */
-    @SuppressWarnings("resource")
-    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper)
-            throws IllegalArgumentException {
-        N.checkArgNotNull(stmt, s.stmt);
-        N.checkArgNotNull(rowFilter, s.rowFilter);
-        N.checkArgNotNull(rowMapper, s.rowMapper);
-
-        JdbcUtil.checkDateType(stmt);
-
-        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
-
-        return Stream.just(supplier)
-                .onClose(() -> supplier.get().close())
-                .flatMap(it -> Stream.of(it.get()))
-                .map(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
+                .map(Fn.ff(rs -> extractAndCloseResultSet(rs, resultExtractor)));
     }
 
     static ObjIteratorEx<ResultSet> iterateAllResultSets(final Statement stmt, final boolean isFirstResultSet) { //NOSONAR

@@ -1,3 +1,11 @@
+### 3.8.3
+
+* Upgrade dependence: `abacus-common:5.6.3`.
+* Remove : `JdbcUtil.streamAllResultSets`.
+* Rename `JdbcUtil.extractAllResultSets` to `JdbcUtil.streamAllResultSets`.
+* Refactoring: `AbstractQuery.streamAllResultSets` and `CallableQuery.queryAllResultsetsAndGetOutParameters`.
+* Improvements and bug fix.
+
 ### 3.8.2
 
 * Upgrade dependence: `abacus-common:5.6.0`

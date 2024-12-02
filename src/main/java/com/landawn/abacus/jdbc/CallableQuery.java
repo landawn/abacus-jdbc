@@ -56,7 +56,6 @@ import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.Tuple.Tuple4;
 import com.landawn.abacus.util.stream.ObjIteratorEx;
-import com.landawn.abacus.util.stream.Stream;
 
 /**
  * The backed {@code PreparedStatement/CallableStatement} will be closed by default
@@ -799,7 +798,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the blob.
+     * Sets the Blob.
      *
      * @param parameterName
      * @param x
@@ -813,7 +812,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the blob.
+     * Sets the Blob.
      *
      * @param parameterName
      * @param inputStream
@@ -827,7 +826,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the blob.
+     * Sets the Blob.
      *
      * @param parameterName
      * @param inputStream
@@ -842,7 +841,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the clob.
+     * Sets the Clob.
      *
      * @param parameterName
      * @param x
@@ -856,7 +855,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the clob.
+     * Sets the Clob.
      *
      * @param parameterName
      * @param reader
@@ -870,7 +869,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets the clob.
+     * Sets the Clob.
      *
      * @param parameterName
      * @param reader
@@ -1966,7 +1965,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             JdbcUtil.execute(cstmt);
 
-            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, targetType).map(Stream::toList).toList();
+            final List<List<T>> resultList = JdbcUtil.<List<T>> streamAllResultSets(cstmt, Jdbc.BiResultExtractor.toList(targetType)).toList();
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
@@ -1994,7 +1993,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             JdbcUtil.execute(cstmt);
 
-            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, rowMapper).map(Stream::toList).toList();
+            final List<List<T>> resultList = JdbcUtil.<List<T>> streamAllResultSets(cstmt, Jdbc.ResultExtractor.toList(rowMapper)).toList();
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
@@ -2024,7 +2023,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             JdbcUtil.execute(cstmt);
 
-            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, rowFilter, rowMapper).map(Stream::toList).toList();
+            final List<List<T>> resultList = JdbcUtil.<List<T>> streamAllResultSets(cstmt, Jdbc.ResultExtractor.toList(rowFilter, rowMapper)).toList();
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
@@ -2052,7 +2051,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             JdbcUtil.execute(cstmt);
 
-            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, rowMapper).map(Stream::toList).toList();
+            final List<List<T>> resultList = JdbcUtil.<List<T>> streamAllResultSets(cstmt, Jdbc.BiResultExtractor.toList(rowMapper)).toList();
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
@@ -2082,7 +2081,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             JdbcUtil.execute(cstmt);
 
-            final List<List<T>> resultList = JdbcUtil.<T> streamAllResultSets(cstmt, rowFilter, rowMapper).map(Stream::toList).toList();
+            final List<List<T>> resultList = JdbcUtil.<List<T>> streamAllResultSets(cstmt, Jdbc.BiResultExtractor.toList(rowFilter, rowMapper)).toList();
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {

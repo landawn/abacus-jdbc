@@ -630,6 +630,7 @@ public final class Jdbc {
          * @param <T>
          * @param targetClass
          * @return
+         * @see BiResultExtractor#toList(Class)
          */
         static <T> ResultExtractor<List<T>> toList(final Class<? extends T> targetClass) {
             N.checkArgNotNull(targetClass, s.targetClass);
@@ -1128,6 +1129,7 @@ public final class Jdbc {
          * @param <T>
          * @param targetClass
          * @return
+         * @see ResultExtractor#toList(Class)
          */
         @SequentialOnly
         @Stateful

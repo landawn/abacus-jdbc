@@ -844,31 +844,21 @@ final class DaoImpl {
                 }
 
                 if (hasRowMapperOrExtractor) {
-                    if (Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
-                        if (hasRowFilter) {
-                            return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.RowFilter) args[paramLen - 2],
-                                    (Jdbc.RowMapper) args[paramLen - 1]);
-                        } else {
-                            return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.RowMapper) args[paramLen - 1]);
-                        }
-                    } else if (Jdbc.BiRowMapper.class.isAssignableFrom(lastParamType)) {
-                        if (hasRowFilter) {
-                            return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.BiRowFilter) args[paramLen - 2],
-                                    (Jdbc.BiRowMapper) args[paramLen - 1]);
-                        } else {
-                            return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.BiRowMapper) args[paramLen - 1]);
-                        }
+                    if (Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)) {
+                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.ResultExtractor) args[paramLen - 1]);
+                    } else if (Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType)) {
+                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.BiResultExtractor) args[paramLen - 1]);
                     } else {
                         throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
                                 + " is not supported the specified op: " + op);
                     }
                 } else {
-                    if (firstReturnEleType == null) {
+                    if (firstReturnEleType == null || !DataSet.class.isAssignableFrom(firstReturnEleType)) {
                         throw new UnsupportedOperationException(
                                 "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
                     }
 
-                    return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets(firstReturnEleType);
+                    return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets();
                 }
             }
 
@@ -937,8 +927,7 @@ final class DaoImpl {
                 throw new UnsupportedOperationException("RowMapper/ResultExtractor is not supported by OP: " + op + " in method: " + fullClassMethodName);
             }
 
-            if (hasRowFilter && (op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll
-                    || op == OP.stream || op == OP.streamAll || op == OP.DEFAULT)) {
+            if (hasRowFilter && (op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.listAll || op == OP.stream || op == OP.DEFAULT)) {
                 throw new UnsupportedOperationException("RowFilter is not supported by OP: " + op + " in method: " + fullClassMethodName);
             }
 
@@ -5199,15 +5188,14 @@ final class DaoImpl {
 
                     if (hasRowMapperOrResultExtractor
                             && (Jdbc.RowMapper.class.isAssignableFrom(lastParamType) || Jdbc.BiRowMapper.class.isAssignableFrom(lastParamType))
-                            && !(op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.stream || op == OP.listAll || op == OP.streamAll
-                                    || op == OP.DEFAULT)) {
+                            && !(op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.stream || op == OP.listAll || op == OP.DEFAULT)) {
                         throw new UnsupportedOperationException(
                                 "Parameter 'RowMapper/BiRowMapper' is not supported by OP = " + op + " in method: " + fullClassMethodName);
                     }
 
                     if (hasRowMapperOrResultExtractor
                             && (Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType) || Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType))
-                            && !(op == OP.query || op == OP.queryAll || op == OP.DEFAULT)) {
+                            && !(op == OP.query || op == OP.queryAll || op == OP.streamAll || op == OP.DEFAULT)) {
                         throw new UnsupportedOperationException(
                                 "Parameter 'ResultExtractor/BiResultExtractor' is not supported by OP = " + op + " in method: " + fullClassMethodName);
                     }
