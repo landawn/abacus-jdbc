@@ -1,3 +1,7 @@
+### 3.8.4
+
+* Improvements and bug fix.
+
 ### 3.8.3
 
 * Upgrade dependence: `abacus-common:5.6.3`.

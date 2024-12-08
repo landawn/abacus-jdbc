@@ -48,7 +48,7 @@ public class CodeHelper {
                 final List<String> methodsInCheckedDao = Stream.of(checkedDaoClass.getMethods())
                         .filter(it -> N.contains(it.getExceptionTypes(), SQLException.class))
                         .map(Method::getName)
-                        .filter(it -> it.startsWith("prepare") == false)
+                        .filter(it -> !(it.startsWith("prepare") && it.contains("Query")))
                         .toList();
 
                 final List<String> methodsInUncheckedDao = Stream.of(uncheckedDaoClass.getMethods())
