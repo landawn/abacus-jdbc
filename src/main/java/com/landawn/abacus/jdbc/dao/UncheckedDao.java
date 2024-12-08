@@ -24,6 +24,7 @@ import java.util.function.Consumer;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory;
+import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.AbstractQuery;
@@ -1172,6 +1173,24 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      */
     @Override
     int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws UncheckedSQLException;
+
+    /**
+     * Executes {@code insertion} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+     *
+     * @param entity the entity to add or update.
+     * @param uniquePropNamesForQuery the list of unique property names to use to verify if the record exists or not.
+     * @return the added or updated db record.
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException {
+        N.checkArgNotNull(entity, s.entity);
+        N.checkArgNotEmpty(uniquePropNamesForQuery, s.uniquePropNamesForQuery);
+
+        final Condition cond = CF.eqAnd(entity, uniquePropNamesForQuery);
+
+        return upsert(entity, cond);
+    }
 
     /**
      * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.

@@ -1,8 +1,12 @@
 package com.landawn.abacus;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +14,7 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.s;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.Fn;
@@ -20,6 +25,51 @@ import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.stream.Stream;
 
 public class CodeHelper {
+
+    @Test
+    public void compare_methods_in_UncheckedDaos() throws Exception {
+
+        final Map<String, Class<?>> daoClsMap = Stream.of(ClassUtil.getClassesByPackage("com.landawn.abacus.jdbc.dao", true, true))
+                .toMap(ClassUtil::getSimpleClassName, Fn.identity());
+
+        Stream.ofValues(daoClsMap).filter(it -> ClassUtil.getSimpleClassName(it).startsWith("Unchecked")).forEach(Fn.println());
+
+        Stream.of(daoClsMap).filter(entry -> !entry.getKey().startsWith("Unchecked") && daoClsMap.containsKey("Unchecked" + entry.getKey())).foreach(entry -> {
+            final String key = entry.getKey();
+            final Class<?> checkedDaoClass = entry.getValue();
+
+            N.println("========================================================: " + key);
+
+            final String uncheckedClsName = "Unchecked" + key;
+
+            if (daoClsMap.containsKey(uncheckedClsName)) {
+                final Class<?> uncheckedDaoClass = daoClsMap.get(uncheckedClsName);
+
+                final List<String> methodsInCheckedDao = Stream.of(checkedDaoClass.getMethods())
+                        .filter(it -> N.contains(it.getExceptionTypes(), SQLException.class))
+                        .map(Method::getName)
+                        .filter(it -> it.startsWith("prepare") == false)
+                        .toList();
+
+                final List<String> methodsInUncheckedDao = Stream.of(uncheckedDaoClass.getMethods())
+                        .filter(it -> N.contains(it.getExceptionTypes(), UncheckedSQLException.class)
+                                && !N.contains(it.getExceptionTypes(), SQLException.class))
+                        .map(Method::getName)
+                        .toList();
+
+                // N.println(methods);
+                // N.println(uncheckedMethods);
+
+                final List<String> diff = N.symmetricDifference(methodsInCheckedDao, methodsInUncheckedDao);
+                if (diff.size() > 0) {
+                    N.println("diff: " + diff);
+                    N.println(methodsInCheckedDao);
+                    N.println(methodsInUncheckedDao);
+                }
+                assertTrue(N.isEmpty(diff));
+            }
+        });
+    }
 
     @Test
     public void replace_parameter_string() throws Exception {

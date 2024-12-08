@@ -20,6 +20,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
@@ -413,6 +414,22 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     @Deprecated
     @Override
     default int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws SQLException, UnsupportedOperationException {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Inserts the specified entity if it does not exist, otherwise updates the existing entity.
+     *
+     * @param entity the entity to be upserted
+     * @param uniquePropNamesForQuery the list of property names to be used for querying the uniqueness of the entity
+     * @return the upserted entity
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the operation is not supported
+     * @deprecated unsupported Operation
+     */
+    @Deprecated
+    @Override
+    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws SQLException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 

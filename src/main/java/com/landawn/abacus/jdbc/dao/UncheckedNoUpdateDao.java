@@ -16,6 +16,7 @@
 package com.landawn.abacus.jdbc.dao;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
@@ -102,7 +103,23 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
-     * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+     * Inserts the specified entity if it does not exist, otherwise updates the existing entity.
+     *
+     * @param entity the entity to be upserted
+     * @param uniquePropNamesForQuery the list of property names to be used for querying the uniqueness of the entity
+     * @return the upserted entity
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the operation is not supported
+     * @deprecated unsupported Operation
+     */
+    @Deprecated
+    @Override
+    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException, UnsupportedOperationException {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Inserts the specified entity if it does not exist, otherwise updates the existing entity.
      *
      * @param entity
      * @param cond to verify if the record exists or not.
