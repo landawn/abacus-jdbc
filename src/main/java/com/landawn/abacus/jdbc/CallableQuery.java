@@ -26,6 +26,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLType;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
@@ -38,12 +39,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
-import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -1047,7 +1045,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException if a database access error occurs
      * @see ClassUtil#getPropNameList(Class)
      * @see ClassUtil#getPropNames(Class, Collection)
-     * @see ClassUtil#getpropNames(Class, Set)
      * @see JdbcUtil#getNamedParameters(String)
      */
     public CallableQuery setParameters(final Object entity, final List<String> parameterNames) throws IllegalArgumentException, SQLException {
@@ -1375,8 +1372,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return the result of applying the function to the CallableStatement
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
-     * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
-     * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
+     * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
+     * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.BiResultExtractor)
      */
     @Override
     public <R> R executeThenApply(final Throwables.Function<? super CallableStatement, ? extends R, SQLException> getter) throws SQLException { //NOSONAR
@@ -1392,8 +1389,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return the result of applying the BiFunction to the CallableStatement
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
-     * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
-     * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
+     * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
+     * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.BiResultExtractor)
      */
     @Override
     public <R> R executeThenApply(final Throwables.BiFunction<Boolean, ? super CallableStatement, ? extends R, SQLException> getter) throws SQLException { //NOSONAR
@@ -1409,8 +1406,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return the result of applying the TriFunction to the CallableStatement
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
-     * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
-     * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
+     * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
+     * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.BiResultExtractor)
      */
     public <R> R executeThenApply(final Throwables.TriFunction<Boolean, List<Jdbc.OutParam>, ? super CallableStatement, ? extends R, SQLException> getter)
             throws SQLException {
@@ -1419,7 +1416,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         try {
             final boolean isFirstResultSet = JdbcUtil.execute(cstmt);
-            outParams = outParams == null ? N.<Jdbc.OutParam> emptyList() : outParams;
+            outParams = outParams == null ? N.emptyList() : outParams;
 
             return getter.apply(isFirstResultSet, outParams, cstmt);
         } finally {
@@ -1433,8 +1430,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param consumer the consumer to apply to the CallableStatement
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
-     * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
-     * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
+     * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
+     * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.BiResultExtractor)
      */
     @Override
     public void executeThenAccept(final Throwables.Consumer<? super CallableStatement, SQLException> consumer) throws SQLException { //NOSONAR
@@ -1448,8 +1445,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                 the second parameter is the executed {@code CallableStatement}.
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
-     * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
-     * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
+     * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
+     * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.BiResultExtractor)
      */
     @Override
     public void executeThenAccept(final Throwables.BiConsumer<Boolean, ? super CallableStatement, SQLException> consumer) throws SQLException { //NOSONAR
@@ -1463,8 +1460,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                 the second parameter is the list of OUT parameters, and the third parameter is the executed {@code CallableStatement}.
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
-     * @see JdbcUtil#streamAllResultSets(java.sql.Statement, RowMapper)
-     * @see JdbcUtil#streamAllResultSets(java.sql.Statement, BiRowMapper)
+     * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
+     * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.BiResultExtractor)
      */
     public void executeThenAccept(final Throwables.TriConsumer<Boolean, List<Jdbc.OutParam>, ? super CallableStatement, SQLException> consumer)
             throws SQLException {
@@ -1473,7 +1470,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         try {
             final boolean isFirstResultSet = JdbcUtil.execute(cstmt);
-            outParams = outParams == null ? N.<Jdbc.OutParam> emptyList() : outParams;
+            outParams = outParams == null ? N.emptyList() : outParams;
 
             consumer.accept(isFirstResultSet, outParams, cstmt);
         } finally {

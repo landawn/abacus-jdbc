@@ -44,6 +44,7 @@ import java.util.Map;
 public @interface MappedByKey {
 
     /**
+     * Use {@code keyName} to specify attribute explicitly
      *
      * @return
      * @deprecated using keyName="id" for explicit call.

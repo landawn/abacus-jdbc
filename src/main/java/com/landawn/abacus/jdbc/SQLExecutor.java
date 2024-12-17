@@ -921,7 +921,7 @@ public final class SQLExecutor {
     //                } else {
     //                    if (logger.isWarnEnabled()) {
     //                        logger.warn(
-    //                                "Failed to set the returned id property to entity/map. because the size of returned key not equals the lenght of the input arrray");
+    //                                "Failed to set the returned id property to entity/map. because the size of returned key not equals the length of the input array");
     //                    }
     //                }
     //            }

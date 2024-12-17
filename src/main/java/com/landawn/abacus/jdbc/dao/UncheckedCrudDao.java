@@ -32,7 +32,6 @@ import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.SQLExecutor;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.jdbc.s;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
@@ -68,7 +67,6 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
  * @see Dao
- * @see SQLExecutor.Mapper
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
  */
@@ -826,6 +824,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
             return new ArrayList<>();
         }
 
+        @SuppressWarnings("UnnecessaryLocalVariable")
         final List<String> propNameListForQuery = uniquePropNamesForQuery;
         final T first = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = first.getClass();
@@ -847,8 +846,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
             return entityId;
         };
 
-        final com.landawn.abacus.util.function.Function<T, ? extends Object> keysExtractor = propNameListForQuery.size() == 1 ? singleKeyExtractor
-                : entityIdExtractor;
+        final com.landawn.abacus.util.function.Function<T, ?> keysExtractor = propNameListForQuery.size() == 1 ? singleKeyExtractor : entityIdExtractor;
 
         final List<T> dbEntities = propNameListForQuery.size() == 1
                 ? Stream.of(entities).split(batchSize).flatmap(it -> list(CF.in(propNameListForQuery.get(0), N.map(it, singleKeyExtractor)))).toList()

@@ -15,13 +15,6 @@
  */
 package com.landawn.abacus.jdbc;
 
-import lombok.Value;
-
-@Value
-public class DBProductInfo { // NOSONAR
-
-    private String productName;
-    private String productVersion;
-    private DBVersion version;
+public record DBProductInfo(String productName, String productVersion, DBVersion version) { // NOSONAR
 
 }

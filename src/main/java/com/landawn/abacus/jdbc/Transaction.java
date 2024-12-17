@@ -60,11 +60,11 @@ public interface Transaction {
     //    /**
     //     * Commits the current transaction and executes the specified action after the commit.
     //     *
-    //     * @param actoinAfterCommit the action to be executed after the current transaction is committed successfully.
+    //     * @param actionAfterCommit the action to be executed after the current transaction is committed successfully.
     //     * @throws UncheckedSQLException if an SQL error occurs during the commit.
     //     */
     //    @Beta
-    //    void commit(Runnable actoinAfterCommit) throws UncheckedSQLException;
+    //    void commit(Runnable actionAfterCommit) throws UncheckedSQLException;
 
     /**
      * Rolls back the current transaction.
@@ -118,7 +118,7 @@ public interface Transaction {
         /**
          * Field FAILED_ROLLBACK.
          */
-        FAILED_ROLLBACK;
+        FAILED_ROLLBACK
     }
 
     /**
@@ -131,6 +131,6 @@ public interface Transaction {
         COMMIT,
 
         /** The rollback. */
-        ROLLBACK;
+        ROLLBACK
     }
 }

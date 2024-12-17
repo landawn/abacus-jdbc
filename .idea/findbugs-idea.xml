@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="FindBugs-IDEA">
+    <analysisEffort>max</analysisEffort>
+    <suppressWarningsClassName>com.landawn.abacus.annotation.SuppressFBWarnings</suppressWarningsClassName>
+    <detectors>
+      <detector name="BadUseOfReturnValue" enabled="false" />
+      <detector name="ConstructorThrow" enabled="false" />
+      <detector name="DefaultEncodingDetector" enabled="false" />
+      <detector name="FindReturnRef" enabled="false" />
+      <detector name="Naming" enabled="false" />
+    </detectors>
+  </component>
+</project>

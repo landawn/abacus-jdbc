@@ -230,9 +230,9 @@ public final class JdbcUtil {
         try {
             final DatabaseMetaData metaData = conn.getMetaData();
 
-            final String dbProudctName = metaData.getDatabaseProductName();
-            final String dbProudctVersion = metaData.getDatabaseProductVersion();
-            final String upperCaseProductName = dbProudctName.toUpperCase();
+            final String dbProductName = metaData.getDatabaseProductName();
+            final String dbProductVersion = metaData.getDatabaseProductVersion();
+            final String upperCaseProductName = dbProductName.toUpperCase();
 
             DBVersion dbVersion = DBVersion.OTHERS;
 
@@ -241,43 +241,43 @@ public final class JdbcUtil {
             } else if (upperCaseProductName.contains("HSQL")) {
                 dbVersion = DBVersion.HSQLDB;
             } else if (upperCaseProductName.contains("MYSQL")) {
-                if (dbProudctVersion.startsWith("5.5")) {
+                if (dbProductVersion.startsWith("5.5")) {
                     dbVersion = DBVersion.MYSQL_5_5;
-                } else if (dbProudctVersion.startsWith("5.6")) {
+                } else if (dbProductVersion.startsWith("5.6")) {
                     dbVersion = DBVersion.MYSQL_5_6;
-                } else if (dbProudctVersion.startsWith("5.7")) {
+                } else if (dbProductVersion.startsWith("5.7")) {
                     dbVersion = DBVersion.MYSQL_5_7;
-                } else if (dbProudctVersion.startsWith("5.8")) {
+                } else if (dbProductVersion.startsWith("5.8")) {
                     dbVersion = DBVersion.MYSQL_5_8;
-                } else if (dbProudctVersion.startsWith("5.9")) {
+                } else if (dbProductVersion.startsWith("5.9")) {
                     dbVersion = DBVersion.MYSQL_5_9;
-                } else if (dbProudctVersion.startsWith("6")) {
+                } else if (dbProductVersion.startsWith("6")) {
                     dbVersion = DBVersion.MYSQL_6;
-                } else if (dbProudctVersion.startsWith("7")) {
+                } else if (dbProductVersion.startsWith("7")) {
                     dbVersion = DBVersion.MYSQL_7;
-                } else if (dbProudctVersion.startsWith("8")) {
+                } else if (dbProductVersion.startsWith("8")) {
                     dbVersion = DBVersion.MYSQL_8;
-                } else if (dbProudctVersion.startsWith("9")) {
+                } else if (dbProductVersion.startsWith("9")) {
                     dbVersion = DBVersion.MYSQL_9;
-                } else if (dbProudctVersion.startsWith("10")) {
+                } else if (dbProductVersion.startsWith("10")) {
                     dbVersion = DBVersion.MYSQL_10;
                 } else {
                     dbVersion = DBVersion.MYSQL_OTHERS;
                 }
             } else if (upperCaseProductName.contains("POSTGRESQL")) {
-                if (dbProudctVersion.startsWith("9.2")) {
+                if (dbProductVersion.startsWith("9.2")) {
                     dbVersion = DBVersion.POSTGRESQL_9_2;
-                } else if (dbProudctVersion.startsWith("9.3")) {
+                } else if (dbProductVersion.startsWith("9.3")) {
                     dbVersion = DBVersion.POSTGRESQL_9_3;
-                } else if (dbProudctVersion.startsWith("9.4")) {
+                } else if (dbProductVersion.startsWith("9.4")) {
                     dbVersion = DBVersion.POSTGRESQL_9_4;
-                } else if (dbProudctVersion.startsWith("9.5")) {
+                } else if (dbProductVersion.startsWith("9.5")) {
                     dbVersion = DBVersion.POSTGRESQL_9_5;
-                } else if (dbProudctVersion.startsWith("10")) {
+                } else if (dbProductVersion.startsWith("10")) {
                     dbVersion = DBVersion.POSTGRESQL_10;
-                } else if (dbProudctVersion.startsWith("11")) {
+                } else if (dbProductVersion.startsWith("11")) {
                     dbVersion = DBVersion.POSTGRESQL_11;
-                } else if (dbProudctVersion.startsWith("12")) {
+                } else if (dbProductVersion.startsWith("12")) {
                     dbVersion = DBVersion.POSTGRESQL_12;
                 } else {
                     dbVersion = DBVersion.POSTGRESQL_OTHERS;
@@ -290,7 +290,7 @@ public final class JdbcUtil {
                 dbVersion = DBVersion.SQL_SERVER;
             }
 
-            return new DBProductInfo(dbProudctName, dbProudctName, dbVersion);
+            return new DBProductInfo(dbProductName, dbProductName, dbVersion);
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1234,11 +1234,10 @@ public final class JdbcUtil {
                     final ResultSetMetaData metaData = rs.getMetaData();
 
                     if ("java.sql.Timestamp".equals(metaData.getColumnClassName(columnIndex))) {
-                        result.add(rs.getTimestamp(columnIndex));
 
-                        while (rs.next()) {
+                        do {
                             result.add(rs.getTimestamp(columnIndex));
-                        }
+                        } while (rs.next());
                     } else {
                         result.add(val);
 
@@ -1492,7 +1491,6 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException the unchecked SQL exception
      * @see {@link #getConnection(javax.sql.DataSource)}
      * @see {@link #releaseConnection(Connection, javax.sql.DataSource)}
-     * @see SQLExecutor#beginTransaction(IsolationLevel, boolean, JdbcSettings)
      */
     public static SQLTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel, final boolean isForUpdateOnly)
             throws UncheckedSQLException {
@@ -1648,13 +1646,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given command outside of any started transaction for the specified DataSource.
+     * Executes the given command outside any started transaction for the specified DataSource.
      * If a transaction is already started in current thread, a new connection which is not used to started transaction will be used to execute the command.
      *
      * @param <T> The type of the result returned by the command.
      * @param <E> The type of exception that the command may throw.
      * @param dataSource The DataSource for which to execute the command.
-     * @param cmd The command to execute outside of any started transaction.
+     * @param cmd The command to execute outside any started transaction.
      * @return The result of the command execution.
      * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
      * @throws E If the command throws an exception.
@@ -1691,13 +1689,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given command outside of any started transaction for the specified DataSource.
+     * Executes the given command outside any started transaction for the specified DataSource.
      * If a transaction is already started in current thread, a new connection which is not used to started transaction will be used to execute the command.
      *
      * @param <T> The type of the result returned by the command.
      * @param <E> The type of exception that the command may throw.
      * @param dataSource The DataSource for which to execute the command.
-     * @param cmd The command to execute outside of any started transaction.
+     * @param cmd The command to execute outside any started transaction.
      * @return The result of the command execution.
      * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
      * @throws E If the command throws an exception.
@@ -1734,12 +1732,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given command outside of any started transaction for the specified DataSource.
+     * Executes the given command outside any started transaction for the specified DataSource.
      * If a transaction is already started in current thread, a new connection which is not used to started transaction will be used to execute the command.
      *
      * @param <E> The type of exception that the command may throw.
      * @param dataSource The DataSource for which to execute the command.
-     * @param cmd The command to execute outside of any started transaction.
+     * @param cmd The command to execute outside any started transaction.
      * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
      * @throws E If the command throws an exception.
      */
@@ -1775,12 +1773,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given command outside of any started transaction for the specified DataSource.
+     * Executes the given command outside any started transaction for the specified DataSource.
      * If a transaction is already started in current thread, a new connection which is not used to started transaction will be used to execute the command.
      *
      * @param <E> The type of exception that the command may throw.
      * @param dataSource The DataSource for which to execute the command.
-     * @param cmd The command to execute outside of any started transaction.
+     * @param cmd The command to execute outside any started transaction.
      * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
      * @throws E If the command throws an exception.
      */
@@ -3492,7 +3490,7 @@ public final class JdbcUtil {
     //        ResultSet rs = null;
     //
     //        try {
-    //            rs = executeQuerry(stmt);
+    //            rs = executeQuery(stmt);
     //
     //            return extractData(rs);
     //        } finally {
@@ -4155,6 +4153,7 @@ public final class JdbcUtil {
             parameterValues = new Object[parameterCount];
 
             if (ClassUtil.isBeanClass(cls)) {
+                @SuppressWarnings("UnnecessaryLocalVariable")
                 final Object entity = parameter_0;
                 final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
                 parameterTypes = new Type[parameterCount];
@@ -4229,9 +4228,8 @@ public final class JdbcUtil {
         if ((parameters.length == 1) && (parameters[0] != null)) {
             if (parameters[0] instanceof Object[] && ((((Object[]) parameters[0]).length) >= parsedSql.getParameterCount())) {
                 return (Object[]) parameters[0];
-            } else if (parameters[0] instanceof List && (((List<?>) parameters[0]).size() >= parsedSql.getParameterCount())) {
-                final Collection<?> c = (Collection<?>) parameters[0];
-                return c.toArray(new Object[c.size()]);
+            } else if (parameters[0] instanceof Collection<?> c && (((List<?>) parameters[0]).size() >= parsedSql.getParameterCount())) {
+                return c.toArray(new Object[0]);
             }
         }
 
@@ -4243,7 +4241,7 @@ public final class JdbcUtil {
             return false;
         }
 
-        final Class<? extends Object> cls = parameters[0].getClass();
+        final Class<?> cls = parameters[0].getClass();
 
         return ClassUtil.isBeanClass(cls) || ClassUtil.isRecordClass(cls) || Map.class.isAssignableFrom(cls) || EntityId.class.isAssignableFrom(cls);
     }
@@ -4627,7 +4625,7 @@ public final class JdbcUtil {
             private boolean isClosed = false;
 
             @Override
-            public final void close() {
+            public void close() {
                 if (isClosed) {
                     return;
                 }
@@ -4709,7 +4707,7 @@ public final class JdbcUtil {
             private boolean isClosed = false;
 
             @Override
-            public final void close() {
+            public void close() {
                 if (isClosed) {
                     return;
                 }
@@ -4819,7 +4817,7 @@ public final class JdbcUtil {
             private boolean isClosed = false;
 
             @Override
-            public final void close() {
+            public void close() {
                 if (isClosed) {
                     return;
                 }
@@ -5196,7 +5194,7 @@ public final class JdbcUtil {
 
             @Override
             public boolean hasNext() {
-                if (resultSetHolder.isNull() && noMoreResult == false) {
+                if (resultSetHolder.isNull() && !noMoreResult) {
                     try {
                         while (true) {
                             if (isNextResultSet) {
@@ -5231,7 +5229,7 @@ public final class JdbcUtil {
             private boolean isClosed = false;
 
             @Override
-            public final void close() {
+            public void close() {
                 if (isClosed) {
                     return;
                 }
@@ -5285,7 +5283,7 @@ public final class JdbcUtil {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return Stream.<Holder<R>> of(Holder.of((R) null)) //
+        return Stream.of(Holder.of((R) null)) //
                 .cycled()
                 .map(it -> {
                     try {
@@ -5326,7 +5324,7 @@ public final class JdbcUtil {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return Stream.<Holder<R>> of(Holder.of((R) null)) //
+        return Stream.of(Holder.of((R) null)) //
                 .cycled()
                 .map(it -> {
                     try {
@@ -5386,7 +5384,7 @@ public final class JdbcUtil {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return Stream.<Holder<R>> of(Holder.of((R) null)) //
+        return Stream.of(Holder.of((R) null)) //
                 .cycled()
                 .map(it -> {
                     try {
@@ -5427,7 +5425,7 @@ public final class JdbcUtil {
 
         final boolean isNamedQuery = ParsedSql.parse(query).getNamedParameters().size() > 0;
 
-        return Stream.<Holder<R>> of(Holder.of((R) null)) //
+        return Stream.of(Holder.of((R) null)) //
                 .cycled()
                 .map(it -> {
                     try {
@@ -5486,7 +5484,7 @@ public final class JdbcUtil {
 
     static boolean checkDateType(final Statement stmt) {
         try {
-            return Strings.containsIgnoreCase(JdbcUtil.getDBProductInfo(stmt.getConnection()).getProductName(), "Oracle");
+            return Strings.containsIgnoreCase(JdbcUtil.getDBProductInfo(stmt.getConnection()).productName(), "Oracle");
         } catch (final SQLException e) {
             return true;
         }
@@ -5809,7 +5807,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(stmt, s.stmt);
 
         if (N.isEmpty(outParams)) {
-            return new OutParamResult(N.<OutParam> emptyList(), N.<Object, Object> emptyMap());
+            return new OutParamResult(N.emptyList(), N.emptyMap());
         }
 
         final Map<Object, Object> outParamValues = new LinkedHashMap<>(outParams.size());
@@ -6170,7 +6168,7 @@ public final class JdbcUtil {
             if (minExecutionTimeForSqlPerfLog >= 0) {
                 logger.debug("set 'minExecutionTimeForSqlPerfLog' to: " + minExecutionTimeForSqlPerfLog);
             } else {
-                logger.debug("Turn off SQL perfermance log");
+                logger.debug("Turn off SQL performance log");
             }
         }
 
@@ -6936,7 +6934,7 @@ public final class JdbcUtil {
     @SuppressWarnings({ "rawtypes", "deprecation", "null" })
     static <ID> Tuple3<BiRowMapper<ID>, com.landawn.abacus.util.function.Function<Object, ID>, com.landawn.abacus.util.function.BiConsumer<ID, Object>> getIdGeneratorGetterSetter(
             final Class<? extends Dao> daoInterface, final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
-        if (entityClass == null || !ClassUtil.isBeanClass(entityClass)) {
+        if (!ClassUtil.isBeanClass(entityClass)) {
             return (Tuple3) noIdGeneratorGetterSetter;
         }
 
@@ -6952,9 +6950,9 @@ public final class JdbcUtil {
             final BeanInfo entityInfo = isNoId ? null : ParserUtil.getBeanInfo(entityClass);
             final List<PropInfo> idPropInfoList = isNoId ? null : Stream.of(idPropNameList).map(entityInfo::getPropInfo).toList();
             final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
-            final boolean isOneId = isNoId ? false : idPropNameList.size() == 1;
+            final boolean isOneId = !isNoId && idPropNameList.size() == 1;
             final boolean isEntityId = idType != null && EntityId.class.isAssignableFrom(idType);
-            final BeanInfo idBeanInfo = idType != null && ClassUtil.isBeanClass(idType) ? ParserUtil.getBeanInfo(idType) : null;
+            final BeanInfo idBeanInfo = ClassUtil.isBeanClass(idType) ? ParserUtil.getBeanInfo(idType) : null;
 
             final com.landawn.abacus.util.function.Function<Object, ID> idGetter = isNoId ? noIdGeneratorGetterSetter._2 //
                     : (isOneId ? idPropInfo::getPropValue //
@@ -6994,6 +6992,7 @@ public final class JdbcUtil {
                                 }
                             } : (id, entity) -> {
                                 if (id != null && ClassUtil.isBeanClass(id.getClass())) {
+                                    @SuppressWarnings("UnnecessaryLocalVariable")
                                     final Object entityId = id;
 
                                     for (final PropInfo propInfo : idPropInfoList) {

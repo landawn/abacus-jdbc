@@ -35,6 +35,7 @@ import com.landawn.abacus.util.SQLBuilder;
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
  */
+@SuppressWarnings("RedundantThrows")
 @Beta
 public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T, SB, TD>> extends NoUpdateDao<T, SB, TD> {
     /**

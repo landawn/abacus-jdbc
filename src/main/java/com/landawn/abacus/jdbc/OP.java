@@ -17,7 +17,7 @@ package com.landawn.abacus.jdbc;
 
 /**
  *
- * @see The operations in {@code AbstractQuery}
+ * Refer to the operations in {@code AbstractQuery}
  *
  */
 public enum OP {
@@ -67,6 +67,6 @@ public enum OP {
 
     /* batchUpdate,*/
 
-    DEFAULT;
+    DEFAULT
 
 }

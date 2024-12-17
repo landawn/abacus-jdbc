@@ -224,8 +224,7 @@ final class DaoUtil {
         if (tp == null) {
             java.lang.reflect.Type[] typeArguments = null;
 
-            if (N.notEmpty(daoInterface.getGenericInterfaces()) && daoInterface.getGenericInterfaces()[0] instanceof ParameterizedType) {
-                final ParameterizedType parameterizedType = (ParameterizedType) daoInterface.getGenericInterfaces()[0];
+            if (N.notEmpty(daoInterface.getGenericInterfaces()) && daoInterface.getGenericInterfaces()[0] instanceof ParameterizedType parameterizedType) {
                 typeArguments = parameterizedType.getActualTypeArguments();
             }
 

@@ -41,7 +41,6 @@ import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
-import com.landawn.abacus.jdbc.SQLExecutor;
 import com.landawn.abacus.jdbc.s;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
@@ -223,7 +222,6 @@ import com.landawn.abacus.util.stream.Stream;
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
  * @see Dao
  * @See CrudDao
- * @see SQLExecutor.Mapper
  * @see com.landawn.abacus.annotation.AccessFieldByMethod
  * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.condition.ConditionFactory
@@ -231,6 +229,7 @@ import com.landawn.abacus.util.stream.Stream;
  *
  * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
  */
+@SuppressWarnings("RedundantThrows")
 public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
@@ -1653,7 +1652,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws SQLException {
         final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
-        final Jdbc.RowMapper<? extends R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
+        final Jdbc.RowMapper<? extends R> rowMapper = propInfo == null ? ColumnOne.getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
         return list(singleSelectPropName, cond, rowMapper);
     }
@@ -1849,7 +1848,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     @LazyEvaluation
     default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond) {
         final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
-        final Jdbc.RowMapper<? extends R> rowMapper = propInfo == null ? ColumnOne.<R> getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
+        final Jdbc.RowMapper<? extends R> rowMapper = propInfo == null ? ColumnOne.getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
         return stream(singleSelectPropName, cond, rowMapper);
     }

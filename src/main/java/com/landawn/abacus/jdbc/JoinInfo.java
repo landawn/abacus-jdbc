@@ -59,17 +59,11 @@ public final class JoinInfo {
     static final Map<Class<? extends SQLBuilder>, Tuple4<Function<Collection<String>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>>> sqlBuilderFuncMap = new HashMap<>();
 
     static {
-        sqlBuilderFuncMap.put(PSC.class,
-                Tuple.of((final Collection<String> selectPropNames) -> PSC.select(selectPropNames), (final Class<?> targetClass) -> PSC.selectFrom(targetClass),
-                        (final Class<?> targetClass) -> PSC.update(targetClass), (final Class<?> targetClass) -> PSC.deleteFrom(targetClass)));
+        sqlBuilderFuncMap.put(PSC.class, Tuple.of(PSC::select, PSC::selectFrom, PSC::update, PSC::deleteFrom));
 
-        sqlBuilderFuncMap.put(PAC.class,
-                Tuple.of((final Collection<String> selectPropNames) -> PAC.select(selectPropNames), (final Class<?> targetClass) -> PAC.selectFrom(targetClass),
-                        (final Class<?> targetClass) -> PAC.update(targetClass), (final Class<?> targetClass) -> PAC.deleteFrom(targetClass)));
+        sqlBuilderFuncMap.put(PAC.class, Tuple.of(PAC::select, PAC::selectFrom, PAC::update, PAC::deleteFrom));
 
-        sqlBuilderFuncMap.put(PLC.class,
-                Tuple.of((final Collection<String> selectPropNames) -> PLC.select(selectPropNames), (final Class<?> targetClass) -> PLC.selectFrom(targetClass),
-                        (final Class<?> targetClass) -> PLC.update(targetClass), (final Class<?> targetClass) -> PLC.deleteFrom(targetClass)));
+        sqlBuilderFuncMap.put(PLC.class, Tuple.of(PLC::select, PLC::selectFrom, PLC::update, PLC::deleteFrom));
     }
 
     final Class<?> entityClass;
@@ -708,12 +702,8 @@ public final class JoinInfo {
      * @return
      */
     public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName) {
-        Map<Tuple2<Class<?>, String>, Map<String, JoinInfo>> entityJoinInfoMap = daoEntityJoinInfoPool.get(daoClass);
-
-        if (entityJoinInfoMap == null) {
-            entityJoinInfoMap = new ConcurrentHashMap<>();
-            daoEntityJoinInfoPool.put(daoClass, entityJoinInfoMap);
-        }
+        Map<Tuple2<Class<?>, String>, Map<String, JoinInfo>> entityJoinInfoMap = daoEntityJoinInfoPool.computeIfAbsent(daoClass,
+                k -> new ConcurrentHashMap<>());
 
         final Tuple2<Class<?>, String> key = Tuple.of(entityClass, tableName);
 
@@ -721,7 +711,7 @@ public final class JoinInfo {
 
         if (joinInfoMap == null) {
             final Config anno = daoClass.getAnnotation(Config.class);
-            final boolean allowJoiningByNullOrDefaultValue = (anno == null || !anno.allowJoiningByNullOrDefaultValue()) == false;
+            final boolean allowJoiningByNullOrDefaultValue = !(anno == null || !anno.allowJoiningByNullOrDefaultValue());
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
 
             joinInfoMap = new LinkedHashMap<>();
@@ -781,13 +771,7 @@ public final class JoinInfo {
             List<String> joinPropNames = null;
 
             for (final JoinInfo joinInfo : getEntityJoinInfo(daoClass, entityClass, tableName).values()) {
-                joinPropNames = joinEntityPropNamesByTypeMap.get(joinInfo.referencedEntityClass);
-
-                if (joinPropNames == null) {
-                    joinPropNames = new ArrayList<>(1);
-                    joinEntityPropNamesByTypeMap.put(joinInfo.referencedEntityClass, joinPropNames);
-
-                }
+                joinPropNames = joinEntityPropNamesByTypeMap.computeIfAbsent(joinInfo.referencedEntityClass, k -> new ArrayList<>(1));
 
                 joinPropNames.add(joinInfo.joinPropInfo.name);
             }
@@ -795,6 +779,6 @@ public final class JoinInfo {
             joinEntityPropNamesByTypePool.put(key, joinEntityPropNamesByTypeMap);
         }
 
-        return joinEntityPropNamesByTypeMap.getOrDefault(joinPropEntityClass, N.<String> emptyList());
+        return joinEntityPropNamesByTypeMap.getOrDefault(joinPropEntityClass, N.emptyList());
     }
 }

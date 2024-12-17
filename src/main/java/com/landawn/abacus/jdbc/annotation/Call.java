@@ -30,6 +30,7 @@ import com.landawn.abacus.jdbc.OP;
 public @interface Call {
 
     /**
+     * Use {@code sql} to specify attribute explicitly
      *
      * @return
      * @deprecated using {@code sql="call update_account(?)"} or {@code id="updateAccount"} for explicit call.
@@ -70,7 +71,7 @@ public @interface Call {
     boolean isSingleParameter() default false;
 
     /**
-     * Set it to {@code true} if want to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/listAll/streamAll}.
+     * Set it to {@code true} if you want to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/listAll/streamAll}.
      * It is {@code false} by default. The reason is all the query methods extended from {@code AbstractQuery} only retrieve the first {@code ResultSet}.
      *
      * @return

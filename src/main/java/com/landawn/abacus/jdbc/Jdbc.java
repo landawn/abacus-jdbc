@@ -140,8 +140,6 @@ public final class Jdbc {
      * @param <QS>
      * @param <T>
      * @see Columns.ColumnOne
-     * @see Columns.ColumnTwo
-     * @see Columns.ColumnThree
      */
     @FunctionalInterface
     public interface BiParametersSetter<QS, T> extends Throwables.BiConsumer<QS, T, SQLException> {
@@ -247,14 +245,12 @@ public final class Jdbc {
      * @param <QS>
      * @param <T>
      */
+    @SuppressWarnings("RedundantThrows")
     @FunctionalInterface
     public interface TriParametersSetter<QS, T> extends Throwables.TriConsumer<ParsedSql, QS, T, SQLException> {
         @SuppressWarnings("rawtypes")
-        TriParametersSetter DO_NOTHING = new TriParametersSetter<>() {
-            @Override
-            public void accept(ParsedSql parsedSql, Object preparedQuery, Object param) throws SQLException {
-                // Do nothing.
-            }
+        TriParametersSetter DO_NOTHING = (TriParametersSetter<Object, Object>) (parsedSql, preparedQuery, param) -> {
+            // Do nothing.
         };
 
         /**
@@ -327,7 +323,7 @@ public final class Jdbc {
          * @return A map containing the extracted keys and values.
          */
         static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor) {
-            return toMap(keyExtractor, valueExtractor, Suppliers.<K, V> ofMap());
+            return toMap(keyExtractor, valueExtractor, Suppliers.ofMap());
         }
 
         /**
@@ -342,7 +338,7 @@ public final class Jdbc {
          */
         static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final Supplier<? extends M> supplier) {
-            return toMap(keyExtractor, valueExtractor, Fn.<V> throwingMerger(), supplier);
+            return toMap(keyExtractor, valueExtractor, Fn.throwingMerger(), supplier);
         }
 
         /**
@@ -353,13 +349,13 @@ public final class Jdbc {
          * @param valueExtractor
          * @param mergeFunction
          * @return
-         * @see {@link Fn.throwingMerger()}
-         * @see {@link Fn.replacingMerger()}
-         * @see {@link Fn.ignoringMerger()}
+         * @see {@link Fn#throwingMerger()}
+         * @see {@link Fn#replacingMerger()}
+         * @see {@link Fn#ignoringMerger()}
          */
         static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final BinaryOperator<V> mergeFunction) {
-            return toMap(keyExtractor, valueExtractor, mergeFunction, Suppliers.<K, V> ofMap());
+            return toMap(keyExtractor, valueExtractor, mergeFunction, Suppliers.ofMap());
         }
 
         /**
@@ -374,9 +370,9 @@ public final class Jdbc {
          * @param mergeFunction The function to merge values if the same key is encountered.
          * @param supplier The supplier to provide a new map instance.
          * @return A map containing the extracted keys and values.
-         * @see {@link Fn.throwingMerger()}
-         * @see {@link Fn.replacingMerger()}
-         * @see {@link Fn.ignoringMerger()}
+         * @see {@link Fn#throwingMerger()}
+         * @see {@link Fn#replacingMerger()}
+         * @see {@link Fn#ignoringMerger()}
          */
         static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final BinaryOperator<V> mergeFunction, final Supplier<? extends M> supplier) {
@@ -412,7 +408,7 @@ public final class Jdbc {
         @Deprecated
         static <K, V, D> ResultExtractor<Map<K, D>> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final Collector<? super V, ?, D> downstream) {
-            return toMap(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
+            return toMap(keyExtractor, valueExtractor, downstream, Suppliers.ofMap());
         }
 
         /**
@@ -445,7 +441,7 @@ public final class Jdbc {
          * @return
          */
         static <K, V> ResultExtractor<ListMultimap<K, V>> toMultimap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor) {
-            return toMultimap(keyExtractor, valueExtractor, Suppliers.<K, V> ofListMultimap());
+            return toMultimap(keyExtractor, valueExtractor, Suppliers.ofListMultimap());
         }
 
         /**
@@ -486,7 +482,7 @@ public final class Jdbc {
          * @return
          */
         static <K, V> ResultExtractor<Map<K, List<V>>> groupTo(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor) {
-            return groupTo(keyExtractor, valueExtractor, Suppliers.<K, List<V>> ofMap());
+            return groupTo(keyExtractor, valueExtractor, Suppliers.ofMap());
         }
 
         /**
@@ -512,12 +508,7 @@ public final class Jdbc {
 
                 while (rs.next()) {
                     key = keyExtractor.apply(rs);
-                    value = result.get(key);
-
-                    if (value == null) {
-                        value = new ArrayList<>();
-                        result.put(key, value);
-                    }
+                    value = result.computeIfAbsent(key, k -> new ArrayList<>());
 
                     value.add(valueExtractor.apply(rs));
                 }
@@ -538,7 +529,7 @@ public final class Jdbc {
          */
         static <K, V, D> ResultExtractor<Map<K, D>> groupTo(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final Collector<? super V, ?, D> downstream) {
-            return groupTo(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
+            return groupTo(keyExtractor, valueExtractor, downstream, Suppliers.ofMap());
         }
 
         /**
@@ -823,7 +814,7 @@ public final class Jdbc {
          * @return
          */
         static <K, V> BiResultExtractor<Map<K, V>> toMap(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor) {
-            return toMap(keyExtractor, valueExtractor, Suppliers.<K, V> ofMap());
+            return toMap(keyExtractor, valueExtractor, Suppliers.ofMap());
         }
 
         /**
@@ -838,7 +829,7 @@ public final class Jdbc {
          */
         static <K, V, M extends Map<K, V>> BiResultExtractor<M> toMap(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor, final Supplier<? extends M> supplier) {
-            return toMap(keyExtractor, valueExtractor, Fn.<V> throwingMerger(), supplier);
+            return toMap(keyExtractor, valueExtractor, Fn.throwingMerger(), supplier);
         }
 
         /**
@@ -849,13 +840,13 @@ public final class Jdbc {
          * @param valueExtractor
          * @param mergeFunction
          * @return
-         * @see {@link Fn.throwingMerger()}
-         * @see {@link Fn.replacingMerger()}
-         * @see {@link Fn.ignoringMerger()}
+         * @see {@link Fn#throwingMerger()}
+         * @see {@link Fn#replacingMerger()}
+         * @see {@link Fn#ignoringMerger()}
          */
         static <K, V> BiResultExtractor<Map<K, V>> toMap(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor,
                 final BinaryOperator<V> mergeFunction) {
-            return toMap(keyExtractor, valueExtractor, mergeFunction, Suppliers.<K, V> ofMap());
+            return toMap(keyExtractor, valueExtractor, mergeFunction, Suppliers.ofMap());
         }
 
         /**
@@ -868,9 +859,9 @@ public final class Jdbc {
          * @param mergeFunction
          * @param supplier
          * @return
-         * @see {@link Fn.throwingMerger()}
-         * @see {@link Fn.replacingMerger()}
-         * @see {@link Fn.ignoringMerger()}
+         * @see {@link Fn#throwingMerger()}
+         * @see {@link Fn#replacingMerger()}
+         * @see {@link Fn#ignoringMerger()}
          */
         static <K, V, M extends Map<K, V>> BiResultExtractor<M> toMap(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor, final BinaryOperator<V> mergeFunction, final Supplier<? extends M> supplier) {
@@ -906,7 +897,7 @@ public final class Jdbc {
         @Deprecated
         static <K, V, D> BiResultExtractor<Map<K, D>> toMap(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor,
                 final Collector<? super V, ?, D> downstream) {
-            return toMap(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
+            return toMap(keyExtractor, valueExtractor, downstream, Suppliers.ofMap());
         }
 
         /**
@@ -940,7 +931,7 @@ public final class Jdbc {
          */
         static <K, V> BiResultExtractor<ListMultimap<K, V>> toMultimap(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor) {
-            return toMultimap(keyExtractor, valueExtractor, Suppliers.<K, V> ofListMultimap());
+            return toMultimap(keyExtractor, valueExtractor, Suppliers.ofListMultimap());
         }
 
         /**
@@ -980,7 +971,7 @@ public final class Jdbc {
          * @return
          */
         static <K, V> BiResultExtractor<Map<K, List<V>>> groupTo(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor) {
-            return groupTo(keyExtractor, valueExtractor, Suppliers.<K, List<V>> ofMap());
+            return groupTo(keyExtractor, valueExtractor, Suppliers.ofMap());
         }
 
         /**
@@ -1006,12 +997,7 @@ public final class Jdbc {
 
                 while (rs.next()) {
                     key = keyExtractor.apply(rs, columnLabels);
-                    value = result.get(key);
-
-                    if (value == null) {
-                        value = new ArrayList<>();
-                        result.put(key, value);
-                    }
+                    value = result.computeIfAbsent(key, k -> new ArrayList<>());
 
                     value.add(valueExtractor.apply(rs, columnLabels));
                 }
@@ -1032,7 +1018,7 @@ public final class Jdbc {
          */
         static <K, V, D> BiResultExtractor<Map<K, D>> groupTo(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor,
                 final Collector<? super V, ?, D> downstream) {
-            return groupTo(keyExtractor, valueExtractor, downstream, Suppliers.<K, D> ofMap());
+            return groupTo(keyExtractor, valueExtractor, downstream, Suppliers.ofMap());
         }
 
         /**
@@ -1155,8 +1141,6 @@ public final class Jdbc {
      *
      * @param <T>
      * @see Columns.ColumnOne
-     * @see Columns.ColumnTwo
-     * @see Columns.ColumnThree
      */
     @FunctionalInterface
     public interface RowMapper<T> extends Throwables.Function<ResultSet, T, SQLException> {
@@ -1298,7 +1282,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static RowMapper<List<Object>> toList(final ColumnGetter<?> columnGetterForAll) {
-            return toCollection(columnGetterForAll, Factory.<Object> ofList());
+            return toCollection(columnGetterForAll, Factory.ofList());
         }
 
         /**
@@ -1455,7 +1439,7 @@ public final class Jdbc {
         //    }
 
         @SequentialOnly
-        public static class RowMapperBuilder {
+        class RowMapperBuilder {
             private final Map<Integer, ColumnGetter<?>> columnGetterMap;
 
             RowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
@@ -2776,7 +2760,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static BiRowMapper<Map<String, Object>> toMap(final Function<? super String, String> columnNameConverter) {
-            return toMap(columnNameConverter, IntFunctions.<String, Object> ofMap());
+            return toMap(columnNameConverter, IntFunctions.ofMap());
         }
 
         /**
@@ -2918,7 +2902,7 @@ public final class Jdbc {
          */
         @Beta
         static BiRowMapper<List<Object>> toList(final ColumnGetter<?> columnGetterForAll) {
-            return toCollection(columnGetterForAll, Factory.<Object> ofList());
+            return toCollection(columnGetterForAll, Factory.ofList());
         }
 
         /**
@@ -3064,7 +3048,7 @@ public final class Jdbc {
         //    }
 
         @SequentialOnly
-        public static class BiRowMapperBuilder {
+        class BiRowMapperBuilder {
             private final ColumnGetter<?> defaultColumnGetter;
             private final Map<String, ColumnGetter<?>> columnGetterMap;
 
@@ -4105,7 +4089,7 @@ public final class Jdbc {
             return new RowExtractorBuilder(defaultColumnGetter);
         }
 
-        public static class RowExtractorBuilder {
+        class RowExtractorBuilder {
             private final Map<Integer, ColumnGetter<?>> columnGetterMap;
 
             RowExtractorBuilder(final ColumnGetter<?> defaultColumnGetter) {
@@ -4390,13 +4374,7 @@ public final class Jdbc {
          * @return
          */
         static <T> ColumnGetter<T> get(final Type<? extends T> type) {
-            ColumnGetter<?> columnGetter = COLUMN_GETTER_POOL.get(type);
-
-            if (columnGetter == null) {
-                columnGetter = type::get;
-
-                COLUMN_GETTER_POOL.put(type, columnGetter);
-            }
+            final ColumnGetter<?> columnGetter = COLUMN_GETTER_POOL.computeIfAbsent(type, k -> type::get);
 
             return (ColumnGetter<T>) columnGetter;
         }
@@ -4443,8 +4421,8 @@ public final class Jdbc {
             public static final RowMapper<Clob> GET_CLOB = rs -> rs.getClob(1);
 
             //        [INFO] Compiling 42 source files to C:\Users\haiyangl\Landawn\abacus-jdbc\trunk\target\classes
-            //        An exception has occurred in the compiler (1.8.0_231). Please file a bug against the Java compiler via the Java bug reporting page (http://bugreport.java.com) a
-            //        fter checking the Bug Database (http://bugs.java.com) for duplicates. Include your program and the following diagnostic in your report. Thank you.
+            //        An exception has occurred in the compiler (1.8.0_231). Please file a bug against the Java compiler via the Java bug reporting page (http://bugreport.java.com)
+            //        after checking the Bug Database (http://bugs.java.com) for duplicates. Include your program and the following diagnostic in your report. Thank you.
             //        java.lang.AssertionError
             //                at com.sun.tools.javac.util.Assert.error(Assert.java:126)
             //                at com.sun.tools.javac.util.Assert.check(Assert.java:45)
@@ -5071,7 +5049,7 @@ public final class Jdbc {
         }
     }
 
-    public final class HandlerFactory {
+    public static final class HandlerFactory {
 
         @SuppressWarnings("rawtypes")
         static final Handler EMPTY = new Handler() {
@@ -5079,7 +5057,7 @@ public final class Jdbc {
         };
 
         private static final Map<String, Handler<?>> handlerPool = new ConcurrentHashMap<>();
-        private static final SpringApplicationContext spingAppContext;
+        private static final SpringApplicationContext springAppContext;
 
         static {
             handlerPool.put(ClassUtil.getCanonicalClassName(Handler.class), EMPTY);
@@ -5093,7 +5071,7 @@ public final class Jdbc {
                 // ignore.
             }
 
-            spingAppContext = tmp;
+            springAppContext = tmp;
         }
 
         /**
@@ -5154,8 +5132,8 @@ public final class Jdbc {
 
             Handler<?> result = handlerPool.get(qualifier);
 
-            if (result == null && spingAppContext != null) {
-                final Object bean = spingAppContext.getBean(qualifier);
+            if (result == null && springAppContext != null) {
+                final Object bean = springAppContext.getBean(qualifier);
 
                 if (bean instanceof Handler) {
                     result = (Handler<?>) bean;
@@ -5180,11 +5158,11 @@ public final class Jdbc {
 
             Handler<?> result = handlerPool.get(qualifier);
 
-            if (result == null && spingAppContext != null) {
-                result = spingAppContext.getBean(handlerClass);
+            if (result == null && springAppContext != null) {
+                result = springAppContext.getBean(handlerClass);
 
                 if (result == null) {
-                    final Object bean = spingAppContext.getBean(qualifier);
+                    final Object bean = springAppContext.getBean(qualifier);
 
                     if (bean instanceof Handler) {
                         result = (Handler<?>) bean;

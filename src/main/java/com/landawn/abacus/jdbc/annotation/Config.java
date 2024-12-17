@@ -52,7 +52,7 @@ public @interface Config {
     boolean allowJoiningByNullOrDefaultValue() default false;
 
     //    // why do we need this?
-    //    boolean excludePrepareQueryMethodsFromNonDBOpereation() default false;
+    //    boolean excludePrepareQueryMethodsFromNonDBOperation() default false;
 
     /**
      *

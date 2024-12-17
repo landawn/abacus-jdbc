@@ -21,6 +21,7 @@ import java.util.concurrent.Executor;
 
 import com.landawn.abacus.util.SQLBuilder;
 
+@SuppressWarnings("RedundantThrows")
 public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
 
     /**

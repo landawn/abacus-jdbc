@@ -364,7 +364,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * @param ids the collection of IDs of the entities to retrieve
      * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
      * @param batchSize the number of entities to retrieve in each batch
-     * @param joinEntitiesToLoad the class of the join entities to load
+     * @param includeAllJoinEntities whether to include all join entities in the retrieval
      * @return a list of retrieved entities with the specified join entities loaded
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs

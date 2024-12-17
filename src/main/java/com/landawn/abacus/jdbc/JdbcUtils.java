@@ -186,7 +186,6 @@ public final class JdbcUtils {
      *
      * @param dataset the DataSet containing the data to be imported
      * @param selectColumnNames the collection of column names to be selected
-     * @param offset the starting point in the DataSet
      * @param insertSQL the SQL insert statement; the column order in the SQL must be consistent with the column order in the DataSet
      * @param batchSize the number of rows to be inserted in each batch
      * @param batchIntervalInMillis the interval in milliseconds between each batch
@@ -250,7 +249,6 @@ public final class JdbcUtils {
      * </pre>
      *
      * @param dataset the DataSet containing the data to be imported
-     * @param offset the starting point in the DataSet
      * @param insertSQL the SQL insert statement; the column order in the SQL must be consistent with the column order in the DataSet
      * @param columnTypeMap a map specifying the types of the columns
      * @return the number of rows affected
@@ -278,7 +276,6 @@ public final class JdbcUtils {
      * </pre>
      *
      * @param dataset the DataSet containing the data to be imported
-     * @param offset the starting point in the DataSet
      * @param insertSQL the SQL insert statement; the column order in the SQL must be consistent with the column order in the DataSet
      * @param batchSize the number of rows to be inserted in each batch
      * @param batchIntervalInMillis the interval in milliseconds between each batch
@@ -581,8 +578,6 @@ public final class JdbcUtils {
      * @param <E> the type of exception that might be thrown
      * @param dataset the DataSet containing the data to be imported
      * @param filter a predicate to filter the data
-     * @param conn the Connection to the database
-     * @param insertSQL the SQL insert statement; the column order in the SQL must be consistent with the column order in the DataSet
      * @param batchSize the number of rows to be inserted in each batch
      * @param batchIntervalInMillis the interval in milliseconds between each batch
      * @param columnTypeMap a map specifying the types of the columns
@@ -1727,7 +1722,7 @@ public final class JdbcUtils {
      */
     public static long importCSV(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
-        return importCSV(file, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
+        return importCSV(file, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -1822,10 +1817,9 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    @SuppressWarnings({ "unchecked" })
     public static long importCSV(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
-        return importCSV(reader, Fn.<String[]> alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
+        return importCSV(reader, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -1849,7 +1843,6 @@ public final class JdbcUtils {
      * @throws IOException if an I/O error occurs
      * @throws E if the filter throws an exception
      */
-    @SuppressWarnings({ "unchecked", "resource" })
     public static <E extends Exception> long importCSV(final Reader reader, final Throwables.Predicate<? super String[], E> filter,
             final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter)
@@ -1977,8 +1970,6 @@ public final class JdbcUtils {
      * @param conn the Connection to the database
      * @param querySQL the SQL query to execute to retrieve the data
      * @param selectColumnNames the collection of column names to be selected
-     * @param offset the starting point of the data to be exported
-     * @param count the number of rows to be exported
      * @param writeTitle whether to write the column names as the first line
      * @param quoted whether to quote each value in the CSV file
      * @return the number of rows exported
@@ -2010,7 +2001,6 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    @SuppressWarnings("unchecked")
     public static long exportCSV(final File out, final PreparedStatement stmt) throws SQLException, IOException {
         return exportCSV(out, stmt, true, true);
     }
@@ -3497,7 +3487,7 @@ public final class JdbcUtils {
     private static void setFetchForBigResult(final Connection conn, final PreparedStatement stmt, final int fetchSize) throws SQLException {
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
-        if (JdbcUtil.getDBProductInfo(conn).getVersion().isMySQL()) {
+        if (JdbcUtil.getDBProductInfo(conn).version().isMySQL()) {
             stmt.setFetchSize(Integer.MIN_VALUE);
         } else {
             stmt.setFetchSize(fetchSize);

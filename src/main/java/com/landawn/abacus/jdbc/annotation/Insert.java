@@ -33,7 +33,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 public @interface Insert {
 
     /**
-     * Sql script, or id which is defined in sql mapper or sql table class inside DAO class.
+     * Use {@code sql} to specify attribute explicitly
      *
      * @return
      * @deprecated using {@code sql="SELECT ... FROM ..."} or {@code id="selectById"} for explicit call.

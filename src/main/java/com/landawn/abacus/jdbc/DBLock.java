@@ -117,7 +117,7 @@ public final class DBLock {
         }
 
         final Runnable refreshTask = () -> {
-            if (targetCodePool.size() > 0) {
+            if (!targetCodePool.isEmpty()) {
                 final Map<String, String> m = Objectory.createMap();
 
                 try {

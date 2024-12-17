@@ -2776,6 +2776,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This addBatchParameters(final Iterator<?> batchParameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(batchParameters, s.batchParameters);
 
+        @SuppressWarnings("UnnecessaryLocalVariable")
         final Iterator<?> iter = batchParameters;
         boolean noException = false;
 
@@ -2840,6 +2841,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(batchParameters, s.batchParameters);
         checkArgNotNull(type, s.type);
 
+        @SuppressWarnings("UnnecessaryLocalVariable")
         final Iterator<? extends T> iter = batchParameters;
         final Type<T> setter = N.typeOf(type);
         boolean noException = false;
@@ -2949,6 +2951,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         boolean noException = false;
 
         try {
+            @SuppressWarnings("UnnecessaryLocalVariable")
             final Iterator<? extends T> iter = batchParameters;
 
             while (iter.hasNext()) {
@@ -3055,6 +3058,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         boolean noException = false;
 
         try {
+            @SuppressWarnings("UnnecessaryLocalVariable")
             final Iterator<? extends T> iter = batchParameters;
 
             while (iter.hasNext()) {
@@ -3106,7 +3110,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @return this instance for method chaining
      * @throws SQLException if a database access error occurs or this method is called on a closed statement
-     * @see java.sql.Statement#addBatch()
+     * @see java.sql.PreparedStatement#addBatch()
      */
     public This addBatch() throws SQLException {
         addBatchAction.accept((This) this, stmt);
@@ -3463,7 +3467,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Nullable.of(rs.getString(1)) : Nullable.<String> empty();
+            return rs.next() ? Nullable.of(rs.getString(1)) : Nullable.empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -3483,7 +3487,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Nullable.of(BIG_INTEGER_TYPE.get(rs, 1)) : Nullable.<BigInteger> empty();
+            return rs.next() ? Nullable.of(BIG_INTEGER_TYPE.get(rs, 1)) : Nullable.empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -3501,7 +3505,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Nullable.of(rs.getBigDecimal(1)) : Nullable.<BigDecimal> empty();
+            return rs.next() ? Nullable.of(rs.getBigDecimal(1)) : Nullable.empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -3518,7 +3522,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Nullable.of(rs.getDate(1)) : Nullable.<java.sql.Date> empty();
+            return rs.next() ? Nullable.of(rs.getDate(1)) : Nullable.empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -3535,7 +3539,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Nullable.of(rs.getTime(1)) : Nullable.<java.sql.Time> empty();
+            return rs.next() ? Nullable.of(rs.getTime(1)) : Nullable.empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -3552,7 +3556,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Nullable.of(rs.getTimestamp(1)) : Nullable.<java.sql.Timestamp> empty();
+            return rs.next() ? Nullable.of(rs.getTimestamp(1)) : Nullable.empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -3569,7 +3573,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Nullable.of(rs.getBytes(1)) : Nullable.<byte[]> empty();
+            return rs.next() ? Nullable.of(rs.getBytes(1)) : Nullable.empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -3607,7 +3611,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Nullable.of(targetType.get(rs, 1)) : Nullable.<V> empty();
+            return rs.next() ? Nullable.of(targetType.get(rs, 1)) : Nullable.empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -3645,7 +3649,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Optional.of(targetType.get(rs, 1)) : Optional.<V> empty();
+            return rs.next() ? Optional.of(targetType.get(rs, 1)) : Optional.empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -3687,7 +3691,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            final Nullable<V> result = rs.next() ? Nullable.of(targetType.get(rs, 1)) : Nullable.<V> empty();
+            final Nullable<V> result = rs.next() ? Nullable.of(targetType.get(rs, 1)) : Nullable.empty();
 
             if (result.isPresent() && rs.next()) {
                 throw new DuplicatedResultException(
@@ -3736,7 +3740,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            final Optional<V> result = rs.next() ? Optional.of(targetType.get(rs, 1)) : Optional.<V> empty();
+            final Optional<V> result = rs.next() ? Optional.of(targetType.get(rs, 1)) : Optional.empty();
 
             if (result.isPresent() && rs.next()) {
                 throw new DuplicatedResultException(
@@ -3941,7 +3945,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return a list of {@code DataSet} extracted from all {@code ResultSets} returned by the executed procedure.
      * @throws SQLException If a database access error occurs.
      * @see #queryAllResultsets(ResultExtractor)
-     * @see #streamAllResults()
+     * @see #streamAllResultsets()
      */
     public List<DataSet> queryAllResultsets() throws SQLException {
         return queryAllResultsets(ResultExtractor.TO_DATA_SET);
@@ -3956,7 +3960,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If the provided {@code resultExtractor} is {@code null}.
      * @throws IllegalStateException If the query is executed on a closed statement.
      * @throws SQLException If a database access error occurs.
-     * @see #streamAllResults(ResultExtractor)
+     * @see #streamAllResultsets(ResultExtractor)
      */
     public <R> List<R> queryAllResultsets(final Jdbc.ResultExtractor<? extends R> resultExtractor)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -3997,7 +4001,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If the provided {@code resultExtractor} is {@code null}.
      * @throws IllegalStateException If the query is executed on a closed statement.
      * @throws SQLException If a database access error occurs.
-     * @see #streamAllResults(BiResultExtractor)
+     * @see #streamAllResultsets(BiResultExtractor)
      */
     public <R> List<R> queryAllResultsets(final Jdbc.BiResultExtractor<? extends R> resultExtractor)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -5027,7 +5031,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Note: The opened {@code Connection} and {@code Statement} will be held till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      *
      * @param <T> The type of the elements in the stream.
-     * @param rowMapper The {@code RowMapper} to map rows of the {@code ResultSet} to the target type.
+     * @param targetType The class of the result object.
      * @return A {@code Stream} of the specified type representing the rows in the first {@code ResultSet}.
      * @throws IllegalArgumentException If the provided {@code targetType} is {@code null}.
      * @throws IllegalStateException If this is closed.
@@ -5979,7 +5983,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 final ID id = rs.next() ? autoGeneratedKeyExtractor.apply(rs) : null;
-                return isDefaultIdTester.test(id) ? Optional.<ID> empty() : Optional.of(id);
+                return isDefaultIdTester.test(id) ? Optional.empty() : Optional.of(id);
             }
         } finally {
             closeAfterExecutionIfAllowed();
@@ -6007,9 +6011,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 if (rs.next()) {
                     final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
                     final ID id = autoGeneratedKeyExtractor.apply(rs, columnLabels);
-                    return isDefaultIdTester.test(id) ? Optional.<ID> empty() : Optional.of(id);
+                    return isDefaultIdTester.test(id) ? Optional.empty() : Optional.of(id);
                 } else {
-                    return Optional.<ID> empty();
+                    return Optional.empty();
                 }
             }
         } finally {

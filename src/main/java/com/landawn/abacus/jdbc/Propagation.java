@@ -36,5 +36,5 @@ public enum Propagation {
     /**
      * Execute non-transactionally, suspend the current transaction if one exists.
      */
-    NOT_SUPPORTED;
+    NOT_SUPPORTED
 }

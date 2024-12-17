@@ -71,6 +71,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
  */
+@SuppressWarnings("RedundantThrows")
 public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
 
     /**
@@ -78,6 +79,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @return a BiRowMapper that extracts the ID from a row.
      */
+    @SuppressWarnings("SameReturnValue")
     @NonDBOperation
     default Jdbc.BiRowMapper<ID> idExtractor() {
         return null;
@@ -769,6 +771,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
             return new ArrayList<>();
         }
 
+        @SuppressWarnings("UnnecessaryLocalVariable")
         final List<String> propNameListForQuery = uniquePropNamesForQuery;
         final T first = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = first.getClass();
@@ -790,8 +793,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
             return entityId;
         };
 
-        final com.landawn.abacus.util.function.Function<T, ? extends Object> keysExtractor = propNameListForQuery.size() == 1 ? singleKeyExtractor
-                : entityIdExtractor;
+        final com.landawn.abacus.util.function.Function<T, ?> keysExtractor = propNameListForQuery.size() == 1 ? singleKeyExtractor : entityIdExtractor;
 
         final List<T> dbEntities = propNameListForQuery.size() == 1
                 ? Seq.of(entities, SQLException.class)

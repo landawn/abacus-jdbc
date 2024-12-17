@@ -46,7 +46,7 @@ public @interface CacheResult {
 
     /**
      * Minimum required size to cache query result if the return type is {@code Collection} or {@code DataSet}.
-     * This setting will be ignore if the return types are not {@code Collection} or {@code DataSet}.
+     * This setting will be ignored if the return types are not {@code Collection} or {@code DataSet}.
      *
      * @return
      */
@@ -54,7 +54,7 @@ public @interface CacheResult {
 
     /**
      * If the query result won't be cached if it's size is bigger than {@code maxSize} if the return type is {@code Collection} or {@code DataSet}.
-     * This setting will be ignore if the return types are not {@code Collection} or {@code DataSet}.
+     * This setting will be ignored if the return types are not {@code Collection} or {@code DataSet}.
      *
      * @return
      */
@@ -65,12 +65,12 @@ public @interface CacheResult {
      * It can be set to {@code "none" and "kryo"}.
      *
      * @return
-     * @see https://github.com/EsotericSoftware/kryo
+     * @see <a href="https://github.com/EsotericSoftware/kryo">kryo</a>
      */
     String transfer() default "none";
 
     //    /**
-    //     * If it's set to true, the cached result won't be removed by method annotated by {@code RefershCache}.
+    //     * If it's set to true, the cached result won't be removed by method annotated by {@code RefreshCache}.
     //     *
     //     * @return
     //     */

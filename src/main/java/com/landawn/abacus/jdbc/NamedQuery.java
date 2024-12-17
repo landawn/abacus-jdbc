@@ -37,7 +37,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.parser.ParserUtil;
@@ -101,20 +100,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         }
     }
 
-    /**
-     * Inits the param name index map.
-     */
     private void initParamNameIndexMap() {
         paramNameIndexMap = new HashMap<>(parameterCount);
         int index = 1;
 
         for (final String paramName : parameterNames) {
-            IntList indexes = paramNameIndexMap.get(paramName);
-
-            if (indexes == null) {
-                indexes = new IntList(1);
-                paramNameIndexMap.put(paramName, indexes);
-            }
+            final IntList indexes = paramNameIndexMap.computeIfAbsent(paramName, k -> new IntList(1));
 
             indexes.add(index++);
         }
@@ -3110,7 +3101,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws SQLException if a database access error occurs
      * @see ClassUtil#getPropNameList(Class)
      * @see ClassUtil#getPropNames(Class, Collection)
-     * @see ClassUtil#getpropNames(Class, Set)
      * @see JdbcUtil#getNamedParameters(String)
      */
     public NamedQuery setParameters(final Object entity, final Collection<String> parameterNames) throws IllegalArgumentException, SQLException {
@@ -3175,20 +3165,20 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets the parameters for the named query using a custom parameters setter.
      *
      * @param <T> the type of the parameters object
-     * @param paramaters the parameters object
+     * @param parameters the parameters object
      * @param paramsSetter a custom parameters setter
      * @return the current instance of {@code NamedQuery}
      * @throws IllegalArgumentException if the parameters setter is null
      * @throws SQLException if a database access error occurs
      */
-    public <T> NamedQuery setParameters(final T paramaters, final Jdbc.TriParametersSetter<? super NamedQuery, ? super T> paramsSetter)
+    public <T> NamedQuery setParameters(final T parameters, final Jdbc.TriParametersSetter<? super NamedQuery, ? super T> paramsSetter)
             throws IllegalArgumentException, SQLException {
         checkArgNotNull(paramsSetter, s.paramsSetter);
 
         boolean noException = false;
 
         try {
-            paramsSetter.accept(namedSql, this, paramaters);
+            paramsSetter.accept(namedSql, this, parameters);
 
             noException = true;
         } finally {
@@ -3233,6 +3223,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     public NamedQuery addBatchParameters(final Iterator<?> batchParameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(batchParameters, s.batchParameters);
 
+        @SuppressWarnings("UnnecessaryLocalVariable")
         final Iterator<?> iter = batchParameters;
         boolean noException = false;
 

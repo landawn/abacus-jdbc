@@ -188,10 +188,10 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     /**
      * Commits the current transaction and executes the specified action after the commit.
      *
-     * @param actoinAfterCommit the action to be executed after the current transaction is committed successfully.
+     * @param actionAfterCommit the action to be executed after the current transaction is committed successfully.
      * @throws UncheckedSQLException if an SQL error occurs during the commit.
      */
-    void commit(final Runnable actoinAfterCommit) throws UncheckedSQLException {
+    void commit(final Runnable actionAfterCommit) throws UncheckedSQLException {
         final int refCount = decrementAndGetRef();
         _isMarkedByCommitPreviously = true;
 
@@ -230,7 +230,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
                 resetAndCloseConnection();
 
-                actoinAfterCommit.run();
+                actionAfterCommit.run();
             } else {
                 logger.warn("Failed to commit transaction(id={}). It will automatically be rolled back ", _timedId);
                 executeRollback();
@@ -258,7 +258,6 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * </pre>
      *
      * @throws UncheckedSQLException the unchecked SQL exception
-     * @see SQLExecutor#beginTransaction(IsolationLevel)
      * @deprecated replaced by {@code #rollbackIfNotCommitted()}
      */
     @Deprecated
@@ -584,6 +583,6 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
          * SQLExecutor.
          * @deprecated not used
          */
-        SQL_EXECUTOR;
+        SQL_EXECUTOR
     }
 }

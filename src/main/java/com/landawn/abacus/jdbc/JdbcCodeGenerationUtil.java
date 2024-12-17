@@ -101,7 +101,7 @@ public final class JdbcCodeGenerationUtil {
         return null;
     };
 
-    private static final String LINE_SEPERATOR = IOUtil.LINE_SEPARATOR;
+    private static final String LINE_SEPARATOR = IOUtil.LINE_SEPARATOR;
 
     private static final String eccImports = """
             import javax.persistence.Column;
@@ -342,9 +342,9 @@ public final class JdbcCodeGenerationUtil {
                 }
 
                 final String columnClassName = customizedField == null || customizedField._3 == null
-                        ? mapColumClassnName((fieldTypeConverter == null ? getColumnClassName(rsmd, i)
+                        ? mapColumClassName((fieldTypeConverter == null ? getColumnClassName(rsmd, i)
                                 : fieldTypeConverter.apply(entityName, fieldName, columnName, getColumnClassName(rsmd, i))), false, configToUse)
-                        : mapColumClassnName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
+                        : mapColumClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
 
                 columnNameList.add(columnName);
                 fieldNameList.add(fieldName);
@@ -362,7 +362,7 @@ public final class JdbcCodeGenerationUtil {
             final StringBuilder sb = new StringBuilder();
 
             if (Strings.isNotEmpty(packageName)) {
-                sb.append("package ").append(packageName + ";");
+                sb.append("package ").append(packageName).append(";");
             }
 
             String headPart = "";
@@ -373,7 +373,8 @@ public final class JdbcCodeGenerationUtil {
 
                     try { //NOSONAR
                         if (ClassUtil.forClass("java.util." + clsName) != null) {
-                            headPart += LINE_SEPERATOR + "import java.util." + clsName + ";"; //NOSONAR
+                            //noinspection StringConcatenationInLoop
+                            headPart += LINE_SEPARATOR + "import java.util." + clsName + ";"; //NOSONAR
                         }
                     } catch (final Exception e) {
                         // ignore.
@@ -382,10 +383,10 @@ public final class JdbcCodeGenerationUtil {
             }
 
             if (Strings.isNotEmpty(headPart)) {
-                headPart += LINE_SEPERATOR;
+                headPart += LINE_SEPARATOR;
             }
 
-            headPart += LINE_SEPERATOR + eccImports + LINE_SEPERATOR + eccClassAnnos;
+            headPart += LINE_SEPARATOR + eccImports + LINE_SEPARATOR + eccClassAnnos;
 
             if (isJavaPersistenceTable) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Table;\n", "");
@@ -444,7 +445,7 @@ public final class JdbcCodeGenerationUtil {
             }
 
             if (headPart.contains("javax.persistence.")) {
-                sb.append(LINE_SEPERATOR);
+                sb.append(LINE_SEPARATOR);
             }
 
             sb.append(headPart);
@@ -479,45 +480,46 @@ public final class JdbcCodeGenerationUtil {
                 }
 
                 if (eccJsonXmlConfig.getEnumerated() != null) {
-                    tmp.add("enumerated = EnumBy." + eccJsonXmlConfig.getEnumerated().name() + "");
+                    tmp.add("enumerated = EnumBy." + eccJsonXmlConfig.getEnumerated().name());
                 }
 
-                sb.append("@JsonXmlConfig" + Strings.join(tmp, ", ", "(", ")")).append(LINE_SEPERATOR);
+                sb.append("@JsonXmlConfig").append(Strings.join(tmp, ", ", "(", ")")).append(LINE_SEPARATOR);
             }
 
             sb.append(isJavaPersistenceTable ? "@Table(name = \"" + entityName + "\")" : "@Table(\"" + entityName + "\")")
-                    .append(LINE_SEPERATOR)
-                    .append("public class " + finalClassName)
+                    .append(LINE_SEPARATOR)
+                    .append("public class ")
+                    .append(finalClassName)
                     .append(" {")
-                    .append(LINE_SEPERATOR);
+                    .append(LINE_SEPARATOR);
 
             for (int i = 0, size = columnNameList.size(); i < size; i++) {
                 final String columnName = columnNameList.get(i);
                 final String fieldName = fieldNameList.get(i);
                 final String columnClassName = columnClassNameList.get(i);
 
-                sb.append(LINE_SEPERATOR);
+                sb.append(LINE_SEPARATOR);
 
                 if (idFields.remove(fieldName) || idFields.remove(columnName)) {
-                    sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append(LINE_SEPERATOR); //NOSONAR
+                    sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append(LINE_SEPARATOR); //NOSONAR
                 }
 
                 if (readOnlyFields.remove(fieldName) || readOnlyFields.remove(columnName)) {
-                    sb.append("    @ReadOnly").append(LINE_SEPERATOR);
+                    sb.append("    @ReadOnly").append(LINE_SEPARATOR);
                 } else if (nonUpdatableFields.remove(fieldName) || nonUpdatableFields.remove(columnName)) {
-                    sb.append("    @NonUpdatable").append(LINE_SEPERATOR);
+                    sb.append("    @NonUpdatable").append(LINE_SEPARATOR);
                 }
 
                 sb.append(isJavaPersistenceColumn ? "    @Column(name = \"" + columnName + "\")" : "    @Column(\"" + columnName + "\")")
-                        .append(LINE_SEPERATOR);
+                        .append(LINE_SEPARATOR);
 
                 final Tuple2<String, String> dbType = customizedFieldDbTypeMap.getOrDefault(fieldName, customizedFieldDbTypeMap.get(columnName));
 
                 if (dbType != null) {
-                    sb.append("    @Type(name = \"" + dbType._2 + "\")").append(LINE_SEPERATOR);
+                    sb.append("    @Type(name = \"").append(dbType._2).append("\")").append(LINE_SEPARATOR);
                 }
 
-                sb.append("    private " + columnClassName + " " + fieldName + ";").append(LINE_SEPERATOR);
+                sb.append("    private ").append(columnClassName).append(" ").append(fieldName).append(";").append(LINE_SEPARATOR);
             }
 
             //    if (idFields.size() > 0) {
@@ -536,57 +538,70 @@ public final class JdbcCodeGenerationUtil {
             //    }
 
             if (Strings.isNotEmpty(configToUse.getAdditionalFieldsOrLines())) {
-                sb.append(LINE_SEPERATOR).append(configToUse.getAdditionalFieldsOrLines());
+                sb.append(LINE_SEPARATOR).append(configToUse.getAdditionalFieldsOrLines());
             }
 
             if (configToUse.isGenerateCopyMethod()) {
                 // TODO extract fields from additionalFieldsOrLines?
 
-                sb.append(LINE_SEPERATOR)
-                        .append("    public " + className + " copy() {")
-                        .append(LINE_SEPERATOR) //
-                        .append("        final " + className + " copy = new " + className + "();")
-                        .append(LINE_SEPERATOR); //
+                //
+                sb.append(LINE_SEPARATOR)
+                        .append("    public ")
+                        .append(className)
+                        .append(" copy() {")
+                        .append(LINE_SEPARATOR)
+                        .append("        final ")
+                        .append(className)
+                        .append(" copy = new ")
+                        .append(className)
+                        .append("();")
+                        .append(LINE_SEPARATOR); //
 
                 for (final String fieldName : fieldNameList) {
-                    sb.append("        copy." + fieldName + " = this." + fieldName + ";").append(LINE_SEPERATOR);
+                    sb.append("        copy.").append(fieldName).append(" = this.").append(fieldName).append(";").append(LINE_SEPARATOR);
                 }
 
                 for (final Tuple2<String, String> tp : additionalFields) {
-                    sb.append("        copy." + tp._2 + " = this." + tp._2 + ";").append(LINE_SEPERATOR);
+                    sb.append("        copy.").append(tp._2).append(" = this.").append(tp._2).append(";").append(LINE_SEPARATOR);
                 }
 
-                sb.append("        return copy;").append(LINE_SEPERATOR).append("    }").append(LINE_SEPERATOR);
+                sb.append("        return copy;").append(LINE_SEPARATOR).append("    }").append(LINE_SEPARATOR);
             }
 
             if (configToUse.isGenerateFieldNameTable()) {
-                sb.append(LINE_SEPERATOR)
+                sb.append(LINE_SEPARATOR)
                         .append("    /*")
-                        .append(LINE_SEPERATOR)
+                        .append(LINE_SEPARATOR)
                         .append("     * Auto-generated class for property(field) name table by abacus-jdbc.")
-                        .append(LINE_SEPERATOR)
+                        .append(LINE_SEPARATOR)
                         .append("     */");
 
-                sb.append(LINE_SEPERATOR)
+                sb.append(LINE_SEPARATOR)
                         .append("    public interface ")
                         .append(X)
                         .append(" {")
                         .append(Character.isLowerCase(X.charAt(0)) ? " // NOSONAR" : "")
-                        .append(LINE_SEPERATOR)
-                        .append(LINE_SEPERATOR); //
+                        .append(LINE_SEPARATOR)
+                        .append(LINE_SEPARATOR); //
 
                 for (final String fieldName : fieldNameList) {
-                    sb.append("        /** Property(field) name {@code \"" + fieldName + "\"} */")
-                            .append(LINE_SEPERATOR)
-                            .append("        String " + fieldName + " = \"" + fieldName + "\";")
-                            .append(LINE_SEPERATOR)
-                            .append(LINE_SEPERATOR);
+                    sb.append("        /** Property(field) name {@code \"")
+                            .append(fieldName)
+                            .append("\"} */")
+                            .append(LINE_SEPARATOR)
+                            .append("        String ")
+                            .append(fieldName)
+                            .append(" = \"")
+                            .append(fieldName)
+                            .append("\";")
+                            .append(LINE_SEPARATOR)
+                            .append(LINE_SEPARATOR);
                 }
 
-                sb.append("    }").append(LINE_SEPERATOR);
+                sb.append("    }").append(LINE_SEPARATOR);
             }
 
-            sb.append(LINE_SEPERATOR).append("}").append(LINE_SEPERATOR);
+            sb.append(LINE_SEPARATOR).append("}").append(LINE_SEPARATOR);
 
             final String result = sb.toString();
 
@@ -645,7 +660,7 @@ public final class JdbcCodeGenerationUtil {
         return eccClassNameMap.getOrDefault(columnClassName, columnClassName);
     }
 
-    private static String mapColumClassnName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
+    private static String mapColumClassName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
         String className = columnClassName.replace("java.lang.", "");
 
         if (isCustomizedType) {
@@ -875,8 +890,8 @@ public final class JdbcCodeGenerationUtil {
      *        .className("User")
      *        .packageName("codes.entity")
      *        .srcDir("./samples")
-     *        .fieldNameConverter((enityOrTableName, columnName) -> StringUtil.toCamelCase(columnName))
-     *        .fieldTypeConverter((enityOrTableName, fieldName, columnName, columnClassName) -> columnClassName // columnClassName <- resultSetMetaData.getColumnClassName(columnIndex);
+     *        .fieldNameConverter((entityOrTableName, columnName) -> StringUtil.toCamelCase(columnName))
+     *        .fieldTypeConverter((entityOrTableName, fieldName, columnName, columnClassName) -> columnClassName // columnClassName <- resultSetMetaData.getColumnClassName(columnIndex);
      *                .replace("java.lang.", ""))
      *        .useBoxedType(false)
      *        .readOnlyFields(N.asSet("id"))

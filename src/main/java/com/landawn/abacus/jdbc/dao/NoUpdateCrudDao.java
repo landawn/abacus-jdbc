@@ -34,6 +34,7 @@ import com.landawn.abacus.util.SQLBuilder;
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
  */
+@SuppressWarnings("RedundantThrows")
 @Beta
 public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpdateCrudDao<T, ID, SB, TD>>
         extends NoUpdateDao<T, SB, TD>, CrudDao<T, ID, SB, TD> {
