@@ -36,6 +36,7 @@ import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
+import com.landawn.abacus.util.ExceptionUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Result;
 import com.landawn.abacus.util.SQLBuilder;
@@ -150,7 +151,7 @@ final class DaoUtil {
         } else if (e.getCause() instanceof SQLException) {
             throw new UncheckedSQLException((SQLException) e.getCause());
         } else {
-            throw N.toRuntimeException(e);
+            throw ExceptionUtil.toRuntimeException(e, true);
         }
     };
 
@@ -160,7 +161,7 @@ final class DaoUtil {
         } else if (e.getCause() instanceof SQLException) {
             throw (SQLException) e.getCause();
         } else {
-            throw N.toRuntimeException(e);
+            throw ExceptionUtil.toRuntimeException(e, true);
         }
     };
 
@@ -224,7 +225,7 @@ final class DaoUtil {
         if (tp == null) {
             java.lang.reflect.Type[] typeArguments = null;
 
-            if (N.notEmpty(daoInterface.getGenericInterfaces()) && daoInterface.getGenericInterfaces()[0] instanceof ParameterizedType parameterizedType) {
+            if (N.notEmpty(daoInterface.getGenericInterfaces()) && daoInterface.getGenericInterfaces()[0] instanceof final ParameterizedType parameterizedType) {
                 typeArguments = parameterizedType.getActualTypeArguments();
             }
 

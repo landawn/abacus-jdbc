@@ -78,6 +78,7 @@ import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.EntityId;
+import com.landawn.abacus.util.ExceptionUtil;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.BiConsumers;
 import com.landawn.abacus.util.Holder;
@@ -313,7 +314,7 @@ public final class JdbcUtil {
 
             return new com.zaxxer.hikari.HikariDataSource(config);
         } catch (final Exception e) {
-            throw N.toRuntimeException(e);
+            throw ExceptionUtil.toRuntimeException(e, true);
         }
     }
 
@@ -335,7 +336,7 @@ public final class JdbcUtil {
 
             return cpds;
         } catch (final Exception e) {
-            throw N.toRuntimeException(e);
+            throw ExceptionUtil.toRuntimeException(e, true);
         }
     }
 
@@ -4228,7 +4229,7 @@ public final class JdbcUtil {
         if ((parameters.length == 1) && (parameters[0] != null)) {
             if (parameters[0] instanceof Object[] && ((((Object[]) parameters[0]).length) >= parsedSql.getParameterCount())) {
                 return (Object[]) parameters[0];
-            } else if (parameters[0] instanceof Collection<?> c && (((List<?>) parameters[0]).size() >= parsedSql.getParameterCount())) {
+            } else if (parameters[0] instanceof final Collection<?> c && (((List<?>) parameters[0]).size() >= parsedSql.getParameterCount())) {
                 return c.toArray(new Object[0]);
             }
         }
@@ -6414,7 +6415,7 @@ public final class JdbcUtil {
     //        try {
     //            sqlAction.run();
     //        } catch (final Exception e) {
-    //            throw N.toRuntimeException(e);
+    //           throw ExceptionUtil.toRuntimeException(e, true);
     //        }
     //    }
     //
@@ -6433,7 +6434,7 @@ public final class JdbcUtil {
     //        try {
     //            sqlAction.accept(t);
     //        } catch (final Exception e) {
-    //            throw N.toRuntimeException(e);
+    //            throw ExceptionUtil.toRuntimeException(e, true);
     //        }
     //    }
     //
@@ -6455,7 +6456,7 @@ public final class JdbcUtil {
     //        try {
     //            sqlAction.accept(t, u);
     //        } catch (final Exception e) {
-    //            throw N.toRuntimeException(e);
+    //            throw ExceptionUtil.toRuntimeException(e, true);
     //        }
     //    }
     //
@@ -6479,7 +6480,7 @@ public final class JdbcUtil {
     //        try {
     //            sqlAction.accept(a, b, c);
     //        } catch (final Exception e) {
-    //            throw N.toRuntimeException(e);
+    //            throw ExceptionUtil.toRuntimeException(e, true);
     //        }
     //    }
     //
@@ -6498,7 +6499,7 @@ public final class JdbcUtil {
     //        try {
     //            return sqlAction.call();
     //        } catch (final Exception e) {
-    //            throw N.toRuntimeException(e);
+    //            throw ExceptionUtil.toRuntimeException(e, true);
     //        }
     //    }
     //
@@ -6519,7 +6520,7 @@ public final class JdbcUtil {
     //        try {
     //            return sqlAction.apply(t);
     //        } catch (final Exception e) {
-    //            throw N.toRuntimeException(e);
+    //            throw ExceptionUtil.toRuntimeException(e, true);
     //        }
     //    }
     //
@@ -6543,7 +6544,7 @@ public final class JdbcUtil {
     //        try {
     //            return sqlAction.apply(t, u);
     //        } catch (final Exception e) {
-    //            throw N.toRuntimeException(e);
+    //            throw ExceptionUtil.toRuntimeException(e, true);
     //        }
     //    }
     //
@@ -6569,7 +6570,7 @@ public final class JdbcUtil {
     //        try {
     //            return sqlAction.apply(a, b, c);
     //        } catch (final Exception e) {
-    //            throw N.toRuntimeException(e);
+    //            throw ExceptionUtil.toRuntimeException(e, true);
     //        }
     //    }
 
