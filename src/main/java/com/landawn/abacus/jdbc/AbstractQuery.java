@@ -110,7 +110,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/PreparedStatement.html">PreparedStatement</a>
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/ResultSet.html">ResultSet</a>
  */
-@SuppressWarnings("java:S1192")
+@SuppressWarnings("resource")
 public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends AbstractQuery<Stmt, This>> implements AutoCloseable {
 
     static final Logger logger = LoggerFactory.getLogger(AbstractQuery.class);

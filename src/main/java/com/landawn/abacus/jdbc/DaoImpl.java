@@ -162,7 +162,7 @@ import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 @Internal
-@SuppressWarnings({ "deprecation", "java:S1192" })
+@SuppressWarnings({ "deprecation", "java:S1192", "resource" })
 final class DaoImpl {
 
     private DaoImpl() {
@@ -1640,7 +1640,7 @@ final class DaoImpl {
 
             if (cond != null) {
                 switch (cond.getOperator()) {
-                    case LIMIT:
+                    case LIMIT: // should never happen
                         criteria.limit((Limit) cond);
                         break;
 

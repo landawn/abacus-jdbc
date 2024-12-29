@@ -83,7 +83,7 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/PreparedStatement.html">PreparedStatement</a>
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/ResultSet.html">ResultSet</a>
  */
-@SuppressWarnings("java:S1192")
+@SuppressWarnings({ "java:S1192", "resource" })
 public final class CallableQuery extends AbstractQuery<CallableStatement, CallableQuery> {
 
     final CallableStatement cstmt;

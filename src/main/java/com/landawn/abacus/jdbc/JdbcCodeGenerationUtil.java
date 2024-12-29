@@ -68,6 +68,7 @@ import lombok.experimental.Accessors;
 /**
  * @see CodeGenerationUtil
  */
+@SuppressWarnings("resource")
 public final class JdbcCodeGenerationUtil {
 
     /**

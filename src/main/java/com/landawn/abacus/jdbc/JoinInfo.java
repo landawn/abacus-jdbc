@@ -53,7 +53,7 @@ import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 @Internal
-@SuppressWarnings("java:S1192")
+@SuppressWarnings({ "java:S1192", "resource" })
 public final class JoinInfo {
 
     static final Map<Class<? extends SQLBuilder>, Tuple4<Function<Collection<String>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>>> sqlBuilderFuncMap = new HashMap<>();

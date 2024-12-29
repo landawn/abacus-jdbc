@@ -44,6 +44,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
  */
+@SuppressWarnings("resource")
 public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
 
     /**

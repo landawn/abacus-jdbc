@@ -50,7 +50,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
  */
-@SuppressWarnings("RedundantThrows")
+@SuppressWarnings({ "RedundantThrows", "resource" })
 public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Retrieves the class type of the target DAO interface.

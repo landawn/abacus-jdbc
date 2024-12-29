@@ -70,6 +70,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
  */
+@SuppressWarnings("resource")
 @Beta
 public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
         extends UncheckedDao<T, SB, TD>, CrudDao<T, ID, SB, TD> {

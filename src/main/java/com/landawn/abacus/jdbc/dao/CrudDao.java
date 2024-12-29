@@ -71,7 +71,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
  */
-@SuppressWarnings("RedundantThrows")
+@SuppressWarnings({ "RedundantThrows", "resource" })
 public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
 
     /**

@@ -154,7 +154,7 @@ import com.landawn.abacus.util.stream.Stream;
  *          </ul>
  *      </ul>
  *      <ul>
- *          <li>Or else if the return type of the method is {@code OptionalBoolean/Byte/.../Double}, {@code PreparedQuery#queryForBoolean/Byte/...Double()} will called.</li>
+ *          <li>Or else if the return type of the method is {@code OptionalBoolean/Byte/.../Double}, {@code PreparedQuery#queryForBoolean/Byte/...Double()} will be called.</li>
  *      </ul>
  *      <ul>
  *          <li>Or else if the return type of the method is {@code List}, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"/"findOnlyOne"}, {@code PreparedQuery#list(Class)} will be called.</li>
@@ -229,7 +229,7 @@ import com.landawn.abacus.util.stream.Stream;
  *
  * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
  */
-@SuppressWarnings("RedundantThrows")
+@SuppressWarnings({ "RedundantThrows", "resource" })
 public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**

@@ -132,7 +132,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/PreparedStatement.html">PreparedStatement</a>
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/ResultSet.html">ResultSet</a>
  */
-@SuppressWarnings({ "java:S1192", "java:S6539" })
+@SuppressWarnings({ "java:S1192", "java:S6539", "resource" })
 public final class JdbcUtil {
 
     static final Logger logger = LoggerFactory.getLogger(JdbcUtil.class);

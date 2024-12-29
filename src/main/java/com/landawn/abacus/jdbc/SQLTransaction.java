@@ -34,6 +34,7 @@ import com.landawn.abacus.util.Throwables;
  * DO NOT CLOSE the connection manually. It will be automatically closed after the transaction is committed or rolled back.
  *
  */
+@SuppressWarnings("resource")
 public final class SQLTransaction implements Transaction, AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(SQLTransaction.class);
