@@ -217,33 +217,33 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     /**
      *
      *
-     * @param <V>
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param id
+     * @param targetValueType
+     * @param <V>
      * @return
      * @throws UncheckedSQLException
      */
     @Override
-    default <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
+    default <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
             throws UncheckedSQLException {
-        return queryForSingleResult(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        return queryForSingleResult(singleSelectPropName, Long.valueOf(id), targetValueType);
     }
 
     /**
      *
      *
-     * @param <V>
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param id
+     * @param targetValueType
+     * @param <V>
      * @return
      * @throws UncheckedSQLException
      */
     @Override
-    default <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
+    default <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
             throws UncheckedSQLException {
-        return queryForSingleNonNull(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        return queryForSingleNonNull(singleSelectPropName, Long.valueOf(id), targetValueType);
     }
 
     /**
@@ -264,35 +264,35 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     /**
      *
      *
-     * @param <V>
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param id
+     * @param targetValueType
+     * @param <V>
      * @return
      * @throws DuplicatedResultException
      * @throws UncheckedSQLException
      */
     @Override
-    default <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
+    default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
             throws DuplicatedResultException, UncheckedSQLException {
-        return queryForUniqueResult(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        return queryForUniqueResult(singleSelectPropName, Long.valueOf(id), targetValueType);
     }
 
     /**
      *
      *
-     * @param <V>
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param id
+     * @param targetValueType
+     * @param <V>
      * @return
      * @throws DuplicatedResultException
      * @throws UncheckedSQLException
      */
     @Override
-    default <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final long id)
+    default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
             throws DuplicatedResultException, UncheckedSQLException {
-        return queryForUniqueNonNull(targetValueClass, singleSelectPropName, Long.valueOf(id));
+        return queryForUniqueNonNull(singleSelectPropName, Long.valueOf(id), targetValueType);
     }
 
     /**

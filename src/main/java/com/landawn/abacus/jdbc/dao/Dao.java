@@ -1331,34 +1331,34 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      * Returns a {@code Nullable<V>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
-     *
-     * @param <V>
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param cond
+     * @param targetValueType
+     *
+     * @param <V>
      * @return
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      * @see AbstractQuery#queryForSingleResult(Class)
      */
-    <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
+    <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws SQLException;
 
     /**
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
-     *
-     * @param <V> the value type
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param cond
+     * @param targetValueType
+     *
+     * @param <V> the value type
      * @return
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
-    <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
+    <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws SQLException;
 
     /**
@@ -1381,11 +1381,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      * And throws {@code DuplicatedResultException} if more than one record found.
-     *
-     * @param <V> the value type
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param cond
+     * @param targetValueType
+     *
+     * @param <V> the value type
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
@@ -1393,16 +1393,16 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      * @see AbstractQuery#queryForUniqueResult(Class)
      */
-    <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
+    <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws DuplicatedResultException, SQLException;
 
     /**
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
-     *
-     * @param <V> the value type
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param cond
+     * @param targetValueType
+     *
+     * @param <V> the value type
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
@@ -1410,7 +1410,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
-    <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
+    <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws DuplicatedResultException, SQLException;
 
     /**

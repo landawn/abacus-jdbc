@@ -642,11 +642,11 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a {@code Nullable<V>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
-     *
-     * @param <V>
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param cond
+     * @param targetValueType
+     *
+     * @param <V>
      * @return
      * @throws UncheckedSQLException
      * @see ConditionFactory
@@ -654,16 +654,16 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @see AbstractQuery#queryForSingleResult(Class)
      */
     @Override
-    <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
+    <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws UncheckedSQLException;
 
     /**
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
-     *
-     * @param <V> the value type
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param cond
+     * @param targetValueType
+     *
+     * @param <V> the value type
      * @return
      * @throws UncheckedSQLException
      * @see ConditionFactory
@@ -671,7 +671,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Override
-    <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
+    <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws UncheckedSQLException;
 
     /**
@@ -694,11 +694,11 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     /**
      * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      * And throws {@code DuplicatedResultException} if more than one record found.
-     *
-     * @param <V> the value type
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param cond
+     * @param targetValueType
+     *
+     * @param <V> the value type
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws UncheckedSQLException
@@ -707,16 +707,16 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @see AbstractQuery#queryForUniqueResult(Class)
      */
     @Override
-    <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
+    <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws DuplicatedResultException, UncheckedSQLException;
 
     /**
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
-     *
-     * @param <V> the value type
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param cond
+     * @param targetValueType
+     *
+     * @param <V> the value type
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws UncheckedSQLException
@@ -725,7 +725,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
-    <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final Condition cond)
+    <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws DuplicatedResultException, UncheckedSQLException;
 
     /**

@@ -3583,35 +3583,35 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @param <V> the value type
-     * @param targetType
+     * @param targetValueType
      * @return
      * @throws IllegalArgumentException
      * @throws IllegalStateException if this is closed
      * @throws SQLException
      */
-    public <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetType) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(targetType, s.targetType);
+    public <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException {
+        checkArgNotNull(targetValueType, s.targetType);
         assertNotClosed();
 
-        return queryForSingleResult(Type.of(targetType));
+        return queryForSingleResult(Type.of(targetValueType));
     }
 
     /**
      * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @param <V>
-     * @param targetType
+     * @param targetValueType
      * @return
      * @throws IllegalArgumentException
      * @throws IllegalStateException if this is closed
      * @throws SQLException
      */
-    public <V> Nullable<V> queryForSingleResult(final Type<? extends V> targetType) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(targetType, s.targetType);
+    public <V> Nullable<V> queryForSingleResult(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException {
+        checkArgNotNull(targetValueType, s.targetType);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Nullable.of(targetType.get(rs, 1)) : Nullable.empty();
+            return rs.next() ? Nullable.of(targetValueType.get(rs, 1)) : Nullable.empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -3621,35 +3621,35 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
      *
      * @param <V> the value type
-     * @param targetType
+     * @param targetValueType
      * @return
      * @throws IllegalArgumentException
      * @throws IllegalStateException if this is closed
      * @throws SQLException
      */
-    public <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetType) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(targetType, s.targetType);
+    public <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException {
+        checkArgNotNull(targetValueType, s.targetType);
         assertNotClosed();
 
-        return queryForSingleNonNull(Type.of(targetType));
+        return queryForSingleNonNull(Type.of(targetValueType));
     }
 
     /**
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
      *
      * @param <V>
-     * @param targetType
+     * @param targetValueType
      * @return
      * @throws IllegalArgumentException
      * @throws IllegalStateException if this is closed
      * @throws SQLException
      */
-    public <V> Optional<V> queryForSingleNonNull(final Type<? extends V> targetType) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(targetType, s.targetType);
+    public <V> Optional<V> queryForSingleNonNull(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException {
+        checkArgNotNull(targetValueType, s.targetType);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? Optional.of(targetType.get(rs, 1)) : Optional.empty();
+            return rs.next() ? Optional.of(targetValueType.get(rs, 1)) : Optional.empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -3659,43 +3659,43 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @param <V> the value type
-     * @param targetType
+     * @param targetValueType
      * @return
      * @throws IllegalArgumentException
      * @throws IllegalStateException if this is closed
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
      */
-    public <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetType)
+    public <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException {
-        checkArgNotNull(targetType, s.targetType);
+        checkArgNotNull(targetValueType, s.targetType);
         assertNotClosed();
 
-        return queryForUniqueResult(Type.of(targetType));
+        return queryForUniqueResult(Type.of(targetValueType));
     }
 
     /**
      * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      *
      * @param <V>
-     * @param targetType
+     * @param targetValueType
      * @return
      * @throws IllegalArgumentException
      * @throws IllegalStateException if this is closed
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
      */
-    public <V> Nullable<V> queryForUniqueResult(final Type<? extends V> targetType)
+    public <V> Nullable<V> queryForUniqueResult(final Type<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException {
-        checkArgNotNull(targetType, s.targetType);
+        checkArgNotNull(targetValueType, s.targetType);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            final Nullable<V> result = rs.next() ? Nullable.of(targetType.get(rs, 1)) : Nullable.empty();
+            final Nullable<V> result = rs.next() ? Nullable.of(targetValueType.get(rs, 1)) : Nullable.empty();
 
             if (result.isPresent() && rs.next()) {
                 throw new DuplicatedResultException(
-                        "At least two results found: " + Strings.concat(result.get(), ", ", N.convert(JdbcUtil.getColumnValue(rs, 1), targetType)));
+                        "At least two results found: " + Strings.concat(result.get(), ", ", N.convert(JdbcUtil.getColumnValue(rs, 1), targetValueType)));
             }
 
             return result;
@@ -3708,43 +3708,43 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
      *
      * @param <V> the value type
-     * @param targetType
+     * @param targetValueType
      * @return
      * @throws IllegalArgumentException
      * @throws IllegalStateException if this is closed
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
      */
-    public <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetType)
+    public <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException {
-        checkArgNotNull(targetType, s.targetType);
+        checkArgNotNull(targetValueType, s.targetType);
         assertNotClosed();
 
-        return queryForUniqueNonNull(Type.of(targetType));
+        return queryForUniqueNonNull(Type.of(targetValueType));
     }
 
     /**
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
      *
      * @param <V> the value type
-     * @param targetType
+     * @param targetValueType
      * @return
      * @throws IllegalArgumentException
      * @throws IllegalStateException if this is closed
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
      */
-    public <V> Optional<V> queryForUniqueNonNull(final Type<? extends V> targetType)
+    public <V> Optional<V> queryForUniqueNonNull(final Type<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException {
-        checkArgNotNull(targetType, s.targetType);
+        checkArgNotNull(targetValueType, s.targetType);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            final Optional<V> result = rs.next() ? Optional.of(targetType.get(rs, 1)) : Optional.empty();
+            final Optional<V> result = rs.next() ? Optional.of(targetValueType.get(rs, 1)) : Optional.empty();
 
             if (result.isPresent() && rs.next()) {
                 throw new DuplicatedResultException(
-                        "At least two results found: " + Strings.concat(result.get(), ", ", N.convert(JdbcUtil.getColumnValue(rs, 1), targetType)));
+                        "At least two results found: " + Strings.concat(result.get(), ", ", N.convert(JdbcUtil.getColumnValue(rs, 1), targetValueType)));
             }
 
             return result;

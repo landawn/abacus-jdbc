@@ -2845,33 +2845,39 @@ final class DaoImpl {
                             final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForBytes();
                         };
-                    } else if (methodName.equals("queryForSingleResult") && paramLen == 3 && paramTypes[0].equals(Class.class)
-                            && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
+                    } else if (methodName.equals("queryForSingleResult") && paramLen == 3 && paramTypes[0].equals(String.class)
+                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Class.class)) {
                         call = (proxy, args) -> {
-                            final Class<?> targetType = (Class) args[0];
-                            final String selectPropName = (String) args[1];
-                            final Condition cond = (Condition) args[2];
-                            N.checkArgNotNull(targetType, "targetClass");
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final Class<?> targetValueType = (Class) args[2];
                             N.checkArgNotEmpty(selectPropName, "selectPropName");
                             N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(targetValueType, "targetValueType");
 
                             final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForSingleResult(targetType);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchSize(1)
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .queryForSingleResult(targetValueType);
                         };
-                    } else if (methodName.equals("queryForSingleNonNull") && paramLen == 3 && paramTypes[0].equals(Class.class)
-                            && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
+                    } else if (methodName.equals("queryForSingleNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
+                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Class.class)) {
                         call = (proxy, args) -> {
-                            final Class<?> targetType = (Class) args[0];
-                            final String selectPropName = (String) args[1];
-                            final Condition cond = (Condition) args[2];
-                            N.checkArgNotNull(targetType, "targetClass");
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final Class<?> targetValueType = (Class) args[2];
                             N.checkArgNotEmpty(selectPropName, "selectPropName");
                             N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(targetValueType, "targetValueType");
 
                             final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForSingleNonNull(targetType);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchSize(1)
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .queryForSingleNonNull(targetValueType);
                         };
                     } else if (methodName.equals("queryForSingleNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowMapper.class)) {
@@ -2887,33 +2893,39 @@ final class DaoImpl {
                             final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.sql).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).findFirst(rowMapper);
                         };
-                    } else if (methodName.equals("queryForUniqueResult") && paramLen == 3 && paramTypes[0].equals(Class.class)
-                            && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
+                    } else if (methodName.equals("queryForUniqueResult") && paramLen == 3 && paramTypes[0].equals(String.class)
+                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Class.class)) {
                         call = (proxy, args) -> {
-                            final Class<?> targetType = (Class) args[0];
-                            final String selectPropName = (String) args[1];
-                            final Condition cond = (Condition) args[2];
-                            N.checkArgNotNull(targetType, "targetClass");
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final Class<?> targetValueType = (Class) args[2];
                             N.checkArgNotEmpty(selectPropName, "selectPropName");
                             N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(targetValueType, "targetValueType");
 
                             final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).settParameters(sp.parameters, collParamsSetter).queryForUniqueResult(targetType);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchSize(2)
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .queryForUniqueResult(targetValueType);
                         };
-                    } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 3 && paramTypes[0].equals(Class.class)
-                            && paramTypes[1].equals(String.class) && paramTypes[2].equals(Condition.class)) {
+                    } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
+                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Class.class)) {
                         call = (proxy, args) -> {
-                            final Class<?> targetType = (Class) args[0];
-                            final String selectPropName = (String) args[1];
-                            final Condition cond = (Condition) args[2];
-                            N.checkArgNotNull(targetType, "targetClass");
+                            final String selectPropName = (String) args[0];
+                            final Condition cond = (Condition) args[1];
+                            final Class<?> targetValueType = (Class) args[2];
                             N.checkArgNotEmpty(selectPropName, "selectPropName");
                             N.checkArgNotNull(cond, "cond");
+                            N.checkArgNotNull(targetValueType, "targetValueType");
 
                             final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply(selectPropName, limitedCond);
-                            return proxy.prepareQuery(sp.sql).setFetchSize(2).settParameters(sp.parameters, collParamsSetter).queryForUniqueNonNull(targetType);
+                            return proxy.prepareQuery(sp.sql)
+                                    .setFetchSize(2)
+                                    .settParameters(sp.parameters, collParamsSetter)
+                                    .queryForUniqueNonNull(targetValueType);
                         };
                     } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
                             && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowMapper.class)) {
@@ -4288,33 +4300,33 @@ final class DaoImpl {
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForBytes();
                         };
-                    } else if (methodName.equals("queryForSingleResult") && paramLen == 3 && paramTypes[0].equals(Class.class)
-                            && paramTypes[1].equals(String.class) && !paramTypes[2].equals(Condition.class)) {
+                    } else if (methodName.equals("queryForSingleResult") && paramLen == 3 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Class.class)) {
                         call = (proxy, args) -> {
-                            final Class<?> targetType = (Class) args[0];
-                            final String selectPropName = (String) args[1];
-                            final Object id = args[2];
-                            N.checkArgNotNull(targetType, "targetClass");
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            final Class<?> targetValueType = (Class) args[2];
                             N.checkArgNotEmpty(selectPropName, "selectPropName");
                             N.checkArgNotNull(id, "id");
+                            N.checkArgNotNull(targetValueType, "targetValueType");
 
                             final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
-                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForSingleResult(targetType);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForSingleResult(targetValueType);
                         };
-                    } else if (methodName.equals("queryForSingleNonNull") && paramLen == 3 && paramTypes[0].equals(Class.class)
-                            && paramTypes[1].equals(String.class) && !paramTypes[2].equals(Condition.class)) {
+                    } else if (methodName.equals("queryForSingleNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Class.class)) {
                         call = (proxy, args) -> {
-                            final Class<?> targetType = (Class) args[0];
-                            final String selectPropName = (String) args[1];
-                            final Object id = args[2];
-                            N.checkArgNotNull(targetType, "targetClass");
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            final Class<?> targetValueType = (Class) args[2];
                             N.checkArgNotEmpty(selectPropName, "selectPropName");
                             N.checkArgNotNull(id, "id");
+                            N.checkArgNotNull(targetValueType, "targetValueType");
 
                             final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
-                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForSingleNonNull(targetType);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).queryForSingleNonNull(targetValueType);
                         };
                     } else if (methodName.equals("queryForSingleNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
                             && !paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowMapper.class)) {
@@ -4330,33 +4342,33 @@ final class DaoImpl {
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.sql).setFetchSize(1).settParameters(id, idParamSetter).findFirst(rowMapper);
                         };
-                    } else if (methodName.equals("queryForUniqueResult") && paramLen == 3 && paramTypes[0].equals(Class.class)
-                            && paramTypes[1].equals(String.class) && !paramTypes[2].equals(Condition.class)) {
+                    } else if (methodName.equals("queryForUniqueResult") && paramLen == 3 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Class.class)) {
                         call = (proxy, args) -> {
-                            final Class<?> targetType = (Class) args[0];
-                            final String selectPropName = (String) args[1];
-                            final Object id = args[2];
-                            N.checkArgNotNull(targetType, "targetClass");
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            final Class<?> targetValueType = (Class) args[2];
                             N.checkArgNotEmpty(selectPropName, "selectPropName");
                             N.checkArgNotNull(id, "id");
+                            N.checkArgNotNull(targetValueType, "targetValueType");
 
                             final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
-                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(2).settParameters(id, idParamSetter).queryForUniqueResult(targetType);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(2).settParameters(id, idParamSetter).queryForUniqueResult(targetValueType);
                         };
-                    } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 3 && paramTypes[0].equals(Class.class)
-                            && paramTypes[1].equals(String.class) && !paramTypes[2].equals(Condition.class)) {
+                    } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
+                            && !paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Class.class)) {
                         call = (proxy, args) -> {
-                            final Class<?> targetType = (Class) args[0];
-                            final String selectPropName = (String) args[1];
-                            final Object id = args[2];
-                            N.checkArgNotNull(targetType, "targetClass");
+                            final String selectPropName = (String) args[0];
+                            final Object id = args[1];
+                            final Class<?> targetValueType = (Class) args[2];
                             N.checkArgNotEmpty(selectPropName, "selectPropName");
                             N.checkArgNotNull(id, "id");
+                            N.checkArgNotNull(targetValueType, "targetValueType");
 
                             final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
-                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(2).settParameters(id, idParamSetter).queryForUniqueNonNull(targetType);
+                            return proxy.prepareNamedQuery(sp.sql).setFetchSize(2).settParameters(id, idParamSetter).queryForUniqueNonNull(targetValueType);
                         };
                     } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
                             && !paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowMapper.class)) {
@@ -4553,8 +4565,7 @@ final class DaoImpl {
 
                                     final String query = sql_in_query + joiner.toString();
 
-                                    try (PreparedQuery preparedQuery = proxy.prepareQuery(query)
-                                            .closeAfterExecution(false)) {
+                                    try (PreparedQuery preparedQuery = proxy.prepareQuery(query).closeAfterExecution(false)) {
                                         for (int i = 0, to = idList.size() - batchSize; i <= to; i += batchSize) {
                                             result += preparedQuery.settParameters(idList.subList(i, i + batchSize), collParamsSetter)
                                                     .queryForInt()

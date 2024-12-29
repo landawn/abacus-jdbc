@@ -361,33 +361,33 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Returns a {@code Nullable<V>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
-     *
-     * @param <V>
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param id
+     * @param targetValueType
+     *
+     * @param <V>
      * @return
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      * @see AbstractQuery#queryForSingleResult(Class)
      */
-    <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id) throws SQLException;
+    <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException;
 
     /**
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
-     *
-     * @param <V> the value type
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param id
+     * @param targetValueType
+     *
+     * @param <V> the value type
      * @return
      * @throws SQLException
      * @see ConditionFactory
      * @see ConditionFactory.CF
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
-    <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id) throws SQLException;
+    <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException;
 
     /**
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
@@ -408,11 +408,11 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      * And throws {@code DuplicatedResultException} if more than one record found.
-     *
-     * @param <V> the value type
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param id
+     * @param targetValueType
+     *
+     * @param <V> the value type
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
@@ -420,16 +420,16 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @see ConditionFactory.CF
      * @see AbstractQuery#queryForUniqueResult(Class)
      */
-    <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
+    <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
             throws DuplicatedResultException, SQLException;
 
     /**
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
-     *
-     * @param <V> the value type
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param id
+     * @param targetValueType
+     *
+     * @param <V> the value type
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws SQLException
@@ -437,7 +437,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @see ConditionFactory.CF
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
-    <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
+    <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
             throws DuplicatedResultException, SQLException;
 
     /**

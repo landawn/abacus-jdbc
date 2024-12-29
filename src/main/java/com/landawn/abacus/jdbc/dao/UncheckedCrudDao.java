@@ -370,11 +370,11 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
 
     /**
      * Returns a {@code Nullable<V>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
-     *
-     * @param <V>
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param id
+     * @param targetValueClass
+     *
+     * @param <V>
      * @return
      * @throws UncheckedSQLException
      * @see ConditionFactory
@@ -382,16 +382,16 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @see AbstractQuery#queryForSingleResult(Class)
      */
     @Override
-    <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
+    <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass)
             throws UncheckedSQLException;
 
     /**
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
-     *
-     * @param <V> the value type
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param id
+     * @param targetValueClass
+     *
+     * @param <V> the value type
      * @return
      * @throws UncheckedSQLException
      * @see ConditionFactory
@@ -399,7 +399,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Override
-    <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
+    <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass)
             throws UncheckedSQLException;
 
     /**
@@ -422,11 +422,11 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
      * And throws {@code DuplicatedResultException} if more than one record found.
-     *
-     * @param <V> the value type
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param id
+     * @param targetValueClass
+     *
+     * @param <V> the value type
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws UncheckedSQLException
@@ -435,16 +435,16 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @see AbstractQuery#queryForUniqueResult(Class)
      */
     @Override
-    <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
+    <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass)
             throws DuplicatedResultException, UncheckedSQLException;
 
     /**
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
-     *
-     * @param <V> the value type
-     * @param targetValueClass
      * @param singleSelectPropName
      * @param id
+     * @param targetValueClass
+     *
+     * @param <V> the value type
      * @return
      * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
      * @throws UncheckedSQLException
@@ -453,7 +453,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
-    <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueClass, final String singleSelectPropName, final ID id)
+    <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass)
             throws DuplicatedResultException, UncheckedSQLException;
 
     /**
