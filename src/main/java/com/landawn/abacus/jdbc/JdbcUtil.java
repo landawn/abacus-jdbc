@@ -350,7 +350,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException If a SQL exception occurs while creating the connection.
      */
     public static Connection createConnection(final String url, final String user, final String password) throws UncheckedSQLException {
-        return createConnection(getDriverClasssByUrl(url), url, user, password);
+        return createConnection(getDriverClassByUrl(url), url, user, password);
     }
 
     /**
@@ -397,7 +397,7 @@ public final class JdbcUtil {
      * @param url
      * @return
      */
-    private static Class<? extends Driver> getDriverClasssByUrl(final String url) {
+    private static Class<? extends Driver> getDriverClassByUrl(final String url) {
         N.checkArgNotEmpty(url, s.url);
 
         Class<? extends Driver> driverClass = null;
