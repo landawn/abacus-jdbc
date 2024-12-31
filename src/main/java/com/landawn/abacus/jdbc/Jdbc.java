@@ -691,22 +691,22 @@ public final class Jdbc {
         }
 
         /**
-         * @param entityClass
+         * @param entityClassForExtractor The class used to map the fields from the columns in the result set.
          * @return
          */
-        static ResultExtractor<DataSet> toDataSet(final Class<?> entityClass) {
-            return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClass));
+        static ResultExtractor<DataSet> toDataSet(final Class<?> entityClassForExtractor) {
+            return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClassForExtractor));
         }
 
         /**
          *
          *
-         * @param entityClass
+         * @param entityClassForExtractor The class used to map the fields from the columns in the result set.
          * @param prefixAndFieldNameMap
          * @return
          */
-        static ResultExtractor<DataSet> toDataSet(final Class<?> entityClass, final Map<String, String> prefixAndFieldNameMap) {
-            return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClass, prefixAndFieldNameMap));
+        static ResultExtractor<DataSet> toDataSet(final Class<?> entityClassForExtractor, final Map<String, String> prefixAndFieldNameMap) {
+            return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClassForExtractor, prefixAndFieldNameMap));
         }
 
         /**

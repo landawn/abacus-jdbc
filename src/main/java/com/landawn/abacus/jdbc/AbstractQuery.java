@@ -3780,13 +3780,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Retrieves the first {@code ResultSet} and maps it to a {@code DataSet} using the specified entity class.
      *
-     * @param entityClass The class used to map the fields from the columns in the result set.
+     * @param entityClassForExtractor The class used to map the fields from the columns in the result set.
      * @return A {@code DataSet} containing the results of the query.
      * @throws SQLException If a database access error occurs.
      * @see Jdbc.ResultExtractor#toDataSet(Class)
      */
-    public DataSet query(final Class<?> entityClass) throws SQLException {
-        return query(Jdbc.ResultExtractor.toDataSet(entityClass));
+    public DataSet query(final Class<?> entityClassForExtractor) throws SQLException {
+        return query(Jdbc.ResultExtractor.toDataSet(entityClassForExtractor));
     }
 
     /**
@@ -4053,7 +4053,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <R> The type of the result produced by the function.
      * @param <E> The type of exception that the function might throw.
-     * @param entityClass The class used to fetch fields from columns.
+     * @param entityClassForExtractor The class used to map the fields from the columns in the result set.
      * @param func The function to apply to the {@code DataSet} resulting from the query.
      * @return The result produced by applying the function to the {@code DataSet}.
      * @throws SQLException If a database access error occurs.
@@ -4061,9 +4061,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Jdbc.ResultExtractor#toDataSet(Class)
      */
     @Beta
-    public <R, E extends Exception> R queryThenApply(final Class<?> entityClass, final Throwables.Function<? super DataSet, ? extends R, E> func)
+    public <R, E extends Exception> R queryThenApply(final Class<?> entityClassForExtractor, final Throwables.Function<? super DataSet, ? extends R, E> func)
             throws SQLException, E {
-        return func.apply(query(entityClass));
+        return func.apply(query(entityClassForExtractor));
     }
 
     /**
@@ -4083,15 +4083,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Executes a query and applies a consumer action to the resulting {@code DataSet}, using the specified entity class to fetch fields from columns.
      *
      * @param <E> The type of exception that the consumer action might throw.
-     * @param entityClass The class used to fetch fields from columns.
+     * @param entityClassForExtractor The class used to map the fields from the columns in the result set.
      * @param action The consumer action to apply to the {@code DataSet} resulting from the query.
      * @throws SQLException If a database access error occurs.
      * @throws E If the consumer action throws an exception.
      * @see Jdbc.ResultExtractor#toDataSet(Class)
      */
     @Beta
-    public <E extends Exception> void queryThenAccept(final Class<?> entityClass, final Throwables.Consumer<? super DataSet, E> action) throws SQLException, E {
-        action.accept(query(entityClass));
+    public <E extends Exception> void queryThenAccept(final Class<?> entityClassForExtractor, final Throwables.Consumer<? super DataSet, E> action)
+            throws SQLException, E {
+        action.accept(query(entityClassForExtractor));
     }
 
     //    /**
