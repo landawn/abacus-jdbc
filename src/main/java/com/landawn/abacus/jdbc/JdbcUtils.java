@@ -2369,7 +2369,7 @@ public final class JdbcUtils {
      * </p>
      *
      * @param columnGetterForAll the ColumnGetter to use for setting parameters
-     * @return a BiConsumer that sets parameters on a PreparedQuery using the ResultSet
+     * @return a stateful {@code Throwables.BiConsumer}. Don't save or cache for reuse or use it in parallel stream.
      */
     @Beta
     @SequentialOnly

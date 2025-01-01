@@ -164,7 +164,7 @@ public final class Jdbc {
          * @param <T>
          * @param fieldNameList
          * @param entityClass
-         * @return
+         * @return a stateful {@code BiParametersSetter}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
         @Stateful
@@ -204,7 +204,7 @@ public final class Jdbc {
          * @param <T>
          * @param fieldNameList
          * @param entityClass
-         * @return
+         * @return a stateful {@code BiParametersSetter}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
         @Stateful
@@ -1114,7 +1114,7 @@ public final class Jdbc {
          *
          * @param <T>
          * @param targetClass
-         * @return
+         * @return a stateful {@code BiResultExtractor}. Don't save or cache for reuse or use it in parallel stream.
          * @see ResultExtractor#toList(Class)
          */
         @SequentialOnly
@@ -1185,7 +1185,7 @@ public final class Jdbc {
         //     *
         //     * @param <T>
         //     * @param biRowMapper
-        //     * @return
+        //     * @return a stateful {@code RowMapper}. Don't save or cache for reuse or use it in parallel stream.
         //     * @deprecated because it's stateful and may be misused easily and frequently
         //     */
         //    @Beta
@@ -1249,7 +1249,7 @@ public final class Jdbc {
          *
          *
          * @param columnGetterForAll
-         * @return
+         * @return a stateful {@code RowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
         @SequentialOnly
@@ -1279,7 +1279,7 @@ public final class Jdbc {
          *
          *
          * @param columnGetterForAll
-         * @return
+         * @return a stateful {@code RowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
         @SequentialOnly
@@ -1294,7 +1294,7 @@ public final class Jdbc {
          * @param <C>
          * @param columnGetterForAll
          * @param supplier
-         * @return
+         * @return a stateful {@code RowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
         @SequentialOnly
@@ -1323,7 +1323,7 @@ public final class Jdbc {
         /**
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
-         * @return
+         * @return a stateful {@code RowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
         @SequentialOnly
@@ -1355,7 +1355,7 @@ public final class Jdbc {
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param entityClass used to fetch column/row value from {@code ResultSet} by the type of fields/columns defined in this class.
-         * @return
+         * @return a stateful {@code RowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
         @SequentialOnly
@@ -1844,7 +1844,7 @@ public final class Jdbc {
             /**
              * Don't cache or reuse the returned {@code RowMapper} instance.
              *
-             * @return
+             * @return a stateful {@code RowMapper}. Don't save or cache for reuse or use it in parallel stream.
              */
             @SequentialOnly
             @Stateful
@@ -1876,7 +1876,7 @@ public final class Jdbc {
             /**
              * Don't cache or reuse the returned {@code RowMapper} instance.
              *
-             * @return
+             * @return a stateful {@code RowMapper}. Don't save or cache for reuse or use it in parallel stream.
              */
             @SequentialOnly
             @Stateful
@@ -1910,7 +1910,7 @@ public final class Jdbc {
              *
              * @param <R>
              * @param finisher
-             * @return
+             * @return a stateful {@code RowMapper}. Don't save or cache for reuse or use it in parallel stream.
              */
             @SequentialOnly
             @Stateful
@@ -2039,7 +2039,7 @@ public final class Jdbc {
         /**
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
-         * @return
+         * @return a stateful {@code RowMapper}. Don't save or cache for reuse or use it in parallel stream.
          * @see RowMapper#toBiRowMapper()
          * @deprecated because it's stateful and may be misused easily and frequently
          */
@@ -2117,7 +2117,7 @@ public final class Jdbc {
          *
          * @param <T>
          * @param targetClass
-         * @return
+         * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @SequentialOnly
         @Stateful
@@ -2131,7 +2131,7 @@ public final class Jdbc {
          * @param <T>
          * @param targetClass
          * @param ignoreNonMatchedColumns
-         * @return
+         * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @SequentialOnly
         @Stateful
@@ -2146,7 +2146,7 @@ public final class Jdbc {
          * @param targetClass
          * @param columnNameFilter
          * @param columnNameConverter
-         * @return
+         * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @SequentialOnly
         @Stateful
@@ -2163,7 +2163,7 @@ public final class Jdbc {
          * @param columnNameFilter
          * @param columnNameConverter
          * @param ignoreNonMatchedColumns
-         * @return
+         * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @SequentialOnly
         @Stateful
@@ -2458,7 +2458,7 @@ public final class Jdbc {
          * @param <T>
          * @param entityClass
          * @param prefixAndFieldNameMap
-         * @return
+         * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @SequentialOnly
         @Stateful
@@ -2473,7 +2473,7 @@ public final class Jdbc {
          * @param entityClass
          * @param prefixAndFieldNameMap
          * @param ignoreNonMatchedColumns
-         * @return
+         * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @SequentialOnly
         @Stateful
@@ -2718,7 +2718,7 @@ public final class Jdbc {
          * @param rowExtractor
          * @param valueFilter
          * @param mapSupplier
-         * @return
+         * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @SequentialOnly
         @Stateful
@@ -2758,7 +2758,7 @@ public final class Jdbc {
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param columnNameConverter
-         * @return
+         * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @SequentialOnly
         @Stateful
@@ -2770,7 +2770,7 @@ public final class Jdbc {
          *
          * @param columnNameConverter
          * @param mapSupplier
-         * @return
+         * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @SequentialOnly
         @Stateful
@@ -2808,7 +2808,7 @@ public final class Jdbc {
          * @param rowExtractor
          * @param columnNameConverter
          * @param mapSupplier
-         * @return
+         * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @SequentialOnly
         @Stateful
@@ -2848,7 +2848,7 @@ public final class Jdbc {
          *
          *
          * @param rowExtractor
-         * @return
+         * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @SequentialOnly
         @Stateful
@@ -2934,7 +2934,7 @@ public final class Jdbc {
         /**
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
-         * @return
+         * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
         @SequentialOnly
@@ -2966,7 +2966,7 @@ public final class Jdbc {
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param entityClass used to fetch column/row value from {@code ResultSet} by the type of fields/columns defined in this class.
-         * @return
+         * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
         @SequentialOnly
@@ -3287,7 +3287,7 @@ public final class Jdbc {
              *
              * @param <T>
              * @param targetClass
-             * @return
+             * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
              */
             @SequentialOnly
             @Stateful
@@ -3301,7 +3301,7 @@ public final class Jdbc {
              * @param <T>
              * @param targetClass
              * @param ignoreNonMatchedColumns
-             * @return
+             * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
              */
             @SequentialOnly
             @Stateful
@@ -3517,7 +3517,7 @@ public final class Jdbc {
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param consumerForAll
-         * @return
+         * @return a stateful {@code RowConsumer}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
         @SequentialOnly
@@ -3545,7 +3545,7 @@ public final class Jdbc {
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param consumer
-         * @return
+         * @return a stateful {@code RowConsumer}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
         @SequentialOnly
@@ -3580,7 +3580,7 @@ public final class Jdbc {
          *
          * @param entityClass used to fetch column/row value from {@code ResultSet} by the type of fields/columns defined in this class.
          * @param consumer
-         * @return
+         * @return a stateful {@code RowConsumer}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
         @SequentialOnly
@@ -3714,7 +3714,7 @@ public final class Jdbc {
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param consumer
-         * @return
+         * @return a stateful {@code RowConsumer}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
         @SequentialOnly
@@ -3749,7 +3749,7 @@ public final class Jdbc {
          *
          * @param entityClass used to fetch column/row value from {@code ResultSet} by the type of fields/columns defined in this class.
          * @param consumer
-         * @return
+         * @return a stateful {@code RowConsumer}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
         @SequentialOnly
@@ -3945,7 +3945,7 @@ public final class Jdbc {
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param entityClassForFetch
-         * @return
+         * @return a stateful {@code RowExtractor}. Don't save or cache for reuse or use it in parallel stream.
          */
         @SequentialOnly
         @Stateful
@@ -3958,7 +3958,7 @@ public final class Jdbc {
          *
          * @param entityClassForFetch
          * @param prefixAndFieldNameMap
-         * @return
+         * @return a stateful {@code RowExtractor}. Don't save or cache for reuse or use it in parallel stream.
          */
         @SequentialOnly
         @Stateful
@@ -3971,7 +3971,7 @@ public final class Jdbc {
          *
          * @param entityClassForFetch
          * @param columnLabels
-         * @return
+         * @return a stateful {@code RowExtractor}. Don't save or cache for reuse or use it in parallel stream.
          */
         @SequentialOnly
         @Stateful
@@ -3985,7 +3985,7 @@ public final class Jdbc {
          * @param entityClassForFetch
          * @param columnLabels
          * @param prefixAndFieldNameMap
-         * @return
+         * @return a stateful {@code RowExtractor}. Don't save or cache for reuse or use it in parallel stream.
          */
         @SequentialOnly
         @Stateful
@@ -4284,7 +4284,7 @@ public final class Jdbc {
             /**
              * Don't cache or reuse the returned {@code RowExtractor} instance.
              *
-             * @return
+             * @return a stateful {@code RowExtractor}. Don't save or cache for reuse or use it in parallel stream.
              */
             @SequentialOnly
             @Stateful
