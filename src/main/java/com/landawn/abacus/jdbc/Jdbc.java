@@ -1136,31 +1136,34 @@ public final class Jdbc {
     }
 
     /**
-     * Don't use {@code RowMapper} in {@link PreparedQuery#list(RowMapper)} or any place where multiple records will be retrieved by it, if column labels/count are used in {@link RowMapper#apply(ResultSet)}.
-     * Consider using {@code BiRowMapper} instead because it's more efficient to retrieve multiple records when column labels/count are used.
+     * The `RowMapper` interface is designed to map rows of a `ResultSet` to objects of a specified type `T`.
+     * It extends the `Throwables.Function` interface, which allows it to throw a `SQLException`.
+     * <br />
+     * If column labels/count are used in {@link RowMapper#apply(ResultSet)}, consider using {@code BiRowMapper} instead because it's more efficient to retrieve multiple records when column labels/count are used.
      *
-     * @param <T>
+     * @param <T> the type of the object that each row of the `ResultSet` will be mapped to
      * @see Columns.ColumnOne
      */
     @FunctionalInterface
     public interface RowMapper<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
         /**
+         * Maps a row of the `ResultSet` to an object of type `T`.
          *
-         *
-         * @param rs
-         * @return
-         * @throws SQLException
+         * @param rs the `ResultSet` to map
+         * @return the mapped object of type `T`
+         * @throws SQLException if a database access error occurs
          */
         @Override
         T apply(ResultSet rs) throws SQLException;
 
         /**
+         * Returns a composed `RowMapper` that first applies this `RowMapper` to its input, and then applies the `after` function to the result.
          *
-         *
-         * @param <R>
-         * @param after
-         * @return
+         * @param <R> the type of output of the `after` function, and of the composed `RowMapper`
+         * @param after the function to apply after this `RowMapper` is applied
+         * @return a composed `RowMapper` that first applies this `RowMapper` and then applies the `after` function
+         * @throws NullPointerException if `after` is null
          */
         default <R> RowMapper<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
             N.checkArgNotNull(after);
@@ -1169,9 +1172,9 @@ public final class Jdbc {
         }
 
         /**
+         * Converts this `RowMapper` to a `BiRowMapper`.
          *
-         *
-         * @return
+         * @return a `BiRowMapper` that applies this `RowMapper`
          */
         default BiRowMapper<T> toBiRowMapper() {
             return (rs, columnLabels) -> this.apply(rs);
@@ -1207,13 +1210,13 @@ public final class Jdbc {
         //    }
 
         /**
+         * Combines two `RowMapper` instances into a `RowMapper` that returns a `Tuple2` of their results.
          *
-         *
-         * @param <T>
-         * @param <U>
-         * @param rowMapper1
-         * @param rowMapper2
-         * @return
+         * @param <T> the type of the first `RowMapper`
+         * @param <U> the type of the second `RowMapper`
+         * @param rowMapper1 the first `RowMapper`
+         * @param rowMapper2 the second `RowMapper`
+         * @return a `RowMapper` that returns a `Tuple2` of the results of the two `RowMapper` instances
          */
         static <T, U> RowMapper<Tuple2<T, U>> combine(final RowMapper<? extends T> rowMapper1, final RowMapper<? extends U> rowMapper2) {
             N.checkArgNotNull(rowMapper1, s.rowMapper1);
@@ -1223,15 +1226,15 @@ public final class Jdbc {
         }
 
         /**
+         * Combines three `RowMapper` instances into a `RowMapper` that returns a `Tuple3` of their results.
          *
-         *
-         * @param <A>
-         * @param <B>
-         * @param <C>
-         * @param rowMapper1
-         * @param rowMapper2
-         * @param rowMapper3
-         * @return
+         * @param <A> the type of the first `RowMapper`
+         * @param <B> the type of the second `RowMapper`
+         * @param <C> the type of the third `RowMapper`
+         * @param rowMapper1 the first `RowMapper`
+         * @param rowMapper2 the second `RowMapper`
+         * @param rowMapper3 the third `RowMapper`
+         * @return a `RowMapper` that returns a `Tuple3` of the results of the three `RowMapper` instances
          */
         static <A, B, C> RowMapper<Tuple3<A, B, C>> combine(final RowMapper<? extends A> rowMapper1, final RowMapper<? extends B> rowMapper2,
                 final RowMapper<? extends C> rowMapper3) {
