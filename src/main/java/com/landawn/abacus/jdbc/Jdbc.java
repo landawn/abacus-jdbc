@@ -167,6 +167,7 @@ public final class Jdbc {
          * @return a stateful {@code BiParametersSetter}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
+        @SequentialOnly
         @Stateful
         static <T> BiParametersSetter<PreparedStatement, T[]> createForArray(final List<String> fieldNameList, final Class<?> entityClass) {
             N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
@@ -207,6 +208,7 @@ public final class Jdbc {
          * @return a stateful {@code BiParametersSetter}. Don't save or cache for reuse or use it in parallel stream.
          */
         @Beta
+        @SequentialOnly
         @Stateful
         static <T> BiParametersSetter<PreparedStatement, List<T>> createForList(final List<String> fieldNameList, final Class<?> entityClass) {
             N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
@@ -1117,8 +1119,6 @@ public final class Jdbc {
          * @return a stateful {@code BiResultExtractor}. Don't save or cache for reuse or use it in parallel stream.
          * @see ResultExtractor#toList(Class)
          */
-        @SequentialOnly
-        @Stateful
         static <T> BiResultExtractor<List<T>> toList(final Class<? extends T> targetClass) {
             N.checkArgNotNull(targetClass, s.targetClass);
 
