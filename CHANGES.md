@@ -1,3 +1,7 @@
+### 3.8.7
+
+* Improvements and bug fix.
+
 ### 3.8.6
 
 * Refactoring: `Dao.queryForSingleResult/queryForUniqueResult`.
