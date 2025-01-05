@@ -4675,7 +4675,15 @@ public final class Jdbc {
              * @return
              */
             public static <T> RowMapper<T> get(final Type<? extends T> type) {
-                return rowMapperPool.computeIfAbsent(type, k -> rs -> type.get(rs, 1));
+                RowMapper<T> result = rowMapperPool.get(type);
+
+                if (result == null) {
+                    result = rs -> type.get(rs, 1);
+
+                    rowMapperPool.put(type, result);
+                }
+
+                return result;
             }
 
             /**
