@@ -27,11 +27,13 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.jdbc.Jdbc;
+import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.samples.entity.s;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Fn;
+import com.landawn.abacus.util.Fn.Factory;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder.NSC;
 import com.landawn.abacus.util.SQLBuilder.PSC;
@@ -39,11 +41,33 @@ import com.landawn.abacus.util.stream.IntStream;
 
 public class PreparedQueryTest {
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
+    @Test
+    public void test_builder() throws SQLException {
+
+        final User user = User.builder().firstName("abccc").lastName("Gump").email("123@email.com").build();
+
+        final Long id = userDao.insert(user);
+
+        JdbcUtil.prepareQuery(dataSource, "select * from user1 where id = ?").setLong(1, id).list(User.class).forEach(Fn.println());
+
+        JdbcUtil.prepareQuery(dataSource, "select * from user1 where id = ?")
+                .setLong(1, id)
+                .list(RowMapper.builder().getObject(2, Object.class).toList())
+                .forEach(Fn.println());
+
+        JdbcUtil.prepareQuery(dataSource, "select * from user1 where id = ?")
+                .setLong(1, id)
+                .list(RowMapper.builder().getObject(3, Object.class).toMap())
+                .forEach(Fn.println());
+
+        JdbcUtil.prepareQuery(dataSource, "select * from user1 where id = ?")
+                .setLong(1, id)
+                .list(RowMapper.builder().getObject(3, Object.class).toMap(Factory.ofLinkedHashMap()))
+                .forEach(Fn.println());
+
+        JdbcUtil.prepareQuery(dataSource, "delete from user1 where id = ?").setLong(1, id).update();
+    }
+
     @Test
     public void test_queryForSingleResult() throws SQLException {
 
@@ -67,11 +91,6 @@ public class PreparedQueryTest {
 
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_alias() throws SQLException {
 
@@ -100,11 +119,6 @@ public class PreparedQueryTest {
                 .update();
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_listToMap() throws SQLException {
 
@@ -144,11 +158,6 @@ public class PreparedQueryTest {
                 .update();
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_ColumnGetter() throws SQLException {
 

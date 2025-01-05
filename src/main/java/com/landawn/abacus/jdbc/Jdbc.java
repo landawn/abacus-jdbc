@@ -1616,19 +1616,19 @@ public final class Jdbc {
                 return this;
             }
 
-            /**
-             *
-             * Set column getter function for column[columnIndex].
-             *
-             * @param columnIndex start from 1.
-             * @param columnGetter
-             * @return
-             * @deprecated replaced by {@link #get(int, ColumnGetter)}
-             */
-            @Deprecated
-            public RowMapperBuilder column(final int columnIndex, final ColumnGetter<?> columnGetter) {
-                return get(columnIndex, columnGetter);
-            }
+            //    /**
+            //     *
+            //     * Set column getter function for column[columnIndex].
+            //     *
+            //     * @param columnIndex start from 1.
+            //     * @param columnGetter
+            //     * @return
+            //     * @deprecated replaced by {@link #get(int, ColumnGetter)}
+            //     */
+            //    @Deprecated
+            //    public RowMapperBuilder column(final int columnIndex, final ColumnGetter<?> columnGetter) {
+            //        return get(columnIndex, columnGetter);
+            //    }
 
             //    /**
             //     * Set default column getter function.
@@ -1826,15 +1826,11 @@ public final class Jdbc {
             //        }
             //    }
 
-            ColumnGetter<?>[] initColumnGetter(final ResultSet rs) throws SQLException { //NOSONAR
-                return initColumnGetter(rs.getMetaData().getColumnCount());
-            }
-
-            ColumnGetter<?>[] initColumnGetter(final int columnCount) { //NOSONAR
+            private ColumnGetter<?>[] initColumnGetter(final int columnCount) { //NOSONAR
                 final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[columnCount];
                 final ColumnGetter<?> defaultColumnGetter = columnGetterMap.get(0);
 
-                for (int i = 0, len = rsColumnGetters.length; i < len; i++) {
+                for (int i = 0; i < columnCount; i++) {
                     rsColumnGetters[i] = columnGetterMap.getOrDefault(i + 1, defaultColumnGetter);
                 }
 
@@ -1858,8 +1854,8 @@ public final class Jdbc {
                     @Override
                     public Object[] apply(final ResultSet rs) throws SQLException {
                         if (rsColumnGetters == null) {
-                            rsColumnGetters = initColumnGetter(rs);
-                            rsColumnCount = rsColumnGetters.length - 1;
+                            rsColumnCount = rs.getMetaData().getColumnCount();
+                            rsColumnGetters = initColumnGetter(rsColumnCount);
                         }
 
                         final Object[] row = new Object[rsColumnCount];
@@ -1881,6 +1877,17 @@ public final class Jdbc {
             @SequentialOnly
             @Stateful
             public RowMapper<List<Object>> toList() {
+                return toCollection(Factory.ofList());
+            }
+
+            /**
+             * Don't cache or reuse the returned {@code RowMapper} instance.
+             * @param supplier The supplier to provide a new collection instance
+             * @return a stateful {@code RowMapper}. Don't save or cache for reuse or use it in parallel stream.
+             */
+            @SequentialOnly
+            @Stateful
+            public <C extends Collection<?>> RowMapper<C> toCollection(final IntFunction<C> supplier) {
                 // setDefaultColumnGetter();
 
                 return new RowMapper<>() {
@@ -1888,16 +1895,61 @@ public final class Jdbc {
                     private int rsColumnCount = -1;
 
                     @Override
-                    public List<Object> apply(final ResultSet rs) throws SQLException {
+                    public C apply(final ResultSet rs) throws SQLException {
                         if (rsColumnGetters == null) {
-                            rsColumnGetters = initColumnGetter(rs);
-                            rsColumnCount = rsColumnGetters.length - 1;
+                            rsColumnCount = rs.getMetaData().getColumnCount();
+                            rsColumnGetters = initColumnGetter(rsColumnCount);
                         }
 
-                        final List<Object> row = new ArrayList<>(rsColumnCount);
+                        final Collection<Object> row = (Collection<Object>) supplier.apply(rsColumnCount);
 
                         for (int i = 0; i < rsColumnCount; i++) {
                             row.add(rsColumnGetters[i].apply(rs, i + 1));
+                        }
+
+                        return (C) row;
+                    }
+                };
+            }
+
+            /**
+             * Don't cache or reuse the returned {@code RowMapper} instance.
+             *
+             * @return a stateful {@code RowMapper}. Don't save or cache for reuse or use it in parallel stream.
+             */
+            @SequentialOnly
+            @Stateful
+            public RowMapper<Map<String, Object>> toMap() {
+                return toMap(Factory.ofMap());
+            }
+
+            /**
+             * Don't cache or reuse the returned {@code RowMapper} instance.
+             * @param mapSupplier The supplier to provide a new map instance.
+             * @return a stateful {@code RowMapper}. Don't save or cache for reuse or use it in parallel stream.
+             */
+            @SequentialOnly
+            @Stateful
+            public RowMapper<Map<String, Object>> toMap(final IntFunction<Map<String, Object>> mapSupplier) {
+                // setDefaultColumnGetter();
+
+                return new RowMapper<>() {
+                    private ColumnGetter<?>[] rsColumnGetters = null;
+                    private List<String> columnLabels = null;
+                    private int rsColumnCount = -1;
+
+                    @Override
+                    public Map<String, Object> apply(final ResultSet rs) throws SQLException {
+                        if (rsColumnGetters == null) {
+                            columnLabels = JdbcUtil.getColumnLabelList(rs);
+                            rsColumnCount = columnLabels.size();
+                            rsColumnGetters = initColumnGetter(rsColumnCount);
+                        }
+
+                        final Map<String, Object> row = mapSupplier.apply(rsColumnCount);
+
+                        for (int i = 0; i < rsColumnCount; i++) {
+                            row.put(columnLabels.get(i), rsColumnGetters[i].apply(rs, i + 1));
                         }
 
                         return row;
@@ -1924,8 +1976,8 @@ public final class Jdbc {
                     @Override
                     public R apply(final ResultSet rs) throws SQLException {
                         if (rsColumnGetters == null) {
-                            rsColumnGetters = initColumnGetter(rs);
-                            rsColumnCount = rsColumnGetters.length - 1;
+                            rsColumnCount = rs.getMetaData().getColumnCount();
+                            rsColumnGetters = initColumnGetter(rsColumnCount);
                             outputRow = new Object[rsColumnCount];
                             output = DisposableObjArray.wrap(outputRow);
                         }
@@ -1935,6 +1987,42 @@ public final class Jdbc {
                         }
 
                         return finisher.apply(output);
+                    }
+                };
+            }
+
+            /**
+             * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
+             *
+             * @param <R>
+             * @param finisher
+             * @return a stateful {@code RowMapper}. Don't save or cache for reuse or use it in parallel stream.
+             */
+            @SequentialOnly
+            @Stateful
+            public <R> RowMapper<R> to(final Throwables.BiFunction<List<String>, DisposableObjArray, R, SQLException> finisher) {
+                return new RowMapper<>() {
+                    private ColumnGetter<?>[] rsColumnGetters = null;
+                    private List<String> columnLabels = null;
+                    private int rsColumnCount = -1;
+                    private Object[] outputRow = null;
+                    private DisposableObjArray output;
+
+                    @Override
+                    public R apply(final ResultSet rs) throws SQLException {
+                        if (rsColumnGetters == null) {
+                            columnLabels = JdbcUtil.getColumnLabelList(rs);
+                            rsColumnCount = columnLabels.size();
+                            rsColumnGetters = initColumnGetter(rsColumnCount);
+                            outputRow = new Object[rsColumnCount];
+                            output = DisposableObjArray.wrap(outputRow);
+                        }
+
+                        for (int i = 0; i < rsColumnCount; i++) {
+                            outputRow[i] = rsColumnGetters[i].apply(rs, i + 1);
+                        }
+
+                        return finisher.apply(columnLabels, output);
                     }
                 };
             }
@@ -2043,8 +2131,8 @@ public final class Jdbc {
          * @see RowMapper#toBiRowMapper()
          * @deprecated because it's stateful and may be misused easily and frequently
          */
-        @Beta
         @Deprecated
+        @SequentialOnly
         @Stateful
         default RowMapper<T> toRowMapper() {
             final BiRowMapper<T> biRowMapper = this;
@@ -2803,6 +2891,39 @@ public final class Jdbc {
         }
 
         /**
+         *
+         *
+         * @param rowExtractor
+         * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
+         */
+        @SequentialOnly
+        @Stateful
+        static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor) {
+            return new BiRowMapper<>() {
+                private Object[] outputValuesForRowExtractor = null;
+
+                @Override
+                public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                    final int columnCount = columnLabels.size();
+
+                    if (outputValuesForRowExtractor == null) {
+                        outputValuesForRowExtractor = new Object[columnCount];
+                    }
+
+                    rowExtractor.accept(rs, outputValuesForRowExtractor);
+
+                    final Map<String, Object> result = N.newHashMap(columnCount);
+
+                    for (int i = 0; i < columnCount; i++) {
+                        result.put(columnLabels.get(i), outputValuesForRowExtractor[i]);
+                    }
+
+                    return result;
+                }
+            };
+        }
+
+        /**
          * It's stateful. Don't save or cache the returned instance for reuse or use it in parallel stream.
          *
          * @param rowExtractor
@@ -2837,39 +2958,6 @@ public final class Jdbc {
 
                     for (int i = 0; i < columnCount; i++) {
                         result.put(keyNames[i], outputValuesForRowExtractor[i]);
-                    }
-
-                    return result;
-                }
-            };
-        }
-
-        /**
-         *
-         *
-         * @param rowExtractor
-         * @return a stateful {@code BiRowMapper}. Don't save or cache for reuse or use it in parallel stream.
-         */
-        @SequentialOnly
-        @Stateful
-        static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor) {
-            return new BiRowMapper<>() {
-                private Object[] outputValuesForRowExtractor = null;
-
-                @Override
-                public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                    final int columnCount = columnLabels.size();
-
-                    if (outputValuesForRowExtractor == null) {
-                        outputValuesForRowExtractor = new Object[columnCount];
-                    }
-
-                    rowExtractor.accept(rs, outputValuesForRowExtractor);
-
-                    final Map<String, Object> result = N.newHashMap(columnCount);
-
-                    for (int i = 0; i < columnCount; i++) {
-                        result.put(columnLabels.get(i), outputValuesForRowExtractor[i]);
                     }
 
                     return result;
@@ -3220,17 +3308,17 @@ public final class Jdbc {
                 return this;
             }
 
-            /**
-             *
-             * @param columnName
-             * @param columnGetter
-             * @return
-             * @deprecated replaced by {@link #get(String, ColumnGetter)}
-             */
-            @Deprecated
-            public BiRowMapperBuilder column(final String columnName, final ColumnGetter<?> columnGetter) {
-                return get(columnName, columnGetter);
-            }
+            //    /**
+            //     *
+            //     * @param columnName
+            //     * @param columnGetter
+            //     * @return
+            //     * @deprecated replaced by {@link #get(String, ColumnGetter)}
+            //     */
+            //    @Deprecated
+            //    public BiRowMapperBuilder column(final String columnName, final ColumnGetter<?> columnGetter) {
+            //        return get(columnName, columnGetter);
+            //    }
 
             //    /**
             //     * Set default column getter function.
@@ -4266,21 +4354,6 @@ public final class Jdbc {
                 return this;
             }
 
-            ColumnGetter<?>[] initColumnGetter(final ResultSet rs) throws SQLException { //NOSONAR
-                return initColumnGetter(rs.getMetaData().getColumnCount());
-            }
-
-            ColumnGetter<?>[] initColumnGetter(final int columnCount) { //NOSONAR
-                final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[columnCount];
-                final ColumnGetter<?> defaultColumnGetter = columnGetterMap.get(0);
-
-                for (int i = 0, len = rsColumnGetters.length; i < len; i++) {
-                    rsColumnGetters[i] = columnGetterMap.getOrDefault(i + 1, defaultColumnGetter);
-                }
-
-                return rsColumnGetters;
-            }
-
             /**
              * Don't cache or reuse the returned {@code RowExtractor} instance.
              *
@@ -4296,13 +4369,28 @@ public final class Jdbc {
                     @Override
                     public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
                         if (rsColumnGetters == null) {
-                            rsColumnGetters = initColumnGetter(outputRow.length);
-                            rsColumnCount = rsColumnGetters.length - 1;
+                            rsColumnCount = rs.getMetaData().getColumnCount();
+                            rsColumnGetters = initColumnGetter(rsColumnCount);
+
+                            if (N.len(outputRow) < rsColumnCount) {
+                                throw new IllegalArgumentException("The length of output array is less than the column count of ResultSet");
+                            }
                         }
 
                         for (int i = 0; i < rsColumnCount; i++) {
                             outputRow[i] = rsColumnGetters[i].apply(rs, i + 1);
                         }
+                    }
+
+                    private ColumnGetter<?>[] initColumnGetter(final int columnCount) { //NOSONAR
+                        final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[columnCount];
+                        final ColumnGetter<?> defaultColumnGetter = columnGetterMap.get(0);
+
+                        for (int i = 0; i < columnCount; i++) {
+                            rsColumnGetters[i] = columnGetterMap.getOrDefault(i + 1, defaultColumnGetter);
+                        }
+
+                        return rsColumnGetters;
                     }
                 };
             }
@@ -4587,15 +4675,7 @@ public final class Jdbc {
              * @return
              */
             public static <T> RowMapper<T> get(final Type<? extends T> type) {
-                RowMapper<T> result = rowMapperPool.get(type);
-
-                if (result == null) {
-                    result = rs -> type.get(rs, 1);
-
-                    rowMapperPool.put(type, result);
-                }
-
-                return result;
+                return rowMapperPool.computeIfAbsent(type, k -> rs -> type.get(rs, 1));
             }
 
             /**
