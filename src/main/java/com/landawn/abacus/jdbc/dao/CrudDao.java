@@ -33,7 +33,7 @@ import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLTransaction;
-import com.landawn.abacus.jdbc.s;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
@@ -673,7 +673,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     default T upsert(final T entity) throws SQLException {
-        N.checkArgNotNull(entity, s.entity);
+        N.checkArgNotNull(entity, cs.entity);
 
         final Class<?> cls = entity.getClass();
         @SuppressWarnings("deprecation")
@@ -694,8 +694,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      */
     @Override
     default T upsert(final T entity, final Condition cond) throws SQLException {
-        N.checkArgNotNull(entity, s.entity);
-        N.checkArgNotNull(cond, s.cond);
+        N.checkArgNotNull(entity, cs.entity);
+        N.checkArgNotNull(cond, cs.cond);
 
         final T dbEntity = findOnlyOne(cond).orElseNull();
 
@@ -730,7 +730,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws SQLException {
-        N.checkArgPositive(batchSize, s.batchSize);
+        N.checkArgPositive(batchSize, cs.batchSize);
 
         if (N.isEmpty(entities)) {
             return new ArrayList<>();
@@ -764,8 +764,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery, final int batchSize) throws SQLException {
-        N.checkArgPositive(batchSize, s.batchSize);
-        N.checkArgNotEmpty(uniquePropNamesForQuery, s.uniquePropNamesForQuery);
+        N.checkArgPositive(batchSize, cs.batchSize);
+        N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
 
         if (N.isEmpty(entities)) {
             return new ArrayList<>();
@@ -858,7 +858,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException if a database access error occurs
      */
     default boolean refresh(final T entity) throws SQLException {
-        N.checkArgNotNull(entity, s.entity);
+        N.checkArgNotNull(entity, cs.entity);
 
         final Class<?> cls = entity.getClass();
         final Collection<String> propNamesToRefresh = JdbcUtil.getSelectPropNames(cls);
@@ -876,8 +876,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      */
     @SuppressWarnings("deprecation")
     default boolean refresh(final T entity, final Collection<String> propNamesToRefresh) throws SQLException {
-        N.checkArgNotNull(entity, s.entity);
-        N.checkArgNotEmpty(propNamesToRefresh, s.propNamesToRefresh);
+        N.checkArgNotNull(entity, cs.entity);
+        N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
 
         final Class<?> cls = entity.getClass();
         final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
@@ -951,8 +951,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      */
     @SuppressWarnings("deprecation")
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize) throws SQLException {
-        N.checkArgNotEmpty(propNamesToRefresh, s.propNamesToRefresh);
-        N.checkArgPositive(batchSize, s.batchSize);
+        N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
+        N.checkArgPositive(batchSize, cs.batchSize);
 
         if (N.isEmpty(entities)) {
             return 0;

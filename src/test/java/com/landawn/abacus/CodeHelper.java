@@ -15,7 +15,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.jdbc.s;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IOUtil;
@@ -76,7 +76,7 @@ public class CodeHelper {
         final String clsName = "s";
         final File parentPath = new File("./src/main/java/");
 
-        final Map<String, Field> map = Stream.of(s.class.getFields())
+        final Map<String, Field> map = Stream.of(cs.class.getFields())
                 .filter(it -> it.getType().equals(String.class) && Modifier.isPublic(it.getModifiers()) && Modifier.isStatic(it.getModifiers())
                         && Modifier.isFinal(it.getModifiers()))
                 .toMap(it -> (String) it.get((Object) null), Fn.identity());
@@ -85,7 +85,7 @@ public class CodeHelper {
 
         final Set<String> parameterNamesToAdd = new HashSet<>();
 
-        final String path = ClassUtil.getPackageName(s.class).replace('.', '\\');
+        final String path = ClassUtil.getPackageName(cs.class).replace('.', '\\');
 
         Stream.listFiles(parentPath, true) //
                 .filter(file -> file.isFile() && file.getName().endsWith(".java"))

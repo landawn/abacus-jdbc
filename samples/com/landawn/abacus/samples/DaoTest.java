@@ -74,7 +74,6 @@ import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.LongStream;
 import com.landawn.abacus.util.stream.Stream;
 
-import codes.entity.Account;
 import codes.entity.Account.x;
 
 public class DaoTest {
@@ -548,7 +547,7 @@ public class DaoTest {
     @Test
     public void test_handler() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-        userDao.insert(user, N.asList(x.id, Account.x.firstName, "lastName", "email"));
+        userDao.insert(user, N.asList(s.id, s.firstName, s.lastName, s.email));
 
         final User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
@@ -706,7 +705,7 @@ public class DaoTest {
     @Test
     public void test_save_insert() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-        userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
+        userDao.save(user, N.asList(s.id, s.firstName, s.lastName, s.email));
 
         User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
@@ -718,7 +717,7 @@ public class DaoTest {
 
         userDao.deleteById(100L);
 
-        final long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
+        final long id = userDao.insert(user, N.asList(s.firstName, s.lastName, s.email));
         userFromDB = userDao.gett(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);

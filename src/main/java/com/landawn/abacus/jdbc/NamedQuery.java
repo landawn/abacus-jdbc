@@ -3029,7 +3029,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(parameters, s.parameters);
+        checkArgNotNull(parameters, cs.parameters);
 
         for (final String paramName : parameterNames) {
             if (parameters.containsKey(paramName)) {
@@ -3059,7 +3059,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      */
     @SuppressWarnings("rawtypes")
     public NamedQuery setParameters(final Object parameters) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(parameters, s.parameters);
+        checkArgNotNull(parameters, cs.parameters);
 
         final Class<?> cls = parameters.getClass();
 
@@ -3105,8 +3105,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @see JdbcUtil#getNamedParameters(String)
      */
     public NamedQuery setParameters(final Object entity, final Collection<String> parameterNames) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(entity, s.entity);
-        checkArgNotNull(parameterNames, s.parameterNames);
+        checkArgNotNull(entity, cs.entity);
+        checkArgNotNull(parameterNames, cs.parameterNames);
 
         if (paramNameIndexMap == null) {
             initParamNameIndexMap();
@@ -3174,7 +3174,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      */
     public <T> NamedQuery setParameters(final T parameters, final Jdbc.TriParametersSetter<? super NamedQuery, ? super T> paramsSetter)
             throws IllegalArgumentException, SQLException {
-        checkArgNotNull(paramsSetter, s.paramsSetter);
+        checkArgNotNull(paramsSetter, cs.paramsSetter);
 
         boolean noException = false;
 
@@ -3201,7 +3201,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      */
     @Override
     public NamedQuery addBatchParameters(final Collection<?> batchParameters) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(batchParameters, s.batchParameters);
+        checkArgNotNull(batchParameters, cs.batchParameters);
 
         if (N.isEmpty(batchParameters)) {
             return this;
@@ -3222,7 +3222,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     @Override
     @SuppressWarnings("rawtypes")
     public NamedQuery addBatchParameters(final Iterator<?> batchParameters) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(batchParameters, s.batchParameters);
+        checkArgNotNull(batchParameters, cs.batchParameters);
 
         @SuppressWarnings("UnnecessaryLocalVariable")
         final Iterator<?> iter = batchParameters;

@@ -378,10 +378,10 @@ public final class Jdbc {
          */
         static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final BinaryOperator<V> mergeFunction, final Supplier<? extends M> supplier) {
-            N.checkArgNotNull(keyExtractor, s.keyExtractor);
-            N.checkArgNotNull(valueExtractor, s.valueExtractor);
-            N.checkArgNotNull(mergeFunction, s.mergeFunction);
-            N.checkArgNotNull(supplier, s.supplier);
+            N.checkArgNotNull(keyExtractor, cs.keyExtractor);
+            N.checkArgNotNull(valueExtractor, cs.valueExtractor);
+            N.checkArgNotNull(mergeFunction, cs.mergeFunction);
+            N.checkArgNotNull(supplier, cs.supplier);
 
             return rs -> {
                 final M result = supplier.get();
@@ -459,9 +459,9 @@ public final class Jdbc {
          */
         static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> ResultExtractor<M> toMultimap(final RowMapper<? extends K> keyExtractor,
                 final RowMapper<? extends V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
-            N.checkArgNotNull(keyExtractor, s.keyExtractor);
-            N.checkArgNotNull(valueExtractor, s.valueExtractor);
-            N.checkArgNotNull(multimapSupplier, s.multimapSupplier);
+            N.checkArgNotNull(keyExtractor, cs.keyExtractor);
+            N.checkArgNotNull(valueExtractor, cs.valueExtractor);
+            N.checkArgNotNull(multimapSupplier, cs.multimapSupplier);
 
             return rs -> {
                 final M result = multimapSupplier.get();
@@ -499,9 +499,9 @@ public final class Jdbc {
          */
         static <K, V, M extends Map<K, List<V>>> ResultExtractor<M> groupTo(final RowMapper<? extends K> keyExtractor,
                 final RowMapper<? extends V> valueExtractor, final Supplier<? extends M> supplier) {
-            N.checkArgNotNull(keyExtractor, s.keyExtractor);
-            N.checkArgNotNull(valueExtractor, s.valueExtractor);
-            N.checkArgNotNull(supplier, s.supplier);
+            N.checkArgNotNull(keyExtractor, cs.keyExtractor);
+            N.checkArgNotNull(valueExtractor, cs.valueExtractor);
+            N.checkArgNotNull(supplier, cs.supplier);
 
             return rs -> {
                 final M result = supplier.get();
@@ -548,10 +548,10 @@ public final class Jdbc {
          */
         static <K, V, D, M extends Map<K, D>> ResultExtractor<M> groupTo(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final Collector<? super V, ?, D> downstream, final Supplier<? extends M> supplier) {
-            N.checkArgNotNull(keyExtractor, s.keyExtractor);
-            N.checkArgNotNull(valueExtractor, s.valueExtractor);
-            N.checkArgNotNull(downstream, s.downstream);
-            N.checkArgNotNull(supplier, s.supplier);
+            N.checkArgNotNull(keyExtractor, cs.keyExtractor);
+            N.checkArgNotNull(valueExtractor, cs.valueExtractor);
+            N.checkArgNotNull(downstream, cs.downstream);
+            N.checkArgNotNull(supplier, cs.supplier);
 
             return rs -> {
                 final Supplier<Object> downstreamSupplier = (Supplier<Object>) downstream.supplier();
@@ -603,8 +603,8 @@ public final class Jdbc {
          * @return
          */
         static <T> ResultExtractor<List<T>> toList(final RowFilter rowFilter, final RowMapper<? extends T> rowMapper) {
-            N.checkArgNotNull(rowFilter, s.rowFilter);
-            N.checkArgNotNull(rowMapper, s.rowMapper);
+            N.checkArgNotNull(rowFilter, cs.rowFilter);
+            N.checkArgNotNull(rowMapper, cs.rowMapper);
 
             return rs -> {
                 final List<T> result = new ArrayList<>();
@@ -626,7 +626,7 @@ public final class Jdbc {
          * @see BiResultExtractor#toList(Class)
          */
         static <T> ResultExtractor<List<T>> toList(final Class<? extends T> targetClass) {
-            N.checkArgNotNull(targetClass, s.targetClass);
+            N.checkArgNotNull(targetClass, cs.targetClass);
 
             return rs -> {
                 final BiRowMapper<? extends T> rowMapper = BiRowMapper.to(targetClass);
@@ -649,7 +649,7 @@ public final class Jdbc {
          * @see DataSet#toMergedEntities(Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass) {
-            N.checkArgNotNull(targetClass, s.targetClass);
+            N.checkArgNotNull(targetClass, cs.targetClass);
 
             return rs -> {
                 final RowExtractor rowExtractor = RowExtractor.createBy(targetClass);
@@ -666,7 +666,7 @@ public final class Jdbc {
          * @see DataSet#toMergedEntities(Collection, Collection, Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, final String idPropNameForMerge) {
-            N.checkArgNotNull(targetClass, s.targetClass);
+            N.checkArgNotNull(targetClass, cs.targetClass);
 
             return rs -> {
                 final RowExtractor rowExtractor = RowExtractor.createBy(targetClass);
@@ -683,7 +683,7 @@ public final class Jdbc {
          * @see DataSet#toMergedEntities(Collection, Collection, Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, final Collection<String> idPropNamesForMerge) {
-            N.checkArgNotNull(targetClass, s.targetClass);
+            N.checkArgNotNull(targetClass, cs.targetClass);
 
             return rs -> {
                 final RowExtractor rowExtractor = RowExtractor.createBy(targetClass);
@@ -867,10 +867,10 @@ public final class Jdbc {
          */
         static <K, V, M extends Map<K, V>> BiResultExtractor<M> toMap(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor, final BinaryOperator<V> mergeFunction, final Supplier<? extends M> supplier) {
-            N.checkArgNotNull(keyExtractor, s.keyExtractor);
-            N.checkArgNotNull(valueExtractor, s.valueExtractor);
-            N.checkArgNotNull(mergeFunction, s.mergeFunction);
-            N.checkArgNotNull(supplier, s.supplier);
+            N.checkArgNotNull(keyExtractor, cs.keyExtractor);
+            N.checkArgNotNull(valueExtractor, cs.valueExtractor);
+            N.checkArgNotNull(mergeFunction, cs.mergeFunction);
+            N.checkArgNotNull(supplier, cs.supplier);
 
             return (rs, columnLabels) -> {
                 final M result = supplier.get();
@@ -949,9 +949,9 @@ public final class Jdbc {
          */
         static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> BiResultExtractor<M> toMultimap(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
-            N.checkArgNotNull(keyExtractor, s.keyExtractor);
-            N.checkArgNotNull(valueExtractor, s.valueExtractor);
-            N.checkArgNotNull(multimapSupplier, s.multimapSupplier);
+            N.checkArgNotNull(keyExtractor, cs.keyExtractor);
+            N.checkArgNotNull(valueExtractor, cs.valueExtractor);
+            N.checkArgNotNull(multimapSupplier, cs.multimapSupplier);
 
             return (rs, columnLabels) -> {
                 final M result = multimapSupplier.get();
@@ -988,9 +988,9 @@ public final class Jdbc {
          */
         static <K, V, M extends Map<K, List<V>>> BiResultExtractor<M> groupTo(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor, final Supplier<? extends M> supplier) {
-            N.checkArgNotNull(keyExtractor, s.keyExtractor);
-            N.checkArgNotNull(valueExtractor, s.valueExtractor);
-            N.checkArgNotNull(supplier, s.supplier);
+            N.checkArgNotNull(keyExtractor, cs.keyExtractor);
+            N.checkArgNotNull(valueExtractor, cs.valueExtractor);
+            N.checkArgNotNull(supplier, cs.supplier);
 
             return (rs, columnLabels) -> {
                 final M result = supplier.get();
@@ -1039,10 +1039,10 @@ public final class Jdbc {
          */
         static <K, V, D, M extends Map<K, D>> BiResultExtractor<M> groupTo(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor, final Collector<? super V, ?, D> downstream, final Supplier<? extends M> supplier) {
-            N.checkArgNotNull(keyExtractor, s.keyExtractor);
-            N.checkArgNotNull(valueExtractor, s.valueExtractor);
-            N.checkArgNotNull(downstream, s.downstream);
-            N.checkArgNotNull(supplier, s.supplier);
+            N.checkArgNotNull(keyExtractor, cs.keyExtractor);
+            N.checkArgNotNull(valueExtractor, cs.valueExtractor);
+            N.checkArgNotNull(downstream, cs.downstream);
+            N.checkArgNotNull(supplier, cs.supplier);
 
             return (rs, columnLabels) -> {
 
@@ -1095,8 +1095,8 @@ public final class Jdbc {
          * @return
          */
         static <T> BiResultExtractor<List<T>> toList(final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper) {
-            N.checkArgNotNull(rowFilter, s.rowFilter);
-            N.checkArgNotNull(rowMapper, s.rowMapper);
+            N.checkArgNotNull(rowFilter, cs.rowFilter);
+            N.checkArgNotNull(rowMapper, cs.rowMapper);
 
             return (rs, columnLabels) -> {
                 final List<T> result = new ArrayList<>();
@@ -1120,7 +1120,7 @@ public final class Jdbc {
          * @see ResultExtractor#toList(Class)
          */
         static <T> BiResultExtractor<List<T>> toList(final Class<? extends T> targetClass) {
-            N.checkArgNotNull(targetClass, s.targetClass);
+            N.checkArgNotNull(targetClass, cs.targetClass);
 
             return (rs, columnLabels) -> {
                 final BiRowMapper<? extends T> rowMapper = BiRowMapper.to(targetClass);
@@ -1219,8 +1219,8 @@ public final class Jdbc {
          * @return a `RowMapper` that returns a `Tuple2` of the results of the two `RowMapper` instances
          */
         static <T, U> RowMapper<Tuple2<T, U>> combine(final RowMapper<? extends T> rowMapper1, final RowMapper<? extends U> rowMapper2) {
-            N.checkArgNotNull(rowMapper1, s.rowMapper1);
-            N.checkArgNotNull(rowMapper2, s.rowMapper2);
+            N.checkArgNotNull(rowMapper1, cs.rowMapper1);
+            N.checkArgNotNull(rowMapper2, cs.rowMapper2);
 
             return rs -> Tuple.of(rowMapper1.apply(rs), rowMapper2.apply(rs));
         }
@@ -1238,9 +1238,9 @@ public final class Jdbc {
          */
         static <A, B, C> RowMapper<Tuple3<A, B, C>> combine(final RowMapper<? extends A> rowMapper1, final RowMapper<? extends B> rowMapper2,
                 final RowMapper<? extends C> rowMapper3) {
-            N.checkArgNotNull(rowMapper1, s.rowMapper1);
-            N.checkArgNotNull(rowMapper2, s.rowMapper2);
-            N.checkArgNotNull(rowMapper3, s.rowMapper3);
+            N.checkArgNotNull(rowMapper1, cs.rowMapper1);
+            N.checkArgNotNull(rowMapper2, cs.rowMapper2);
+            N.checkArgNotNull(rowMapper3, cs.rowMapper3);
 
             return rs -> Tuple.of(rowMapper1.apply(rs), rowMapper2.apply(rs), rowMapper3.apply(rs));
         }
@@ -1361,7 +1361,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static RowMapper<DisposableObjArray> toDisposableObjArray(final Class<?> entityClass) {
-            N.checkArgNotNull(entityClass, s.entityClass);
+            N.checkArgNotNull(entityClass, cs.entityClass);
 
             return new RowMapper<>() {
                 private DisposableObjArray disposable = null;
@@ -1446,7 +1446,7 @@ public final class Jdbc {
             private final Map<Integer, ColumnGetter<?>> columnGetterMap;
 
             RowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
-                N.checkArgNotNull(defaultColumnGetter, s.defaultColumnGetter);
+                N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
 
                 columnGetterMap = new HashMap<>(9);
                 columnGetterMap.put(0, defaultColumnGetter);
@@ -1603,8 +1603,8 @@ public final class Jdbc {
              * @throws IllegalArgumentException
              */
             public RowMapperBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
-                N.checkArgPositive(columnIndex, s.columnIndex);
-                N.checkArgNotNull(columnGetter, s.columnGetter);
+                N.checkArgPositive(columnIndex, cs.columnIndex);
+                N.checkArgNotNull(columnGetter, cs.columnGetter);
 
                 //        if (columnGetters == null) {
                 //            columnGetterMap.put(columnIndex, columnGetter);
@@ -2174,8 +2174,8 @@ public final class Jdbc {
          * @return
          */
         static <T, U> BiRowMapper<Tuple2<T, U>> combine(final BiRowMapper<? extends T> rowMapper1, final BiRowMapper<? extends U> rowMapper2) {
-            N.checkArgNotNull(rowMapper1, s.rowMapper1);
-            N.checkArgNotNull(rowMapper2, s.rowMapper2);
+            N.checkArgNotNull(rowMapper1, cs.rowMapper1);
+            N.checkArgNotNull(rowMapper2, cs.rowMapper2);
 
             return (rs, cls) -> Tuple.of(rowMapper1.apply(rs, cls), rowMapper2.apply(rs, cls));
         }
@@ -2193,9 +2193,9 @@ public final class Jdbc {
          */
         static <A, B, C> BiRowMapper<Tuple3<A, B, C>> combine(final BiRowMapper<? extends A> rowMapper1, final BiRowMapper<? extends B> rowMapper2,
                 final BiRowMapper<? extends C> rowMapper3) {
-            N.checkArgNotNull(rowMapper1, s.rowMapper1);
-            N.checkArgNotNull(rowMapper2, s.rowMapper2);
-            N.checkArgNotNull(rowMapper3, s.rowMapper3);
+            N.checkArgNotNull(rowMapper1, cs.rowMapper1);
+            N.checkArgNotNull(rowMapper2, cs.rowMapper2);
+            N.checkArgNotNull(rowMapper3, cs.rowMapper3);
 
             return (rs, cls) -> Tuple.of(rowMapper1.apply(rs, cls), rowMapper2.apply(rs, cls), rowMapper3.apply(rs, cls));
         }
@@ -2257,7 +2257,7 @@ public final class Jdbc {
         @Stateful
         static <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final Predicate<? super String> columnNameFilter,
                 final Function<? super String, String> columnNameConverter, final boolean ignoreNonMatchedColumns) {
-            N.checkArgNotNull(targetClass, s.targetClass);
+            N.checkArgNotNull(targetClass, cs.targetClass);
 
             final Predicate<? super String> columnNameFilterToBeUsed = columnNameFilter == null ? Fn.alwaysTrue() : columnNameFilter;
             final Function<? super String, String> columnNameConverterToBeUsed = columnNameConverter == null ? Fn.identity() : columnNameConverter;
@@ -3060,7 +3060,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static BiRowMapper<DisposableObjArray> toDisposableObjArray(final Class<?> entityClass) {
-            N.checkArgNotNull(entityClass, s.entityClass);
+            N.checkArgNotNull(entityClass, cs.entityClass);
 
             return new BiRowMapper<>() {
                 private DisposableObjArray disposable = null;
@@ -3300,8 +3300,8 @@ public final class Jdbc {
              * @throws IllegalArgumentException
              */
             public BiRowMapperBuilder get(final String columnName, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
-                N.checkArgNotNull(columnName, s.columnName);
-                N.checkArgNotNull(columnGetter, s.columnGetter);
+                N.checkArgNotNull(columnName, cs.columnName);
+                N.checkArgNotNull(columnGetter, cs.columnGetter);
 
                 columnGetterMap.put(columnName, columnGetter);
 
@@ -3611,7 +3611,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static RowConsumer create(final Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
-            N.checkArgNotNull(consumerForAll, s.consumerForAll);
+            N.checkArgNotNull(consumerForAll, cs.consumerForAll);
 
             return new RowConsumer() {
                 private int columnCount = -1;
@@ -3639,7 +3639,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static RowConsumer oneOff(final Consumer<DisposableObjArray> consumer) {
-            N.checkArgNotNull(consumer, s.consumer);
+            N.checkArgNotNull(consumer, cs.consumer);
 
             return new RowConsumer() {
                 private DisposableObjArray disposable = null;
@@ -3674,8 +3674,8 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static RowConsumer oneOff(final Class<?> entityClass, final Consumer<DisposableObjArray> consumer) {
-            N.checkArgNotNull(entityClass, s.entityClass);
-            N.checkArgNotNull(consumer, s.consumer);
+            N.checkArgNotNull(entityClass, cs.entityClass);
+            N.checkArgNotNull(consumer, cs.consumer);
 
             return new RowConsumer() {
                 private DisposableObjArray disposable = null;
@@ -3787,7 +3787,7 @@ public final class Jdbc {
          */
         @Beta
         static BiRowConsumer create(final Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
-            N.checkArgNotNull(consumerForAll, s.consumerForAll);
+            N.checkArgNotNull(consumerForAll, cs.consumerForAll);
 
             return (rs, columnLabels) -> {
                 final int columnCount = columnLabels.size();
@@ -3808,7 +3808,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static BiRowConsumer oneOff(final BiConsumer<List<String>, DisposableObjArray> consumer) {
-            N.checkArgNotNull(consumer, s.consumer);
+            N.checkArgNotNull(consumer, cs.consumer);
 
             return new BiRowConsumer() {
                 private DisposableObjArray disposable = null;
@@ -3843,8 +3843,8 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static BiRowConsumer oneOff(final Class<?> entityClass, final BiConsumer<List<String>, DisposableObjArray> consumer) {
-            N.checkArgNotNull(entityClass, s.entityClass);
-            N.checkArgNotNull(consumer, s.consumer);
+            N.checkArgNotNull(entityClass, cs.entityClass);
+            N.checkArgNotNull(consumer, cs.consumer);
 
             return new BiRowConsumer() {
                 private DisposableObjArray disposable = null;
@@ -4184,7 +4184,7 @@ public final class Jdbc {
             private final Map<Integer, ColumnGetter<?>> columnGetterMap;
 
             RowExtractorBuilder(final ColumnGetter<?> defaultColumnGetter) {
-                N.checkArgNotNull(defaultColumnGetter, s.defaultColumnGetter);
+                N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
 
                 columnGetterMap = new HashMap<>(9);
                 columnGetterMap.put(0, defaultColumnGetter);
@@ -4341,8 +4341,8 @@ public final class Jdbc {
              * @throws IllegalArgumentException
              */
             public RowExtractorBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
-                N.checkArgPositive(columnIndex, s.columnIndex);
-                N.checkArgNotNull(columnGetter, s.columnGetter);
+                N.checkArgPositive(columnIndex, cs.columnIndex);
+                N.checkArgNotNull(columnGetter, cs.columnGetter);
 
                 //        if (columnGetters == null) {
                 //            columnGetterMap.put(columnIndex, columnGetter);
@@ -5173,7 +5173,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException
          */
         public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException {
-            N.checkArgNotNull(handlerClass, s.handlerClass);
+            N.checkArgNotNull(handlerClass, cs.handlerClass);
 
             return register(N.newInstance(handlerClass));
         }
@@ -5186,7 +5186,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException
          */
         public static boolean register(final Handler<?> handler) throws IllegalArgumentException {
-            N.checkArgNotNull(handler, s.handler);
+            N.checkArgNotNull(handler, cs.handler);
 
             return register(ClassUtil.getCanonicalClassName(handler.getClass()), handler);
         }
@@ -5200,8 +5200,8 @@ public final class Jdbc {
          * @throws IllegalArgumentException
          */
         public static boolean register(final String qualifier, final Handler<?> handler) throws IllegalArgumentException {
-            N.checkArgNotEmpty(qualifier, s.qualifier);
-            N.checkArgNotNull(handler, s.handler);
+            N.checkArgNotEmpty(qualifier, cs.qualifier);
+            N.checkArgNotNull(handler, cs.handler);
 
             if (handlerPool.containsKey(qualifier)) {
                 return false;
@@ -5219,7 +5219,7 @@ public final class Jdbc {
          * @return
          */
         public static Handler<?> get(final String qualifier) { //NOSONAR
-            N.checkArgNotEmpty(qualifier, s.qualifier);
+            N.checkArgNotEmpty(qualifier, cs.qualifier);
 
             Handler<?> result = handlerPool.get(qualifier);
 
@@ -5243,7 +5243,7 @@ public final class Jdbc {
          * @return
          */
         public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) { //NOSONAR
-            N.checkArgNotNull(handlerClass, s.handlerClass);
+            N.checkArgNotNull(handlerClass, cs.handlerClass);
 
             final String qualifier = ClassUtil.getCanonicalClassName(handlerClass);
 
@@ -5275,7 +5275,7 @@ public final class Jdbc {
          * @return
          */
         public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) { //NOSONAR
-            N.checkArgNotNull(handlerClass, s.handlerClass);
+            N.checkArgNotNull(handlerClass, cs.handlerClass);
 
             Handler<?> result = get(handlerClass);
 
@@ -5306,7 +5306,7 @@ public final class Jdbc {
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction)
                 throws IllegalArgumentException {
-            N.checkArgNotNull(beforeInvokeAction, s.beforeInvokeAction);
+            N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction);
 
             return new Handler<>() {
                 @Override
@@ -5328,7 +5328,7 @@ public final class Jdbc {
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction)
                 throws IllegalArgumentException {
-            N.checkArgNotNull(afterInvokeAction, s.afterInvokeAction);
+            N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction);
 
             return new Handler<>() {
                 @Override
@@ -5354,8 +5354,8 @@ public final class Jdbc {
                 final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction,
                 final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction)
                 throws IllegalArgumentException {
-            N.checkArgNotNull(beforeInvokeAction, s.beforeInvokeAction);
-            N.checkArgNotNull(afterInvokeAction, s.afterInvokeAction);
+            N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction);
+            N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction);
 
             return new Handler<>() {
                 @Override

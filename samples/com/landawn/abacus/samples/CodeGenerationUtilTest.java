@@ -49,6 +49,7 @@ class CodeGenerationUtilTest {
                 .srcDir("./samples")
                 .propNameConverter((cls, propName) -> propName.equals("create_time") ? "createTime" : propName)
                 .generateClassPropNameList(true)
+                .generateLowerCaseWithUnderscore(true)
                 .generateUpperCaseWithUnderscore(true)
                 .generateFunctionPropName(true)
                 .functionClassName("f")

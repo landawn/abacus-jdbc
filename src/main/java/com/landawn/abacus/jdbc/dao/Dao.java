@@ -41,7 +41,7 @@ import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
-import com.landawn.abacus.jdbc.s;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -2169,8 +2169,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @throws SQLException if a database access error occurs
      */
     default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws SQLException {
-        N.checkArgNotNull(entity, s.entity);
-        N.checkArgNotEmpty(uniquePropNamesForQuery, s.uniquePropNamesForQuery);
+        N.checkArgNotNull(entity, cs.entity);
+        N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
 
         final Condition cond = CF.eqAnd(entity, uniquePropNamesForQuery);
 
@@ -2188,8 +2188,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      */
     default T upsert(final T entity, final Condition cond) throws SQLException {
-        N.checkArgNotNull(entity, s.entity);
-        N.checkArgNotNull(cond, s.cond);
+        N.checkArgNotNull(entity, cs.entity);
+        N.checkArgNotNull(cond, cs.cond);
 
         final T dbEntity = findOnlyOne(cond).orElseNull();
 
@@ -2241,8 +2241,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     @Beta
     @NonDBOperation
     default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction, final Executor executor) {
-        N.checkArgNotNull(sqlAction, s.func);
-        N.checkArgNotNull(executor, s.executor);
+        N.checkArgNotNull(sqlAction, cs.func);
+        N.checkArgNotNull(executor, cs.executor);
 
         final TD tdao = (TD) this;
 
@@ -2275,8 +2275,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     @Beta
     @NonDBOperation
     default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super TD, SQLException> sqlAction, final Executor executor) {
-        N.checkArgNotNull(sqlAction, s.action);
-        N.checkArgNotNull(executor, s.executor);
+        N.checkArgNotNull(sqlAction, cs.action);
+        N.checkArgNotNull(executor, cs.executor);
 
         final TD tdao = (TD) this;
 

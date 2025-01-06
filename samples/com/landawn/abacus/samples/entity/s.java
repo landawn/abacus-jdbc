@@ -92,6 +92,97 @@ public interface s { // NOSONAR
     List<String> employeeProjectPropNameList = List.of(employeeId, projectId);
 
     /**
+     * Auto-generated class for lower case property(field) name table for classes: {@code [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User]}
+     */
+    public interface sl { // NOSONAR
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "address"} for classes: {@code [ImmutableUser, User]} */
+        String address = "address";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "address2"} for classes: {@code [ImmutableUser, User]} */
+        String address2 = "address2";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "city"} for classes: {@code [Address]} */
+        String city = "city";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "create_time"} for classes: {@code [ImmutableUser, User]} */
+        String createTime = "create_time";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "devices"} for classes: {@code [ImmutableUser, User]} */
+        String devices = "devices";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "devices2"} for classes: {@code [ImmutableUser, User]} */
+        String devices2 = "devices2";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "email"} for classes: {@code [ImmutableUser, User]} */
+        String email = "email";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "employee_id"} for classes: {@code [Employee, EmployeeProject]} */
+        String employeeId = "employee_id";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "employees"} for classes: {@code [Project]} */
+        String employees = "employees";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "first_name"} for classes: {@code [Employee, ImmutableUser, User]} */
+        String firstName = "first_name";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "id"} for classes: {@code [Address, Device, ImmutableUser, User]} */
+        String id = "id";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "last_name"} for classes: {@code [Employee, ImmutableUser, User]} */
+        String lastName = "last_name";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "manufacture"} for classes: {@code [Device]} */
+        String manufacture = "manufacture";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "model"} for classes: {@code [Device]} */
+        String model = "model";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "nick_name"} for classes: {@code [ImmutableUser, User]} */
+        String nickName = "nick_name";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "project_id"} for classes: {@code [EmployeeProject, Project]} */
+        String projectId = "project_id";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "projects"} for classes: {@code [Employee]} */
+        String projects = "projects";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "start_date"} for classes: {@code [Project]} */
+        String startDate = "start_date";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "street"} for classes: {@code [Address]} */
+        String street = "street";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "title"} for classes: {@code [Project]} */
+        String title = "title";
+
+        /** Property(field) name in lower case concatenated with underscore: {@code "user_id"} for classes: {@code [Address, Device]} */
+        String userId = "user_id";
+
+        /** Unmodifiable property(field) name list for class: {@code "Project"}. */
+        List<String> projectPropNameList = List.of(employees, projectId, startDate, title);
+
+        /** Unmodifiable property(field) name list for class: {@code "Employee"}. */
+        List<String> employeePropNameList = List.of(employeeId, firstName, lastName, projects);
+
+        /** Unmodifiable property(field) name list for class: {@code "User"}. */
+        List<String> userPropNameList = List.of(address, address2, createTime, devices, devices2, email, firstName, id, lastName, nickName);
+
+        /** Unmodifiable property(field) name list for class: {@code "Address"}. */
+        List<String> addressPropNameList = List.of(city, id, street, userId);
+
+        /** Unmodifiable property(field) name list for class: {@code "Device"}. */
+        List<String> devicePropNameList = List.of(id, manufacture, model, userId);
+
+        /** Unmodifiable property(field) name list for class: {@code "ImmutableUser"}. */
+        List<String> immutableUserPropNameList = List.of(address, address2, createTime, devices, devices2, email, firstName, id, lastName, nickName);
+
+        /** Unmodifiable property(field) name list for class: {@code "EmployeeProject"}. */
+        List<String> employeeProjectPropNameList = List.of(employeeId, projectId);
+
+    }
+
+    /**
      * Auto-generated class for upper case property(field) name table for classes: {@code [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User]}
      */
     public interface su { // NOSONAR

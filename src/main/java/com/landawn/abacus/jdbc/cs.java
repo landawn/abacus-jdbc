@@ -16,8 +16,8 @@
 
 package com.landawn.abacus.jdbc;
 
-public final class s { // NOSONAR
-    private s() {
+public final class cs { // NOSONAR
+    private cs() {
         // singleton
     }
 

@@ -209,13 +209,13 @@ public class PreparedQueryTest {
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
                 .findOnlyOne(
-                        Jdbc.BiRowMapper.builder().get("id", ResultSet::getLong).get("firstName", ResultSet::getString).getDate("createTime").to(Map.class))
+                        Jdbc.BiRowMapper.builder().get(s.id, ResultSet::getLong).get(s.firstName, ResultSet::getString).getDate(s.createTime).to(Map.class))
                 .ifPresent(System.out::println);
 
         JdbcUtil.prepareQuery(dataSource, "select id from user1").queryForBigInteger().ifPresent(Fn.println());
         JdbcUtil.prepareQuery(dataSource, "select id from user1").queryForBigDecimal().ifPresent(Fn.println());
 
-        sql = PSC.deleteFrom(User.class).where("id = ?").sql();
+        sql = PSC.deleteFrom(User.class).where(CF.eq(s.id)).sql();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
                 .update();
