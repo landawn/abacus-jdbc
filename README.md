@@ -3,13 +3,13 @@
 [![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc.svg)](https://maven-badges.herokuapp.com/maven-central/com.landawn/abacus-jdbc/)
 [![Javadocs](https://img.shields.io/badge/javadoc-3.8.8-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/3.8.8/index.html)
 
-Hope it will bring you the programming experiences: coding with SQL/DB is just like coding with Collections.
+Experience the simplicity of coding with SQL/DB as if you're working with Collections.
 
 ## Features:
 
-This library is just about three things:
+This library focuses on three main aspects:
 
-*  Write/generate a `sql script`(if needed): [SQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/SQLBuilder_view.html), 
+*  Writing/Generating `SQL Scripts`(if needed): [SQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/SQLBuilder_view.html), 
 [DynamicSQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DynamicSQLBuilder_view.html).
 
 ```java
@@ -34,7 +34,7 @@ UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
 
 <br />
 
-*  Prepare `Statement` [PreparedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedQuery_view.html), 
+*  Preparing `Statements` [PreparedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedQuery_view.html), 
 [NamedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/NamedQuery_view.html), 
 [CallableQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/CallableQuery_view.html) with a `sql` or `Dao` mapped with `sqls`.
 
@@ -94,7 +94,7 @@ UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, ...);
 ```
 <br />
 
-* Call methods in the prepared `statement/query` or `Dao` and retrieve the result(If needed):
+* Calling methods in the prepared `statement/query` or `Dao` and retrieve the result(If needed):
 [Dao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dao_view.html)/[CrudDao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/CrudDao_view.html)/[JoinEntityHelper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JoinEntityHelper_view.html), 
 [Jdbc](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Jdbc_view.html),
 [DataSet](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DataSet_view.html), 
