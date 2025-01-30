@@ -6023,8 +6023,9 @@ public final class JdbcUtil {
      */
     @Deprecated
     public static void enableSqlLog(final boolean b, final int maxSqlLogLength) {
+        final SqlLogConfig config = isSQLLogEnabled_TL.get();
         // synchronized (isSQLLogEnabled_TL) {
-        if (logger.isDebugEnabled() && isSQLLogEnabled_TL.get().isEnabled != b) {
+        if (logger.isDebugEnabled() && config.isEnabled != b) {
             if (b) {
                 logger.debug("Turn on [SQL] log");
             } else {
@@ -6032,7 +6033,7 @@ public final class JdbcUtil {
             }
         }
 
-        isSQLLogEnabled_TL.get().set(b, maxSqlLogLength);
+        config.set(b, maxSqlLogLength);
         // }
     }
 
@@ -6164,8 +6165,9 @@ public final class JdbcUtil {
      * @param maxSqlLogLength the maximum length of the SQL log. Default value is 1024.
      */
     public static void setMinExecutionTimeForSqlPerfLog(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength) {
+        final SqlLogConfig config = minExecutionTimeForSqlPerfLog_TL.get();
         // synchronized (minExecutionTimeForSqlPerfLog_TL) {
-        if (logger.isDebugEnabled() && minExecutionTimeForSqlPerfLog_TL.get().minExecutionTimeForSqlPerfLog != minExecutionTimeForSqlPerfLog) {
+        if (logger.isDebugEnabled() && config.minExecutionTimeForSqlPerfLog != minExecutionTimeForSqlPerfLog) {
             if (minExecutionTimeForSqlPerfLog >= 0) {
                 logger.debug("set 'minExecutionTimeForSqlPerfLog' to: " + minExecutionTimeForSqlPerfLog);
             } else {
@@ -6173,7 +6175,7 @@ public final class JdbcUtil {
             }
         }
 
-        minExecutionTimeForSqlPerfLog_TL.get().set(minExecutionTimeForSqlPerfLog, maxSqlLogLength);
+        config.set(minExecutionTimeForSqlPerfLog, maxSqlLogLength);
         // }
     }
 
@@ -7525,7 +7527,9 @@ public final class JdbcUtil {
         try {
             return new String(blob.getBytes(1, (int) blob.length()), Charsets.UTF_8);
         } finally {
-            blob.free();
+            if (blob != null) {
+                blob.free();
+            }
         }
     }
 
@@ -7541,7 +7545,9 @@ public final class JdbcUtil {
         try {
             return new String(blob.getBytes(1, (int) blob.length()), charset);
         } finally {
-            blob.free();
+            if (blob != null) {
+                blob.free();
+            }
         }
     }
 
@@ -7558,7 +7564,9 @@ public final class JdbcUtil {
         try {
             return IOUtil.write(blob.getBinaryStream(), output);
         } finally {
-            blob.free();
+            if (blob != null) {
+                blob.free();
+            }
         }
     }
 
@@ -7573,7 +7581,9 @@ public final class JdbcUtil {
         try {
             return clob.getSubString(1, (int) clob.length());
         } finally {
-            clob.free();
+            if (clob != null) {
+                clob.free();
+            }
         }
     }
 
@@ -7590,7 +7600,9 @@ public final class JdbcUtil {
         try {
             return IOUtil.write(clob.getCharacterStream(), output);
         } finally {
-            clob.free();
+            if (clob != null) {
+                clob.free();
+            }
         }
     }
 
