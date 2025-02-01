@@ -81,8 +81,9 @@ public @interface Delete {
 
     /**
      *
-     *
      * @return
+     * @see Define
+     * @see DefineList
      */
     @Beta
     boolean hasDefineWithNamedParameter() default false;
