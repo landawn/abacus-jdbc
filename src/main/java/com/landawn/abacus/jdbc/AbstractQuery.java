@@ -2364,9 +2364,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return The current instance of the query.
      * @throws SQLException If a database access error occurs.
      * @see java.sql.Types
-     * @deprecated
      */
-    @Deprecated
     @Beta
     public This setNullForMultiPositions(final int sqlType, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
