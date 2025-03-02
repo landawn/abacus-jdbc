@@ -1351,30 +1351,28 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the Clob.
+     * Sets the Clob value for the specified parameter index.
      *
-     * @param parameterIndex
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param x The Clob value to set.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setClob(final int parameterIndex, final java.sql.Clob x) throws SQLException {
         stmt.setClob(parameterIndex, x);
-
         return (This) this;
     }
 
     /**
-     * Sets the Clob.
+     * Sets the Clob value for the specified parameter index using a Reader.
      *
-     * @param parameterIndex
-     * @param reader
-     * @return
-     * @throws SQLException
+     * @param parameterIndex The index of the parameter to set, starting from 1.
+     * @param reader The Reader object that contains the Clob data to set.
+     * @return The current instance of the query.
+     * @throws SQLException If a database access error occurs.
      */
     public This setClob(final int parameterIndex, final Reader reader) throws SQLException {
         stmt.setClob(parameterIndex, reader);
-
         return (This) this;
     }
 
@@ -3625,7 +3623,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this is closed
      * @throws SQLException
      */
-    public <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException {
+    public <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueType)
+            throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(targetValueType, cs.targetType);
         assertNotClosed();
 
@@ -4997,8 +4996,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         consumer.accept(list(rowMapper));
     }
 
-    // Will it cause confusion if it's called in transaction?
-
     /**
      * Streams the rows in the first {@code ResultSet}.
      *
@@ -5017,6 +5014,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @LazyEvaluation
     public Stream<Map<String, Object>> stream() {
+        // Will it cause confusion if it's called in transaction?
+
         return stream(Jdbc.BiRowMapper.TO_MAP);
     }
 
@@ -5044,7 +5043,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return stream(Jdbc.BiRowMapper.to(targetType));
     }
 
-    // Will it cause confusion if it's called in transaction?
     /**
      * Streams the rows in the first {@code ResultSet} using the provided {@code RowMapper}.
      *
@@ -5067,6 +5065,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @SuppressWarnings("resource")
     @LazyEvaluation
     public <T> Stream<T> stream(final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
+        // Will it cause confusion if it's called in transaction?
+
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
 
@@ -5075,7 +5075,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return Stream.just(supplier).map(Supplier::get).flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
     }
 
-    // Will it cause confusion if it's called in transaction?
     /**
      * Streams the rows in the first {@code ResultSet} using the provided {@code BiRowMapper}.
      *
@@ -5098,6 +5097,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @SuppressWarnings("resource")
     @LazyEvaluation
     public <T> Stream<T> stream(final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
+        // Will it cause confusion if it's called in transaction?
+
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
 
@@ -5106,7 +5107,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return Stream.just(supplier).map(Supplier::get).flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
     }
 
-    // Will it cause confusion if it's called in transaction?
     /**
      * Streams the rows in the first {@code ResultSet} using the provided {@code RowFilter} and {@code RowMapper}.
      *
@@ -5131,6 +5131,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @LazyEvaluation
     public <T> Stream<T> stream(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException {
+        // Will it cause confusion if it's called in transaction?
+
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
@@ -5143,7 +5145,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 .onClose(this::closeAfterExecutionIfAllowed);
     }
 
-    // Will it cause confusion if it's called in transaction?
     /**
      * Streams the rows in the first {@code ResultSet} using the provided {@code BiRowFilter} and {@code BiRowMapper}.
      *
@@ -5168,6 +5169,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @LazyEvaluation
     public <T> Stream<T> stream(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException {
+        // Will it cause confusion if it's called in transaction?
+
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
