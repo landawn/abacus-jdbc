@@ -319,6 +319,32 @@ public final class JdbcUtil {
     }
 
     /**
+     * Creates a HikariCP DataSource with the specified database connection details.
+     *
+     * @param url
+     * @param user
+     * @param password
+     * @param minIdle
+     * @param maxPoolSize
+     * @return
+     */
+    public static javax.sql.DataSource createHikariDataSource(final String url, final String user, final String password, final int minIdle,
+            final int maxPoolSize) {
+        try {
+            final com.zaxxer.hikari.HikariConfig config = new com.zaxxer.hikari.HikariConfig();
+            config.setJdbcUrl(url);
+            config.setUsername(user);
+            config.setPassword(password);
+            config.setMinimumIdle(minIdle);
+            config.setMaximumPoolSize(maxPoolSize);
+
+            return new com.zaxxer.hikari.HikariDataSource(config);
+        } catch (final Exception e) {
+            throw ExceptionUtil.toRuntimeException(e, true);
+        }
+    }
+
+    /**
      * Creates a C3P0 DataSource with the specified database connection details.
      *
      * @param url The JDBC URL for the database connection.
@@ -334,6 +360,32 @@ public final class JdbcUtil {
             cpds.setUser(user);
             cpds.setPassword(password);
 
+            return cpds;
+        } catch (final Exception e) {
+            throw ExceptionUtil.toRuntimeException(e, true);
+        }
+    }
+
+    /**
+     * Creates a C3P0 DataSource with the specified database connection details.
+     *
+     * @param url
+     * @param user
+     * @param password
+     * @param minPoolSize
+     * @param maxPoolSize
+     * @return
+     */
+    @Beta
+    public static javax.sql.DataSource createC3p0DataSource(final String url, final String user, final String password, final int minPoolSize,
+            final int maxPoolSize) {
+        try {
+            final com.mchange.v2.c3p0.ComboPooledDataSource cpds = new com.mchange.v2.c3p0.ComboPooledDataSource();
+            cpds.setJdbcUrl(url);
+            cpds.setUser(user);
+            cpds.setPassword(password);
+            cpds.setMinPoolSize(minPoolSize);
+            cpds.setMaxPoolSize(maxPoolSize);
             return cpds;
         } catch (final Exception e) {
             throw ExceptionUtil.toRuntimeException(e, true);
