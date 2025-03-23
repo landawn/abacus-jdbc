@@ -7694,11 +7694,11 @@ public final class JdbcUtil {
      * </pre>
      *
      */
-    public static void enableThreadCacheForDao() {
+    public static void startThreadCacheForDao() {
         localThreadCache_TL.set(new Jdbc.LocalThreadCacheForDao());
     }
 
-    public static void enableThreadCacheForDao(final Jdbc.LocalThreadCacheForDao localThreadCache) {
+    public static void startThreadCacheForDao(final Jdbc.LocalThreadCacheForDao localThreadCache) {
         localThreadCache_TL.set(localThreadCache);
     }
 

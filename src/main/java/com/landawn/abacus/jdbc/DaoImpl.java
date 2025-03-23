@@ -175,8 +175,7 @@ final class DaoImpl {
     private static final Set<String> SUPPORTED_TRANSFER_FOR_CACHE = N.asSet("none", "kryo", "json");
 
     private static final Set<String> QUERY_METHOD_NAME_SET = N.asSet("query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne",
-            "exist",
-            "notExist", "count");
+            "exist", "notExist", "count");
 
     private static final Set<String> UPDATE_METHOD_NAME_SET = N.asSet("update", "delete", "deleteById", "insert", "save", "batchUpdate", "batchDelete",
             "batchDeleteByIds", "batchInsert", "batchSave", "batchUpsert", "upsert", "execute");
@@ -1710,15 +1709,16 @@ final class DaoImpl {
     }
 
     @SuppressWarnings("unused")
-    private static String createCacheKey(final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
+    private static String createCacheKey(final String tableName, final String methodName, final Object[] args, final Logger daoLogger) {
         String cacheKey = null;
+        String tableAndOp = Strings.concat(tableName, ".", methodName);
 
         if (kryoParser != null) {
             try {
-                cacheKey = kryoParser.serialize(N.asMap(fullClassMethodName, args));
+                cacheKey = kryoParser.serialize(N.asMap(tableAndOp, args));
             } catch (final Exception e) {
                 // ignore;
-                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
+                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + methodName);
             }
         } else {
             final List<Object> newArgs = Stream.of(args).map(it -> {
@@ -1736,10 +1736,10 @@ final class DaoImpl {
             }).toList();
 
             try {
-                cacheKey = N.toJson(N.asMap(fullClassMethodName, newArgs));
+                cacheKey = N.toJson(N.asMap(tableAndOp, newArgs));
             } catch (final Exception e) {
                 // ignore;
-                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
+                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + methodName);
             }
         }
 
@@ -6101,7 +6101,7 @@ final class DaoImpl {
                         final boolean isRefreshLocalThreadCacheRequired = isUpdateMethod && localThreadCache != null;
 
                         final String cacheKey = isAnnotatedCacheResult || isLocalThreadCacheEnabled || isRefreshLocalThreadCacheRequired
-                                ? createCacheKey(fullClassMethodName, args, daoLogger)
+                                ? createCacheKey(tableName, methodName, args, daoLogger)
                                 : null;
 
                         Object result = null;
