@@ -80,27 +80,44 @@ public class DaoTest {
 
     @Test
     public void test_localThreadCache() throws Exception {
+        final List<User> users = IntStream.range(1, 100)
+                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                .toList();
+
+        List<Long> ids = userDao.batchInsertWithId(users);
+
         JdbcUtil.enableThreadCacheForDao();
 
         try {
-            final List<User> users = IntStream.range(1, 100)
-                    .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
-                    .toList();
-
-            List<Long> ids = userDao.batchInsertWithId(users);
             assertEquals(users.size(), ids.size());
 
             final List<User> users2 = userDao.batchGet(ids);
             assertEquals(users.size(), users2.size());
 
+            long start = System.currentTimeMillis();
+
             for (int i = 0; i < 100; i++) {
                 assertEquals(users.size(), userDao.batchGet(ids).size());
             }
 
-            assertEquals(users.size(), userDao.batchDeleteByIds(ids));
+            N.println("Time with local thread cache: " + (System.currentTimeMillis() - start));
+
         } finally {
             JdbcUtil.closeThreadCacheForDao();
         }
+
+        final List<User> users2 = userDao.batchGet(ids);
+        assertEquals(users.size(), users2.size());
+
+        long start = System.currentTimeMillis();
+
+        for (int i = 0; i < 100; i++) {
+            assertEquals(users.size(), userDao.batchGet(ids).size());
+        }
+
+        N.println("Time without local thread cache: " + (System.currentTimeMillis() - start));
+
+        assertEquals(users.size(), userDao.batchDeleteByIds(ids));
 
     }
 
