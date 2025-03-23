@@ -1617,6 +1617,37 @@ final class DaoImpl {
                 default:
                     return limit;
             }
+        } else if (cond instanceof final Criteria criteria) {
+            final Limit limit = criteria.getLimit();
+
+            if (limit != null) {
+                switch (dbVersion) { //NOSONAR
+                    case ORACLE, SQL_SERVER, DB2:
+
+                        if (limit.getCount() > 0 && limit.getOffset() > 0) {
+                            criteria.limit("OFFSET " + limit.getOffset() + " ROWS FETCH NEXT " + limit.getCount() + " ROWS ONLY");
+                        } else if (limit.getCount() > 0) {
+                            criteria.limit("FETCH FIRST " + limit.getCount() + " ROWS ONLY");
+                        } else if (limit.getOffset() > 0) {
+                            criteria.limit("OFFSET " + limit.getOffset() + " ROWS");
+                        }
+
+                        break;
+
+                    default:
+                }
+            } else if (count > 0) {
+                switch (dbVersion) { //NOSONAR
+                    case ORACLE, SQL_SERVER, DB2:
+                        criteria.limit("FETCH FIRST " + count + " ROWS ONLY");
+                        break;
+
+                    default:
+                        criteria.limit(count);
+                }
+            }
+
+            return criteria;
         } else if (cond instanceof final Expression expr //
                 && Strings.containsAnyIgnoreCase(expr.getLiteral(), " LIMIT ", " OFFSET ", " FETCH NEXT ")) {
             // ignore.

@@ -1181,6 +1181,8 @@ public final class JdbcUtil {
 
         if (ret instanceof final Blob blob) {
             ret = blob.getBytes(1, (int) blob.length());
+        } else if (ret instanceof final Clob clob) {
+            ret = clob.getSubString(1, (int) clob.length());
         } else if (checkDateType) {
             ret = columnConverterByIndex.apply(rs, columnIndex, ret);
         }
@@ -1223,6 +1225,8 @@ public final class JdbcUtil {
 
         if (ret instanceof final Blob blob) {
             ret = blob.getBytes(1, (int) blob.length());
+        } else if (ret instanceof final Clob clob) {
+            ret = clob.getSubString(1, (int) clob.length());
         } else if (checkDateType) {
             ret = columnConverterByLabel.apply(rs, columnLabel, ret);
         }
@@ -5891,6 +5895,10 @@ public final class JdbcUtil {
                 } finally {
                     JdbcUtil.closeQuietly(rs);
                 }
+            } else if (value instanceof final Blob blob) {
+                value = blob.getBytes(1, (int) blob.length());
+            } else if (value instanceof final Clob clob) {
+                value = clob.getSubString(1, (int) clob.length());
             }
 
             outParamValues.put(key, value);
