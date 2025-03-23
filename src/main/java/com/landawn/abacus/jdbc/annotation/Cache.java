@@ -21,6 +21,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.jdbc.JdbcUtil;
 
 // TODO: First of all, it's a bad idea to implement cache in DAL layer?! and how if not?
 /**
@@ -36,12 +37,12 @@ public @interface Cache {
      *
      * @return
      */
-    int capacity() default 1000;
+    int capacity() default JdbcUtil.DEFAULT_BATCH_SIZE;
 
     /**
      *
      *
      * @return
      */
-    long evictDelay() default 3000; // unit milliseconds.
+    long evictDelay() default JdbcUtil.DEFAULT_CACHE_EVICT_DELAY; // unit milliseconds.
 }

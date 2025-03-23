@@ -21,6 +21,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.jdbc.JdbcUtil;
 
 @Beta
 @Retention(RetentionPolicy.RUNTIME)
@@ -36,13 +37,13 @@ public @interface CacheResult {
      *
      * @return
      */
-    long liveTime() default 30 * 60 * 1000; // unit milliseconds.
+    long liveTime() default JdbcUtil.DEFAULT_CACHE_LIVE_TIME; // unit milliseconds.
 
     /**
      *
      * @return
      */
-    long idleTime() default 3 * 60 * 1000; // unit milliseconds.
+    long idleTime() default JdbcUtil.DEFAULT_CACHE_IDLE_TIME; // unit milliseconds.
 
     /**
      * Minimum required size to cache query result if the return type is {@code Collection} or {@code DataSet}.
@@ -62,7 +63,7 @@ public @interface CacheResult {
 
     /**
      * It's used to copy/clone the result when save result to cache or fetch result from cache.
-     * It can be set to {@code "none" and "kryo"}.
+     * It can be set to {@code "none", "kryo" or "json"}.
      *
      * @return
      * @see <a href="https://github.com/EsotericSoftware/kryo">kryo</a>
@@ -78,7 +79,7 @@ public @interface CacheResult {
 
     /**
      * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
-     * It's only applied if target of annotation {@code RefreshCache} is {@code Type}, and will be ignored if target is method.
+     * It's only applied if target of annotation {@code CacheResult} is {@code Type}, and will be ignored if target is method.
      *
      * @return
      */

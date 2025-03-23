@@ -6383,14 +6383,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Executes the SQL statement in this {@code PreparedStatement} object and applies the provided function to the statement.
      *
      * @param <R> the type of the result
-     * @param getter the function to apply to the {@code PreparedStatement}. The first parameter indicates if the first result is a {@code ResultSet} object,
-     *               the second parameter is the executed {@code PreparedStatement}.
+     * @param getter the function to apply to the {@code PreparedStatement}. The first parameter is the executed {@code PreparedStatement},
+     *               the second parameter indicates if the first result is a {@code ResultSet} object.
      * @return the result of applying the function to the {@code PreparedStatement}
      * @throws IllegalArgumentException if the provided function is invalid
      * @throws IllegalStateException if this instance is closed
      * @throws SQLException if a database access error occurs
      */
-    public <R> R executeThenApply(final Throwables.BiFunction<Boolean, ? super Stmt, ? extends R, SQLException> getter)
+    public <R> R executeThenApply(final Throwables.BiFunction<? super Stmt, Boolean, ? extends R, SQLException> getter)
             throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(getter, cs.getter);
         assertNotClosed();
@@ -6398,7 +6398,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         try {
             final boolean isFirstResultSet = JdbcUtil.execute(stmt);
 
-            return getter.apply(isFirstResultSet, stmt);
+            return getter.apply(stmt, isFirstResultSet);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -6429,13 +6429,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the SQL statement in this {@code PreparedStatement} object and applies the provided consumer to the statement.
      *
-     * @param consumer the consumer to apply to the {@code PreparedStatement}. The first parameter indicates if the first result is a {@code ResultSet} object,
-     *               the second parameter is the executed {@code PreparedStatement}.
+     * @param consumer the consumer to apply to the {@code PreparedStatement}. The first parameter is the executed {@code PreparedStatement},
+     *               the second parameter indicates if the first result is a {@code ResultSet} object.
      * @throws IllegalArgumentException if the provided consumer is invalid
      * @throws IllegalStateException if this instance is closed
      * @throws SQLException if a database access error occurs
      */
-    public void executeThenAccept(final Throwables.BiConsumer<Boolean, ? super Stmt, SQLException> consumer)
+    public void executeThenAccept(final Throwables.BiConsumer<? super Stmt, Boolean, SQLException> consumer)
             throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(consumer, cs.consumer);
         assertNotClosed();
@@ -6443,7 +6443,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         try {
             final boolean isFirstResultSet = JdbcUtil.execute(stmt);
 
-            consumer.accept(isFirstResultSet, stmt);
+            consumer.accept(stmt, isFirstResultSet);
         } finally {
             closeAfterExecutionIfAllowed();
         }

@@ -5377,6 +5377,61 @@ public final class Jdbc {
         }
     }
 
+    public static final class LocalThreadCacheForDao {
+        protected final Map<Object, Object> cache;
+
+        public LocalThreadCacheForDao() {
+            cache = new HashMap<>();
+        }
+
+        public LocalThreadCacheForDao(final Map<Object, Object> cache) {
+            this.cache = cache;
+        }
+
+        /**
+         * @param defaultCacheKey
+         * @param proxy
+         * @param args
+         * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
+         * @return
+         */
+        @SuppressWarnings("unused")
+        public Object fetchResultFromCache(final String defaultCacheKey, final Object proxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            return cache.get(defaultCacheKey);
+        }
+
+        /**
+         * Cache result.
+         *
+         * @param defaultCacheKey
+         * @param result
+         * @param proxy
+         * @param args
+         * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
+         * @return
+         */
+        @SuppressWarnings("unused")
+        public boolean catchResult(final String defaultCacheKey, final Object result, final Object proxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            return cache.put(defaultCacheKey, result) == null;
+        }
+
+        /**
+         * Refresh the cache.
+         *
+         * @param defaultCacheKey
+         * @param proxy
+         * @param args
+         * @param methodSignature
+         */
+        @SuppressWarnings("unused")
+        public void refreshCache(final String defaultCacheKey, final Object proxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            cache.remove(defaultCacheKey);
+        }
+    }
+
     static <K, V> void merge(final Map<K, V> map, final K key, final V value, final BinaryOperator<V> remappingFunction) {
         final V oldValue = map.get(key);
 

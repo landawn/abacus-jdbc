@@ -1384,8 +1384,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the CallableStatement and applies the provided BiFunction to the result.
      *
      * @param <R> the type of the result
-     * @param getter the BiFunction to apply to the CallableStatement. The first parameter indicates if the first result is a {@code ResultSet} object,
-     *                 the second parameter is the executed {@code CallableStatement}.
+     * @param getter the BiFunction to apply to the CallableStatement. The first parameter is the executed {@code CallableStatement},
+     *               the second parameter indicates if the first result is a {@code ResultSet} object.
      * @return the result of applying the BiFunction to the CallableStatement
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
@@ -1393,7 +1393,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.BiResultExtractor)
      */
     @Override
-    public <R> R executeThenApply(final Throwables.BiFunction<Boolean, ? super CallableStatement, ? extends R, SQLException> getter) throws SQLException { //NOSONAR
+    public <R> R executeThenApply(final Throwables.BiFunction<? super CallableStatement, Boolean, ? extends R, SQLException> getter) throws SQLException { //NOSONAR
         return super.executeThenApply(getter);
     }
 
@@ -1401,15 +1401,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the CallableStatement and applies the provided TriFunction to the result.
      *
      * @param <R> the type of the result
-     * @param getter the TriFunction to apply to the CallableStatement. The first parameter indicates if the first result is a {@code ResultSet} object,
-     *               the second parameter is the list of OUT parameters, and the third parameter is the executed {@code CallableStatement}.
+     * @param getter the TriFunction to apply to the CallableStatement. The first parameter is the executed {@code CallableStatement},
+     *               the second parameter is the list of OUT parameters, and third parameter indicates if the first result is a {@code ResultSet} object.
      * @return the result of applying the TriFunction to the CallableStatement
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.BiResultExtractor)
      */
-    public <R> R executeThenApply(final Throwables.TriFunction<Boolean, List<Jdbc.OutParam>, ? super CallableStatement, ? extends R, SQLException> getter)
+    public <R> R executeThenApply(final Throwables.TriFunction<? super CallableStatement, List<Jdbc.OutParam>, Boolean, ? extends R, SQLException> getter)
             throws SQLException {
         checkArgNotNull(getter, cs.getter);
         assertNotClosed();
@@ -1418,7 +1418,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final boolean isFirstResultSet = JdbcUtil.execute(cstmt);
             outParams = outParams == null ? N.emptyList() : outParams;
 
-            return getter.apply(isFirstResultSet, outParams, cstmt);
+            return getter.apply(cstmt, outParams, isFirstResultSet);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -1441,15 +1441,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Executes the CallableStatement and applies the provided BiConsumer to the statement.
      *
-     * @param consumer the BiConsumer to apply to the CallableStatement. The first parameter indicates if the first result is a {@code ResultSet} object,
-     *                 the second parameter is the executed {@code CallableStatement}.
+     * @param getter the TriFunction to apply to the CallableStatement. The first parameter is the executed {@code CallableStatement},
+     *               the second parameter is the list of OUT parameters, and third parameter indicates if the first result is a {@code ResultSet} object.
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.BiResultExtractor)
      */
     @Override
-    public void executeThenAccept(final Throwables.BiConsumer<Boolean, ? super CallableStatement, SQLException> consumer) throws SQLException { //NOSONAR
+    public void executeThenAccept(final Throwables.BiConsumer<? super CallableStatement, Boolean, SQLException> consumer) throws SQLException { //NOSONAR
         super.executeThenAccept(consumer);
     }
 
@@ -1463,7 +1463,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.BiResultExtractor)
      */
-    public void executeThenAccept(final Throwables.TriConsumer<Boolean, List<Jdbc.OutParam>, ? super CallableStatement, SQLException> consumer)
+    public void executeThenAccept(final Throwables.TriConsumer<? super CallableStatement, List<Jdbc.OutParam>, Boolean, SQLException> consumer)
             throws SQLException {
         checkArgNotNull(consumer, cs.consumer);
         assertNotClosed();
@@ -1472,7 +1472,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final boolean isFirstResultSet = JdbcUtil.execute(cstmt);
             outParams = outParams == null ? N.emptyList() : outParams;
 
-            consumer.accept(isFirstResultSet, outParams, cstmt);
+            consumer.accept(cstmt, outParams, isFirstResultSet);
         } finally {
             closeAfterExecutionIfAllowed();
         }

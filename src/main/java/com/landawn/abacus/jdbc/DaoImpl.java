@@ -57,6 +57,7 @@ import com.landawn.abacus.jdbc.Jdbc.BiParametersSetter;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
 import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
+import com.landawn.abacus.jdbc.Jdbc.LocalThreadCacheForDao;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.BindList;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
@@ -97,6 +98,7 @@ import com.landawn.abacus.jdbc.dao.UncheckedJoinEntityHelper;
 import com.landawn.abacus.jdbc.dao.UncheckedNoUpdateDao;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
+import com.landawn.abacus.parser.JSONParser;
 import com.landawn.abacus.parser.JSONSerializationConfig;
 import com.landawn.abacus.parser.JSONSerializationConfig.JSC;
 import com.landawn.abacus.parser.KryoParser;
@@ -115,6 +117,7 @@ import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.IntFunctions;
 import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.Holder;
+import com.landawn.abacus.util.Immutable;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.ImmutableMap;
 import com.landawn.abacus.util.ImmutableSet;
@@ -169,9 +172,19 @@ final class DaoImpl {
         // singleton for utility class.
     }
 
-    private static final int DEFAULT_CACHE_CAPACITY = 1000;
+    private static final Set<String> SUPPORTED_TRANSFER_FOR_CACHE = N.asSet("none", "kryo", "json");
 
-    private static final int DEFAULT_EVICT_DELAY = 3000;
+    private static final Set<String> QUERY_METHOD_NAME_SET = N.asSet("query", "queryFor", "list", "get", "find", "findFirst", "findOnlyOne", "exist",
+            "notExist", "count");
+
+    private static final Set<String> UPDATE_METHOD_NAME_SET = N.asSet("update", "delete", "deleteById", "insert", "save", "batchUpdate", "batchDelete",
+            "batchDeleteByIds", "batchInsert", "batchSave", "batchUpsert", "upsert", "execute");
+
+    static final Predicate<Method> IS_QUERY_METHOD = method -> N.anyMatch(QUERY_METHOD_NAME_SET,
+            it -> Strings.isNotEmpty(it) && (Strings.startsWith(method.getName(), it) || Pattern.matches(it, method.getName())));
+
+    static final Predicate<Method> IS_UPDATE_METHOD = method -> N.anyMatch(UPDATE_METHOD_NAME_SET,
+            it -> Strings.isNotEmpty(it) && (Strings.startsWith(method.getName(), it) || Pattern.matches(it, method.getName())));
 
     private static final String _1 = "1";
 
@@ -179,6 +192,7 @@ final class DaoImpl {
 
     static final ThreadLocal<Boolean> isInDaoMethod_TL = ThreadLocal.withInitial(() -> false);
 
+    private static final JSONParser jsonParser = ParserFactory.createJSONParser();
     private static final KryoParser kryoParser = ParserFactory.isKryoAvailable() ? ParserFactory.createKryoParser() : null;
 
     private static final JSONSerializationConfig jsc_no_bracket = JSC.create().setStringQuotation(JdbcUtil.CHAR_ZERO).bracketRootValue(false);
@@ -462,6 +476,8 @@ final class DaoImpl {
 
         isValuePresentMap.putAll(tmp);
     }
+
+    private static final Predicate<? super Class<?>> isImmutableTester = cls -> Immutable.class.isAssignableFrom(cls);
 
     private static final Set<Class<?>> notCacheableTypes = N.asSet(void.class, Void.class, Iterator.class, java.util.stream.BaseStream.class, BaseStream.class,
             EntryStream.class, Stream.class, Seq.class);
@@ -1601,37 +1617,6 @@ final class DaoImpl {
                 default:
                     return limit;
             }
-        } else if (cond instanceof final Criteria criteria) {
-            final Limit limit = criteria.getLimit();
-
-            if (limit != null) {
-                switch (dbVersion) { //NOSONAR
-                    case ORACLE, SQL_SERVER, DB2:
-
-                        if (limit.getCount() > 0 && limit.getOffset() > 0) {
-                            criteria.limit("OFFSET " + limit.getOffset() + " ROWS FETCH NEXT " + limit.getCount() + " ROWS ONLY");
-                        } else if (limit.getCount() > 0) {
-                            criteria.limit("FETCH FIRST " + limit.getCount() + " ROWS ONLY");
-                        } else if (limit.getOffset() > 0) {
-                            criteria.limit("OFFSET " + limit.getOffset() + " ROWS");
-                        }
-
-                        break;
-
-                    default:
-                }
-            } else if (count > 0) {
-                switch (dbVersion) { //NOSONAR
-                    case ORACLE, SQL_SERVER, DB2:
-                        criteria.limit("FETCH FIRST " + count + " ROWS ONLY");
-                        break;
-
-                    default:
-                        criteria.limit(count);
-                }
-            }
-
-            return criteria;
         } else if (cond instanceof final Expression expr //
                 && Strings.containsAnyIgnoreCase(expr.getLiteral(), " LIMIT ", " OFFSET ", " FETCH NEXT ")) {
             // ignore.
@@ -1706,7 +1691,7 @@ final class DaoImpl {
         } else {
             final List<Object> newArgs = Stream.of(args).map(it -> {
                 if (it == null) {
-                    return "null";
+                    return null;
                 }
 
                 final Type<?> type = N.typeOf(it.getClass());
@@ -2212,8 +2197,8 @@ final class DaoImpl {
                 .first()
                 .orElseNull();
 
-        final int capacity = daoClassCacheAnno == null ? DEFAULT_CACHE_CAPACITY : daoClassCacheAnno.capacity();
-        final long evictDelay = daoClassCacheAnno == null ? DEFAULT_EVICT_DELAY : daoClassCacheAnno.evictDelay();
+        final int capacity = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_CAPACITY : daoClassCacheAnno.capacity();
+        final long evictDelay = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_EVICT_DELAY : daoClassCacheAnno.evictDelay();
 
         if (NoUpdateDao.class.isAssignableFrom(daoInterface)) {
             // OK
@@ -6021,6 +6006,9 @@ final class DaoImpl {
                     };
                 }
 
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, ImmutableList.of(method.getParameterTypes()),
+                        method.getReturnType());
+
                 final CacheResult cacheResultAnno = StreamEx.of(method.getAnnotations())
                         .select(CacheResult.class)
                         .last()
@@ -6035,97 +6023,107 @@ final class DaoImpl {
                                 && cacheResultAnno != null //
                                 && N.anyMatch(daoClassRefreshCacheAnno.filter(), filterByMethodNameStartsWith)) ? daoClassRefreshCacheAnno : null);
 
-                final boolean refreshCacheRequired = (refreshResultAnno != null && !refreshResultAnno.disabled());
+                final boolean isQueryMethod = IS_QUERY_METHOD.test(method);
+                final boolean isUpdateMethod = IS_UPDATE_METHOD.test(method);
+                final boolean isAnnotatedCacheResult = cacheResultAnno != null && !cacheResultAnno.disabled();
+                final boolean isRefreshCacheRequired = (refreshResultAnno != null && !refreshResultAnno.disabled());
 
-                if (cacheResultAnno != null && !cacheResultAnno.disabled()) {
+                if (isAnnotatedCacheResult || isRefreshCacheRequired || (isQueryMethod || isUpdateMethod)) {
                     if (daoLogger.isDebugEnabled()) {
-                        daoLogger.debug("Add CacheResult method: " + method);
+                        if (isAnnotatedCacheResult) {
+                            daoLogger.debug("Add CacheResult method: " + method);
+                        } else if (isRefreshCacheRequired) {
+                            daoLogger.debug("Add RefreshCache method: " + method);
+                        }
                     }
 
-                    if (Stream.of(notCacheableTypes).anyMatch(it -> it.isAssignableFrom(returnType))) {
+                    if (isAnnotatedCacheResult && Stream.of(notCacheableTypes).anyMatch(it -> it.isAssignableFrom(returnType))) {
                         throw new UnsupportedOperationException(
                                 "The return type of method: " + simpleClassMethodName + " is not cacheable: " + method.getReturnType());
                     }
 
-                    final String transferAttr = cacheResultAnno.transfer();
+                    final String transferAttr = cacheResultAnno == null ? (kryoParser != null ? "kryo" : "json") : cacheResultAnno.transfer();
 
-                    if (!(Strings.isEmpty(transferAttr) || N.asSet("none", "kryo").contains(transferAttr.toLowerCase()))) {
+                    if (!(Strings.isEmpty(transferAttr) || SUPPORTED_TRANSFER_FOR_CACHE.contains(transferAttr.toLowerCase()))) {
                         throw new UnsupportedOperationException(
-                                "Unsupported 'cloneWhenReadFromCache' : " + transferAttr + " in annotation 'CacheResult' on method: " + simpleClassMethodName);
+                                "Unsupported 'transfer' : " + transferAttr + " in annotation 'CacheResult' on method: " + simpleClassMethodName);
                     }
 
                     final Function<Object, Object> cloneFunc = Strings.isEmpty(transferAttr) || "none".equalsIgnoreCase(transferAttr) ? Fn.identity() : r -> {
-                        if ((r == null) || !isValuePresentMap.getOrDefault(r.getClass(), Fn.alwaysFalse()).test(r)) {
+                        final Class<?> cls = r.getClass();
+
+                        if ((r == null) || !isValuePresentMap.getOrDefault(cls, Fn.alwaysFalse()).test(r) && isImmutableTester.test(cls)) {
                             return r;
-                        } else {
+                        } else if ("kryo".equalsIgnoreCase(transferAttr)) {
                             return kryoParser.clone(r);
+                        } else {
+                            return jsonParser.deserialize(jsonParser.serialize(r), r.getClass());
                         }
                     };
 
                     final Throwables.BiFunction<Dao, Object[], ?, Throwable> temp = call;
 
                     call = (proxy, args) -> {
-                        final String cacheKey = createCacheKey(fullClassMethodName, args, daoLogger);
+                        final LocalThreadCacheForDao localThreadCache = JdbcUtil.localThreadCache_TL.get();
+                        final boolean isLocalThreadCacheEnabled = isQueryMethod && localThreadCache != null;
+                        final boolean isRefreshLocalThreadCacheRequired = isUpdateMethod && localThreadCache != null;
 
-                        Object result = Strings.isEmpty(cacheKey) ? null : cache.gett(cacheKey);
+                        final String cacheKey = isAnnotatedCacheResult || isLocalThreadCacheEnabled || isRefreshLocalThreadCacheRequired
+                                ? createCacheKey(fullClassMethodName, args, daoLogger)
+                                : null;
+
+                        Object result = null;
+
+                        if (Strings.isNotEmpty(cacheKey)) {
+                            if (isAnnotatedCacheResult) {
+                                result = cache.gett(cacheKey);
+                            } else if (isLocalThreadCacheEnabled) {
+                                result = localThreadCache.fetchResultFromCache(cacheKey, proxy, args, methodSignature);
+                            }
+                        }
 
                         if (result != null) {
                             return cloneFunc.apply(result);
                         }
 
-                        result = temp.apply(proxy, args);
+                        if (isRefreshCacheRequired || (Strings.isNotEmpty(cacheKey) && isRefreshLocalThreadCacheRequired)) {
+                            try {
+                                result = temp.apply(proxy, args);
+                            } finally {
+                                if (isRefreshCacheRequired) {
+                                    cache.clear();
+                                }
+
+                                if (Strings.isNotEmpty(cacheKey) && isRefreshLocalThreadCacheRequired) {
+                                    localThreadCache.refreshCache(cacheKey, proxy, args, methodSignature);
+                                }
+                            }
+                        } else {
+                            result = temp.apply(proxy, args);
+                        }
 
                         if (Strings.isNotEmpty(cacheKey) && result != null) {
-                            if (result instanceof final DataSet dataSet) {
-                                if (dataSet.size() >= cacheResultAnno.minSize() && dataSet.size() <= cacheResultAnno.maxSize()) {
-                                    cache.put(cacheKey, cloneFunc.apply(result), cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
-                                }
-                            } else if (result instanceof Collection) {
-                                final Collection<Object> c = (Collection<Object>) result;
+                            if (isAnnotatedCacheResult) {
+                                if (result instanceof final DataSet dataSet) {
+                                    if (dataSet.size() >= cacheResultAnno.minSize() && dataSet.size() <= cacheResultAnno.maxSize()) {
+                                        cache.put(cacheKey, cloneFunc.apply(result), cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
+                                    }
+                                } else if (result instanceof Collection) {
+                                    final Collection<Object> c = (Collection<Object>) result;
 
-                                if (c.size() >= cacheResultAnno.minSize() && c.size() <= cacheResultAnno.maxSize()) {
+                                    if (c.size() >= cacheResultAnno.minSize() && c.size() <= cacheResultAnno.maxSize()) {
+                                        cache.put(cacheKey, cloneFunc.apply(result), cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
+                                    }
+                                } else {
                                     cache.put(cacheKey, cloneFunc.apply(result), cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
                                 }
-                            } else {
-                                cache.put(cacheKey, cloneFunc.apply(result), cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
+                            } else if (isLocalThreadCacheEnabled) {
+                                localThreadCache.catchResult(cacheKey, cloneFunc.apply(result), proxy, args, methodSignature);
                             }
                         }
 
                         return result;
                     };
-
-                    hasCacheResult.setTrue();
-                }
-
-                if (refreshCacheRequired) {
-                    if (daoLogger.isDebugEnabled()) {
-                        daoLogger.debug("Add RefreshCache method: " + method);
-                    }
-
-                    final Throwables.BiFunction<Dao, Object[], ?, Throwable> temp = call;
-
-                    call = (proxy, args) -> {
-                        try {
-                            return temp.apply(proxy, args);
-                        } finally {
-                            cache.clear();
-                        }
-                    };
-
-                    hasRefreshCache.setTrue();
-                }
-
-                // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
-                if ((hasRefreshCache.isTrue() || hasCacheResult.isTrue()) && !NoUpdateDao.class.isAssignableFrom(daoInterface)) {
-                    throw new UnsupportedOperationException(
-                            "Cache is only supported for the methods declared NoUpdateDao/UncheckedNoUpdateDao interface right now, not supported for method: "
-                                    + fullClassMethodName);
-                }
-
-                if (hasRefreshCache.isTrue() && hasCacheResult.isFalse()) {
-                    throw new UnsupportedOperationException("Class: " + daoInterface
-                            + " or its super interfaces or methods are annotated by @RefreshCache, but none of them is annotated with @CacheResult. "
-                            + "Please remove the unnecessary @RefreshCache annotations or Add @CacheResult annotation if it's really needed.");
                 }
 
                 final List<Tuple2<Jdbc.Handler, Boolean>> handlerList = StreamEx.of(method.getAnnotations())
@@ -6141,8 +6139,6 @@ final class DaoImpl {
 
                 if (N.notEmpty(handlerList)) {
                     final Throwables.BiFunction<Dao, Object[], ?, Throwable> temp = call;
-                    final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, ImmutableList.of(method.getParameterTypes()),
-                            method.getReturnType());
 
                     call = (proxy, args) -> {
                         final boolean isInDaoMethod = isInDaoMethod_TL.get();
@@ -6188,6 +6184,27 @@ final class DaoImpl {
                         }
                     };
                 }
+
+                if (isAnnotatedCacheResult) {
+                    hasCacheResult.setTrue();
+                }
+
+                if (isRefreshCacheRequired) {
+                    hasRefreshCache.setTrue();
+                }
+            }
+
+            // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
+            if ((hasRefreshCache.isTrue() || hasCacheResult.isTrue()) && !NoUpdateDao.class.isAssignableFrom(daoInterface)) {
+                throw new UnsupportedOperationException(
+                        "Cache is only supported for the methods declared NoUpdateDao/UncheckedNoUpdateDao interface right now, not supported for method: "
+                                + fullClassMethodName);
+            }
+
+            if (hasRefreshCache.isTrue() && hasCacheResult.isFalse()) {
+                throw new UnsupportedOperationException("Class: " + daoInterface
+                        + " or its super interfaces or methods are annotated by @RefreshCache, but none of them is annotated with @CacheResult. "
+                        + "Please remove the unnecessary @RefreshCache annotations or Add @CacheResult annotation if it's really needed.");
             }
 
             methodInvokerMap.put(method, call);

@@ -149,6 +149,23 @@ public final class JdbcUtil {
 
     public static final int DEFAULT_FETCH_SIZE_FOR_STREAM = 100;
 
+    public static final int DEFAULT_CACHE_CAPACITY = 1000;
+
+    /**
+     * Default cache evict delay in milliseconds
+     */
+    public static final int DEFAULT_CACHE_EVICT_DELAY = 3 * 1000;
+
+    /**
+     * Default cache live time in milliseconds.
+     */
+    public static final int DEFAULT_CACHE_LIVE_TIME = 30 * 60 * 1000;
+
+    /**
+     * Default cache idle time in milliseconds
+     */
+    public static final int DEFAULT_CACHE_IDLE_TIME = 3 * 60 * 1000;
+
     public static final Throwables.Function<Statement, String, SQLException> DEFAULT_SQL_EXTRACTOR = stmt -> {
         Statement stmtToUse = stmt;
         String clsName = stmtToUse.getClass().getName();
@@ -1164,8 +1181,6 @@ public final class JdbcUtil {
 
         if (ret instanceof final Blob blob) {
             ret = blob.getBytes(1, (int) blob.length());
-        } else if (ret instanceof final Clob clob) {
-            ret = clob.getSubString(1, (int) clob.length());
         } else if (checkDateType) {
             ret = columnConverterByIndex.apply(rs, columnIndex, ret);
         }
@@ -1208,8 +1223,6 @@ public final class JdbcUtil {
 
         if (ret instanceof final Blob blob) {
             ret = blob.getBytes(1, (int) blob.length());
-        } else if (ret instanceof final Clob clob) {
-            ret = clob.getSubString(1, (int) clob.length());
         } else if (checkDateType) {
             ret = columnConverterByLabel.apply(rs, columnLabel, ret);
         }
@@ -1249,13 +1262,6 @@ public final class JdbcUtil {
                 while (rs.next()) {
                     blob = (Blob) result.get(columnIndex);
                     result.add(blob.getBytes(1, (int) blob.length()));
-                }
-            } else if (val instanceof Clob clob) {
-                result.add(clob.getSubString(1, (int) clob.length()));
-
-                while (rs.next()) {
-                    clob = (Clob) result.get(columnIndex);
-                    result.add(clob.getSubString(1, (int) clob.length()));
                 }
             } else {
                 final String className = val.getClass().getName();
@@ -5885,10 +5891,6 @@ public final class JdbcUtil {
                 } finally {
                     JdbcUtil.closeQuietly(rs);
                 }
-            } else if (value instanceof final Blob blob) {
-                value = blob.getBytes(1, (int) blob.length());
-            } else if (value instanceof final Clob clob) {
-                value = clob.getSubString(1, (int) clob.length());
             }
 
             outParamValues.put(key, value);
@@ -6014,8 +6016,6 @@ public final class JdbcUtil {
 
             final String msg = N.defaultIfNull(e.getMessage(), "").toLowerCase();
             return Strings.isNotEmpty(msg) && (msg.contains("not exist") || msg.contains("doesn't exist") || msg.contains("not found"));
-        } else if (e instanceof final UncheckedSQLException sqlException) {
-            return isTableNotExistsException(sqlException.getCause());
         }
 
         return false;
@@ -7666,5 +7666,35 @@ public final class JdbcUtil {
      */
     public static boolean isNullOrDefault(final Object value) {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
+    }
+
+    static final ThreadLocal<Jdbc.LocalThreadCacheForDao> localThreadCache_TL = new ThreadLocal<>();
+
+    /**
+     * Enables the cache on thread level for the current thread.
+     *
+     * <pre>
+     * <code>
+     * Jdbc.enableThreadCache();
+     * try {
+     *    // your code here
+     * } finally {
+     *   Jdbc.closeThreadCache();
+     * }
+     *
+     * </code>
+     * </pre>
+     *
+     */
+    public static void enableThreadCacheForDao() {
+        localThreadCache_TL.set(new Jdbc.LocalThreadCacheForDao());
+    }
+
+    public static void enableThreadCacheForDao(final Jdbc.LocalThreadCacheForDao localThreadCache) {
+        localThreadCache_TL.set(localThreadCache);
+    }
+
+    public static void closeThreadCacheForDao() {
+        localThreadCache_TL.remove();
     }
 }
