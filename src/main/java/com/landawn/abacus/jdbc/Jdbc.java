@@ -50,10 +50,6 @@ import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.cache.CacheFactory;
 import com.landawn.abacus.cache.LocalCache;
-import com.landawn.abacus.logging.Logger;
-import com.landawn.abacus.parser.JSONParser;
-import com.landawn.abacus.parser.KryoParser;
-import com.landawn.abacus.parser.ParserFactory;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -79,7 +75,6 @@ import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
-import com.landawn.abacus.util.stream.Stream;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -89,11 +84,6 @@ import lombok.ToString;
 
 @SuppressWarnings("java:S1192")
 public final class Jdbc {
-
-    static final String CACHE_KEY_SPLITOR = "#";
-
-    static final JSONParser jsonParser = ParserFactory.createJSONParser();
-    static final KryoParser kryoParser = ParserFactory.isKryoAvailable() ? ParserFactory.createKryoParser() : null;
 
     static final ObjectPool<Type<?>, ColumnGetter<?>> COLUMN_GETTER_POOL = new ObjectPool<>(1024);
 
@@ -399,7 +389,7 @@ public final class Jdbc {
                 final M result = supplier.get();
 
                 while (rs.next()) {
-                    Jdbc.merge(result, keyExtractor.apply(rs), valueExtractor.apply(rs), mergeFunction);
+                    JdbcUtil.merge(result, keyExtractor.apply(rs), valueExtractor.apply(rs), mergeFunction);
                 }
 
                 return result;
@@ -888,7 +878,7 @@ public final class Jdbc {
                 final M result = supplier.get();
 
                 while (rs.next()) {
-                    Jdbc.merge(result, keyExtractor.apply(rs, columnLabels), valueExtractor.apply(rs, columnLabels), mergeFunction);
+                    JdbcUtil.merge(result, keyExtractor.apply(rs, columnLabels), valueExtractor.apply(rs, columnLabels), mergeFunction);
                 }
 
                 return result;
@@ -2468,7 +2458,7 @@ public final class Jdbc {
                                     }
 
                                     if (propInfos[i] == null) {
-                                        final String newColumnName = Jdbc.checkPrefix(entityInfo, columnLabels[i], null, columnLabelList);
+                                        final String newColumnName = JdbcUtil.checkPrefix(entityInfo, columnLabels[i], null, columnLabelList);
                                         propInfos[i] = JdbcUtil.getSubPropInfo(targetClass, newColumnName);
 
                                         if (propInfos[i] == null) {
@@ -2545,7 +2535,9 @@ public final class Jdbc {
                             return targetType.get(rs, 1);
                         }
                     };
-                } else {
+                } else
+
+                {
                     throw new IllegalArgumentException(
                             "'columnNameFilter' and 'columnNameConverter' are not supported to convert single column to target type: " + targetClass);
                 }
@@ -2620,7 +2612,7 @@ public final class Jdbc {
                             }
 
                             if (propInfos[i] == null) {
-                                final String newColumnName = Jdbc.checkPrefix(entityInfo, columnLabels[i], prefixAndFieldNameMap, columnLabelList);
+                                final String newColumnName = JdbcUtil.checkPrefix(entityInfo, columnLabels[i], prefixAndFieldNameMap, columnLabelList);
                                 propInfos[i] = JdbcUtil.getSubPropInfo(entityClass, newColumnName);
 
                                 if (propInfos[i] == null) {
@@ -3475,7 +3467,9 @@ public final class Jdbc {
                             return (T) m;
                         }
                     };
-                } else if (ClassUtil.isBeanClass(targetClass)) {
+                } else if (ClassUtil.isBeanClass(targetClass))
+
+                {
                     return new BiRowMapper<>() {
                         private final BeanInfo entityInfo = ParserUtil.getBeanInfo(targetClass);
 
@@ -4125,7 +4119,7 @@ public final class Jdbc {
                             }
 
                             if (propInfo == null) {
-                                final String newColumnName = Jdbc.checkPrefix(entityInfo, columnLabels[i], prefixAndFieldNameMap, columnLabelList);
+                                final String newColumnName = JdbcUtil.checkPrefix(entityInfo, columnLabels[i], prefixAndFieldNameMap, columnLabelList);
 
                                 propInfo = JdbcUtil.getSubPropInfo(entityClassForFetch, newColumnName);
 
@@ -5453,11 +5447,12 @@ public final class Jdbc {
          * MUST NOT modify the input parameters.
          *
          * @param defaultCacheKey
+         * @param result
          * @param daoProxy
          * @param args
          * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
          */
-        void update(String defaultCacheKey, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
+        void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
     }
 
@@ -5490,10 +5485,17 @@ public final class Jdbc {
 
         @Override
         @SuppressWarnings("unused")
-        public void update(final String defaultCacheKey, final Object daoProxy, final Object[] args,
+        public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            final Method method = methodSignature._1;
 
-            final String updatedTableName = Strings.substringBetween(defaultCacheKey, CACHE_KEY_SPLITOR);
+            if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
+                if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) {
+                    return;
+                }
+            }
+
+            final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR);
 
             if (Strings.isEmpty(updatedTableName)) {
                 cache.clear();
@@ -5544,10 +5546,17 @@ public final class Jdbc {
 
         @Override
         @SuppressWarnings("unused")
-        public void update(final String defaultCacheKey, final Object daoProxy, final Object[] args,
+        public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            final Method method = methodSignature._1;
 
-            final String updatedTableName = Strings.substringBetween(defaultCacheKey, CACHE_KEY_SPLITOR);
+            if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
+                if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) {
+                    return;
+                }
+            }
+
+            final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR);
 
             if (Strings.isEmpty(updatedTableName)) {
                 cache.clear();
@@ -5555,103 +5564,6 @@ public final class Jdbc {
                 cache.entrySet().removeIf(e -> e.getKey().contains(updatedTableName));
             }
         }
-    }
-
-    @SuppressWarnings("unused")
-    static String createCacheKey(final String tableName, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
-        String paramKey = null;
-
-        if (kryoParser != null) {
-            try {
-                paramKey = kryoParser.serialize(args);
-            } catch (final Exception e) {
-                // ignore;
-                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
-            }
-        } else {
-            final List<Object> newArgs = Stream.of(args).map(it -> {
-                if (it == null) {
-                    return null;
-                }
-
-                final Type<?> type = N.typeOf(it.getClass());
-
-                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isBean() || type.isEntityId()) {
-                    return it;
-                } else {
-                    return it.toString();
-                }
-            }).toList();
-
-            try {
-                paramKey = N.toJson(newArgs);
-            } catch (final Exception e) {
-                // ignore;
-                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
-            }
-        }
-
-        return Strings.concat(fullClassMethodName, CACHE_KEY_SPLITOR, tableName, CACHE_KEY_SPLITOR, paramKey);
-    }
-
-    static <K, V> void merge(final Map<K, V> map, final K key, final V value, final BinaryOperator<V> remappingFunction) {
-        final V oldValue = map.get(key);
-
-        if (oldValue == null && !map.containsKey(key)) {
-            map.put(key, value);
-        } else {
-            map.put(key, remappingFunction.apply(oldValue, value));
-        }
-    }
-
-    static String checkPrefix(final BeanInfo entityInfo, final String columnName, final Map<String, String> prefixAndFieldNameMap,
-            final List<String> columnLabelList) {
-
-        final int idx = columnName.indexOf('.');
-
-        if (idx <= 0) {
-            return columnName;
-        }
-
-        final String prefix = columnName.substring(0, idx);
-        PropInfo propInfo = entityInfo.getPropInfo(prefix);
-
-        if (propInfo != null) {
-            return columnName;
-        }
-
-        if (N.notEmpty(prefixAndFieldNameMap) && prefixAndFieldNameMap.containsKey(prefix)) {
-            propInfo = entityInfo.getPropInfo(prefixAndFieldNameMap.get(prefix));
-
-            if (propInfo != null) {
-                return propInfo.name + columnName.substring(idx);
-            }
-        }
-
-        propInfo = entityInfo.getPropInfo(prefix + "s"); // Trying to do something smart?
-        final int len = prefix.length() + 1;
-
-        if (propInfo != null && (propInfo.type.isBean() || (propInfo.type.isCollection() && propInfo.type.getElementType().isBean()))
-                && N.noneMatch(columnLabelList, it -> it.length() > len && it.charAt(len) == '.' && Strings.startsWithIgnoreCase(it, prefix + "s."))) {
-            // good
-        } else {
-            propInfo = entityInfo.getPropInfo(prefix + "es"); // Trying to do something smart?
-            final int len2 = prefix.length() + 2;
-
-            if (propInfo != null && (propInfo.type.isBean() || (propInfo.type.isCollection() && propInfo.type.getElementType().isBean()))
-                    && N.noneMatch(columnLabelList, it -> it.length() > len2 && it.charAt(len2) == '.' && Strings.startsWithIgnoreCase(it, prefix + "es."))) {
-                // good
-            } else {
-                // Sorry, have done all I can do.
-                propInfo = null;
-            }
-        }
-
-        if (propInfo != null) {
-            return propInfo.name + columnName.substring(idx);
-        }
-
-        return columnName;
     }
 
     //    // TODO it will be removed after below logic is handled in RowDataSet.

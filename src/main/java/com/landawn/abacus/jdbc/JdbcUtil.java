@@ -17,6 +17,8 @@ package com.landawn.abacus.jdbc;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -45,9 +47,11 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
@@ -63,10 +67,14 @@ import com.landawn.abacus.jdbc.Jdbc.RowExtractor;
 import com.landawn.abacus.jdbc.Jdbc.RowFilter;
 import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.jdbc.SQLTransaction.CreatedBy;
+import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
+import com.landawn.abacus.parser.JSONParser;
+import com.landawn.abacus.parser.KryoParser;
+import com.landawn.abacus.parser.ParserFactory;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -106,6 +114,7 @@ import com.landawn.abacus.util.function.TriConsumer;
 import com.landawn.abacus.util.stream.EntryStream;
 import com.landawn.abacus.util.stream.ObjIteratorEx;
 import com.landawn.abacus.util.stream.Stream;
+import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
  *
@@ -136,6 +145,9 @@ public final class JdbcUtil {
     static final Logger logger = LoggerFactory.getLogger(JdbcUtil.class);
 
     static final Logger sqlLogger = LoggerFactory.getLogger("com.landawn.abacus.SQL");
+
+    static final JSONParser jsonParser = ParserFactory.createJSONParser();
+    static final KryoParser kryoParser = ParserFactory.isKryoAvailable() ? ParserFactory.createKryoParser() : null;
 
     static final char CHAR_ZERO = 0;
 
@@ -7674,6 +7686,41 @@ public final class JdbcUtil {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
     }
 
+    static final String CACHE_KEY_SPLITOR = "#";
+
+    static final Set<String> QUERY_METHOD_NAME_SET = N.asSet("query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne", "exist",
+            "notExist", "count");
+
+    static final Set<String> UPDATE_METHOD_NAME_SET = N.asSet("update", "delete", "deleteById", "insert", "save", "batchUpdate", "batchDelete",
+            "batchDeleteByIds", "batchInsert", "batchSave", "batchUpsert", "upsert", "execute");
+
+    static final Set<Method> BUILT_IN_DAO_QUREY_METHODS;
+    static final Set<Method> BUILT_IN_DAO_UPDATE_METHODS;
+
+    static {
+        BUILT_IN_DAO_QUREY_METHODS = StreamEx.of(ClassUtil.getClassesByPackage(Dao.class.getPackageName(), false, true)) //
+                .filter(it -> Dao.class.isAssignableFrom(it))
+                .flattMap(it -> it.getDeclaredMethods())
+                .filter(it -> Modifier.isPublic(it.getModifiers()) && !Modifier.isStatic(it.getModifiers()))
+                .filter(it -> it.getAnnotation(NonDBOperation.class) == null)
+                .filter(it -> N.anyMatch(QUERY_METHOD_NAME_SET, e -> Strings.containsIgnoreCase(it.getName(), e)))
+                .toImmutableSet();
+
+        BUILT_IN_DAO_UPDATE_METHODS = StreamEx.of(ClassUtil.getClassesByPackage(Dao.class.getPackageName(), false, true)) //
+                .filter(it -> Dao.class.isAssignableFrom(it))
+                .flattMap(it -> it.getDeclaredMethods())
+                .filter(it -> Modifier.isPublic(it.getModifiers()) && !Modifier.isStatic(it.getModifiers()))
+                .filter(it -> it.getAnnotation(NonDBOperation.class) == null)
+                .filter(it -> N.anyMatch(UPDATE_METHOD_NAME_SET, e -> Strings.containsIgnoreCase(it.getName(), e)))
+                .toImmutableSet();
+    }
+
+    static final Predicate<Method> IS_QUERY_METHOD = method -> N.anyMatch(QUERY_METHOD_NAME_SET,
+            it -> Strings.isNotEmpty(it) && (Strings.startsWith(method.getName(), it) || Pattern.matches(it, method.getName())));
+
+    static final Predicate<Method> IS_UPDATE_METHOD = method -> N.anyMatch(UPDATE_METHOD_NAME_SET,
+            it -> Strings.isNotEmpty(it) && (Strings.startsWith(method.getName(), it) || Pattern.matches(it, method.getName())));
+
     static final ThreadLocal<Jdbc.DaoCache> localThreadCache_TL = new ThreadLocal<>();
 
     /**
@@ -7727,5 +7774,102 @@ public final class JdbcUtil {
      */
     public static void closeThreadCacheForDao() {
         localThreadCache_TL.remove();
+    }
+
+    @SuppressWarnings("unused")
+    static String createCacheKey(final String tableName, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
+        String paramKey = null;
+
+        if (kryoParser != null) {
+            try {
+                paramKey = kryoParser.serialize(args);
+            } catch (final Exception e) {
+                // ignore;
+                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
+            }
+        } else {
+            final List<Object> newArgs = Stream.of(args).map(it -> {
+                if (it == null) {
+                    return null;
+                }
+
+                final Type<?> type = N.typeOf(it.getClass());
+
+                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isBean() || type.isEntityId()) {
+                    return it;
+                } else {
+                    return it.toString();
+                }
+            }).toList();
+
+            try {
+                paramKey = N.toJson(newArgs);
+            } catch (final Exception e) {
+                // ignore;
+                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
+            }
+        }
+
+        return Strings.concat(fullClassMethodName, CACHE_KEY_SPLITOR, tableName, CACHE_KEY_SPLITOR, paramKey);
+    }
+
+    static <K, V> void merge(final Map<K, V> map, final K key, final V value, final BinaryOperator<V> remappingFunction) {
+        final V oldValue = map.get(key);
+
+        if (oldValue == null && !map.containsKey(key)) {
+            map.put(key, value);
+        } else {
+            map.put(key, remappingFunction.apply(oldValue, value));
+        }
+    }
+
+    static String checkPrefix(final BeanInfo entityInfo, final String columnName, final Map<String, String> prefixAndFieldNameMap,
+            final List<String> columnLabelList) {
+
+        final int idx = columnName.indexOf('.');
+
+        if (idx <= 0) {
+            return columnName;
+        }
+
+        final String prefix = columnName.substring(0, idx);
+        PropInfo propInfo = entityInfo.getPropInfo(prefix);
+
+        if (propInfo != null) {
+            return columnName;
+        }
+
+        if (N.notEmpty(prefixAndFieldNameMap) && prefixAndFieldNameMap.containsKey(prefix)) {
+            propInfo = entityInfo.getPropInfo(prefixAndFieldNameMap.get(prefix));
+
+            if (propInfo != null) {
+                return propInfo.name + columnName.substring(idx);
+            }
+        }
+
+        propInfo = entityInfo.getPropInfo(prefix + "s"); // Trying to do something smart?
+        final int len = prefix.length() + 1;
+
+        if (propInfo != null && (propInfo.type.isBean() || (propInfo.type.isCollection() && propInfo.type.getElementType().isBean()))
+                && N.noneMatch(columnLabelList, it -> it.length() > len && it.charAt(len) == '.' && Strings.startsWithIgnoreCase(it, prefix + "s."))) {
+            // good
+        } else {
+            propInfo = entityInfo.getPropInfo(prefix + "es"); // Trying to do something smart?
+            final int len2 = prefix.length() + 2;
+
+            if (propInfo != null && (propInfo.type.isBean() || (propInfo.type.isCollection() && propInfo.type.getElementType().isBean()))
+                    && N.noneMatch(columnLabelList, it -> it.length() > len2 && it.charAt(len2) == '.' && Strings.startsWithIgnoreCase(it, prefix + "es."))) {
+                // good
+            } else {
+                // Sorry, have done all I can do.
+                propInfo = null;
+            }
+        }
+
+        if (propInfo != null) {
+            return propInfo.name + columnName.substring(idx);
+        }
+
+        return columnName;
     }
 }

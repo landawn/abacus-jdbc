@@ -170,28 +170,16 @@ final class DaoImpl {
 
     private static final Set<String> SUPPORTED_TRANSFER_FOR_CACHE = N.asSet("none", "kryo", "json");
 
-    private static final Set<String> QUERY_METHOD_NAME_SET = N.asSet("query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne",
-            "exist", "notExist", "count");
-
-    private static final Set<String> UPDATE_METHOD_NAME_SET = N.asSet("update", "delete", "deleteById", "insert", "save", "batchUpdate", "batchDelete",
-            "batchDeleteByIds", "batchInsert", "batchSave", "batchUpsert", "upsert", "execute");
-
-    static final Predicate<Method> IS_QUERY_METHOD = method -> N.anyMatch(QUERY_METHOD_NAME_SET,
-            it -> Strings.isNotEmpty(it) && (Strings.startsWith(method.getName(), it) || Pattern.matches(it, method.getName())));
-
-    static final Predicate<Method> IS_UPDATE_METHOD = method -> N.anyMatch(UPDATE_METHOD_NAME_SET,
-            it -> Strings.isNotEmpty(it) && (Strings.startsWith(method.getName(), it) || Pattern.matches(it, method.getName())));
-
     private static final String _1 = "1";
 
     private static final String PN_NOW = "now";
-
-    static final ThreadLocal<Boolean> isInDaoMethod_TL = ThreadLocal.withInitial(() -> false);
 
     private static final JSONParser jsonParser = ParserFactory.createJSONParser();
     private static final KryoParser kryoParser = ParserFactory.isKryoAvailable() ? ParserFactory.createKryoParser() : null;
 
     private static final JSONSerializationConfig jsc_no_bracket = JSC.create().setStringQuotation(JdbcUtil.CHAR_ZERO).bracketRootValue(false);
+
+    static final ThreadLocal<Boolean> isInDaoMethod_TL = ThreadLocal.withInitial(() -> false);
 
     @SuppressWarnings("rawtypes")
     private static final Map<String, Dao> daoPool = new ConcurrentHashMap<>();
@@ -6020,17 +6008,17 @@ final class DaoImpl {
                 final long cacheLiveTime = cacheResultAnno == null ? 0 : cacheResultAnno.liveTime();
                 final long cacheMaxIdleTime = cacheResultAnno == null ? 0 : cacheResultAnno.maxIdleTime();
 
-                final boolean isQueryMethod = IS_QUERY_METHOD.test(method);
-                final boolean isUpdateMethod = IS_UPDATE_METHOD.test(method);
+                final boolean isQueryMethod = JdbcUtil.IS_QUERY_METHOD.test(method);
+                final boolean isUpdateMethod = JdbcUtil.IS_UPDATE_METHOD.test(method);
                 final boolean isAnnotatedCacheResult = cacheResultAnno != null && !cacheResultAnno.disabled();
-                final boolean isRefreshCacheRequired = (refreshResultAnno != null && !refreshResultAnno.disabled());
-                final Jdbc.DaoCache daoCacheToUseInMethod = isAnnotatedCacheResult || isRefreshCacheRequired ? daoCache : null;
+                final boolean isAnnotatedRefreshResult = (refreshResultAnno != null && !refreshResultAnno.disabled());
+                final Jdbc.DaoCache daoCacheToUseInMethod = isAnnotatedCacheResult || isAnnotatedRefreshResult ? daoCache : null;
 
-                if (isAnnotatedCacheResult || isRefreshCacheRequired || (isQueryMethod || isUpdateMethod)) {
+                if (isAnnotatedCacheResult || isAnnotatedRefreshResult || (isQueryMethod || isUpdateMethod)) {
                     if (daoLogger.isDebugEnabled()) {
                         if (isAnnotatedCacheResult) {
                             daoLogger.debug("Add CacheResult method: " + method);
-                        } else if (isRefreshCacheRequired) {
+                        } else if (isAnnotatedRefreshResult) {
                             daoLogger.debug("Add RefreshCache method: " + method);
                         }
                     }
@@ -6066,9 +6054,8 @@ final class DaoImpl {
                         final boolean isLocalThreadCacheEnabled = isQueryMethod && localThreadCache != null;
                         final boolean isRefreshLocalThreadCacheRequired = isUpdateMethod && localThreadCache != null;
 
-                        final String cacheKey = isAnnotatedCacheResult || isLocalThreadCacheEnabled || isRefreshLocalThreadCacheRequired
-                                ? Jdbc.createCacheKey(tableName, fullClassMethodName, args, daoLogger)
-                                : null;
+                        final String cacheKey = isAnnotatedCacheResult || isAnnotatedRefreshResult || isLocalThreadCacheEnabled
+                                || isRefreshLocalThreadCacheRequired ? JdbcUtil.createCacheKey(tableName, fullClassMethodName, args, daoLogger) : null;
 
                         Object result = null;
 
@@ -6084,16 +6071,16 @@ final class DaoImpl {
                             return cloneFunc.apply(result);
                         }
 
-                        if (isRefreshCacheRequired || (Strings.isNotEmpty(cacheKey) && isRefreshLocalThreadCacheRequired)) {
+                        if (isAnnotatedRefreshResult || isRefreshLocalThreadCacheRequired) {
                             try {
                                 result = temp.apply(proxy, args);
                             } finally {
-                                if (isRefreshCacheRequired) {
-                                    daoCacheToUseInMethod.update(cacheKey, proxy, args, methodSignature);
+                                if (isAnnotatedRefreshResult) {
+                                    daoCacheToUseInMethod.update(cacheKey, result, proxy, args, methodSignature);
                                 }
 
-                                if (Strings.isNotEmpty(cacheKey) && isRefreshLocalThreadCacheRequired) {
-                                    localThreadCache.update(cacheKey, proxy, args, methodSignature);
+                                if (isRefreshLocalThreadCacheRequired) {
+                                    localThreadCache.update(cacheKey, result, proxy, args, methodSignature);
                                 }
                             }
                         } else {
@@ -6189,7 +6176,7 @@ final class DaoImpl {
                     hasCacheResult.setTrue();
                 }
 
-                if (isRefreshCacheRequired) {
+                if (isAnnotatedRefreshResult) {
                     hasRefreshCache.setTrue();
                 }
             }
