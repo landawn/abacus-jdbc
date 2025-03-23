@@ -56,7 +56,6 @@ import com.landawn.abacus.jdbc.Jdbc.BiParametersSetter;
 import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.BiRowFilter;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
-import com.landawn.abacus.jdbc.Jdbc.DaoCache;
 import com.landawn.abacus.jdbc.Jdbc.OutParam;
 import com.landawn.abacus.jdbc.Jdbc.OutParamResult;
 import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
@@ -7227,7 +7226,7 @@ public final class JdbcUtil {
     @Deprecated
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
-            final DaoCache daoCache) {
+            final Jdbc.DaoCache daoCache) {
         return createDao(daoInterface, ds, sqlMapper, daoCache, asyncExecutor.getExecutor());
     }
 
@@ -7272,8 +7271,8 @@ public final class JdbcUtil {
      */
     @Deprecated
     @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper, final DaoCache daoCache,
-            final Executor executor) {
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
+            final Jdbc.DaoCache daoCache, final Executor executor) {
 
         //    synchronized (dsEntityDaoPool) {
         //        @SuppressWarnings("rawtypes")
@@ -7332,7 +7331,7 @@ public final class JdbcUtil {
     @Deprecated
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
-            final SQLMapper sqlMapper, final DaoCache daoCache) {
+            final SQLMapper sqlMapper, final Jdbc.DaoCache daoCache) {
         return createDao(daoInterface, targetTableName, ds, sqlMapper, daoCache, asyncExecutor.getExecutor());
     }
 
@@ -7384,7 +7383,7 @@ public final class JdbcUtil {
     @Deprecated
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
-            final SQLMapper sqlMapper, final DaoCache cache, final Executor executor) throws IllegalArgumentException {
+            final SQLMapper sqlMapper, final Jdbc.DaoCache cache, final Executor executor) throws IllegalArgumentException {
 
         //    synchronized (dsEntityDaoPool) {
         //        @SuppressWarnings("rawtypes")
@@ -7691,10 +7690,13 @@ public final class JdbcUtil {
      *
      * </code>
      * </pre>
-     *
+     * 
+     * @return the localThreadCache
      */
-    public static void startThreadCacheForDao() {
-        localThreadCache_TL.set(DaoCache.createByMap());
+    public static Jdbc.DaoCache startThreadCacheForDao() {
+        final Jdbc.DaoCache localThreadCache = Jdbc.DaoCache.createByMap();
+
+        return startThreadCacheForDao(localThreadCache);
     }
 
     /**
@@ -7712,9 +7714,12 @@ public final class JdbcUtil {
      * </code>
      * </pre>
      * @param localThreadCache
+     * @return the specified localThreadCache
      */
-    public static void startThreadCacheForDao(final Jdbc.DaoCache localThreadCache) {
+    public static Jdbc.DaoCache startThreadCacheForDao(final Jdbc.DaoCache localThreadCache) {
         localThreadCache_TL.set(localThreadCache);
+
+        return localThreadCache;
     }
 
     /**

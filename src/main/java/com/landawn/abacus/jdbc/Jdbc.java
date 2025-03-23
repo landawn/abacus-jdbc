@@ -50,6 +50,10 @@ import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.cache.CacheFactory;
 import com.landawn.abacus.cache.LocalCache;
+import com.landawn.abacus.logging.Logger;
+import com.landawn.abacus.parser.JSONParser;
+import com.landawn.abacus.parser.KryoParser;
+import com.landawn.abacus.parser.ParserFactory;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -75,6 +79,7 @@ import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.stream.Stream;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -84,6 +89,11 @@ import lombok.ToString;
 
 @SuppressWarnings("java:S1192")
 public final class Jdbc {
+
+    static final String CACHE_KEY_SPLITOR = "#";
+
+    static final JSONParser jsonParser = ParserFactory.createJSONParser();
+    static final KryoParser kryoParser = ParserFactory.isKryoAvailable() ? ParserFactory.createKryoParser() : null;
 
     static final ObjectPool<Type<?>, ColumnGetter<?>> COLUMN_GETTER_POOL = new ObjectPool<>(1024);
 
@@ -5389,11 +5399,15 @@ public final class Jdbc {
             return new DaoCacheByMap();
         }
 
-        public static DaoCache createByMap(Map<Object, Object> map) {
+        public static DaoCache createByMap(Map<String, Object> map) {
             return new DaoCacheByMap(map);
         }
 
         /**
+         * Retrieves the result from the cache by the default cache key or customized key by the specified parameters.
+         * <br />
+         * MUST NOT modify the input parameters.
+         * 
          * @param defaultCacheKey
          * @param daoProxy
          * @param args
@@ -5403,7 +5417,9 @@ public final class Jdbc {
         Object get(String defaultCacheKey, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
         /**
-         * Cache result.
+         * Caches the result by the default cache key or customized key by the specified parameters.
+         * <br />
+         * MUST NOT modify the input parameters.
          *
          * @param defaultCacheKey
          * @param result
@@ -5415,6 +5431,9 @@ public final class Jdbc {
         boolean put(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
         /**
+         * Caches the result by the default cache key or customized key by the specified parameters.
+         * <br />
+         * MUST NOT modify the input parameters.
          * 
          * @param defaultCacheKey
          * @param result
@@ -5429,7 +5448,9 @@ public final class Jdbc {
                 Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
         /**
-         * Refresh the cache.
+         * Refreshes/Removes the result from the cache by the default cache key or customized key by the specified parameters.
+         * <br />
+         * MUST NOT modify the input parameters.
          *
          * @param defaultCacheKey
          * @param daoProxy
@@ -5441,7 +5462,7 @@ public final class Jdbc {
     }
 
     public static final class DefaultDaoCache implements DaoCache {
-        protected final LocalCache<Object, Object> cache;
+        protected final LocalCache<String, Object> cache;
 
         public DefaultDaoCache(final int capacity, final long evictDelay) {
             cache = CacheFactory.createLocalCache(capacity, evictDelay);
@@ -5471,12 +5492,19 @@ public final class Jdbc {
         @SuppressWarnings("unused")
         public void update(final String defaultCacheKey, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            cache.clear();
+
+            final String updatedTableName = Strings.substringBetween(defaultCacheKey, CACHE_KEY_SPLITOR);
+
+            if (Strings.isEmpty(updatedTableName)) {
+                cache.clear();
+            } else {
+                cache.keySet().stream().filter(k -> k.contains(updatedTableName)).toList().forEach(k -> cache.remove(k));
+            }
         }
     }
 
     static final class DaoCacheByMap implements DaoCache {
-        protected final Map<Object, Object> cache;
+        protected final Map<String, Object> cache;
 
         public DaoCacheByMap() {
             cache = new HashMap<>();
@@ -5486,7 +5514,7 @@ public final class Jdbc {
             this.cache = new HashMap<>(capacity);
         }
 
-        public DaoCacheByMap(final Map<Object, Object> cache) {
+        public DaoCacheByMap(final Map<String, Object> cache) {
             this.cache = cache;
         }
 
@@ -5518,8 +5546,52 @@ public final class Jdbc {
         @SuppressWarnings("unused")
         public void update(final String defaultCacheKey, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            cache.clear();
+
+            final String updatedTableName = Strings.substringBetween(defaultCacheKey, CACHE_KEY_SPLITOR);
+
+            if (Strings.isEmpty(updatedTableName)) {
+                cache.clear();
+            } else {
+                cache.entrySet().removeIf(e -> e.getKey().contains(updatedTableName));
+            }
         }
+    }
+
+    @SuppressWarnings("unused")
+    static String createCacheKey(final String tableName, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
+        String paramKey = null;
+
+        if (kryoParser != null) {
+            try {
+                paramKey = kryoParser.serialize(args);
+            } catch (final Exception e) {
+                // ignore;
+                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
+            }
+        } else {
+            final List<Object> newArgs = Stream.of(args).map(it -> {
+                if (it == null) {
+                    return null;
+                }
+
+                final Type<?> type = N.typeOf(it.getClass());
+
+                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isBean() || type.isEntityId()) {
+                    return it;
+                } else {
+                    return it.toString();
+                }
+            }).toList();
+
+            try {
+                paramKey = N.toJson(newArgs);
+            } catch (final Exception e) {
+                // ignore;
+                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
+            }
+        }
+
+        return Strings.concat(fullClassMethodName, CACHE_KEY_SPLITOR, tableName, CACHE_KEY_SPLITOR, paramKey);
     }
 
     static <K, V> void merge(final Map<K, V> map, final K key, final V value, final BinaryOperator<V> remappingFunction) {

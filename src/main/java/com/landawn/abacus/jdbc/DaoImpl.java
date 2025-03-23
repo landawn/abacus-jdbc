@@ -54,7 +54,6 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc.BiParametersSetter;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
-import com.landawn.abacus.jdbc.Jdbc.DaoCache;
 import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.BindList;
@@ -104,7 +103,6 @@ import com.landawn.abacus.parser.ParserFactory;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.AsyncExecutor;
 import com.landawn.abacus.util.ClassUtil;
@@ -1706,44 +1704,6 @@ final class DaoImpl {
         return cond;
     }
 
-    @SuppressWarnings("unused")
-    private static String createCacheKey(final String tableName, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
-        String cacheKey = null;
-        String keyPrefix = Strings.concat(fullClassMethodName, "#", tableName);
-
-        if (kryoParser != null) {
-            try {
-                cacheKey = kryoParser.serialize(N.newImmutableEntry(keyPrefix, args));
-            } catch (final Exception e) {
-                // ignore;
-                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
-            }
-        } else {
-            final List<Object> newArgs = Stream.of(args).map(it -> {
-                if (it == null) {
-                    return null;
-                }
-
-                final Type<?> type = N.typeOf(it.getClass());
-
-                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isBean() || type.isEntityId()) {
-                    return it;
-                } else {
-                    return it.toString();
-                }
-            }).toList();
-
-            try {
-                cacheKey = N.toJson(N.newImmutableEntry(keyPrefix, newArgs));
-            } catch (final Exception e) {
-                // ignore;
-                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
-            }
-        }
-
-        return cacheKey;
-    }
-
     @SuppressWarnings("rawtypes")
     private static Jdbc.BiRowMapper<Object> getIdExtractor(final Holder<Jdbc.BiRowMapper<Object>> idExtractorHolder,
             final Jdbc.BiRowMapper<Object> defaultIdExtractor, final Dao dao) {
@@ -1805,7 +1765,7 @@ final class DaoImpl {
 
     @SuppressWarnings({ "rawtypes", "null", "resource" })
     static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
-            final DaoCache inputDaoCache, final Executor executor) {
+            final Jdbc.DaoCache inputDaoCache, final Executor executor) {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(ds, "dataSource");
 
@@ -2240,8 +2200,8 @@ final class DaoImpl {
         final int capacity = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_CAPACITY : daoClassCacheAnno.capacity();
         final long evictDelay = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_EVICT_DELAY : daoClassCacheAnno.evictDelay();
 
-        final DaoCache daoCache = inputDaoCache == null
-                ? (daoClassCacheAnno == null || daoClassCacheAnno.impl() == null) ? DaoCache.create(capacity, evictDelay)
+        final Jdbc.DaoCache daoCache = inputDaoCache == null
+                ? (daoClassCacheAnno == null || daoClassCacheAnno.impl() == null) ? Jdbc.DaoCache.create(capacity, evictDelay)
                         : ClassUtil.invokeConstructor(ClassUtil.getDeclaredConstructor(daoClassCacheAnno.impl(), int.class, long.class), capacity, evictDelay)
                 : inputDaoCache;
 
@@ -6064,7 +6024,7 @@ final class DaoImpl {
                 final boolean isUpdateMethod = IS_UPDATE_METHOD.test(method);
                 final boolean isAnnotatedCacheResult = cacheResultAnno != null && !cacheResultAnno.disabled();
                 final boolean isRefreshCacheRequired = (refreshResultAnno != null && !refreshResultAnno.disabled());
-                final DaoCache daoCacheToUseInMethod = isAnnotatedCacheResult || isRefreshCacheRequired ? daoCache : null;
+                final Jdbc.DaoCache daoCacheToUseInMethod = isAnnotatedCacheResult || isRefreshCacheRequired ? daoCache : null;
 
                 if (isAnnotatedCacheResult || isRefreshCacheRequired || (isQueryMethod || isUpdateMethod)) {
                     if (daoLogger.isDebugEnabled()) {
@@ -6107,7 +6067,7 @@ final class DaoImpl {
                         final boolean isRefreshLocalThreadCacheRequired = isUpdateMethod && localThreadCache != null;
 
                         final String cacheKey = isAnnotatedCacheResult || isLocalThreadCacheEnabled || isRefreshLocalThreadCacheRequired
-                                ? createCacheKey(tableName, fullClassMethodName, args, daoLogger)
+                                ? Jdbc.createCacheKey(tableName, fullClassMethodName, args, daoLogger)
                                 : null;
 
                         Object result = null;

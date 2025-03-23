@@ -1,3 +1,8 @@
+### 3.8.10
+
+* Support `DaoCache`
+* Improvements and bug fix.
+
 ### 3.8.9
 
 * Improvements and bug fix.
