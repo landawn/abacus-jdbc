@@ -174,7 +174,8 @@ final class DaoImpl {
 
     private static final Set<String> SUPPORTED_TRANSFER_FOR_CACHE = N.asSet("none", "kryo", "json");
 
-    private static final Set<String> QUERY_METHOD_NAME_SET = N.asSet("query", "queryFor", "list", "get", "find", "findFirst", "findOnlyOne", "exist",
+    private static final Set<String> QUERY_METHOD_NAME_SET = N.asSet("query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne",
+            "exist",
             "notExist", "count");
 
     private static final Set<String> UPDATE_METHOD_NAME_SET = N.asSet("update", "delete", "deleteById", "insert", "save", "batchUpdate", "batchDelete",

@@ -79,6 +79,32 @@ import codes.entity.Account.x;
 public class DaoTest {
 
     @Test
+    public void test_localThreadCache() throws Exception {
+        JdbcUtil.enableThreadCacheForDao();
+
+        try {
+            final List<User> users = IntStream.range(1, 100)
+                    .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
+                    .toList();
+
+            List<Long> ids = userDao.batchInsertWithId(users);
+            assertEquals(users.size(), ids.size());
+
+            final List<User> users2 = userDao.batchGet(ids);
+            assertEquals(users.size(), users2.size());
+
+            for (int i = 0; i < 100; i++) {
+                assertEquals(users.size(), userDao.batchGet(ids).size());
+            }
+
+            assertEquals(users.size(), userDao.batchDeleteByIds(ids));
+        } finally {
+            JdbcUtil.closeThreadCacheForDao();
+        }
+
+    }
+
+    @Test
     public void test_stream_lazy_evaluation() throws Exception {
         // lazy evaluation
 

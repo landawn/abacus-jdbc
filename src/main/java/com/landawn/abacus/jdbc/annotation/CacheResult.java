@@ -83,7 +83,7 @@ public @interface CacheResult {
      *
      * @return
      */
-    String[] filter() default { "query", "queryFor", "list", "get", "find", "findFirst", "findOnlyOne", "exist", "notExist", "count" };
+    String[] filter() default { "query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne", "exist", "notExist", "count" };
 
     // TODO: second, what will key be like?: {methodName=[args]} -> JSON or kryo?
     // KeyGenerator keyGenerator() default KeyGenerator.JSON; KeyGenerator.JSON/KRYO;
