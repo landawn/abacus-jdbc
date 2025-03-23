@@ -51,12 +51,12 @@ import java.util.function.Supplier;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
-import com.landawn.abacus.cache.Cache;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc.BiParametersSetter;
 import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.BiRowFilter;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
+import com.landawn.abacus.jdbc.Jdbc.DaoCache;
 import com.landawn.abacus.jdbc.Jdbc.OutParam;
 import com.landawn.abacus.jdbc.Jdbc.OutParamResult;
 import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
@@ -107,7 +107,6 @@ import com.landawn.abacus.util.function.TriConsumer;
 import com.landawn.abacus.util.stream.EntryStream;
 import com.landawn.abacus.util.stream.ObjIteratorEx;
 import com.landawn.abacus.util.stream.Stream;
-import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
  *
@@ -164,7 +163,7 @@ public final class JdbcUtil {
     /**
      * Default cache idle time in milliseconds
      */
-    public static final int DEFAULT_CACHE_IDLE_TIME = 3 * 60 * 1000;
+    public static final int DEFAULT_CACHE_MAX_IDLE_TIME = 3 * 60 * 1000;
 
     public static final Throwables.Function<Statement, String, SQLException> DEFAULT_SQL_EXTRACTOR = stmt -> {
         Statement stmtToUse = stmt;
@@ -7103,7 +7102,7 @@ public final class JdbcUtil {
 
                                                 return id;
                                             } else {
-                                                final List<Tuple2<String, PropInfo>> tpList = StreamEx.of(columnLabels)
+                                                final List<Tuple2<String, PropInfo>> tpList = Stream.of(columnLabels)
                                                         .filter(it -> idBeanInfo.getPropInfo(it) != null)
                                                         .map(it -> Tuple.of(it, idBeanInfo.getPropInfo(it)))
                                                         .toList();
@@ -7221,15 +7220,15 @@ public final class JdbcUtil {
      * @param daoInterface
      * @param ds
      * @param sqlMapper
-     * @param cache It's better to not share cache between Dao instances.
+     * @param daoCache It's better to not share cache between Dao instances.
      * @return
      * @deprecated
      */
     @Deprecated
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
-            final Cache<String, Object> cache) {
-        return createDao(daoInterface, ds, sqlMapper, cache, asyncExecutor.getExecutor());
+            final DaoCache daoCache) {
+        return createDao(daoInterface, ds, sqlMapper, daoCache, asyncExecutor.getExecutor());
     }
 
     /**
@@ -7266,15 +7265,15 @@ public final class JdbcUtil {
      * @param daoInterface
      * @param ds
      * @param sqlMapper
-     * @param cache It's better to not share cache between Dao instances.
+     * @param daoCache It's better to not share cache between Dao instances.
      * @param executor
      * @return
      * @deprecated
      */
     @Deprecated
     @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
-            final Cache<String, Object> cache, final Executor executor) {
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper, final DaoCache daoCache,
+            final Executor executor) {
 
         //    synchronized (dsEntityDaoPool) {
         //        @SuppressWarnings("rawtypes")
@@ -7288,7 +7287,7 @@ public final class JdbcUtil {
         //        entityDaoPool.put(getTargetEntityClass(daoInterface), dao);
         //    }
 
-        return DaoImpl.createDao(daoInterface, null, ds, sqlMapper, cache, executor);
+        return DaoImpl.createDao(daoInterface, null, ds, sqlMapper, daoCache, executor);
     }
 
     /**
@@ -7326,15 +7325,15 @@ public final class JdbcUtil {
      * @param targetTableName
      * @param ds
      * @param sqlMapper
-     * @param cache It's better to not share cache between Dao instances.
+     * @param daoCache It's better to not share cache between Dao instances.
      * @return
      * @deprecated
      */
     @Deprecated
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
-            final SQLMapper sqlMapper, final Cache<String, Object> cache) {
-        return createDao(daoInterface, targetTableName, ds, sqlMapper, cache, asyncExecutor.getExecutor());
+            final SQLMapper sqlMapper, final DaoCache daoCache) {
+        return createDao(daoInterface, targetTableName, ds, sqlMapper, daoCache, asyncExecutor.getExecutor());
     }
 
     /**
@@ -7385,7 +7384,7 @@ public final class JdbcUtil {
     @Deprecated
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
-            final SQLMapper sqlMapper, final Cache<String, Object> cache, final Executor executor) throws IllegalArgumentException {
+            final SQLMapper sqlMapper, final DaoCache cache, final Executor executor) throws IllegalArgumentException {
 
         //    synchronized (dsEntityDaoPool) {
         //        @SuppressWarnings("rawtypes")
@@ -7676,18 +7675,18 @@ public final class JdbcUtil {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
     }
 
-    static final ThreadLocal<Jdbc.LocalThreadCacheForDao> localThreadCache_TL = new ThreadLocal<>();
+    static final ThreadLocal<Jdbc.DaoCache> localThreadCache_TL = new ThreadLocal<>();
 
     /**
-     * Enables the cache on thread level for the current thread.
+     * Enables the cache for Dao queries in the current thread.
      *
      * <pre>
      * <code>
-     * Jdbc.enableThreadCache();
+     * Jdbc.startThreadCacheForDao();
      * try {
      *    // your code here
      * } finally {
-     *   Jdbc.closeThreadCache();
+     *   Jdbc.closeThreadCacheForDao();
      * }
      *
      * </code>
@@ -7695,13 +7694,32 @@ public final class JdbcUtil {
      *
      */
     public static void startThreadCacheForDao() {
-        localThreadCache_TL.set(new Jdbc.LocalThreadCacheForDao());
+        localThreadCache_TL.set(DaoCache.createByMap());
     }
 
-    public static void startThreadCacheForDao(final Jdbc.LocalThreadCacheForDao localThreadCache) {
+    /**
+     * Enables the cache for Dao queries in the current thread.
+     *
+     * <pre>
+     * <code>
+     * Jdbc.startThreadCacheForDao(localThreadCache);
+     * try {
+     *    // your code here
+     * } finally {
+     *   Jdbc.closeThreadCacheForDao();
+     * }
+     *
+     * </code>
+     * </pre>
+     * @param localThreadCache
+     */
+    public static void startThreadCacheForDao(final Jdbc.DaoCache localThreadCache) {
         localThreadCache_TL.set(localThreadCache);
     }
 
+    /**
+     * Closes the cache for Dao queries in the current thread.
+     */
     public static void closeThreadCacheForDao() {
         localThreadCache_TL.remove();
     }

@@ -43,7 +43,7 @@ public @interface CacheResult {
      *
      * @return
      */
-    long idleTime() default JdbcUtil.DEFAULT_CACHE_IDLE_TIME; // unit milliseconds.
+    long maxIdleTime() default JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME; // unit milliseconds.
 
     /**
      * Minimum required size to cache query result if the return type is {@code Collection} or {@code DataSet}.

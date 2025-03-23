@@ -42,8 +42,6 @@ import java.util.concurrent.Executor;
 import java.util.regex.Pattern;
 
 import com.landawn.abacus.annotation.Internal;
-import com.landawn.abacus.cache.Cache;
-import com.landawn.abacus.cache.CacheFactory;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory;
 import com.landawn.abacus.condition.ConditionFactory.CF;
@@ -56,8 +54,8 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc.BiParametersSetter;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
+import com.landawn.abacus.jdbc.Jdbc.DaoCache;
 import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
-import com.landawn.abacus.jdbc.Jdbc.LocalThreadCacheForDao;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.BindList;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
@@ -1709,16 +1707,16 @@ final class DaoImpl {
     }
 
     @SuppressWarnings("unused")
-    private static String createCacheKey(final String tableName, final String methodName, final Object[] args, final Logger daoLogger) {
+    private static String createCacheKey(final String tableName, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
         String cacheKey = null;
-        String tableAndOp = Strings.concat(tableName, ".", methodName);
+        String keyPrefix = Strings.concat(fullClassMethodName, "#", tableName);
 
         if (kryoParser != null) {
             try {
-                cacheKey = kryoParser.serialize(N.asMap(tableAndOp, args));
+                cacheKey = kryoParser.serialize(N.newImmutableEntry(keyPrefix, args));
             } catch (final Exception e) {
                 // ignore;
-                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + methodName);
+                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
             }
         } else {
             final List<Object> newArgs = Stream.of(args).map(it -> {
@@ -1736,10 +1734,10 @@ final class DaoImpl {
             }).toList();
 
             try {
-                cacheKey = N.toJson(N.asMap(tableAndOp, newArgs));
+                cacheKey = N.toJson(N.newImmutableEntry(keyPrefix, newArgs));
             } catch (final Exception e) {
                 // ignore;
-                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + methodName);
+                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
             }
         }
 
@@ -1807,7 +1805,7 @@ final class DaoImpl {
 
     @SuppressWarnings({ "rawtypes", "null", "resource" })
     static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
-            final Cache<String, Object> daoCache, final Executor executor) {
+            final DaoCache inputDaoCache, final Executor executor) {
         N.checkArgNotNull(daoInterface, "daoInterface");
         N.checkArgNotNull(ds, "dataSource");
 
@@ -2229,20 +2227,24 @@ final class DaoImpl {
                 .first()
                 .orElseNull();
 
-        final int capacity = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_CAPACITY : daoClassCacheAnno.capacity();
-        final long evictDelay = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_EVICT_DELAY : daoClassCacheAnno.evictDelay();
-
         if (NoUpdateDao.class.isAssignableFrom(daoInterface)) {
             // OK
         } else {
             // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
-            if (daoCache != null || daoClassCacheAnno != null) {
+            if (inputDaoCache != null || daoClassCacheAnno != null) {
                 throw new UnsupportedOperationException(
                         "Cache is only supported for NoUpdateDao/UncheckedNoUpdateDao interface right now, not supported for Dao interface: " + daoClassName);
             }
         }
 
-        final Cache<String, Object> cache = daoCache == null ? CacheFactory.createLocalCache(capacity, evictDelay) : daoCache;
+        final int capacity = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_CAPACITY : daoClassCacheAnno.capacity();
+        final long evictDelay = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_EVICT_DELAY : daoClassCacheAnno.evictDelay();
+
+        final DaoCache daoCache = inputDaoCache == null
+                ? (daoClassCacheAnno == null || daoClassCacheAnno.impl() == null) ? DaoCache.create(capacity, evictDelay)
+                        : ClassUtil.invokeConstructor(ClassUtil.getDeclaredConstructor(daoClassCacheAnno.impl(), int.class, long.class), capacity, evictDelay)
+                : inputDaoCache;
+
         final Set<Method> nonDBOperationSet = new HashSet<>();
 
         //    final Map<String, String> sqlCache = new ConcurrentHashMap<>(0);
@@ -6055,10 +6057,14 @@ final class DaoImpl {
                                 && cacheResultAnno != null //
                                 && N.anyMatch(daoClassRefreshCacheAnno.filter(), filterByMethodNameStartsWith)) ? daoClassRefreshCacheAnno : null);
 
+                final long cacheLiveTime = cacheResultAnno == null ? 0 : cacheResultAnno.liveTime();
+                final long cacheMaxIdleTime = cacheResultAnno == null ? 0 : cacheResultAnno.maxIdleTime();
+
                 final boolean isQueryMethod = IS_QUERY_METHOD.test(method);
                 final boolean isUpdateMethod = IS_UPDATE_METHOD.test(method);
                 final boolean isAnnotatedCacheResult = cacheResultAnno != null && !cacheResultAnno.disabled();
                 final boolean isRefreshCacheRequired = (refreshResultAnno != null && !refreshResultAnno.disabled());
+                final DaoCache daoCacheToUseInMethod = isAnnotatedCacheResult || isRefreshCacheRequired ? daoCache : null;
 
                 if (isAnnotatedCacheResult || isRefreshCacheRequired || (isQueryMethod || isUpdateMethod)) {
                     if (daoLogger.isDebugEnabled()) {
@@ -6096,21 +6102,21 @@ final class DaoImpl {
                     final Throwables.BiFunction<Dao, Object[], ?, Throwable> temp = call;
 
                     call = (proxy, args) -> {
-                        final LocalThreadCacheForDao localThreadCache = JdbcUtil.localThreadCache_TL.get();
+                        final Jdbc.DaoCache localThreadCache = JdbcUtil.localThreadCache_TL.get();
                         final boolean isLocalThreadCacheEnabled = isQueryMethod && localThreadCache != null;
                         final boolean isRefreshLocalThreadCacheRequired = isUpdateMethod && localThreadCache != null;
 
                         final String cacheKey = isAnnotatedCacheResult || isLocalThreadCacheEnabled || isRefreshLocalThreadCacheRequired
-                                ? createCacheKey(tableName, methodName, args, daoLogger)
+                                ? createCacheKey(tableName, fullClassMethodName, args, daoLogger)
                                 : null;
 
                         Object result = null;
 
                         if (Strings.isNotEmpty(cacheKey)) {
                             if (isAnnotatedCacheResult) {
-                                result = cache.gett(cacheKey);
+                                result = daoCacheToUseInMethod.get(cacheKey, proxy, args, methodSignature);
                             } else if (isLocalThreadCacheEnabled) {
-                                result = localThreadCache.fetchResultFromCache(cacheKey, proxy, args, methodSignature);
+                                result = localThreadCache.get(cacheKey, proxy, args, methodSignature);
                             }
                         }
 
@@ -6123,11 +6129,11 @@ final class DaoImpl {
                                 result = temp.apply(proxy, args);
                             } finally {
                                 if (isRefreshCacheRequired) {
-                                    cache.clear();
+                                    daoCacheToUseInMethod.update(cacheKey, proxy, args, methodSignature);
                                 }
 
                                 if (Strings.isNotEmpty(cacheKey) && isRefreshLocalThreadCacheRequired) {
-                                    localThreadCache.refreshCache(cacheKey, proxy, args, methodSignature);
+                                    localThreadCache.update(cacheKey, proxy, args, methodSignature);
                                 }
                             }
                         } else {
@@ -6138,19 +6144,21 @@ final class DaoImpl {
                             if (isAnnotatedCacheResult) {
                                 if (result instanceof final DataSet dataSet) {
                                     if (dataSet.size() >= cacheResultAnno.minSize() && dataSet.size() <= cacheResultAnno.maxSize()) {
-                                        cache.put(cacheKey, cloneFunc.apply(result), cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
+                                        daoCacheToUseInMethod.put(cacheKey, cloneFunc.apply(result), cacheLiveTime, cacheMaxIdleTime, proxy, args,
+                                                methodSignature);
                                     }
                                 } else if (result instanceof Collection) {
                                     final Collection<Object> c = (Collection<Object>) result;
 
                                     if (c.size() >= cacheResultAnno.minSize() && c.size() <= cacheResultAnno.maxSize()) {
-                                        cache.put(cacheKey, cloneFunc.apply(result), cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
+                                        daoCacheToUseInMethod.put(cacheKey, cloneFunc.apply(result), cacheLiveTime, cacheMaxIdleTime, proxy, args,
+                                                methodSignature);
                                     }
                                 } else {
-                                    cache.put(cacheKey, cloneFunc.apply(result), cacheResultAnno.liveTime(), cacheResultAnno.idleTime());
+                                    daoCacheToUseInMethod.put(cacheKey, cloneFunc.apply(result), cacheLiveTime, cacheMaxIdleTime, proxy, args, methodSignature);
                                 }
                             } else if (isLocalThreadCacheEnabled) {
-                                localThreadCache.catchResult(cacheKey, cloneFunc.apply(result), proxy, args, methodSignature);
+                                localThreadCache.put(cacheKey, cloneFunc.apply(result), proxy, args, methodSignature);
                             }
                         }
 

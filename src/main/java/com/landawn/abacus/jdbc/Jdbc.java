@@ -48,7 +48,8 @@ import java.util.stream.Collector;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
-import com.landawn.abacus.jdbc.Jdbc.Columns;
+import com.landawn.abacus.cache.CacheFactory;
+import com.landawn.abacus.cache.LocalCache;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -5378,56 +5379,144 @@ public final class Jdbc {
         }
     }
 
-    public static final class LocalThreadCacheForDao {
-        protected final Map<Object, Object> cache;
+    public interface DaoCache {
 
-        public LocalThreadCacheForDao() {
-            cache = new HashMap<>();
+        public static DaoCache create(final int capacity, final long evictDelay) {
+            return new DefaultDaoCache(capacity, evictDelay);
         }
 
-        public LocalThreadCacheForDao(final Map<Object, Object> cache) {
-            this.cache = cache;
+        public static DaoCache createByMap() {
+            return new DaoCacheByMap();
+        }
+
+        public static DaoCache createByMap(Map<Object, Object> map) {
+            return new DaoCacheByMap(map);
         }
 
         /**
          * @param defaultCacheKey
-         * @param proxy
+         * @param daoProxy
          * @param args
          * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
          * @return
          */
-        @SuppressWarnings("unused")
-        public Object fetchResultFromCache(final String defaultCacheKey, final Object proxy, final Object[] args,
-                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            return cache.get(defaultCacheKey);
-        }
+        Object get(String defaultCacheKey, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
         /**
          * Cache result.
          *
          * @param defaultCacheKey
          * @param result
-         * @param proxy
+         * @param daoProxy
          * @param args
          * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
          * @return
          */
-        @SuppressWarnings("unused")
-        public boolean catchResult(final String defaultCacheKey, final Object result, final Object proxy, final Object[] args,
-                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            return cache.put(defaultCacheKey, result) == null;
-        }
+        boolean put(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
+
+        /**
+         * 
+         * @param defaultCacheKey
+         * @param result
+         * @param liveTime
+         * @param maxIdleTime
+         * @param daoProxy
+         * @param args
+         * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
+         * @return
+         */
+        boolean put(String defaultCacheKey, Object result, final long liveTime, final long maxIdleTime, Object daoProxy, Object[] args,
+                Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
         /**
          * Refresh the cache.
          *
          * @param defaultCacheKey
-         * @param proxy
+         * @param daoProxy
          * @param args
-         * @param methodSignature
+         * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
          */
+        void update(String defaultCacheKey, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
+
+    }
+
+    public static final class DefaultDaoCache implements DaoCache {
+        protected final LocalCache<Object, Object> cache;
+
+        public DefaultDaoCache(final int capacity, final long evictDelay) {
+            cache = CacheFactory.createLocalCache(capacity, evictDelay);
+        }
+
+        @Override
         @SuppressWarnings("unused")
-        public void refreshCache(final String defaultCacheKey, final Object proxy, final Object[] args,
+        public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            return cache.gett(defaultCacheKey);
+        }
+
+        @Override
+        @SuppressWarnings("unused")
+        public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            return cache.put(defaultCacheKey, result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME);
+        }
+
+        @Override
+        public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
+                Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            return cache.put(defaultCacheKey, result, liveTime, maxIdleTime);
+        }
+
+        @Override
+        @SuppressWarnings("unused")
+        public void update(final String defaultCacheKey, final Object daoProxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            cache.clear();
+        }
+    }
+
+    static final class DaoCacheByMap implements DaoCache {
+        protected final Map<Object, Object> cache;
+
+        public DaoCacheByMap() {
+            cache = new HashMap<>();
+        }
+
+        public DaoCacheByMap(final int capacity) {
+            this.cache = new HashMap<>(capacity);
+        }
+
+        public DaoCacheByMap(final Map<Object, Object> cache) {
+            this.cache = cache;
+        }
+
+        @Override
+        @SuppressWarnings("unused")
+        public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            return cache.get(defaultCacheKey);
+        }
+
+        @Override
+        @SuppressWarnings("unused")
+        public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            cache.put(defaultCacheKey, result);
+
+            return true;
+        }
+
+        @Override
+        public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
+                Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            cache.put(defaultCacheKey, result);
+
+            return true;
+        }
+
+        @Override
+        @SuppressWarnings("unused")
+        public void update(final String defaultCacheKey, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             cache.clear();
         }

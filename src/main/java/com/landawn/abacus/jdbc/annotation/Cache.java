@@ -21,6 +21,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.jdbc.Jdbc;
+import com.landawn.abacus.jdbc.Jdbc.DaoCache;
 import com.landawn.abacus.jdbc.JdbcUtil;
 
 // TODO: First of all, it's a bad idea to implement cache in DAL layer?! and how if not?
@@ -45,4 +47,11 @@ public @interface Cache {
      * @return
      */
     long evictDelay() default JdbcUtil.DEFAULT_CACHE_EVICT_DELAY; // unit milliseconds.
+
+    /**
+     * The implementation of {@code DaoCache}. it must have a public constructor with type: {@code (int capacity, long evictDelay)}.
+     * 
+     * @return
+     */
+    Class<? extends DaoCache> impl() default Jdbc.DefaultDaoCache.class; //NOSONAR
 }
