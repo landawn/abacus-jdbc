@@ -86,7 +86,7 @@ public class DaoTest {
 
         List<Long> ids = userDao.batchInsertWithId(users);
 
-        JdbcUtil.startThreadCacheForDao();
+        JdbcUtil.startDaoCacheOnCurrentThread();
 
         try {
             assertEquals(users.size(), ids.size());
@@ -103,7 +103,7 @@ public class DaoTest {
             N.println("Time with local thread cache: " + (System.currentTimeMillis() - start));
 
         } finally {
-            JdbcUtil.closeThreadCacheForDao();
+            JdbcUtil.closeDaoCacheOnCurrentThread();
         }
 
         final List<User> users2 = userDao.batchGet(ids);

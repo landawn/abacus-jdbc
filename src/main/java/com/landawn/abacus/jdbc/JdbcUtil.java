@@ -7728,22 +7728,24 @@ public final class JdbcUtil {
      *
      * <pre>
      * <code>
-     * Jdbc.startThreadCacheForDao();
+     * Jdbc.startDaoCacheOnCurrentThread();
      * try {
      *    // your code here
      * } finally {
-     *   Jdbc.closeThreadCacheForDao();
+     *   Jdbc.closeDaoCacheOnCurrentThread();
      * }
      *
      * </code>
      * </pre>
      * 
-     * @return the localThreadCache
+     * @return the created {@code DaoCache} for current thread.
+     * @see Jdbc.DaoCache#createByMap()
+     * @see Jdbc.DaoCache#createByMap(Map)
      */
-    public static Jdbc.DaoCache startThreadCacheForDao() {
+    public static Jdbc.DaoCache startDaoCacheOnCurrentThread() {
         final Jdbc.DaoCache localThreadCache = Jdbc.DaoCache.createByMap();
 
-        return startThreadCacheForDao(localThreadCache);
+        return startDaoCacheOnCurrentThread(localThreadCache);
     }
 
     /**
@@ -7751,19 +7753,21 @@ public final class JdbcUtil {
      *
      * <pre>
      * <code>
-     * Jdbc.startThreadCacheForDao(localThreadCache);
+     * Jdbc.startDaoCacheOnCurrentThread(localThreadCache);
      * try {
      *    // your code here
      * } finally {
-     *   Jdbc.closeThreadCacheForDao();
+     *   Jdbc.closeDaoCacheOnCurrentThread();
      * }
      *
      * </code>
      * </pre>
      * @param localThreadCache
      * @return the specified localThreadCache
+     * @see Jdbc.DaoCache#createByMap()
+     * @see Jdbc.DaoCache#createByMap(Map)
      */
-    public static Jdbc.DaoCache startThreadCacheForDao(final Jdbc.DaoCache localThreadCache) {
+    public static Jdbc.DaoCache startDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) {
         localThreadCache_TL.set(localThreadCache);
 
         return localThreadCache;
@@ -7772,7 +7776,7 @@ public final class JdbcUtil {
     /**
      * Closes the cache for Dao queries in the current thread.
      */
-    public static void closeThreadCacheForDao() {
+    public static void closeDaoCacheOnCurrentThread() {
         localThreadCache_TL.remove();
     }
 
