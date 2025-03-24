@@ -6001,8 +6001,7 @@ final class DaoImpl {
                 final RefreshCache refreshResultAnno = StreamEx.of(method.getAnnotations())
                         .select(RefreshCache.class)
                         .last()
-                        .orElse((daoClassRefreshCacheAnno != null //
-                                && cacheResultAnno != null //
+                        .orElse((daoClassRefreshCacheAnno != null // 
                                 && N.anyMatch(daoClassRefreshCacheAnno.filter(), filterByMethodNameStartsWith)) ? daoClassRefreshCacheAnno : null);
 
                 final long cacheLiveTime = cacheResultAnno == null ? 0 : cacheResultAnno.liveTime();
