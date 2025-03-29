@@ -22,7 +22,7 @@ String query = PSC.select("id", "firstName, "lastName", "email").from(User.class
 String query = PSC.selectFrom(User.class).where(CF.eq("firstName")).sql();
 
 // Sql scripts can also be placed in sql mapper xml file and then associated with a DAO object.
-UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
+UserDao userDao =  JdbcContext.createDao(UserDao.class, dataSource, sqlMapper);
 ```
 `userSqlMapper.xml`
 ```xml
@@ -56,7 +56,7 @@ PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...);
 																		   
 
 // Sql can also be associated to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
-public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JdbcUtil.JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
+public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
     // This is just a sample. Normally there are pre-defined methods available for this query: userDao.list(Condition cond).
     // Methods defined in Dao interface don't require implementation. Of course, Customized implemnetation is also supported by default method.
     @Select(sql = "SELECT id, first_name, last_name, email FROM user WHERE first_Name = ?")
@@ -90,7 +90,7 @@ public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC, Us
     }
 }
 
-UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, ...);
+UserDao userDao =  JdbcContext.createDao(UserDao.class, dataSource, ...);
 ```
 <br />
 
@@ -99,6 +99,7 @@ UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, ...);
 [Jdbc](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Jdbc_view.html),
 [DataSet](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DataSet_view.html), 
 [ConditionFactory(CF)](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/ConditionFactory_view.html), 
+[JdbcContext](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcContext_view.html),
 [JdbcUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtil_view.html),
 [JdbcUtils](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtils_view.html).
 
