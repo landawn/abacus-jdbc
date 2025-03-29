@@ -575,8 +575,10 @@ final class DaoImpl {
         final Class<?> returnType = method.getReturnType();
         final int paramLen = paramTypes.length;
 
+        final boolean isBooleanReturnType = boolean.class.equals(returnType) || Boolean.class.equals(returnType);
+
         if (op == OP.exists) {
-            if (!(boolean.class.equals(returnType) || Boolean.class.equals(returnType))) {
+            if (!isBooleanReturnType) {
                 throw new UnsupportedOperationException(
                         "The result type of exists OP must be boolean or Boolean, can't be: " + returnType + " in method: " + fullClassMethodName);
             }
@@ -594,7 +596,7 @@ final class DaoImpl {
             return false;
         }
 
-        return (boolean.class.equals(returnType) || Boolean.class.equals(returnType))
+        return isBooleanReturnType
                 && ((methodName.startsWith("exists") && (methodName.length() == 6 || Character.isUpperCase(methodName.charAt(6))))
                         || (methodName.startsWith("exist") && (methodName.length() == 5 || Character.isUpperCase(methodName.charAt(5))))
                         || (methodName.startsWith("notExists") && (methodName.length() == 9 || Character.isUpperCase(methodName.charAt(9))))
@@ -722,7 +724,7 @@ final class DaoImpl {
                     }
 
                     if (hasRowMapperOrExtractor) {
-                        if (Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
+                        if (lastParamType != null && Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
                             if (hasRowFilter) {
                                 return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery)
                                         .listAllResultsetsAndGetOutParameters((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1]);
@@ -757,7 +759,7 @@ final class DaoImpl {
                     }
 
                     if (hasRowMapperOrExtractor) {
-                        if (Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
+                        if (lastParamType != null && Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
                             if (hasRowFilter) {
                                 return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultsets((Jdbc.RowFilter) args[paramLen - 2],
                                         (Jdbc.RowMapper) args[paramLen - 1]);
@@ -792,7 +794,7 @@ final class DaoImpl {
                     }
 
                     if (hasRowMapperOrExtractor) {
-                        if (Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)) {
+                        if (lastParamType != null && Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)) {
                             return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery)
                                     .queryAllResultsetsAndGetOutParameters((Jdbc.ResultExtractor) args[paramLen - 1]);
                         } else if (Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType)) {
@@ -818,7 +820,7 @@ final class DaoImpl {
                     }
 
                     if (hasRowMapperOrExtractor) {
-                        if (Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)) {
+                        if (lastParamType != null && Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)) {
                             return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).queryAllResultsets((Jdbc.ResultExtractor) args[paramLen - 1]);
                         } else if (Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType)) {
                             return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).queryAllResultsets((Jdbc.BiResultExtractor) args[paramLen - 1]);
@@ -842,7 +844,7 @@ final class DaoImpl {
                 }
 
                 if (hasRowMapperOrExtractor) {
-                    if (Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)) {
+                    if (lastParamType != null && Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)) {
                         return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.ResultExtractor) args[paramLen - 1]);
                     } else if (Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType)) {
                         return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.BiResultExtractor) args[paramLen - 1]);
@@ -867,7 +869,7 @@ final class DaoImpl {
                 //    }
 
                 if (hasRowMapperOrExtractor) {
-                    if (Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
+                    if (lastParamType != null && Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
                         if (hasRowFilter) {
                             return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAndGetOutParameters((Jdbc.RowFilter) args[paramLen - 2],
                                     (Jdbc.RowMapper) args[paramLen - 1]);
@@ -929,7 +931,7 @@ final class DaoImpl {
                 throw new UnsupportedOperationException("RowFilter is not supported by OP: " + op + " in method: " + fullClassMethodName);
             }
 
-            if (Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
+            if (lastParamType != null && Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
                 if (isListQuery) {
                     if (returnType.equals(List.class)) {
                         if (hasRowFilter) {

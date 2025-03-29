@@ -104,17 +104,17 @@ public class JdbcContext {
     static final Set<String> UPDATE_METHOD_NAME_SET = N.asSet("update", "delete", "deleteById", "insert", "save", "batchUpdate", "batchDelete",
             "batchDeleteByIds", "batchInsert", "batchSave", "batchUpsert", "upsert", "execute");
 
-    static final Set<Method> BUILT_IN_DAO_QUREY_METHODS = StreamEx.of(ClassUtil.getClassesByPackage(Dao.class.getPackageName(), false, true)) //
-            .filter(it -> Dao.class.isAssignableFrom(it))
-            .flattMap(it -> it.getDeclaredMethods())
+    static final Set<Method> BUILT_IN_DAO_QUERY_METHODS = StreamEx.of(ClassUtil.getClassesByPackage(Dao.class.getPackageName(), false, true)) //
+            .filter(Dao.class::isAssignableFrom)
+            .flattMap(Class::getDeclaredMethods)
             .filter(it -> Modifier.isPublic(it.getModifiers()) && !Modifier.isStatic(it.getModifiers()))
             .filter(it -> it.getAnnotation(NonDBOperation.class) == null)
             .filter(it -> N.anyMatch(QUERY_METHOD_NAME_SET, e -> Strings.containsIgnoreCase(it.getName(), e)))
             .toImmutableSet();
 
     static final Set<Method> BUILT_IN_DAO_UPDATE_METHODS = StreamEx.of(ClassUtil.getClassesByPackage(Dao.class.getPackageName(), false, true)) //
-            .filter(it -> Dao.class.isAssignableFrom(it))
-            .flattMap(it -> it.getDeclaredMethods())
+            .filter(Dao.class::isAssignableFrom)
+            .flattMap(Class::getDeclaredMethods)
             .filter(it -> Modifier.isPublic(it.getModifiers()) && !Modifier.isStatic(it.getModifiers()))
             .filter(it -> it.getAnnotation(NonDBOperation.class) == null)
             .filter(it -> N.anyMatch(UPDATE_METHOD_NAME_SET, e -> Strings.containsIgnoreCase(it.getName(), e)))

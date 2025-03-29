@@ -2535,9 +2535,7 @@ public final class Jdbc {
                             return targetType.get(rs, 1);
                         }
                     };
-                } else
-
-                {
+                } else {
                     throw new IllegalArgumentException(
                             "'columnNameFilter' and 'columnNameConverter' are not supported to convert single column to target type: " + targetClass);
                 }
@@ -3467,9 +3465,7 @@ public final class Jdbc {
                             return (T) m;
                         }
                     };
-                } else if (ClassUtil.isBeanClass(targetClass))
-
-                {
+                } else if (ClassUtil.isBeanClass(targetClass)) {
                     return new BiRowMapper<>() {
                         private final BeanInfo entityInfo = ParserUtil.getBeanInfo(targetClass);
 
@@ -5401,7 +5397,7 @@ public final class Jdbc {
          * Retrieves the result from the cache by the default cache key or customized key by the specified parameters.
          * <br />
          * MUST NOT modify the input parameters.
-         * 
+         *
          * @param defaultCacheKey composed by: <i> fullMethodName#tableName#jsonArrayOfParameters</i>. For example: 
          * <code>
          * com.landawn.abacus.jdbc.dao.ReadOnlyDao.save#user1#[{"id": 100, "email": "123@email.com"}]
@@ -5434,7 +5430,7 @@ public final class Jdbc {
          * Caches the result by the default cache key or customized key by the specified parameters.
          * <br />
          * MUST NOT modify the input parameters.
-         * 
+         *
          * @param defaultCacheKey composed by: <i> fullMethodName#tableName#jsonArrayOfParameters</i>. For example: 
          * <code>
          * com.landawn.abacus.jdbc.dao.ReadOnlyDao.save#user1#[{"id": 100, "email": "123@email.com"}]
@@ -5512,7 +5508,7 @@ public final class Jdbc {
             if (Strings.isEmpty(updatedTableName)) {
                 cache.clear();
             } else {
-                cache.keySet().stream().filter(k -> Strings.containsIgnoreCase(k, updatedTableName)).toList().forEach(k -> cache.remove(k));
+                cache.keySet().stream().filter(k -> Strings.containsIgnoreCase(k, updatedTableName)).toList().forEach(cache::remove);
             }
         }
     }

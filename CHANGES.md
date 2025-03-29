@@ -1,3 +1,9 @@
+### 3.9.0
+
+* Refactory `JdbcUtil`.
+* Add `JdbcContext`.
+* Improvements and bug fix.
+
 ### 3.8.11
 
 * Support `DaoCache`
