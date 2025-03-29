@@ -166,7 +166,7 @@ public final class JdbcUtils {
      */
     public static int importData(final DataSet dataset, final Collection<String> selectColumnNames, final Connection conn, final String insertSQL)
             throws SQLException {
-        return importData(dataset, selectColumnNames, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0);
+        return importData(dataset, selectColumnNames, conn, insertSQL, JdbcContext.DEFAULT_BATCH_SIZE, 0);
     }
 
     /**
@@ -257,7 +257,7 @@ public final class JdbcUtils {
     @SuppressWarnings("rawtypes")
     public static int importData(final DataSet dataset, final Connection conn, final String insertSQL, final Map<String, ? extends Type> columnTypeMap)
             throws SQLException {
-        return importData(dataset, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
+        return importData(dataset, conn, insertSQL, JdbcContext.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
     }
 
     /**
@@ -349,7 +349,7 @@ public final class JdbcUtils {
      */
     public static int importData(final DataSet dataset, final Connection conn, final String insertSQL,
             final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException {
-        return importData(dataset, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
+        return importData(dataset, conn, insertSQL, JdbcContext.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
@@ -453,7 +453,7 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      */
     public static int importData(final DataSet dataset, final Collection<String> selectColumnNames, final PreparedStatement stmt) throws SQLException {
-        return importData(dataset, selectColumnNames, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0);
+        return importData(dataset, selectColumnNames, stmt, JdbcContext.DEFAULT_BATCH_SIZE, 0);
     }
 
     /**
@@ -537,7 +537,7 @@ public final class JdbcUtils {
      */
     @SuppressWarnings("rawtypes")
     public static int importData(final DataSet dataset, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap) throws SQLException {
-        return importData(dataset, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
+        return importData(dataset, stmt, JdbcContext.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
     }
 
     /**
@@ -649,7 +649,7 @@ public final class JdbcUtils {
      */
     public static int importData(final DataSet dataset, final PreparedStatement stmt,
             final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException {
-        return importData(dataset, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
+        return importData(dataset, stmt, JdbcContext.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
@@ -760,7 +760,7 @@ public final class JdbcUtils {
         final Connection conn = sourceDataSource.getConnection();
 
         try {
-            return importData(file, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
+            return importData(file, conn, insertSQL, JdbcContext.DEFAULT_BATCH_SIZE, 0, func);
         } finally {
             JdbcUtil.releaseConnection(conn, sourceDataSource);
         }
@@ -827,7 +827,7 @@ public final class JdbcUtils {
         final Connection conn = sourceDataSource.getConnection();
 
         try {
-            return importData(reader, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
+            return importData(reader, conn, insertSQL, JdbcContext.DEFAULT_BATCH_SIZE, 0, func);
         } finally {
             JdbcUtil.releaseConnection(conn, sourceDataSource);
         }
@@ -931,7 +931,7 @@ public final class JdbcUtils {
         final Connection conn = sourceDataSource.getConnection();
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
-            return importData(iter, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
+            return importData(iter, stmt, JdbcContext.DEFAULT_BATCH_SIZE, 0, stmtSetter);
         } finally {
             JdbcUtil.releaseConnection(conn, sourceDataSource);
         }
@@ -1014,7 +1014,7 @@ public final class JdbcUtils {
     //    @SuppressWarnings("rawtypes")
     //    public static long importCSV(final File file, final Connection conn, final String insertSQL, final List<? extends Type> columnTypeList)
     //            throws SQLException, IOException {
-    //        return importCSV(file, 0, Long.MAX_VALUE, true, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeList);
+    //        return importCSV(file, 0, Long.MAX_VALUE, true, conn, insertSQL, JdbcContext.DEFAULT_BATCH_SIZE, 0, columnTypeList);
     //    }
     //
     //    /**
@@ -1078,7 +1078,7 @@ public final class JdbcUtils {
     //     */
     //    @SuppressWarnings("rawtypes")
     //    public static long importCSV(final File file, final PreparedStatement stmt, final List<? extends Type> columnTypeList) throws SQLException, IOException {
-    //        return importCSV(file, 0, Long.MAX_VALUE, true, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeList);
+    //        return importCSV(file, 0, Long.MAX_VALUE, true, stmt, JdbcContext.DEFAULT_BATCH_SIZE, 0, columnTypeList);
     //    }
     //
     //    /**
@@ -1141,7 +1141,7 @@ public final class JdbcUtils {
     //    @SuppressWarnings("rawtypes")
     //    public static long importCSV(final InputStream is, final PreparedStatement stmt, final List<? extends Type> columnTypeList)
     //            throws SQLException, IOException {
-    //        return importCSV(is, 0, Long.MAX_VALUE, true, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeList);
+    //        return importCSV(is, 0, Long.MAX_VALUE, true, stmt, JdbcContext.DEFAULT_BATCH_SIZE, 0, columnTypeList);
     //    }
     //
     //    /**
@@ -1203,7 +1203,7 @@ public final class JdbcUtils {
     //    @SuppressWarnings("rawtypes")
     //    public static long importCSV(final Reader reader, final PreparedStatement stmt, final List<? extends Type> columnTypeList)
     //            throws SQLException, IOException {
-    //        return importCSV(reader, 0, Long.MAX_VALUE, true, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeList);
+    //        return importCSV(reader, 0, Long.MAX_VALUE, true, stmt, JdbcContext.DEFAULT_BATCH_SIZE, 0, columnTypeList);
     //    }
     //
     //    /**
@@ -1326,7 +1326,7 @@ public final class JdbcUtils {
     //    @SuppressWarnings("rawtypes")
     //    public static long importCSV(final File file, final Connection conn, final String insertSQL, final Map<String, ? extends Type> columnTypeMap)
     //            throws SQLException, IOException {
-    //        return importCSV(file, 0, Long.MAX_VALUE, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
+    //        return importCSV(file, 0, Long.MAX_VALUE, conn, insertSQL, JdbcContext.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
     //    }
     //
     //    /**
@@ -1388,7 +1388,7 @@ public final class JdbcUtils {
     //    @SuppressWarnings("rawtypes")
     //    public static long importCSV(final File file, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
     //            throws SQLException, IOException {
-    //        return importCSV(file, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
+    //        return importCSV(file, 0, Long.MAX_VALUE, stmt, JdbcContext.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
     //    }
     //
     //    /**
@@ -1449,7 +1449,7 @@ public final class JdbcUtils {
     //    @SuppressWarnings("rawtypes")
     //    public static long importCSV(final InputStream is, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
     //            throws SQLException, IOException {
-    //        return importCSV(is, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
+    //        return importCSV(is, 0, Long.MAX_VALUE, stmt, JdbcContext.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
     //    }
     //
     //    /**
@@ -1508,7 +1508,7 @@ public final class JdbcUtils {
     //    @SuppressWarnings("rawtypes")
     //    public static long importCSV(final Reader reader, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
     //            throws SQLException, IOException {
-    //        return importCSV(reader, 0, Long.MAX_VALUE, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
+    //        return importCSV(reader, 0, Long.MAX_VALUE, stmt, JdbcContext.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
     //    }
     //
     //    /**
@@ -1700,7 +1700,7 @@ public final class JdbcUtils {
      */
     public static long importCSV(final File file, final PreparedStatement stmt,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
-        return importCSV(file, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
+        return importCSV(file, stmt, JdbcContext.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
@@ -1797,7 +1797,7 @@ public final class JdbcUtils {
      */
     public static long importCSV(final Reader reader, final PreparedStatement stmt,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
-        return importCSV(reader, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
+        return importCSV(reader, stmt, JdbcContext.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
@@ -2362,36 +2362,6 @@ public final class JdbcUtils {
     };
 
     /**
-     * Creates a parameter setter for a PreparedQuery using the provided ColumnGetter.
-     * <p>
-     * This method returns a BiConsumer that sets parameters on a PreparedQuery based on the values
-     * from a ResultSet using the specified ColumnGetter.
-     * </p>
-     *
-     * @param columnGetterForAll the ColumnGetter to use for setting parameters
-     * @return a stateful {@code Throwables.BiConsumer}. Don't save or cache for reuse or use it in parallel stream.
-     */
-    @Beta
-    @SequentialOnly
-    @Stateful
-    public static Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> createParamSetter(final ColumnGetter<?> columnGetterForAll) {
-        return new Throwables.BiConsumer<>() {
-            private int columnCount = -1;
-
-            @Override
-            public void accept(final PreparedQuery stmt, final ResultSet rs) throws SQLException {
-                if (columnCount < 0) {
-                    columnCount = JdbcUtil.getColumnCount(rs);
-                }
-
-                for (int i = 1; i <= columnCount; i++) {
-                    stmt.setObject(i, columnGetterForAll.apply(rs, i));
-                }
-            }
-        };
-    }
-
-    /**
      * Copies data from a <i>source</i> data source to a <i>target</i> data source for the specified table.
      * <p>
      * This method copies all data from the table in the <i>source</i> data source to the table in the <i>target</i> data source.
@@ -2423,7 +2393,7 @@ public final class JdbcUtils {
      */
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
             final String targetTableName) throws SQLException {
-        return copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, JdbcUtil.DEFAULT_BATCH_SIZE);
+        return copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, JdbcContext.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -2459,7 +2429,7 @@ public final class JdbcUtils {
             JdbcUtil.releaseConnection(conn, sourceDataSource);
         }
 
-        return copy(sourceDataSource, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetDataSource, insertSql, batchSize);
+        return copy(sourceDataSource, selectSql, N.max(JdbcContext.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetDataSource, insertSql, batchSize);
     }
 
     /**
@@ -2478,7 +2448,7 @@ public final class JdbcUtils {
      */
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
             final String targetTableName, final Collection<String> selectColumnNames) throws SQLException {
-        return copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, selectColumnNames, JdbcUtil.DEFAULT_BATCH_SIZE);
+        return copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, selectColumnNames, JdbcContext.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -2515,7 +2485,7 @@ public final class JdbcUtils {
             JdbcUtil.releaseConnection(conn, sourceDataSource);
         }
 
-        return copy(sourceDataSource, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetDataSource, insertSql, batchSize);
+        return copy(sourceDataSource, selectSql, N.max(JdbcContext.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetDataSource, insertSql, batchSize);
     }
 
     /**
@@ -2533,7 +2503,7 @@ public final class JdbcUtils {
      */
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource,
             final String insertSql) throws SQLException {
-        return copy(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE);
+        return copy(sourceDataSource, selectSql, JdbcContext.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, JdbcContext.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -2573,7 +2543,7 @@ public final class JdbcUtils {
      */
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource,
             final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) throws SQLException {
-        return copy(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0,
+        return copy(sourceDataSource, selectSql, JdbcContext.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, JdbcContext.DEFAULT_BATCH_SIZE, 0,
                 stmtSetter);
     }
 
@@ -2648,7 +2618,7 @@ public final class JdbcUtils {
      */
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName)
             throws SQLException {
-        return copy(sourceConn, targetConn, sourceTableName, targetTableName, JdbcUtil.DEFAULT_BATCH_SIZE);
+        return copy(sourceConn, targetConn, sourceTableName, targetTableName, JdbcContext.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -2674,7 +2644,7 @@ public final class JdbcUtils {
             insertSql = Strings.replaceFirstIgnoreCase(insertSql, sourceTableName, targetTableName);
         }
 
-        return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetConn, insertSql, batchSize);
+        return copy(sourceConn, selectSql, N.max(JdbcContext.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetConn, insertSql, batchSize);
     }
 
     /**
@@ -2693,7 +2663,7 @@ public final class JdbcUtils {
      */
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
             final Collection<String> selectColumnNames) throws SQLException {
-        return copy(sourceConn, targetConn, sourceTableName, targetTableName, selectColumnNames, JdbcUtil.DEFAULT_BATCH_SIZE);
+        return copy(sourceConn, targetConn, sourceTableName, targetTableName, selectColumnNames, JdbcContext.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -2720,7 +2690,7 @@ public final class JdbcUtils {
             insertSql = Strings.replaceFirstIgnoreCase(insertSql, sourceTableName, targetTableName);
         }
 
-        return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetConn, insertSql, batchSize);
+        return copy(sourceConn, selectSql, N.max(JdbcContext.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetConn, insertSql, batchSize);
     }
 
     private static String generateSelectSql(final Connection conn, final String tableName, final Collection<String> selectColumnNames) {
@@ -2786,7 +2756,7 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      */
     public static long copy(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql) throws SQLException {
-        return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetConn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE);
+        return copy(sourceConn, selectSql, JdbcContext.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetConn, insertSql, JdbcContext.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -2826,7 +2796,7 @@ public final class JdbcUtils {
      */
     public static long copy(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql,
             final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) throws SQLException {
-        return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetConn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
+        return copy(sourceConn, selectSql, JdbcContext.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetConn, insertSql, JdbcContext.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
@@ -2958,7 +2928,7 @@ public final class JdbcUtils {
     //     */
     //    public static long copyInParallel(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource,
     //            final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException {
-    //        return copyInParallel(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE,
+    //        return copyInParallel(sourceDataSource, selectSql, JdbcContext.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, JdbcContext.DEFAULT_BATCH_SIZE,
     //                stmtSetter);
     //    }
     //
@@ -3011,7 +2981,7 @@ public final class JdbcUtils {
     //     */
     //    public static long copyInParallel(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql,
     //            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException {
-    //        return copyInParallel(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetConn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE,
+    //        return copyInParallel(sourceConn, selectSql, JdbcContext.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetConn, insertSql, JdbcContext.DEFAULT_BATCH_SIZE,
     //                stmtSetter);
     //    }
     //
@@ -3097,7 +3067,7 @@ public final class JdbcUtils {
     //     */
     //    public static <T> long copyInParallel(final PreparedStatement selectStmt, final PreparedStatement insertStmt, final Jdbc.BiRowMapper<? extends T> rowMapper,
     //            final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
-    //        return copyInParallel(selectStmt, 0, Long.MAX_VALUE, insertStmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, rowMapper, stmtSetter);
+    //        return copyInParallel(selectStmt, 0, Long.MAX_VALUE, insertStmt, JdbcContext.DEFAULT_BATCH_SIZE, 0, rowMapper, stmtSetter);
     //    }
     //
     //    /**
@@ -3481,7 +3451,7 @@ public final class JdbcUtils {
     //    }
 
     private static void setFetchForBigResult(final Connection conn, final PreparedStatement stmt) throws SQLException {
-        setFetchForBigResult(conn, stmt, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        setFetchForBigResult(conn, stmt, JdbcContext.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
     }
 
     private static void setFetchForBigResult(final Connection conn, final PreparedStatement stmt, final int fetchSize) throws SQLException {
@@ -3494,4 +3464,33 @@ public final class JdbcUtils {
         }
     }
 
+    /**
+     * Creates a parameter setter for a PreparedQuery using the provided ColumnGetter.
+     * <p>
+     * This method returns a BiConsumer that sets parameters on a PreparedQuery based on the values
+     * from a ResultSet using the specified ColumnGetter.
+     * </p>
+     *
+     * @param columnGetterForAll the ColumnGetter to use for setting parameters
+     * @return a stateful {@code Throwables.BiConsumer}. Don't save or cache for reuse or use it in parallel stream.
+     */
+    @Beta
+    @SequentialOnly
+    @Stateful
+    public static Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> createParamSetter(final ColumnGetter<?> columnGetterForAll) {
+        return new Throwables.BiConsumer<>() {
+            private int columnCount = -1;
+
+            @Override
+            public void accept(final PreparedQuery stmt, final ResultSet rs) throws SQLException {
+                if (columnCount < 0) {
+                    columnCount = JdbcUtil.getColumnCount(rs);
+                }
+
+                for (int i = 1; i <= columnCount; i++) {
+                    stmt.setObject(i, columnGetterForAll.apply(rs, i));
+                }
+            }
+        };
+    }
 }

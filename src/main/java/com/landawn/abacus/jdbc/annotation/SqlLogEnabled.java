@@ -20,7 +20,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.JdbcContext;
 
 /**
  *
@@ -41,7 +41,7 @@ public @interface SqlLogEnabled {
      *
      * @return
      */
-    int maxSqlLogLength() default JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH; // 1024
+    int maxSqlLogLength() default JdbcContext.DEFAULT_MAX_SQL_LOG_LENGTH; // 1024
 
     /**
      * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.

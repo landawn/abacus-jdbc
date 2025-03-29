@@ -30,7 +30,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
-import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.JdbcContext;
 import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -102,7 +102,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      */
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave) throws UncheckedSQLException {
-        batchSave(entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+        batchSave(entitiesToSave, JdbcContext.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -126,7 +126,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      */
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave) throws UncheckedSQLException {
-        batchSave(entitiesToSave, propNamesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+        batchSave(entitiesToSave, propNamesToSave, JdbcContext.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -152,7 +152,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
     @Beta
     @Override
     default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws UncheckedSQLException {
-        batchSave(namedInsertSQL, entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+        batchSave(namedInsertSQL, entitiesToSave, JdbcContext.DEFAULT_BATCH_SIZE);
     }
 
     /**

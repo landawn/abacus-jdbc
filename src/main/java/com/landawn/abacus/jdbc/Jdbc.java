@@ -50,6 +50,7 @@ import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.cache.CacheFactory;
 import com.landawn.abacus.cache.LocalCache;
+import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -141,7 +142,6 @@ public final class Jdbc {
      *
      * @param <QS>
      * @param <T>
-     * @see Columns.ColumnOne
      */
     @FunctionalInterface
     public interface BiParametersSetter<QS, T> extends Throwables.BiConsumer<QS, T, SQLException> {
@@ -1144,7 +1144,7 @@ public final class Jdbc {
      * If column labels/count are used in {@link RowMapper#apply(ResultSet)}, consider using {@code BiRowMapper} instead because it's more efficient to retrieve multiple records when column labels/count are used.
      *
      * @param <T> the type of the object that each row of the `ResultSet` will be mapped to
-     * @see Columns.ColumnOne
+     * @see ColumnOne
      */
     @FunctionalInterface
     public interface RowMapper<T> extends Throwables.Function<ResultSet, T, SQLException> {
@@ -5402,9 +5402,12 @@ public final class Jdbc {
          * <br />
          * MUST NOT modify the input parameters.
          * 
-         * @param defaultCacheKey
+         * @param defaultCacheKey composed by: <i> fullMethodName#tableName#jsonArrayOfParameters</i>. For example: 
+         * <code>
+         * com.landawn.abacus.jdbc.dao.ReadOnlyDao.save#user1#[{"id": 100, "email": "123@email.com"}]
+         * </code>
          * @param daoProxy
-         * @param args
+         * @param args the parameters of the method
          * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
          * @return
          */
@@ -5415,10 +5418,13 @@ public final class Jdbc {
          * <br />
          * MUST NOT modify the input parameters.
          *
-         * @param defaultCacheKey
-         * @param result
+         * @param defaultCacheKey composed by: <i> fullMethodName#tableName#jsonArrayOfParameters</i>. For example: 
+         * <code>
+         * com.landawn.abacus.jdbc.dao.ReadOnlyDao.save#user1#[{"id": 100, "email": "123@email.com"}]
+         * </code>
+         * @param result the returned value from the method
          * @param daoProxy
-         * @param args
+         * @param args the parameters of the method
          * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
          * @return
          */
@@ -5429,12 +5435,15 @@ public final class Jdbc {
          * <br />
          * MUST NOT modify the input parameters.
          * 
-         * @param defaultCacheKey
-         * @param result
+         * @param defaultCacheKey composed by: <i> fullMethodName#tableName#jsonArrayOfParameters</i>. For example: 
+         * <code>
+         * com.landawn.abacus.jdbc.dao.ReadOnlyDao.save#user1#[{"id": 100, "email": "123@email.com"}]
+         * </code>
+         * @param result the returned value from the method
          * @param liveTime
          * @param maxIdleTime
          * @param daoProxy
-         * @param args
+         * @param args the parameters of the method
          * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
          * @return
          */
@@ -5446,10 +5455,13 @@ public final class Jdbc {
          * <br />
          * MUST NOT modify the input parameters.
          *
-         * @param defaultCacheKey
-         * @param result
+         * @param defaultCacheKey composed by: <i> fullMethodName#tableName#jsonArrayOfParameters</i>. For example: 
+         * <code>
+         * com.landawn.abacus.jdbc.dao.ReadOnlyDao.save#user1#[{"id": 100, "email": "123@email.com"}]
+         * </code>
+         * @param result the returned value from the method
          * @param daoProxy
-         * @param args
+         * @param args the parameters of the method
          * @param methodSignature The first element is {@code Method}, The second element is {@code parameterTypes}(it will be an empty Class<?> List if there is no parameter), the third element is {@code returnType}
          */
         void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
@@ -5474,7 +5486,7 @@ public final class Jdbc {
         @SuppressWarnings("unused")
         public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            return cache.put(defaultCacheKey, result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME);
+            return cache.put(defaultCacheKey, result, JdbcContext.DEFAULT_CACHE_LIVE_TIME, JdbcContext.DEFAULT_CACHE_MAX_IDLE_TIME);
         }
 
         @Override
@@ -5489,18 +5501,18 @@ public final class Jdbc {
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             final Method method = methodSignature._1;
 
-            if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
+            if (JdbcContext.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
                 if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) {
                     return;
                 }
             }
 
-            final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR);
+            final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcContext.CACHE_KEY_SPLITOR);
 
             if (Strings.isEmpty(updatedTableName)) {
                 cache.clear();
             } else {
-                cache.keySet().stream().filter(k -> k.contains(updatedTableName)).toList().forEach(k -> cache.remove(k));
+                cache.keySet().stream().filter(k -> Strings.containsIgnoreCase(k, updatedTableName)).toList().forEach(k -> cache.remove(k));
             }
         }
     }
@@ -5550,18 +5562,18 @@ public final class Jdbc {
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             final Method method = methodSignature._1;
 
-            if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
+            if (JdbcContext.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
                 if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) {
                     return;
                 }
             }
 
-            final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR);
+            final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcContext.CACHE_KEY_SPLITOR);
 
             if (Strings.isEmpty(updatedTableName)) {
                 cache.clear();
             } else {
-                cache.entrySet().removeIf(e -> e.getKey().contains(updatedTableName));
+                cache.entrySet().removeIf(e -> Strings.containsIgnoreCase(e.getKey(), updatedTableName));
             }
         }
     }

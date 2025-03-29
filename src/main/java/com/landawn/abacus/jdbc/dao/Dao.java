@@ -38,6 +38,7 @@ import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
+import com.landawn.abacus.jdbc.JdbcContext;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
@@ -197,7 +198,7 @@ import com.landawn.abacus.util.stream.Stream;
  * static final UserDao userDao = Dao.newInstance(UserDao.class, dataSource);
  * ...
  *
- * final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+ * final SQLTransaction tran = JdbcContext.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
  *
  * try {
  *      userDao.getById(id);
@@ -817,7 +818,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see CrudDao#batchInsert(Collection)
      */
     default void batchSave(final Collection<? extends T> entitiesToSave) throws SQLException {
-        batchSave(entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+        batchSave(entitiesToSave, JdbcContext.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -839,7 +840,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see CrudDao#batchInsert(Collection)
      */
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave) throws SQLException {
-        batchSave(entitiesToSave, propNamesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+        batchSave(entitiesToSave, propNamesToSave, JdbcContext.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -863,7 +864,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @Beta
     default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws SQLException {
-        batchSave(namedInsertSQL, entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+        batchSave(namedInsertSQL, entitiesToSave, JdbcContext.DEFAULT_BATCH_SIZE);
     }
 
     /**

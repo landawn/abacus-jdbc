@@ -27,7 +27,7 @@ import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.JdbcContext;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
@@ -235,10 +235,10 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         final List<T> result = DaoUtil.getDao(this).list(selectPropNames, cond);
 
         if (N.notEmpty(result)) {
-            if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
+            if (result.size() <= JdbcContext.DEFAULT_BATCH_SIZE) {
                 loadJoinEntities(result, joinEntitiesToLoad);
             } else {
-                N.runByBatch(result, JdbcUtil.DEFAULT_BATCH_SIZE, batchEntities -> loadJoinEntities(batchEntities, joinEntitiesToLoad));
+                N.runByBatch(result, JdbcContext.DEFAULT_BATCH_SIZE, batchEntities -> loadJoinEntities(batchEntities, joinEntitiesToLoad));
             }
         }
 
@@ -259,12 +259,12 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         final List<T> result = DaoUtil.getDao(this).list(selectPropNames, cond);
 
         if (N.notEmpty(result) && N.notEmpty(joinEntitiesToLoad)) {
-            if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
+            if (result.size() <= JdbcContext.DEFAULT_BATCH_SIZE) {
                 for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                     loadJoinEntities(result, joinEntityClass);
                 }
             } else {
-                N.runByBatch(result, JdbcUtil.DEFAULT_BATCH_SIZE, batchEntities -> {
+                N.runByBatch(result, JdbcContext.DEFAULT_BATCH_SIZE, batchEntities -> {
                     for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                         loadJoinEntities(batchEntities, joinEntityClass);
                     }
@@ -289,10 +289,10 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         final List<T> result = DaoUtil.getDao(this).list(selectPropNames, cond);
 
         if (includeAllJoinEntities && N.notEmpty(result)) {
-            if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
+            if (result.size() <= JdbcContext.DEFAULT_BATCH_SIZE) {
                 loadAllJoinEntities(result);
             } else {
-                N.runByBatch(result, JdbcUtil.DEFAULT_BATCH_SIZE, this::loadAllJoinEntities);
+                N.runByBatch(result, JdbcContext.DEFAULT_BATCH_SIZE, this::loadAllJoinEntities);
             }
         }
 
@@ -309,7 +309,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      */
     @Beta
     default Stream<T> stream(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) {
-        return DaoUtil.getDao(this).stream(selectPropNames, cond).split(JdbcUtil.DEFAULT_BATCH_SIZE).onEach(batchEntities -> {
+        return DaoUtil.getDao(this).stream(selectPropNames, cond).split(JdbcContext.DEFAULT_BATCH_SIZE).onEach(batchEntities -> {
             try {
                 loadJoinEntities(batchEntities, joinEntitiesToLoad);
             } catch (final SQLException e) {
@@ -330,7 +330,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     default Stream<T> stream(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond) {
         return DaoUtil.getDao(this)
                 .stream(selectPropNames, cond)
-                .split(JdbcUtil.DEFAULT_BATCH_SIZE) //
+                .split(JdbcContext.DEFAULT_BATCH_SIZE) //
                 .onEach(batchEntities -> {
                     try {
                         for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
@@ -356,7 +356,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         if (includeAllJoinEntities) {
             return DaoUtil.getDao(this)
                     .stream(selectPropNames, cond)
-                    .split(JdbcUtil.DEFAULT_BATCH_SIZE) //
+                    .split(JdbcContext.DEFAULT_BATCH_SIZE) //
                     .onEach(t -> {
                         try {
                             loadAllJoinEntities(t);
@@ -1004,7 +1004,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     //    int saveWithJoinEntities(final T entity) throws SQLException;
     //
     //    default int batchSaveWithJoinEntities(final Collection<? extends T> entities) throws SQLException {
-    //        return batchSaveWithJoinEntities(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+    //        return batchSaveWithJoinEntities(entities, JdbcContext.DEFAULT_BATCH_SIZE);
     //    }
     //
     //    int batchSaveWithJoinEntities(final Collection<? extends T> entity, int batchSize) throws SQLException;
@@ -1028,7 +1028,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         } else {
             int result = 0;
             final DataSource dataSource = DaoUtil.getDao(this).dataSource();
-            final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+            final SQLTransaction tran = JdbcContext.beginTransaction(dataSource);
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
@@ -1067,7 +1067,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         } else {
             int result = 0;
             final DataSource dataSource = DaoUtil.getDao(this).dataSource();
-            final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+            final SQLTransaction tran = JdbcContext.beginTransaction(dataSource);
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
@@ -1121,7 +1121,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         } else {
             int result = 0;
             final DataSource dataSource = DaoUtil.getDao(this).dataSource();
-            final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+            final SQLTransaction tran = JdbcContext.beginTransaction(dataSource);
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
@@ -1199,7 +1199,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         } else {
             int result = 0;
             final DataSource dataSource = DaoUtil.getDao(this).dataSource();
-            final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+            final SQLTransaction tran = JdbcContext.beginTransaction(dataSource);
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {

@@ -244,7 +244,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <pre>
      * <code>
-     *   final SQLTransaction tran = JdbcUtil.beginTransaction(IsolationLevel.READ_COMMITTED);
+     *   final SQLTransaction tran = JdbcContext.beginTransaction(IsolationLevel.READ_COMMITTED);
      *   try {
      *       // sqlExecutor.insert(...);
      *       // sqlExecutor.update(...);

@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.JdbcContext;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JoinInfo;
 import com.landawn.abacus.jdbc.NamedQuery;
@@ -64,7 +65,7 @@ final class DaoUtil {
 
     static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
-        stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        stmt.setFetchSize(JdbcContext.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
     };
 
     @SuppressWarnings("deprecation")

@@ -48,6 +48,7 @@ import org.junit.jupiter.api.Test;
 import com.landawn.abacus.condition.ConditionFactory.CB;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.jdbc.Jdbc;
+import com.landawn.abacus.jdbc.JdbcContext;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JdbcUtils;
 import com.landawn.abacus.jdbc.SQLTransaction;
@@ -86,7 +87,7 @@ public class DaoTest {
 
         List<Long> ids = userDao.batchInsertWithId(users);
 
-        JdbcUtil.startDaoCacheOnCurrentThread();
+        JdbcContext.startDaoCacheOnCurrentThread();
 
         try {
             assertEquals(users.size(), ids.size());
@@ -103,7 +104,7 @@ public class DaoTest {
             N.println("Time with local thread cache: " + (System.currentTimeMillis() - start));
 
         } finally {
-            JdbcUtil.closeDaoCacheOnCurrentThread();
+            JdbcContext.closeDaoCacheOnCurrentThread();
         }
 
         final List<User> users2 = userDao.batchGet(ids);
@@ -534,7 +535,7 @@ public class DaoTest {
      */
     @Test
     public void test_orderBy() throws SQLException {
-        JdbcUtil.enableSqlLog();
+        JdbcContext.enableSqlLog();
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
 
@@ -596,13 +597,13 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+        try (SQLTransaction tran = JdbcContext.beginTransaction(dataSource)) {
             userDao.delete_propagation_SUPPORTS(userFromDB.getId());
         }
 
         assertTrue(userDao.exists(userFromDB.getId()));
 
-        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+        try (SQLTransaction tran = JdbcContext.beginTransaction(dataSource)) {
             userDao.delete_propagation_REQUIRES_NEW(userFromDB.getId());
         }
 
@@ -621,8 +622,8 @@ public class DaoTest {
             synchronized (JdbcUtil.class) {
                 if (idx % 2 == 0) {
                     System.out.println("###: enable log for Thread: " + Thread.currentThread());
-                    JdbcUtil.enableSqlLog();
-                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(0);
+                    JdbcContext.enableSqlLog();
+                    JdbcContext.setMinExecutionTimeForSqlPerfLog(0);
                 } else {
                     System.out.println("+++: Not enable log for Thread: " + Thread.currentThread());
                 }
@@ -636,8 +637,8 @@ public class DaoTest {
 
                 if (idx % 2 == 0) {
                     System.out.println("###: disable log for Thread: " + Thread.currentThread());
-                    JdbcUtil.disableSqlLog();
-                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(-1);
+                    JdbcContext.disableSqlLog();
+                    JdbcContext.setMinExecutionTimeForSqlPerfLog(-1);
                 }
             }
         });
@@ -671,13 +672,13 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+        try (SQLTransaction tran = JdbcContext.beginTransaction(dataSource)) {
             userDao.delete_propagation_SUPPORTS(userFromDB.getId());
         }
 
         assertTrue(userDao.exists(userFromDB.getId()));
 
-        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+        try (SQLTransaction tran = JdbcContext.beginTransaction(dataSource)) {
             userDao.delete_propagation_REQUIRES_NEW(userFromDB.getId());
         }
 

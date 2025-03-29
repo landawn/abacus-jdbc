@@ -21,7 +21,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.JdbcContext;
 
 @Beta
 @Retention(RetentionPolicy.RUNTIME)
@@ -37,13 +37,13 @@ public @interface CacheResult {
      *
      * @return
      */
-    long liveTime() default JdbcUtil.DEFAULT_CACHE_LIVE_TIME; // unit milliseconds.
+    long liveTime() default JdbcContext.DEFAULT_CACHE_LIVE_TIME; // unit milliseconds.
 
     /**
      *
      * @return
      */
-    long maxIdleTime() default JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME; // unit milliseconds.
+    long maxIdleTime() default JdbcContext.DEFAULT_CACHE_MAX_IDLE_TIME; // unit milliseconds.
 
     /**
      * Minimum required size to cache query result if the return type is {@code Collection} or {@code DataSet}.
