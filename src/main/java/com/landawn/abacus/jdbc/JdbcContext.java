@@ -468,6 +468,65 @@ public class JdbcContext {
     }
 
     /**
+     * Retrieves a connection from the specified DataSource.
+     * If Spring transaction management is enabled and a transaction is active,
+     * it will return the connection associated with the current transaction.
+     * Otherwise, it will return a new connection from the DataSource.
+     *
+     * @param ds The DataSource from which to retrieve the connection.
+     * @return A Connection object that represents a connection to the database.
+     * @throws UncheckedSQLException If a SQL exception occurs while retrieving the connection.
+     */
+    public static Connection getConnection(final javax.sql.DataSource ds) throws UncheckedSQLException {
+        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
+            try {
+                return org.springframework.jdbc.datasource.DataSourceUtils.getConnection(ds);
+            } catch (final NoClassDefFoundError e) {
+                isInSpring = false;
+
+                try {
+                    return ds.getConnection();
+                } catch (final SQLException e1) {
+                    throw new UncheckedSQLException(e1);
+                }
+            }
+        } else {
+            try {
+                return ds.getConnection();
+            } catch (final SQLException e) {
+                throw new UncheckedSQLException(e);
+            }
+        }
+    }
+
+    /**
+     * Releases the given connection back to the DataSource.
+     * If Spring transaction management is enabled and a transaction is active,
+     * it will release the connection associated with the current transaction.
+     * Otherwise, it will close the connection directly.
+     *
+     * @param conn The Connection to be released.
+     * @param ds The DataSource from which the connection was obtained.
+     */
+    @SuppressWarnings("deprecation")
+    public static void releaseConnection(final Connection conn, final javax.sql.DataSource ds) {
+        if (conn == null) {
+            return;
+        }
+
+        if (isInSpring && ds != null && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
+            try {
+                org.springframework.jdbc.datasource.DataSourceUtils.releaseConnection(conn, ds);
+            } catch (final NoClassDefFoundError e) {
+                isInSpring = false;
+                JdbcUtil.closeQuietly(conn);
+            }
+        } else {
+            JdbcUtil.closeQuietly(conn);
+        }
+    }
+
+    /**
      * Checks if there is an active transaction for the given DataSource in current thread.
      *
      * @param ds The DataSource to check for an active transaction.
@@ -482,13 +541,13 @@ public class JdbcContext {
             Connection conn = null;
 
             try {
-                conn = JdbcUtil.getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
 
                 return org.springframework.jdbc.datasource.DataSourceUtils.isConnectionTransactional(conn, ds);
             } catch (final NoClassDefFoundError e) {
                 isInSpring = false;
             } finally {
-                JdbcUtil.releaseConnection(conn, ds);
+                JdbcContext.releaseConnection(conn, ds);
             }
         }
 
@@ -607,8 +666,8 @@ public class JdbcContext {
      * @param isForUpdateOnly
      * @return
      * @throws UncheckedSQLException the unchecked SQL exception
-     * @see {@link JdbcUtil#getConnection(javax.sql.DataSource)}
-     * @see {@link JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)}
+     * @see {@link JdbcContext#getConnection(javax.sql.DataSource)}
+     * @see {@link JdbcContext#releaseConnection(Connection, javax.sql.DataSource)}
      */
     public static SQLTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel, final boolean isForUpdateOnly)
             throws UncheckedSQLException {
@@ -622,7 +681,7 @@ public class JdbcContext {
             boolean noException = false;
 
             try { //NOSONAR
-                conn = JdbcUtil.getConnection(dataSource);
+                conn = JdbcContext.getConnection(dataSource);
                 tran = new SQLTransaction(dataSource, conn, isolationLevel, CreatedBy.JDBC_UTIL, true); //NOSONAR
                 tran.incrementAndGetRef(isolationLevel, isForUpdateOnly);
 
@@ -631,7 +690,7 @@ public class JdbcContext {
                 throw new UncheckedSQLException(e);
             } finally {
                 if (!noException) {
-                    JdbcUtil.releaseConnection(conn, dataSource);
+                    JdbcContext.releaseConnection(conn, dataSource);
                 }
             }
 

@@ -113,7 +113,7 @@ public final class JdbcUtils {
         try {
             return importData(dataset, conn, insertSQL);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcContext.releaseConnection(conn, sourceDataSource);
         }
     }
 
@@ -762,7 +762,7 @@ public final class JdbcUtils {
         try {
             return importData(file, conn, insertSQL, JdbcContext.DEFAULT_BATCH_SIZE, 0, func);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcContext.releaseConnection(conn, sourceDataSource);
         }
     }
 
@@ -829,7 +829,7 @@ public final class JdbcUtils {
         try {
             return importData(reader, conn, insertSQL, JdbcContext.DEFAULT_BATCH_SIZE, 0, func);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcContext.releaseConnection(conn, sourceDataSource);
         }
     }
 
@@ -933,7 +933,7 @@ public final class JdbcUtils {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importData(iter, stmt, JdbcContext.DEFAULT_BATCH_SIZE, 0, stmtSetter);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcContext.releaseConnection(conn, sourceDataSource);
         }
     }
 
@@ -1654,7 +1654,7 @@ public final class JdbcUtils {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importCSV(file, stmt, stmtSetter);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcContext.releaseConnection(conn, sourceDataSource);
         }
     }
 
@@ -1776,7 +1776,7 @@ public final class JdbcUtils {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSQL)) {
             return importCSV(reader, stmt, stmtSetter);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcContext.releaseConnection(conn, sourceDataSource);
         }
     }
 
@@ -1914,7 +1914,7 @@ public final class JdbcUtils {
         try {
             return exportCSV(out, conn, querySQL);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcContext.releaseConnection(conn, sourceDataSource);
         }
     }
 
@@ -2142,7 +2142,7 @@ public final class JdbcUtils {
         try {
             return exportCSV(out, conn, querySQL);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcContext.releaseConnection(conn, sourceDataSource);
         }
     }
 
@@ -2426,7 +2426,7 @@ public final class JdbcUtils {
                 insertSql = Strings.replaceFirstIgnoreCase(insertSql, sourceTableName, targetTableName);
             }
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcContext.releaseConnection(conn, sourceDataSource);
         }
 
         return copy(sourceDataSource, selectSql, N.max(JdbcContext.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetDataSource, insertSql, batchSize);
@@ -2482,7 +2482,7 @@ public final class JdbcUtils {
                 insertSql = Strings.replaceFirstIgnoreCase(insertSql, sourceTableName, targetTableName);
             }
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcContext.releaseConnection(conn, sourceDataSource);
         }
 
         return copy(sourceDataSource, selectSql, N.max(JdbcContext.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetDataSource, insertSql, batchSize);
@@ -2572,17 +2572,17 @@ public final class JdbcUtils {
         Connection targetConn = null;
 
         try {
-            sourceConn = JdbcUtil.getConnection(sourceDataSource);
-            targetConn = JdbcUtil.getConnection(targetDataSource);
+            sourceConn = JdbcContext.getConnection(sourceDataSource);
+            targetConn = JdbcContext.getConnection(targetDataSource);
 
             return copy(sourceConn, selectSql, fetchSize, targetConn, insertSql, batchSize, batchIntervalInMillis, stmtSetter);
         } finally {
             if (sourceConn != null) {
-                JdbcUtil.releaseConnection(sourceConn, sourceDataSource);
+                JdbcContext.releaseConnection(sourceConn, sourceDataSource);
             }
 
             if (targetConn != null) {
-                JdbcUtil.releaseConnection(targetConn, targetDataSource);
+                JdbcContext.releaseConnection(targetConn, targetDataSource);
             }
         }
     }

@@ -372,7 +372,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
             logger.warn("Failed to reset connection", e);
         } finally {
             if (_closeConnection) {
-                JdbcUtil.releaseConnection(_conn, _ds);
+                JdbcContext.releaseConnection(_conn, _ds);
             }
         }
     }

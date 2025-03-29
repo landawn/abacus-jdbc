@@ -97,7 +97,7 @@ public final class DBLock {
                 + "(host_name VARCHAR(64), target VARCHAR(255) NOT NULL, code VARCHAR(64), status VARCHAR(16) NOT NULL, "
                 + "expiry_time TIMESTAMP NOT NULL, update_time TIMESTAMP NOT NULL, create_time TIMESTAMP NOT NULL, UNIQUE (target))";
 
-        final Connection conn = JdbcUtil.getConnection(ds);
+        final Connection conn = JdbcContext.getConnection(ds);
 
         try {
             JdbcUtil.createTableIfNotExists(conn, tableName, schema);
@@ -113,7 +113,7 @@ public final class DBLock {
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
-            JdbcUtil.releaseConnection(conn, ds);
+            JdbcContext.releaseConnection(conn, ds);
         }
 
         final Runnable refreshTask = () -> {
@@ -130,7 +130,7 @@ public final class DBLock {
                     } catch (final SQLException e) {
                         throw new UncheckedSQLException(e);
                     } finally {
-                        JdbcUtil.releaseConnection(conn, ds);
+                        JdbcContext.releaseConnection(conn, ds);
                     }
                 } finally {
                     Objectory.recycle(m);

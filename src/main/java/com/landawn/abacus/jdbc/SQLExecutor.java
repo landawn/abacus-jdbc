@@ -113,7 +113,7 @@ package com.landawn.abacus.jdbc;
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/ResultSet.html">ResultSet</a>
  */
 // Archive for history. Replaced b PreparedQuery and Dao.
-public final class SQLExecutor {
+final class SQLExecutor {
     private SQLExecutor() throws IllegalArgumentException {
         // no use.
     }

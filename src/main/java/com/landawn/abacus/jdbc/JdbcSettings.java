@@ -16,7 +16,7 @@
 package com.landawn.abacus.jdbc;
 
 //Archive for history. Replaced b PreparedQuery and Dao.
-public final class JdbcSettings {
+final class JdbcSettings {
 
     private JdbcSettings() {
         // no use.

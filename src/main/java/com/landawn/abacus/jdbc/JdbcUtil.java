@@ -175,7 +175,7 @@ public final class JdbcUtil {
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
-            JdbcUtil.releaseConnection(conn, ds);
+            JdbcContext.releaseConnection(conn, ds);
         }
     }
 
@@ -449,27 +449,10 @@ public final class JdbcUtil {
      * @param ds The DataSource from which to retrieve the connection.
      * @return A Connection object that represents a connection to the database.
      * @throws UncheckedSQLException If a SQL exception occurs while retrieving the connection.
+     * @deprecated Use {@link JdbcContext#getConnection(javax.sql.DataSource)} instead
      */
     public static Connection getConnection(final javax.sql.DataSource ds) throws UncheckedSQLException {
-        if (JdbcContext.isInSpring && !JdbcContext.isSpringTransactionalDisabled_TL.get()) { //NOSONAR
-            try {
-                return org.springframework.jdbc.datasource.DataSourceUtils.getConnection(ds);
-            } catch (final NoClassDefFoundError e) {
-                JdbcContext.isInSpring = false;
-
-                try {
-                    return ds.getConnection();
-                } catch (final SQLException e1) {
-                    throw new UncheckedSQLException(e1);
-                }
-            }
-        } else {
-            try {
-                return ds.getConnection();
-            } catch (final SQLException e) {
-                throw new UncheckedSQLException(e);
-            }
-        }
+        return JdbcContext.getConnection(ds);
     }
 
     /**
@@ -480,22 +463,10 @@ public final class JdbcUtil {
      *
      * @param conn The Connection to be released.
      * @param ds The DataSource from which the connection was obtained.
+     * @deprecated Use {@link JdbcContext#releaseConnection(Connection,javax.sql.DataSource)} instead
      */
     public static void releaseConnection(final Connection conn, final javax.sql.DataSource ds) {
-        if (conn == null) {
-            return;
-        }
-
-        if (JdbcContext.isInSpring && ds != null && !JdbcContext.isSpringTransactionalDisabled_TL.get()) { //NOSONAR
-            try {
-                org.springframework.jdbc.datasource.DataSourceUtils.releaseConnection(conn, ds);
-            } catch (final NoClassDefFoundError e) {
-                JdbcContext.isInSpring = false;
-                JdbcUtil.closeQuietly(conn);
-            }
-        } else {
-            JdbcUtil.closeQuietly(conn);
-        }
+        JdbcContext.releaseConnection(conn, ds);
     }
 
     /**
@@ -506,7 +477,7 @@ public final class JdbcUtil {
      * @return
      */
     static Runnable createCloseHandler(final Connection conn, final javax.sql.DataSource ds) {
-        return () -> releaseConnection(conn, ds);
+        return () -> JdbcContext.releaseConnection(conn, ds);
     }
 
     /**
@@ -589,7 +560,7 @@ public final class JdbcUtil {
      *
      * @param conn
      * @throws UncheckedSQLException the unchecked SQL exception
-     * @deprecated consider using {@link #releaseConnection(Connection, javax.sql.DataSource)}
+     * @deprecated consider using {@link JdbcContext#releaseConnection(Connection, javax.sql.DataSource)}
      */
     @Deprecated
     public static void close(final Connection conn) throws UncheckedSQLException {
@@ -758,7 +729,7 @@ public final class JdbcUtil {
      * This is typically used in finally blocks.
      *
      * @param conn
-     * @deprecated consider using {@link #releaseConnection(Connection, javax.sql.DataSource)}
+     * @deprecated consider using {@link JdbcContext#releaseConnection(Connection, javax.sql.DataSource)}
      */
     @Deprecated
     public static void closeQuietly(final Connection conn) {
@@ -1403,8 +1374,8 @@ public final class JdbcUtil {
      * @return a PreparedQuery object representing the prepared SQL query
      * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
@@ -1419,11 +1390,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareQuery(conn, sql).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -1446,8 +1417,8 @@ public final class JdbcUtil {
      * @return a PreparedQuery object representing the prepared SQL query
      * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
@@ -1463,11 +1434,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareQuery(conn, sql, autoGeneratedKeys).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -1490,8 +1461,8 @@ public final class JdbcUtil {
      * @return a PreparedQuery object representing the prepared SQL query
      * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final int[] returnColumnIndexes)
             throws IllegalArgumentException, SQLException {
@@ -1508,11 +1479,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareQuery(conn, sql, returnColumnIndexes).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -1535,8 +1506,8 @@ public final class JdbcUtil {
      * @return a PreparedQuery object representing the prepared SQL query
      * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final String[] returnColumnNames)
             throws IllegalArgumentException, SQLException {
@@ -1553,11 +1524,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareQuery(conn, sql, returnColumnNames).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -1580,8 +1551,8 @@ public final class JdbcUtil {
      * @return a PreparedQuery object representing the prepared SQL query
      * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -1598,11 +1569,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareQuery(conn, sql, stmtCreator).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -1792,8 +1763,8 @@ public final class JdbcUtil {
      * @return a NamedQuery object representing the prepared named SQL query
      * @throws IllegalArgumentException if the DataSource or named SQL string is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
@@ -1808,11 +1779,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareNamedQuery(conn, namedSql).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -1835,8 +1806,8 @@ public final class JdbcUtil {
      * @return a NamedQuery object representing the prepared named SQL query
      * @throws IllegalArgumentException if the DataSource or named SQL string is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
@@ -1852,11 +1823,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareNamedQuery(conn, namedSql, autoGeneratedKeys).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -1879,8 +1850,8 @@ public final class JdbcUtil {
      * @return a NamedQuery object representing the prepared named SQL query
      * @throws IllegalArgumentException if the DataSource, named SQL string, or returnColumnIndexes is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final int[] returnColumnIndexes)
             throws IllegalArgumentException, SQLException {
@@ -1897,11 +1868,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareNamedQuery(conn, namedSql, returnColumnIndexes).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -1924,8 +1895,8 @@ public final class JdbcUtil {
      * @return a NamedQuery object representing the prepared named SQL query
      * @throws IllegalArgumentException if the DataSource, named SQL string, or returnColumnNames is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final String[] returnColumnNames)
             throws IllegalArgumentException, SQLException {
@@ -1942,11 +1913,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareNamedQuery(conn, namedSql, returnColumnNames).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -1969,8 +1940,8 @@ public final class JdbcUtil {
      * @return a NamedQuery object representing the prepared named SQL query
      * @throws IllegalArgumentException if the DataSource, named SQL string, or stmtCreator is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -1987,11 +1958,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareNamedQuery(conn, namedSql, stmtCreator).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -2159,8 +2130,8 @@ public final class JdbcUtil {
      * @return a NamedQuery object representing the prepared named SQL query
      * @throws IllegalArgumentException if the DataSource or named SQL string is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
@@ -2176,11 +2147,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareNamedQuery(conn, namedSql).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -2203,8 +2174,8 @@ public final class JdbcUtil {
      * @return a NamedQuery object representing the prepared named SQL query
      * @throws IllegalArgumentException if the DataSource or named SQL string is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
@@ -2221,11 +2192,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareNamedQuery(conn, namedSql, autoGeneratedKeys).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -2248,8 +2219,8 @@ public final class JdbcUtil {
      * @return a NamedQuery object representing the prepared named SQL query
      * @throws IllegalArgumentException if the DataSource, named SQL string, or returnColumnIndexes is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final int[] returnColumnIndexes)
             throws IllegalArgumentException, SQLException {
@@ -2267,11 +2238,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareNamedQuery(conn, namedSql, returnColumnIndexes).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -2294,8 +2265,8 @@ public final class JdbcUtil {
      * @return a NamedQuery object representing the prepared named SQL query
      * @throws IllegalArgumentException if the DataSource, named SQL string, or returnColumnNames is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final String[] returnColumnNames)
             throws IllegalArgumentException, SQLException {
@@ -2313,11 +2284,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareNamedQuery(conn, namedSql, returnColumnNames).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -2340,8 +2311,8 @@ public final class JdbcUtil {
      * @return a NamedQuery object representing the prepared named SQL query
      * @throws IllegalArgumentException if the DataSource, named SQL string, or stmtCreator is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -2359,11 +2330,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareNamedQuery(conn, namedSql, stmtCreator).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -2574,8 +2545,8 @@ public final class JdbcUtil {
      * @return a CallableQuery object representing the prepared callable SQL query
      * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
@@ -2590,11 +2561,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareCallableQuery(conn, sql).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -2616,8 +2587,8 @@ public final class JdbcUtil {
      * @return a CallableQuery object representing the prepared callable SQL query
      * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see #getConnection(javax.sql.DataSource)
-     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see JdbcContext#getConnection(javax.sql.DataSource)
+     * @see JdbcContext#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql,
             final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -2634,11 +2605,11 @@ public final class JdbcUtil {
             Connection conn = null;
 
             try {
-                conn = getConnection(ds);
+                conn = JdbcContext.getConnection(ds);
                 result = prepareCallableQuery(conn, sql, stmtCreator).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
-                    releaseConnection(conn, ds);
+                    JdbcContext.releaseConnection(conn, ds);
                 }
             }
 
@@ -2967,12 +2938,12 @@ public final class JdbcUtil {
         if (tran != null) {
             return executeQuery(tran.connection(), sql, parameters);
         } else {
-            final Connection conn = getConnection(ds);
+            final Connection conn = JdbcContext.getConnection(ds);
 
             try {
                 return executeQuery(conn, sql, parameters);
             } finally {
-                releaseConnection(conn, ds);
+                JdbcContext.releaseConnection(conn, ds);
             }
         }
     }
@@ -3054,12 +3025,12 @@ public final class JdbcUtil {
         if (tran != null) {
             return executeUpdate(tran.connection(), sql, parameters);
         } else {
-            final Connection conn = getConnection(ds);
+            final Connection conn = JdbcContext.getConnection(ds);
 
             try {
                 return executeUpdate(conn, sql, parameters);
             } finally {
-                releaseConnection(conn, ds);
+                JdbcContext.releaseConnection(conn, ds);
             }
         }
     }
@@ -3140,12 +3111,12 @@ public final class JdbcUtil {
         if (tran != null) {
             return executeBatchUpdate(tran.connection(), sql, listOfParameters, batchSize);
         } else if (listOfParameters.size() <= batchSize) {
-            final Connection conn = getConnection(ds);
+            final Connection conn = JdbcContext.getConnection(ds);
 
             try {
                 return executeBatchUpdate(conn, sql, listOfParameters, batchSize);
             } finally {
-                releaseConnection(conn, ds);
+                JdbcContext.releaseConnection(conn, ds);
             }
         } else {
             final SQLTransaction tran2 = JdbcContext.beginTransaction(ds);
@@ -3306,12 +3277,12 @@ public final class JdbcUtil {
         if (tran != null) {
             return executeLargeBatchUpdate(tran.connection(), sql, listOfParameters, batchSize);
         } else if (listOfParameters.size() <= batchSize) {
-            final Connection conn = getConnection(ds);
+            final Connection conn = JdbcContext.getConnection(ds);
 
             try {
                 return executeLargeBatchUpdate(conn, sql, listOfParameters, batchSize);
             } finally {
-                releaseConnection(conn, ds);
+                JdbcContext.releaseConnection(conn, ds);
             }
         } else {
             final SQLTransaction tran2 = JdbcContext.beginTransaction(ds);
@@ -3450,12 +3421,12 @@ public final class JdbcUtil {
         if (tran != null) {
             return execute(tran.connection(), sql, parameters);
         } else {
-            final Connection conn = getConnection(ds);
+            final Connection conn = JdbcContext.getConnection(ds);
 
             try {
                 return execute(conn, sql, parameters);
             } finally {
-                releaseConnection(conn, ds);
+                JdbcContext.releaseConnection(conn, ds);
             }
         }
     }

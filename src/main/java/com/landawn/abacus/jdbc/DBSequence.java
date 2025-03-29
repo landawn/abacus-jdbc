@@ -82,7 +82,7 @@ public final class DBSequence {
         final String schema = "CREATE TABLE " + tableName
                 + "(seq_name VARCHAR(64), next_val BIGINT, update_time TIMESTAMP NOT NULL, create_time TIMESTAMP NOT NULL, UNIQUE (seq_name))";
 
-        final Connection conn = JdbcUtil.getConnection(ds);
+        final Connection conn = JdbcContext.getConnection(ds);
 
         try { //NOSONAR
             if (!JdbcUtil.doesTableExist(conn, tableName)) {
@@ -124,7 +124,7 @@ public final class DBSequence {
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
-            JdbcUtil.releaseConnection(conn, ds);
+            JdbcContext.releaseConnection(conn, ds);
         }
     }
 
