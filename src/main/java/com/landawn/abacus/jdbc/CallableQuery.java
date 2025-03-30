@@ -1441,7 +1441,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Executes the CallableStatement and applies the provided BiConsumer to the statement.
      *
-     * @param getter the TriFunction to apply to the CallableStatement. The first parameter is the executed {@code CallableStatement},
+     * @param consumer the TriFunction to apply to the CallableStatement. The first parameter is the executed {@code CallableStatement},
      *               the second parameter is the list of OUT parameters, and third parameter indicates if the first result is a {@code ResultSet} object.
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
